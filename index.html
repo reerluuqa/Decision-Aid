@@ -40,6 +40,10 @@
       font-size: 0.85rem;
       color: #777;
     }
+    .error {
+      font-size: 0.85rem;
+      color: #b00020;
+    }
   </style>
 </head>
 <body>
@@ -49,11 +53,12 @@
   <div id="library"></div>
 
   <script>
-    // ---- configuration: your systems / folders ----
+    // Only list folders you are actually using right now.
+    // Add more entries here as you create more folders.
     const categories = [
       { dir: "Endocrine-metabolic",            title: "Endocrine metabolic" },
       { dir: "GI-gastroenterology-hepatology", title: "GI Gastroenterology hepatology" },
-      { dir: "Skin-and-Nail",                  title: "Skin & Nail" },
+      { dir: "Skin-and-Nail",                  title: "Skin & Nail" },   // <-- you already have this
       { dir: "ENT-and-Oral-health",            title: "ENT & Oral health" },
       { dir: "MSK-and-Rheumatology",           title: "MSK & Rheumatology" },
       { dir: "Pregnancy",                      title: "Pregnancy" },
@@ -74,7 +79,6 @@
       { dir: "Mens-Health",                    title: "Men's Health" }
     ];
 
-    // ---- GitHub repo details ----
     const username = "reerluuqa";
     const repoName = "Decision-Aid";
     const baseApi = `https://api.github.com/repos/${username}/${repoName}/contents/`;
@@ -82,7 +86,6 @@
     const container = document.getElementById("library");
 
     categories.forEach(cat => {
-      // Section heading
       const section = document.createElement("section");
       const heading = document.createElement("h2");
       heading.textContent = cat.title;
@@ -91,27 +94,33 @@
       const list = document.createElement("ul");
       const status = document.createElement("span");
       status.className = "status";
-      status.textContent = "Loading...";
+      status.textContent = "Loading topics…";
       list.appendChild(status);
       section.appendChild(list);
       container.appendChild(section);
 
-      // Fetch contents of that folder from GitHub
       fetch(baseApi + encodeURIComponent(cat.dir))
         .then(response => {
           if (!response.ok) {
-            // Folder probably doesn't exist yet
+            // Folder not found or API error (rate limit etc.)
             list.innerHTML = "";
             const msg = document.createElement("span");
-            msg.className = "status";
-            msg.textContent = "(no topics yet)";
+            msg.className = response.status === 404 ? "status" : "error";
+
+            if (response.status === 404) {
+              msg.textContent = "(folder not created yet)";
+            } else {
+              msg.textContent = `(error ${response.status} loading topics)`;
+            }
             list.appendChild(msg);
-            return [];
+            return null;
           }
           return response.json();
         })
         .then(files => {
-          if (!Array.isArray(files) || !files.length) {
+          if (!files) return; // handled above
+
+          if (!Array.isArray(files) || files.length === 0) {
             list.innerHTML = "";
             const msg = document.createElement("span");
             msg.className = "status";
@@ -120,41 +129,42 @@
             return;
           }
 
-          // Clear "Loading..." text
+          const htmlFiles = files.filter(file =>
+            file.type === "file" && file.name.toLowerCase().endsWith(".html")
+          );
+
           list.innerHTML = "";
 
-          // Only list .html files
-          files
-            .filter(file => file.type === "file" && file.name.toLowerCase().endsWith(".html"))
-            .forEach(file => {
-              const li = document.createElement("li");
-              const a = document.createElement("a");
-
-              // Link to the actual page in that folder
-              a.href = `${cat.dir}/${encodeURIComponent(file.name)}`;
-
-              // Make the display name nicer: strip .html, replace _ and - with spaces
-              a.textContent = file.name
-                .replace(/\.html$/i, "")
-                .replace(/_/g, " ")
-                .replace(/-/g, " ");
-
-              li.appendChild(a);
-              list.appendChild(li);
-            });
-
-          if (!list.children.length) {
+          if (htmlFiles.length === 0) {
             const msg = document.createElement("span");
             msg.className = "status";
             msg.textContent = "(no topics yet)";
             list.appendChild(msg);
+            return;
           }
+
+          htmlFiles.forEach(file => {
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+
+            // Construct link to the HTML file under the folder
+            a.href = `${cat.dir}/${encodeURIComponent(file.name)}`;
+
+            // Nicer label: strip extension, replace _ and - with spaces
+            a.textContent = file.name
+              .replace(/\.html$/i, "")
+              .replace(/_/g, " ")
+              .replace(/-/g, " ");
+
+            li.appendChild(a);
+            list.appendChild(li);
+          });
         })
         .catch(err => {
           console.error("Error loading category", cat.dir, err);
           list.innerHTML = "";
           const msg = document.createElement("span");
-          msg.className = "status";
+          msg.className = "error";
           msg.textContent = "(error loading topics)";
           list.appendChild(msg);
         });
