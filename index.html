@@ -1,80 +1,162 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>My Medical Reference Library</title>
   <style>
-    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    h1 { margin-bottom: 0.5rem; }
-    h2 { margin-top: 2rem; }
-    ul { margin-top: 0.25rem; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 900px;
+      margin: 2rem auto;
+      line-height: 1.5;
+    }
+    h1 {
+      margin-bottom: 0.25rem;
+    }
+    h2 {
+      margin-top: 2rem;
+      margin-bottom: 0.25rem;
+      font-size: 1.25rem;
+    }
+    ul {
+      margin-top: 0.25rem;
+      margin-bottom: 0.5rem;
+      padding-left: 1.25rem;
+    }
+    li {
+      margin: 0.1rem 0;
+    }
+    a {
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .meta {
+      color: #555;
+      margin-bottom: 1.5rem;
+    }
+    .status {
+      font-size: 0.85rem;
+      color: #777;
+    }
   </style>
 </head>
 <body>
   <h1>My Medical Reference Library</h1>
-  <p>General practice / primary care topics organised by system.</p>
+  <p class="meta">General practice / primary care topics organised by system.</p>
 
-  <div id="content"></div>
+  <div id="library"></div>
 
   <script>
+    // ---- configuration: your systems / folders ----
     const categories = [
-      { dir: "Endocrine-metabolic",              title: "Endocrine metabolic" },
-      { dir: "GI-gastroenterology-hepatology",   title: "GI Gastroenterology hepatology" },
-      { dir: "Skin-and-Nail",                    title: "Skin & Nail" },
-      { dir: "ENT-and-Oral-health",              title: "ENT & Oral health" },
-      { dir: "MSK-and-Rheumatology",             title: "MSK & Rheumatology" },
-      { dir: "Pregnancy",                        title: "Pregnancy" },
-      { dir: "Renal-Urology",                    title: "Renal Urology" },
-      { dir: "Haematology",                      title: "Haematology" },
-      { dir: "Allergy",                          title: "Allergy" },
-      { dir: "Palliative",                       title: "Palliative" },
-      { dir: "Geriatrics",                       title: "Geriatrics" },
-      { dir: "Neurology",                        title: "Neurology" },
-      { dir: "Cancer",                           title: "Cancer" },
-      { dir: "Eyes-ophthalmology",               title: "Eyes ophthalmology" },
-      { dir: "Infectious-disease",               title: "Infectious disease" },
-      { dir: "Paeds",                            title: "Paeds" },
-      { dir: "Mental-health",                    title: "Mental health" },
-      { dir: "Cardio-respiratory",               title: "Cardio respiratory" },
-      { dir: "General",                          title: "General" },
-      { dir: "Womens-Health",                    title: "Women's Health" },
-      { dir: "Mens-Health",                      title: "Men's Health" }
+      { dir: "Endocrine-metabolic",            title: "Endocrine metabolic" },
+      { dir: "GI-gastroenterology-hepatology", title: "GI Gastroenterology hepatology" },
+      { dir: "Skin-and-Nail",                  title: "Skin & Nail" },
+      { dir: "ENT-and-Oral-health",            title: "ENT & Oral health" },
+      { dir: "MSK-and-Rheumatology",           title: "MSK & Rheumatology" },
+      { dir: "Pregnancy",                      title: "Pregnancy" },
+      { dir: "Renal-Urology",                  title: "Renal Urology" },
+      { dir: "Haematology",                    title: "Haematology" },
+      { dir: "Allergy",                        title: "Allergy" },
+      { dir: "Palliative",                     title: "Palliative" },
+      { dir: "Geriatrics",                     title: "Geriatrics" },
+      { dir: "Neurology",                      title: "Neurology" },
+      { dir: "Cancer",                         title: "Cancer" },
+      { dir: "Eyes-ophthalmology",             title: "Eyes ophthalmology" },
+      { dir: "Infectious-disease",             title: "Infectious disease" },
+      { dir: "Paeds",                          title: "Paeds" },
+      { dir: "Mental-health",                  title: "Mental health" },
+      { dir: "Cardio-respiratory",             title: "Cardio respiratory" },
+      { dir: "General",                        title: "General" },
+      { dir: "Womens-Health",                  title: "Women's Health" },
+      { dir: "Mens-Health",                    title: "Men's Health" }
     ];
 
-    const baseApi = "https://api.github.com/repos/reerluuqa/My-Medical-pages/contents/";
+    // ---- GitHub repo details ----
+    const username = "reerluuqa";
+    const repoName = "Decision-Aid";
+    const baseApi = `https://api.github.com/repos/${username}/${repoName}/contents/`;
 
-    const content = document.getElementById("content");
+    const container = document.getElementById("library");
 
     categories.forEach(cat => {
+      // Section heading
       const section = document.createElement("section");
-      const header = document.createElement("h2");
-      header.textContent = cat.title;
-      section.appendChild(header);
+      const heading = document.createElement("h2");
+      heading.textContent = cat.title;
+      section.appendChild(heading);
 
-      const ul = document.createElement("ul");
-      section.appendChild(ul);
-      content.appendChild(section);
+      const list = document.createElement("ul");
+      const status = document.createElement("span");
+      status.className = "status";
+      status.textContent = "Loading...";
+      list.appendChild(status);
+      section.appendChild(list);
+      container.appendChild(section);
 
+      // Fetch contents of that folder from GitHub
       fetch(baseApi + encodeURIComponent(cat.dir))
-        .then(res => {
-          if (!res.ok) { return []; }  // folder might not exist yet
-          return res.json();
+        .then(response => {
+          if (!response.ok) {
+            // Folder probably doesn't exist yet
+            list.innerHTML = "";
+            const msg = document.createElement("span");
+            msg.className = "status";
+            msg.textContent = "(no topics yet)";
+            list.appendChild(msg);
+            return [];
+          }
+          return response.json();
         })
         .then(files => {
+          if (!Array.isArray(files) || !files.length) {
+            list.innerHTML = "";
+            const msg = document.createElement("span");
+            msg.className = "status";
+            msg.textContent = "(no topics yet)";
+            list.appendChild(msg);
+            return;
+          }
+
+          // Clear "Loading..." text
+          list.innerHTML = "";
+
+          // Only list .html files
           files
-            .filter(f => f.name.endsWith(".html"))
+            .filter(file => file.type === "file" && file.name.toLowerCase().endsWith(".html"))
             .forEach(file => {
               const li = document.createElement("li");
               const a = document.createElement("a");
-              a.href = `${cat.dir}/${file.name}`;
-              // remove .html and replace underscores with spaces for nicer titles
-              a.textContent = file.name.replace(".html", "").replace(/_/g, " ");
+
+              // Link to the actual page in that folder
+              a.href = `${cat.dir}/${encodeURIComponent(file.name)}`;
+
+              // Make the display name nicer: strip .html, replace _ and - with spaces
+              a.textContent = file.name
+                .replace(/\.html$/i, "")
+                .replace(/_/g, " ")
+                .replace(/-/g, " ");
+
               li.appendChild(a);
-              ul.appendChild(li);
+              list.appendChild(li);
             });
+
+          if (!list.children.length) {
+            const msg = document.createElement("span");
+            msg.className = "status";
+            msg.textContent = "(no topics yet)";
+            list.appendChild(msg);
+          }
         })
         .catch(err => {
-          console.error("Error loading", cat.dir, err);
+          console.error("Error loading category", cat.dir, err);
+          list.innerHTML = "";
+          const msg = document.createElement("span");
+          msg.className = "status";
+          msg.textContent = "(error loading topics)";
+          list.appendChild(msg);
         });
     });
   </script>
