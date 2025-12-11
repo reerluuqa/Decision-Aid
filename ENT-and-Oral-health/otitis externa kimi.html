@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Otitis Externa Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --assessment-color: #4361ee;
+            --diagnosis-color: #7209b7;
+            --treatment-color: #2a9d8f;
+            --followup-color: #f8961e;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --success: #28a745;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .progress-nav h3 {
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-nav ul {
+            list-style: none;
+        }
+
+        .progress-nav li {
+            margin-bottom: 0.75rem;
+        }
+
+        .progress-nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #6c757d;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .progress-nav a:hover {
+            background: var(--light);
+            color: var(--dark);
+            transform: translateX(4px);
+        }
+
+        .progress-nav a.active {
+            background: var(--assessment-color);
+            color: white;
+        }
+
+        .progress-nav a.active[href="#diagnosis"] {
+            background: var(--diagnosis-color);
+        }
+
+        .progress-nav a.active[href="#treatment"] {
+            background: var(--treatment-color);
+        }
+
+        .progress-nav a.active[href="#followup"] {
+            background: var(--followup-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .algorithm-header {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .algorithm-header h1 {
+            color: var(--dark);
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .algorithm-header .subtitle {
+            color: #6c757d;
+            font-size: 1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s forwards;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+        .card:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            color: white;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .assessment-card .card-header {
+            background: var(--assessment-color);
+        }
+
+        .diagnosis-card .card-header {
+            background: var(--diagnosis-color);
+        }
+
+        .treatment-card .card-header {
+            background: var(--treatment-color);
+        }
+
+        .followup-card .card-header {
+            background: var(--followup-color);
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+
+        .card-header h2 {
+            flex: 1;
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            transition: var(--transition);
+            font-size: 1.2rem;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        /* Content Styling */
+        .subsection {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .subsection:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .subsection h3 {
+            color: var(--dark);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection h3 i {
+            color: var(--assessment-color);
+        }
+
+        .diagnosis-card .subsection h3 i {
+            color: var(--diagnosis-color);
+        }
+
+        .treatment-card .subsection h3 i {
+            color: var(--treatment-color);
+        }
+
+        .followup-card .subsection h3 i {
+            color: var(--followup-color);
+        }
+
+        ul.checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul.checklist li {
+            padding: 0.5rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        ul.checklist li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .badge-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: var(--dark);
+        }
+
+        .badge-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .condition-box {
+            background: var(--light);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--assessment-color);
+        }
+
+        .diagnosis-card .condition-box {
+            border-left-color: var(--diagnosis-color);
+        }
+
+        .treatment-card .condition-box {
+            border-left-color: var(--treatment-color);
+        }
+
+        .condition-box h4 {
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .condition-box p {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .medication-list {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .medication-list ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .medication-list li {
+            padding: 0.25rem 0;
+            font-size: 0.9rem;
+        }
+
+        .medication-list li strong {
+            color: var(--dark);
+        }
+
+        .referral-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .referral-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .referral-box li {
+            padding: 0.25rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .referral-box li::before {
+            content: '!';
+            position: absolute;
+            left: 0;
+            color: var(--warning);
+            font-weight: bold;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+            }
+            
+            .sidebar {
+                position: static;
+                margin-bottom: 2rem;
+            }
+            
+            .progress-nav ul {
+                display: flex;
+                gap: 0.5rem;
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+            }
+            
+            .progress-nav li {
+                flex: 0 0 auto;
+                margin-bottom: 0;
+            }
+            
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .algorithm-header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .card-header h2 {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Progress -->
+        <aside class="sidebar">
+            <div class="progress-nav">
+                <h3><i class="fas fa-route"></i> Algorithm Progress</h3>
+                <ul>
+                    <li><a href="#assessment" class="active"><i class="fas fa-clipboard-check"></i> Assessment</a></li>
+                    <li><a href="#diagnosis"><i class="fas fa-stethoscope"></i> Diagnosis</a></li>
+                    <li><a href="#treatment"><i class="fas fa-pills"></i> Treatment</a></li>
+                    <li><a href="#followup"><i class="fas fa-calendar-check"></i> Follow-up</a></li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="algorithm-header">
+                <h1><i class="fas fa-ear"></i> Otitis Externa Management Algorithm</h1>
+                <p class="subtitle">Based on NICE CKS Guidelines • Last Revised August 2025</p>
+            </header>
+
+            <!-- Assessment Card -->
+            <section id="assessment" class="card assessment-card">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-clipboard-check card-icon"></i>
+                        <h2>Assessment</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><i class="fas fa-question-circle"></i> Key History Questions</h3>
+                            <ul class="checklist">
+                                <li>Onset, nature, and severity of symptoms (pain, itch, discharge)</li>
+                                <li>Tenderness on moving ear (tragus/pinna) or jaw</li>
+                                <li>Impact on daily functioning</li>
+                                <li>Risk factors: recent trauma, water exposure, hearing aids, skin conditions</li>
+                                <li>Diabetes mellitus or immunocompromise</li>
+                                <li>Previous episodes and treatments</li>
+                                <li>History of ear surgery or perforated tympanic membrane</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-search"></i> Examination Findings</h3>
+                            <ul class="checklist">
+                                <li>Inspect ear canal, pinna, and regional lymph nodes</li>
+                                <li>Look for: redness, edema, discharge, debris, fungal signs</li>
+                                <li>Assess tragus/pinna tenderness</li>
+                                <li>Check for tympanic membrane perforation</li>
+                                <li>Evaluate surrounding skin for dermatitis</li>
+                            </ul>
+                            <span class="badge badge-warning"><i class="fas fa-exclamation-triangle"></i> Exercise caution if TM not visualized</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-vial"></i> Investigations</h3>
+                            <p>Consider ear swab for MC&S if:</p>
+                            <ul class="checklist">
+                                <li>Treatment failure</li>
+                                <li>Severe, recurrent, or chronic infection</li>
+                                <li>Ear canal occlusion preventing treatment</li>
+                                <li>Suspected spread beyond ear canal</li>
+                            </ul>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> Routine for uncomplicated cases not required</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Card -->
+            <section id="diagnosis" class="card diagnosis-card">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-stethoscope card-icon"></i>
+                        <h2>Diagnosis</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="two-column">
+                            <div class="condition-box">
+                                <h4>Acute Otitis Externa <span class="badge badge-success">Common</span></h4>
+                                <p><strong>Symptoms:</strong> Rapid onset (&lt;48h), itch, pain, possible discharge</p>
+                                <p><strong>Signs:</strong> Tragus/pinna tenderness + red, edematous canal (≥2 signs)</p>
+                                <p><strong>Duration:</strong> ≤3 weeks</p>
+                            </div>
+
+                            <div class="condition-box">
+                                <h4>Chronic Otitis Externa</h4>
+                                <p><strong>Symptoms:</strong> Persistent itch, mild discomfort</p>
+                                <p><strong>Signs:</strong> Dry scaly or red moist skin, canal stenosis, lack of wax</p>
+                                <p><strong>Duration:</strong> &gt;3 months</p>
+                            </div>
+                        </div>
+
+                        <div class="subsection" style="margin-top: 2rem;">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Red Flag: Malignant Otitis Externa <span class="badge badge-danger">URGENT</span></h3>
+                            <div class="referral-box">
+                                <p><strong>High-risk patients:</strong> Diabetes, immunocompromised, elderly</p>
+                                <ul>
+                                    <li>Unremitting severe pain out of proportion</li>
+                                    <li>Purulent otorrhea with systemic illness</li>
+                                    <li>Granulation tissue in ear canal</li>
+                                    <li>Facial nerve palsy</li>
+                                    <li>Exposed bone in canal</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-balance-scale"></i> Differential Diagnosis</h3>
+                            <ul>
+                                <li><strong>Acute otitis media</strong> - TM perforation with discharge</li>
+                                <li><strong>Foreign body</strong> - Especially in children</li>
+                                <li><strong>Impacted earwax</strong> - Pain and hearing loss</li>
+                                <li><strong>Skin conditions</strong> - Dermatitis, eczema, psoriasis</li>
+                                <li><strong>Referred pain</strong> - Dental, sinus, throat</li>
+                                <li><strong>Cholesteatoma</strong> - Painless persistent discharge</li>
+                                <li><strong>Ramsay Hunt syndrome</strong> - Herpes zoster with vesicles</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Card -->
+            <section id="treatment" class="card treatment-card">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-pills card-icon"></i>
+                        <h2>Treatment</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><i class="fas fa-user-md"></i> Initial Management</h3>
+                            
+                            <h4 style="margin-top: 1rem;">1. Self-Care Measures</h4>
+                            <ul class="checklist">
+                                <li>Avoid ear trauma (no cotton buds)</li>
+                                <li>Keep ear clean and dry for 7-10 days</li>
+                                <li>Use ear plugs when bathing/swimming</li>
+                                <li>Consider OTC acetic acid 2% drops (age 12+) for 7 days max</li>
+                                <li>Use hair dryer on low setting to dry canal</li>
+                            </ul>
+
+                            <h4 style="margin-top: 1rem;">2. Analgesia</h4>
+                            <p>Paracetamol or ibuprofen as needed for pain relief</p>
+
+                            <h4 style="margin-top: 1rem;">3. Aural Toilet <span class="badge badge-warning"><i class="fas fa-info-circle"></i> Enable effective treatment</span></h4>
+                            <ul class="checklist">
+                                <li>Dry swabbing of secretions</li>
+                                <li>Ear irrigation if TM intact and not immunocompromised</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-syringe"></i> Topical Treatment</h3>
+                            <p>Prescribe topical antibiotic ± corticosteroid for 7-14 days</p>
+                            
+                            <div class="medication-list">
+                                <h4>Available Preparations:</h4>
+                                <ul>
+                                    <li><strong>Astringent/Acidic:</strong> Acetic acid 2% spray (EarCalm®)</li>
+                                    <li><strong>Antibiotic:</strong> Ciprofloxacin drops, Gentamicin 0.3% drops</li>
+                                    <li><strong>Combined:</strong> Ciprofloxacin + dexamethasone, Betnesol-N® (neomycin + betamethasone)</li>
+                                    <li><strong>Antifungal:</strong> Clotrimazole 1% for fungal infection</li>
+                                    <li><strong>Steroid only:</strong> Prednisolone or betamethasone drops for inflammation</li>
+                                </ul>
+                            </div>
+
+                            <p style="margin-top: 1rem;"><strong>Administration:</strong> Fill ear canal, lie on side for 3-5 minutes, cotton plug optional</p>
+                            
+                            <span class="badge badge-danger"><i class="fas fa-ban"></i> Aminoglycosides contraindicated if perforated TM</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-tablets"></i> Oral Antibiotics</h3>
+                            <p>Consider if:</p>
+                            <ul class="checklist">
+                                <li>Patient is immunocompromised</li>
+                                <li>Severe infection</li>
+                                <li>Spread beyond external ear canal (cellulitis)</li>
+                            </ul>
+                            <span class="badge badge-warning"><i class="fas fa-user-nurse"></i> See Cellulitis CKS for guidance</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-frog"></i> Fungal Infection (Chronic)</h3>
+                            <ul class="checklist">
+                                <li>Topical antifungal: Clotrimazole 1% 2-3 times daily</li>
+                                <li>Continue for at least 14 days after resolution</li>
+                                <li>Alternative: Clioquinol + corticosteroid</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Card -->
+            <section id="followup" class="card followup-card">
+                <div class="card-header">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-calendar-check card-icon"></i>
+                        <h2>Follow-up & Referral</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><i class="fas fa-clock"></i> When to Reassess</h3>
+                            <ul class="checklist">
+                                <li>No improvement within 48-72 hours of treatment</li>
+                                <li>Symptoms not resolved after 2 weeks</li>
+                                <li>Severe symptoms or spreading cellulitis</li>
+                                <li>Immunocompromised patients</li>
+                                <li>Canal stenosis preventing TM visualization</li>
+                            </ul>
+                            <span class="badge badge-success"><i class="fas fa-check"></i> 65-90% resolve within 7-10 days</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-ambulance"></i> Urgent Referral Criteria <span class="badge badge-danger">EMERGENCY</span></h3>
+                            <div class="referral-box">
+                                <p><strong>Immediate ENT referral/admission if:</strong></p>
+                                <ul>
+                                    <li>Suspected malignant otitis externa</li>
+                                    <li>Severe infection not responding to primary care management</li>
+                                    <li>Facial nerve palsy or other complications</li>
+                                    <li>Systemically unwell patient</li>
+                                    <li>Osteomyelitis suspected</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-user-md"></i> Specialist Referral (Non-Urgent)</h3>
+                            <p>Refer to ENT if:</p>
+                            <ul class="checklist">
+                                <li>Persistent symptoms despite optimal management</li>
+                                <li>Elderly/diabetic/immunocompromised with concerning features</li>
+                                <li>Canal occlusion preventing topical treatment (needs microsuction/wick)</li>
+                                <li>Cellulitis extending beyond canal</li>
+                                <li>Requires topical treatment >2-3 months</li>
+                            </ul>
+                            
+                            <p style="margin-top: 1rem;">Refer to Dermatology if:</p>
+                            <ul class="checklist">
+                                <li>Suspected contact sensitivity to neomycin/aminoglycosides</li>
+                                <li>Persistent dermatitis reaction</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-exclamation-circle"></i> Complications to Monitor</h3>
+                            <div class="two-column">
+                                <div class="condition-box">
+                                    <h4>Local Complications</h4>
+                                    <ul>
+                                        <li>Chronic otitis externa</li>
+                                        <li>Canal stenosis/fibrosis</li>
+                                        <li>Perichondritis/chondritis</li>
+                                        <li>TM perforation</li>
+                                    </ul>
+                                </div>
+                                <div class="condition-box">
+                                    <h4>Serious Complications</h4>
+                                    <ul>
+                                        <li>Malignant otitis externa</li>
+                                        <li>Osteomyelitis</li>
+                                        <li>Facial nerve palsy</li>
+                                        <li>Meningitis/brain abscess</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Card expand/collapse functionality
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.parentElement;
+                card.classList.toggle('expanded');
+            });
+        });
+
+        // Auto-expand first card on load
+        document.querySelector('#assessment').classList.add('expanded');
+
+        // Sidebar navigation with smooth scroll
+        const navLinks = document.querySelectorAll('.progress-nav a');
+        const cards = document.querySelectorAll('.card');
+
+        function updateActiveNav() {
+            const scrollPosition = window.scrollY + 100;
+
+            cards.forEach((card, index) => {
+                const cardTop = card.offsetTop;
+                const cardHeight = card.offsetHeight;
+                const cardId = card.getAttribute('id');
+
+                if (scrollPosition >= cardTop && scrollPosition < cardTop + cardHeight) {
+                    navLinks.forEach(link => link.classList.remove('active'));
+                    const activeLink = document.querySelector(`a[href="#${cardId}"]`);
+                    if (activeLink) activeLink.classList.add('active');
+                }
+            });
+        }
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href');
+                const targetCard = document.querySelector(targetId);
+                
+                targetCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Expand target card
+                setTimeout(() => {
+                    targetCard.classList.add('expanded');
+                }, 300);
+            });
+        });
+
+        // Update active nav on scroll
+        window.addEventListener('scroll', updateActiveNav);
+        
+        // Initial call
+        updateActiveNav();
+
+        // Add badge click animations
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html>
