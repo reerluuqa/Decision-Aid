@@ -1,0 +1,494 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nausea & Vomiting in Pregnancy - Interactive Algorithm</title>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #005eb8; /* NHS Blue */
+            --secondary: #4c6272;
+            --bg-color: #f0f4f5;
+            --card-bg: #ffffff;
+            --text-color: #212b32;
+            
+            /* Status Colors */
+            --urgent: #d32f2f;
+            --caution: #ff9800;
+            --stable: #2e7d32;
+            
+            /* Section Colors */
+            --sect-assess: #1976d2;
+            --sect-diag: #7b1fa2;
+            --sect-treat: #00796b;
+            --sect-follow: #e65100;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        
+        body { background-color: var(--bg-color); color: var(--text-color); line-height: 1.6; }
+
+        /* Layout */
+        .container { display: flex; max-width: 1200px; margin: 0 auto; padding: 20px; gap: 30px; }
+        
+        /* Sticky Sidebar */
+        .sidebar {
+            width: 250px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar h3 { margin-bottom: 15px; color: var(--primary); font-size: 1.1rem; }
+        
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            color: #666;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        
+        .progress-step:hover { background-color: #f0f0f0; }
+        .progress-step.active { background-color: var(--primary); color: white; font-weight: bold; }
+        .progress-step i { margin-right: 10px; width: 20px; text-align: center; }
+
+        /* Main Content */
+        .main-content { flex: 1; }
+        
+        header { margin-bottom: 30px; }
+        header h1 { color: var(--primary); margin-bottom: 5px; }
+        .last-revised { font-size: 0.85rem; color: #666; font-style: italic; }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            overflow: hidden;
+            border-left: 6px solid #ccc;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+
+        .card-header {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, rgba(255,255,255,0.9), rgba(255,255,255,0));
+        }
+
+        .card-header h2 { font-size: 1.3rem; display: flex; align-items: center; gap: 10px; }
+        
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, padding 0.3s ease;
+            padding: 0 20px;
+        }
+        
+        .card.expanded .card-content {
+            max-height: 2000px; /* Arbitrary large number for transition */
+            padding: 0 20px 20px 20px;
+            border-top: 1px solid #eee;
+        }
+
+        /* Specific Card Styles */
+        .card.assess { border-left-color: var(--sect-assess); }
+        .card.assess .card-header h2 { color: var(--sect-assess); }
+        
+        .card.diag { border-left-color: var(--sect-diag); }
+        .card.diag .card-header h2 { color: var(--sect-diag); }
+        
+        .card.manage { border-left-color: var(--sect-treat); }
+        .card.manage .card-header h2 { color: var(--sect-treat); }
+        
+        .card.refer { border-left-color: var(--urgent); }
+        .card.refer .card-header h2 { color: var(--urgent); }
+
+        .card.follow { border-left-color: var(--sect-follow); }
+        .card.follow .card-header h2 { color: var(--sect-follow); }
+
+        /* Inner Content Styling */
+        .puqe-calculator {
+            background: #eef5fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #d0e1f5;
+        }
+        
+        .form-group { margin-bottom: 10px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9rem; }
+        .form-group select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        
+        .result-box { margin-top: 15px; font-weight: bold; }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .badge.green { background-color: var(--stable); }
+        .badge.amber { background-color: var(--caution); }
+        .badge.red { background-color: var(--urgent); }
+
+        .alert-box {
+            padding: 15px;
+            border-left: 4px solid;
+            margin: 10px 0;
+            background-color: #fafafa;
+        }
+        .alert-red { border-color: var(--urgent); background: #ffebee; }
+        .alert-amber { border-color: var(--caution); background: #fff3e0; }
+
+        ul { margin-left: 20px; margin-bottom: 10px; }
+        li { margin-bottom: 5px; }
+
+        /* Interactive Chevron */
+        .chevron { transition: transform 0.3s; }
+        .card.expanded .chevron { transform: rotate(180deg); }
+
+        /* Drug Treatment Steps */
+        .drug-step {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .drug-step h4 { margin-bottom: 10px; color: #333; }
+        
+        .drug-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .drug-item {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container { flex-direction: column; padding: 10px; }
+            .sidebar { 
+                position: relative; 
+                width: 100%; 
+                top: 0; 
+                flex-direction: row; 
+                overflow-x: auto;
+                padding: 10px;
+                gap: 10px;
+            }
+            .sidebar h3 { display: none; }
+            .progress-step { white-space: nowrap; margin-bottom: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Sidebar / Progress Tracker -->
+    <aside class="sidebar">
+        <h3>Algorithm Progress</h3>
+        <a href="#assessment" class="progress-step active" id="link-assessment">
+            <i class="fas fa-clipboard-list"></i> Assessment
+        </a>
+        <a href="#diagnosis" class="progress-step" id="link-diagnosis">
+            <i class="fas fa-stethoscope"></i> Diagnosis
+        </a>
+        <a href="#management" class="progress-step" id="link-management">
+            <i class="fas fa-pills"></i> Management
+        </a>
+        <a href="#referral" class="progress-step" id="link-referral">
+            <i class="fas fa-hospital-user"></i> Admission/Referral
+        </a>
+        <a href="#followup" class="progress-step" id="link-followup">
+            <i class="fas fa-user-clock"></i> Follow-up
+        </a>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <header>
+            <h1>Nausea & Vomiting in Pregnancy</h1>
+            <p class="last-revised">Based on NICE/CKS Guidelines (Revised Nov 2025)</p>
+        </header>
+
+        <!-- ASSESSMENT CARD -->
+        <section id="assessment" class="card assess expanded">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2><i class="fas fa-clipboard-check"></i> Assessment</h2>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="card-content">
+                <p><strong>Initial History:</strong> Onset (typically 4-7 weeks), frequency, severity, hydration status, and impact on daily life.</p>
+                
+                <div class="alert-box alert-amber">
+                    <strong>Note:</strong> Ketonuria is <em>not</em> a reliable indicator of severity but should be checked to exclude DKA or starvation ketosis if indicated.
+                </div>
+
+                <div class="puqe-calculator">
+                    <h3><i class="fas fa-calculator"></i> Quick Severity Assessment (PUQE/HELP)</h3>
+                    <p style="font-size: 0.9em; margin-bottom:10px;">Estimate based on last 24 hours:</p>
+                    
+                    <div class="form-group">
+                        <label>Hours of nausea?</label>
+                        <select id="puqe-nausea">
+                            <option value="1">&lt; 1 hour</option>
+                            <option value="2">2-3 hours</option>
+                            <option value="3">4-6 hours</option>
+                            <option value="4">6+ hours</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Vomiting episodes?</label>
+                        <select id="puqe-vomit">
+                            <option value="1">0 times</option>
+                            <option value="2">1-2 times</option>
+                            <option value="3">3-4 times</option>
+                            <option value="4">5+ times</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Retching episodes?</label>
+                        <select id="puqe-retch">
+                            <option value="1">0 times</option>
+                            <option value="2">1-2 times</option>
+                            <option value="3">3-4 times</option>
+                            <option value="4">5+ times</option>
+                        </select>
+                    </div>
+                    
+                    <button onclick="calculateSeverity()" style="background:var(--primary); color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">Calculate Score</button>
+                    
+                    <div id="severity-result" class="result-box"></div>
+                </div>
+
+                <h4>Examination Checklist:</h4>
+                <ul>
+                    <li>Weight (Check for >5% loss)</li>
+                    <li>Signs of dehydration (Mucous membranes, tachycardia, postural hypotension)</li>
+                    <li>Abdominal exam (Exclude other causes)</li>
+                    <li>Neurological signs (Exclude Wernicke’s - confusion, ataxia)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- DIAGNOSIS CARD -->
+        <section id="diagnosis" class="card diag">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2><i class="fas fa-user-md"></i> Diagnosis & Differentials</h2>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="card-content">
+                <p><strong>Definition:</strong> Onset in first trimester (4-7 weeks, peak 9-16 weeks), resolving by 20 weeks. Other causes excluded.</p>
+                
+                <div class="alert-box alert-red">
+                    <strong>Red Flags (Alternative Causes):</strong>
+                    <ul style="margin-top:5px;">
+                        <li>Onset after 11 weeks gestation</li>
+                        <li>Abdominal pain, fever, or headache</li>
+                        <li>Neurological symptoms</li>
+                        <li>Abnormal leukocyte count or CRP</li>
+                    </ul>
+                </div>
+
+                <h4>Consider Differentials:</h4>
+                <ul class="drug-grid">
+                    <li class="drug-item"><strong>UTI / Pyelonephritis</strong> (Check MSU)</li>
+                    <li class="drug-item"><strong>Gastritis / Peptic Ulcer</strong></li>
+                    <li class="drug-item"><strong>Appendicitis</strong></li>
+                    <li class="drug-item"><strong>Thyrotoxicosis</strong></li>
+                    <li class="drug-item"><strong>Molar Pregnancy</strong></li>
+                    <li class="drug-item"><strong>Diabetic Ketoacidosis</strong></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- MANAGEMENT CARD -->
+        <section id="management" class="card manage">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2><i class="fas fa-prescription-bottle-alt"></i> Management Steps</h2>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="card-content">
+                <div class="drug-step" style="border-left: 4px solid var(--stable);">
+                    <h4>Step 1: Advice & Self-Care <span class="badge green">Mild</span></h4>
+                    <ul>
+                        <li>Reassurance: usually resolves by 16-20 weeks.</li>
+                        <li><strong>Diet:</strong> Small, frequent meals (high carb, low fat, protein-rich). Eat plain biscuits/crackers before getting up.</li>
+                        <li><strong>Hydration:</strong> Drink little and often.</li>
+                        <li><strong>Acupressure:</strong> P6 (wrist) pressure.</li>
+                        <li><em>Note: Ginger is no longer explicitly recommended (2025 update).</em></li>
+                        <li>Stop iron-containing multivitamins if they trigger nausea.</li>
+                    </ul>
+                </div>
+
+                <div class="drug-step" style="border-left: 4px solid var(--caution);">
+                    <h4>Step 2: First-Line Pharmacotherapy <span class="badge amber">Moderate</span></h4>
+                    <p>If self-care fails. Reassess after 24-72 hours.</p>
+                    <div class="drug-grid">
+                        <div class="drug-item"><strong>Cyclizine</strong><br>50mg PO TDS</div>
+                        <div class="drug-item"><strong>Promethazine</strong><br>12.5-25mg PO 4-8 hourly</div>
+                        <div class="drug-item"><strong>Prochlorperazine</strong><br>5-10mg PO/Buccal 6-8 hourly</div>
+                        <div class="drug-item"><strong>Chlorpromazine</strong><br>10-25mg PO 4-6 hourly</div>
+                        <div class="drug-item"><strong>Doxylamine/Pyridoxine (Xonvea)</strong><br>Licensed combination product.</div>
+                    </div>
+                </div>
+
+                <div class="drug-step" style="border-left: 4px solid var(--caution);">
+                    <h4>Step 3: Second-Line Pharmacotherapy</h4>
+                    <p>Add to or switch if 1st line fails. <strong>Caution required.</strong></p>
+                    <div class="drug-grid">
+                        <div class="drug-item">
+                            <strong>Metoclopramide</strong><br>Max 5 days (Extrapyramidal risk).
+                        </div>
+                        <div class="drug-item">
+                            <strong>Domperidone</strong><br>Max 7 days (Cardiac risk).
+                        </div>
+                        <div class="drug-item">
+                            <strong>Ondansetron</strong><br>Small increased risk of cleft lip/palate in 1st trimester. Max 5 days usually.
+                        </div>
+                    </div>
+                    <p style="font-size:0.85rem; margin-top:10px; color:#555;">*Experience in secondary care allows longer usage (>20 weeks) for Hyperemesis Gravidarum.</p>
+                </div>
+
+                <div class="drug-step" style="border-left: 4px solid var(--urgent);">
+                    <h4>Step 4: Third-Line / Refractory <span class="badge red">Severe</span></h4>
+                    <p><strong>Corticosteroids:</strong> Oral Prednisolone (40-50mg daily), tapered to lowest effective dose.</p>
+                    <ul>
+                        <li>Use only if other treatments fail.</li>
+                        <li>Requires monitoring of BP and Glucose.</li>
+                        <li>Seek specialist advice if ineffective.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- REFERRAL CARD -->
+        <section id="referral" class="card refer">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2><i class="fas fa-ambulance"></i> Admission & Referral Criteria</h2>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="card-content">
+                <div class="alert-box alert-red">
+                    <strong>Arrange Urgent Admission/Referral if:</strong>
+                    <ul>
+                        <li>Suspected Hyperemesis Gravidarum despite oral antiemetics.</li>
+                        <li>Ketonuria with dehydration/weight loss.</li>
+                        <li>Weight loss > 5% body weight.</li>
+                        <li>Inability to tolerate oral fluids or meds.</li>
+                        <li>Co-morbidity requiring oral meds (e.g., Diabetes, UTI antibiotics) that cannot be tolerated.</li>
+                        <li>PUQE Score ≥ 13.</li>
+                        <li>Significant mental health concern.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- FOLLOW UP CARD -->
+        <section id="followup" class="card follow">
+            <div class="card-header" onclick="toggleCard(this)">
+                <h2><i class="fas fa-calendar-check"></i> Follow-up & Weaning</h2>
+                <i class="fas fa-chevron-down chevron"></i>
+            </div>
+            <div class="card-content">
+                <ul>
+                    <li><strong>Review:</strong> Reassess 24-72 hours after starting meds. Once stable, review weekly.</li>
+                    <li><strong>Weaning:</strong> Consider reducing/stopping meds around 12-16 weeks.</li>
+                    <li><strong>Method:</strong> Taper dose gradually to prevent symptom recurrence.</li>
+                    <li><strong>Warning:</strong> Stopping too early can cause relapse requiring admission.</li>
+                    <li><strong>Adjuncts:</strong> Consider Thiamine if severe intake reduction. Consider PPI/H2RA if reflux present.</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    // Toggle Card Expansion
+    function toggleCard(header) {
+        const card = header.parentElement;
+        card.classList.toggle('expanded');
+    }
+
+    // Interactive PUQE Logic (Simplified for Demo)
+    function calculateSeverity() {
+        const n = parseInt(document.getElementById('puqe-nausea').value);
+        const v = parseInt(document.getElementById('puqe-vomit').value);
+        const r = parseInt(document.getElementById('puqe-retch').value);
+        
+        // Simple mapping based on inputs 1-4 to raw score approx logic
+        // Real PUQE-24 uses scores 1-5 per question. This is a simplified interactive representation.
+        const score = n + v + r + 3; // Offset to mimic scale
+        
+        const resultBox = document.getElementById('severity-result');
+        let html = '';
+
+        if(score <= 6) {
+            html = '<span style="color:var(--stable)">Mild NVP</span> (Score ~' + score + '). <span class="badge green">Manage in Primary Care</span>';
+        } else if (score <= 12) {
+            html = '<span style="color:var(--caution)">Moderate NVP</span> (Score ~' + score + '). <span class="badge amber">Start Antiemetics</span>';
+        } else {
+            html = '<span style="color:var(--urgent)">Severe / HG</span> (Score ~' + score + '). <span class="badge red">Consider Admission</span>';
+        }
+        
+        resultBox.innerHTML = html;
+    }
+
+    // Scroll Spy for Sidebar
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('.sidebar a');
+
+    window.onscroll = () => {
+        let current = '';
+        
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            const sectionHeight = section.clientHeight;
+            if (pageYOffset >= (sectionTop - 150)) {
+                current = section.getAttribute('id');
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').includes(current)) {
+                link.classList.add('active');
+            }
+        });
+    };
+</script>
+
+</body>
+</html>

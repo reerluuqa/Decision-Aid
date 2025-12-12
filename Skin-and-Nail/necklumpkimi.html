@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICE Neck Lump Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #005eb8;
+            --success: #007f3b;
+            --warning: #ff8c00;
+            --danger: #d5281b;
+            --info: #00a9ce;
+            --dark: #425563;
+            --light: #e8edee;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e6eef7 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Sidebar Progress */
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            width: 280px;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: var(--transition);
+        }
+
+        .progress-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            opacity: 0.6;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: var(--light);
+            border-left: 4px solid var(--primary);
+        }
+
+        .progress-item.completed {
+            opacity: 0.9;
+            background: #e8f5e9;
+            border-left: 4px solid var(--success);
+        }
+
+        .progress-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .progress-item.active .progress-icon {
+            background: var(--primary);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .progress-item.completed .progress-icon {
+            background: var(--success);
+            color: white;
+        }
+
+        .progress-text {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .header p {
+            color: var(--dark);
+            font-size: 1.1rem;
+        }
+
+        .last-updated {
+            background: var(--light);
+            padding: 0.75rem 1.5rem;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: var(--transition);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s forwards;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .card-header::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .card.expanded .card-header::after {
+            transform: rotate(180deg);
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            transition: var(--transition);
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1);
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.4rem;
+            color: var(--dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .card-title p {
+            color: var(--dark);
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        /* Card Colors */
+        .card-assessment .card-header { background: linear-gradient(135deg, var(--info) 0%, #008fa8 100%); }
+        .card-assessment .card-icon { background: var(--info); }
+
+        .card-diagnosis .card-header { background: linear-gradient(135deg, var(--warning) 0%, #ff7b00 100%); }
+        .card-diagnosis .card-icon { background: var(--warning); }
+
+        .card-management .card-header { background: linear-gradient(135deg, var(--danger) 0%, #c01f13 100%); }
+        .card-management .card-icon { background: var(--danger); }
+
+        .card-followup .card-header { background: linear-gradient(135deg, var(--success) 0%, #006e2b 100%); }
+        .card-followup .card-icon { background: var(--success); }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            transition: var(--transition);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .badge-danger {
+            background: linear-gradient(135deg, #ff5252 0%, var(--danger) 100%);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, #ffb142 0%, var(--warning) 100%);
+            color: white;
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, #2ed573 0%, var(--success) 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #3742fa 0%, var(--primary) 100%);
+            color: white;
+        }
+
+        /* Highlight Boxes */
+        .highlight-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 4px solid var(--warning);
+            padding: 1.25rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .highlight-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--warning);
+        }
+
+        .highlight-box h4 {
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .highlight-box .icon {
+            color: var(--warning);
+        }
+
+        /* Content Sections */
+        .subsection {
+            margin-bottom: 1.5rem;
+            padding: 1.25rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+
+        .subsection h3 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .subsection li {
+            padding: 0.5rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .subsection li::before {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            width: 24px;
+            height: 24px;
+            background: #e8f5e9;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            margin-top: 2px;
+        }
+
+        /* Decision Tree */
+        .decision-node {
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .decision-node:hover {
+            border-color: var(--info);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .decision-node h4 {
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .decision-branch {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .branch-option {
+            flex: 1;
+            min-width: 200px;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .branch-option:hover {
+            transform: scale(1.03);
+        }
+
+        .branch-yes {
+            background: linear-gradient(135deg, #2ed573 0%, var(--success) 100%);
+            color: white;
+        }
+
+        .branch-no {
+            background: linear-gradient(135deg, #ff6b6b 0%, var(--danger) 100%);
+            color: white;
+        }
+
+        .branch-maybe {
+            background: linear-gradient(135deg, #ffb142 0%, var(--warning) 100%);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+
+            .progress-item {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .decision-branch {
+                flex-direction: column;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .card-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .card-icon {
+                margin-bottom: 0.5rem;
+            }
+
+            .card-header::after {
+                display: none;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--light);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--dark);
+        }
+
+        /* Print */
+        @media print {
+            .progress-sidebar, .card-header::after {
+                display: none;
+            }
+            
+            .card-body {
+                max-height: none !important;
+            }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <div class="progress-title">
+                <i class="fas fa-route"></i>
+                Algorithm Progress
+            </div>
+            
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="progress-text">Assessment</div>
+            </div>
+            
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="progress-text">Diagnosis</div>
+            </div>
+            
+            <div class="progress-item" data-step="management">
+                <div class="progress-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <div class="progress-text">Management</div>
+            </div>
+            
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="progress-text">Follow-up</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>
+                    <i class="fas fa-head-side-cough"></i>
+                    Neck Lump Management Algorithm
+                </h1>
+                <p>Primary Care Decision Support Tool - Based on NICE CKS Guidelines</p>
+                <div class="last-updated">
+                    <i class="fas fa-clock"></i>
+                    Last Revised: May 2025
+                </div>
+            </header>
+
+            <!-- Assessment Card -->
+            <div class="card card-assessment" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>Step 1: Clinical Assessment</h2>
+                        <p>Comprehensive history and examination of neck lump</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><i class="fas fa-question-circle"></i> Key History Points</h3>
+                            <ul>
+                                <li><strong>Onset & Duration:</strong> When did it first appear? Rapid vs gradual growth?</li>
+                                <li><strong>Size & Change:</strong> >3cm or increasing size raises suspicion</li>
+                                <li><strong>Red Flag Symptoms:</strong> Dysphagia, voice change, weight loss, night sweats</li>
+                                <li><strong>Risk Factors:</strong> Age >40, smoking, alcohol, previous cancer, immunosuppression</li>
+                                <li><strong>Associated Symptoms:</strong> Fever, dental pain, URTI, trauma, recent travel</li>
+                                <li><strong>Consistency:</strong> Painful/tender (infection) vs painless (malignancy)</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-hand-pointer"></i> Examination Checklist</h3>
+                            <ul>
+                                <li><strong>Location:</strong> Anterior triangle, posterior triangle, midline</li>
+                                <li><strong>Movement:</strong> Moves with swallowing? (thyroid) Moves with tongue protrusion? (thyroglossal)</li>
+                                <li><strong>Characteristics:</strong> Hard/irregular/fixed = malignancy suspicion</li>
+                                <li><strong>Overlying Skin:</strong> Ulceration, erythema, pulsatility</li>
+                                <li><strong>Regional Exam:</strong> Ears, nose, throat, oral cavity, scalp</li>
+                                <li><strong>Systemic:</strong> Other lymph nodes, hepatosplenomegaly</li>
+                            </ul>
+                        </div>
+
+                        <div class="highlight-box">
+                            <h4><i class="fas fa-exclamation-triangle icon"></i>Critical Red Flags</h4>
+                            <div class="decision-branch">
+                                <div class="branch-option branch-yes">
+                                    <strong>Airway Compromise</strong><br>
+                                    Stridor, dysphagia with aspiration, SVC obstruction
+                                    <br><span class="badge badge-danger">EMERGENCY ADMISSION</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-user-clock"></i> Age-Specific Considerations</h3>
+                            <ul>
+                                <li><strong>Children (<16y):</strong> 90% benign (reactive lymphadenopathy most common)</li>
+                                <li><strong>Young Adults (16-40y):</strong> Inflammatory > congenital > malignant</li>
+                                <li><strong>Adults (>40y):</strong> Malignancy risk significantly increases</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card card-diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>Step 2: Differential Diagnosis</h2>
+                        <p>Categorize the neck lump based on clinical features</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="decision-node">
+                            <h4><i class="fas fa-project-diagram"></i> Diagnostic Pathway</h4>
+                            <p>Based on location and characteristics:</p>
+                            <div class="decision-branch">
+                                <div class="branch-option branch-yes" onclick="showManagement('lymphadenopathy')">
+                                    <i class="fas fa-sitemap"></i><br>
+                                    <strong>Lymphadenopathy</strong><br>
+                                    Mobile, tender nodes, recent infection
+                                </div>
+                                <div class="branch-option branch-maybe" onclick="showManagement('thyroid')">
+                                    <i class="fas fa-balance-scale"></i><br>
+                                    <strong>Thyroid Lump</strong><br>
+                                    Moves with swallowing, midline
+                                </div>
+                                <div class="branch-option branch-no" onclick="showManagement('salivary')">
+                                    <i class="fas fa-tint"></i><br>
+                                    <strong>Salivary Gland</strong><br>
+                                    Worse with meals, submandibular/parotid
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-chart-line"></i> Malignancy Risk Stratification</h3>
+                            <ul>
+                                <li><strong>Low Risk:</strong> <40 years, <3cm, mobile, tender, recent infection</li>
+                                <li><strong>Intermediate:</strong> 40-60 years, 2-3cm, persistent >6 weeks</li>
+                                <li><strong>High Risk:</strong> >60 years, >3cm, hard/fixed, rapid growth, systemic symptoms</li>
+                            </ul>
+                        </div>
+
+                        <div class="highlight-box">
+                            <h4><i class="fas fa-calculator icon"></i>Key Decision Thresholds</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: var(--warning);">>6 weeks</div>
+                                    <div>Persistence threshold for concern</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: var(--danger);">>3 cm</div>
+                                    <div>Size threshold for malignancy risk</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: var(--primary);">40 years</div>
+                                    <div>Age threshold for increased risk</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-clipboard-question"></i> When to Suspect Malignancy</h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <span class="badge badge-danger">Age >40 years</span>
+                                <span class="badge badge-danger">Smoking/alcohol excess</span>
+                                <span class="badge badge-danger">Previous head/neck cancer</span>
+                                <span class="badge badge-danger">Hard, fixed, non-tender node</span>
+                                <span class="badge badge-danger">Rapid growth</span>
+                                <span class="badge badge-danger">Supraclavicular location</span>
+                                <span class="badge badge-danger">Systemic symptoms (B symptoms)</span>
+                                <span class="badge badge-danger">Unilateral tonsillar enlargement</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Management Card -->
+            <div class="card card-management" id="management">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">
+                        <i class="fas fa-procedures"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>Step 3: Management & Referral</h2>
+                        <p>Scenario-based management pathways</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <!-- Lymphadenopathy Scenario -->
+                        <div class="subsection" id="management-lymphadenopathy">
+                            <h3><i class="fas fa-sitemap"></i> Lymphadenopathy Management</h3>
+                            
+                            <div class="decision-node">
+                                <h4>Is there airway compromise or SVC obstruction?</h4>
+                                <div class="decision-branch">
+                                    <div class="branch-option branch-yes">
+                                        <i class="fas fa-ambulance"></i><br>
+                                        <strong>YES</strong><br>
+                                        <span class="badge badge-danger">EMERGENCY ADMISSION</span>
+                                    </div>
+                                    <div class="branch-option branch-no">
+                                        <i class="fas fa-clock"></i><br>
+                                        <strong>NO</strong><br>
+                                        Continue assessment
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="decision-node">
+                                <h4>What is the likely cause?</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                    <div style="padding: 1rem; border: 2px solid var(--success); border-radius: 8px;">
+                                        <h5 style="color: var(--success); margin-bottom: 0.5rem;">Viral URTI</h5>
+                                        <p>Reassure, review if persists >7 days or grows</p>
+                                    </div>
+                                    <div style="padding: 1rem; border: 2px solid var(--warning); border-radius: 8px;">
+                                        <h5 style="color: var(--warning); margin-bottom: 0.5rem;">Bacterial Infection</h5>
+                                        <p>Treat underlying source, review in 2-4 weeks</p>
+                                    </div>
+                                    <div style="padding: 1rem; border: 2px solid var(--danger); border-radius: 8px;">
+                                        <h5 style="color: var(--danger); margin-bottom: 0.5rem;">Malignant Features</h5>
+                                        <p><span class="badge badge-danger">URGENT CANCER REFERRAL</span></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-arrow-right icon"></i>Referral Pathways</h4>
+                                <ul>
+                                    <li><strong>Persistent >6 weeks:</strong> Urgent ENT referral</li>
+                                    <li><strong>Generalized lymphadenopathy:</strong> Urgent FBC within 48h</li>
+                                    <li><strong>Supraclavicular (age >40):</strong> Urgent CXR + referral</li>
+                                    <li><strong>Associated oral ulcer >3 weeks:</strong> Urgent oral cancer referral</li>
+                                    <li><strong>Hoarseness + lymphadenopathy (age >45):</strong> Urgent laryngeal cancer referral</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Thyroid Scenario -->
+                        <div class="subsection" id="management-thyroid" style="display: none;">
+                            <h3><i class="fas fa-balance-scale"></i> Thyroid Lump Management</h3>
+                            
+                            <div class="decision-node">
+                                <h4>Is there airway compromise or rapid expansion?</h4>
+                                <div class="decision-branch">
+                                    <div class="branch-option branch-yes">
+                                        <span class="badge badge-danger">EMERGENCY ADMISSION</span>
+                                    </div>
+                                    <div class="branch-option branch-no">
+                                        Stable for outpatient management
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="decision-node">
+                                <h4>Any suspicious features present?</h4>
+                                <ul style="margin-bottom: 1rem;">
+                                    <li>Unexplained lump/hoarseness</li>
+                                    <li>Cervical lymphadenopathy</li>
+                                    <li>Rapidly enlarging painless mass</li>
+                                    <li>Compressive symptoms</li>
+                                    <li>Red flags/risk factors</li>
+                                </ul>
+                                <div class="decision-branch">
+                                    <div class="branch-option branch-yes">
+                                        <strong>YES</strong><br>
+                                        <span class="badge badge-danger">URGENT CANCER REFERRAL</span><br>
+                                        To thyroid surgeon/endocrinologist
+                                    </div>
+                                    <div class="branch-option branch-no">
+                                        <strong>NO</strong><br>
+                                        Investigate in primary care
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-vial icon"></i>Primary Care Investigations</h4>
+                                <ul>
+                                    <li><strong>Serum Thyroid Function Tests:</strong> For all non-suspicious lumps</li>
+                                    <li><strong>Routine Endocrinology Referral:</strong> If abnormal TFTs or non-suspicious nodule</li>
+                                    <li><strong>No Routine USS:</strong> May cause diagnostic delay</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Salivary Gland Scenario -->
+                        <div class="subsection" id="management-salivary" style="display: none;">
+                            <h3><i class="fas fa-tint"></i> Salivary Gland Lump Management</h3>
+                            
+                            <div class="decision-node">
+                                <h4>Is the swelling persistent and unexplained?</h4>
+                                <div class="decision-branch">
+                                    <div class="branch-option branch-yes">
+                                        <strong>YES</strong><br>
+                                        <span class="badge badge-danger">URGENT ENT REFERRAL</span><br>
+                                        Within 2 weeks
+                                    </div>
+                                    <div class="branch-option branch-no">
+                                        <strong>NO</strong><br>
+                                        Consider sialolithiasis
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="decision-node">
+                                <h4>Is there post-prandial pain/swelling?</h4>
+                                <div class="decision-branch">
+                                    <div class="branch-option branch-yes">
+                                        <strong>YES</strong><br>
+                                        Likely sialolithiasis<br>
+                                        <span class="badge badge-warning">ENT/Maxillofacial Referral</span>
+                                    </div>
+                                    <div class="branch-option branch-no">
+                                        <strong>NO</strong><br>
+                                        Consider infection or tumor
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="highlight-box">
+                                <h4><i class="fas fa-tooth icon"></i>Key Differentiators</h4>
+                                <ul>
+                                    <li><strong>Sialolithiasis:</strong> Pain/swelling with meals, may have purulent discharge</li>
+                                    <li><strong>Mumps:</strong> Bilateral parotid swelling, consider if unvaccinated</li>
+                                    <li><strong>Malignancy:</strong> Pain, rapid growth, facial nerve palsy, skin fixation</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Other Scenarios -->
+                        <div class="subsection">
+                            <h3><i class="fas fa-ellipsis-h"></i> Other Scenarios</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+                                <div style="padding: 1rem; border: 2px solid var(--info); border-radius: 8px;">
+                                    <h5 style="color: var(--info); margin-bottom: 0.5rem;"><i class="fas fa-egg"></i> Congenital/Developmental</h5>
+                                    <p>Branchial cyst, thyroglossal cyst<br>
+                                    <span class="badge badge-warning">ENT/H&N Referral</span></p>
+                                </div>
+                                <div style="padding: 1rem; border: 2px solid var(--info); border-radius: 8px;">
+                                    <h5 style="color: var(--info); margin-bottom: 0.5rem;"><i class="fas fa-heartbeat"></i> Carotid/Vascular</h5>
+                                    <p>Pulsatile mass, post-trauma<br>
+                                    <span class="badge badge-danger">Vascular Referral</span></p>
+                                </div>
+                                <div style="padding: 1rem; border: 2px solid var(--info); border-radius: 8px;">
+                                    <h5 style="color: var(--info); margin-bottom: 0.5rem;"><i class="fas fa-question"></i> Unknown Cause</h5>
+                                    <p>After assessment, diagnosis uncertain<br>
+                                    <span class="badge badge-danger">Urgent USS + Referral</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="highlight-box">
+                            <h4><i class="fas fa-user-md icon"></i>Referral Guidelines Summary</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                <div>
+                                    <h5 style="color: var(--danger); margin-bottom: 0.5rem;">Urgent Cancer Pathway</h5>
+                                    <ul style="padding-left: 1.5rem;">
+                                        <li>Any suspicious features</li>
+                                        <li>Persistent unexplained lump</li>
+                                        <li>Age-specific thresholds</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 style="color: var(--warning); margin-bottom: 0.5rem;">Urgent Non-Cancer</h5>
+                                    <ul style="padding-left: 1.5rem;">
+                                        <li>Persistent infection</li>
+                                        <li>Compressive symptoms</li>
+                                        <li>Uncertain diagnosis</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 style="color: var(--success); margin-bottom: 0.5rem;">Routine</h5>
+                                    <ul style="padding-left: 1.5rem;">
+                                        <li>Benign diagnosis certain</li>
+                                        <li>Longstanding stable lump</li>
+                                        <li>Abnormal TFTs, non-suspicious</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card card-followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>Step 4: Follow-up & Safety Netting</h2>
+                        <p>Monitoring and when to reassess</p>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><i class="fas fa-clock"></i> Monitoring Timeframes</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                                <div style="text-align: center; padding: 1rem; background: #e8f5e9; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--success);">7 days</div>
+                                    <div>Viral lymphadenopathy review</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: #fff3cd; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--warning);">2-4 weeks</div>
+                                    <div>Bacterial lymphadenopathy review</div>
+                                </div>
+                                <div style="text-align: center; padding: 1rem; background: #ffeaa7; border-radius: 8px;">
+                                    <div style="font-size: 1.5rem; font-weight: bold; color: var(--warning);">6 weeks</div>
+                                    <div>Persistent lump threshold</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="highlight-box">
+                            <h4><i class="fas fa-exclamation-circle icon"></i>Safety Netting Advice</h4>
+                            <ul>
+                                <li><strong>Return if:</strong> Lump increases in size, becomes painful, or new symptoms develop</li>
+                                <li><strong>Red flags:</strong> Difficulty swallowing/breathing, voice changes, unexplained weight loss</li>
+                                <li><strong>Reassurance:</strong> Most neck lumps in children are benign and self-limiting</li>
+                                <li><strong>Documentation:</strong> Clearly record size, location, characteristics, and safety netting</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-clipboard-check"></i> Primary Care Responsibilities</h3>
+                            <ul>
+                                <li>Arrange appropriate investigations (FBC, TFTs)</li>
+                                <li>Make timely referrals (cancer pathways have specific timelines)</li>
+                                <li>Monitor patients awaiting specialist review</li>
+                                <li>Communicate results and next steps clearly to patients</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-info-circle"></i> Patient Information</h3>
+                            <p style="background: #e3f2fd; padding: 1rem; border-radius: 8px;">
+                                <strong>Key Message:</strong> While most neck lumps are benign, persistent lumps (>6 weeks) 
+                                or those with concerning features require urgent assessment to exclude malignancy. 
+                                Age >40 years significantly increases risk.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 20px var(--shadow); text-align: center;">
+                <p style="color: var(--dark); font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> This algorithm is based on NICE CKS guidelines (May 2025). 
+                    Always use clinical judgement and consider individual patient factors.
+                </p>
+                <div style="margin-top: 1rem;">
+                    <span class="badge badge-info"><i class="fas fa-file-alt"></i> Full Guidelines: cks.nice.org.uk/neck-lump</span>
+                    <span class="badge badge-info"><i class="fas fa-phone"></i> Cancer Referral: 2-week wait pathway</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Card Toggle Functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update progress
+            updateProgress();
+            
+            // Smooth scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // Progress Tracking
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                const item = progressItems[index];
+                const rect = card.getBoundingClientRect();
+                const isVisible = rect.top < window.innerHeight * 0.5;
+                const isExpanded = card.classList.contains('expanded');
+                
+                item.classList.remove('active', 'completed');
+                
+                if (isExpanded) {
+                    item.classList.add('active');
+                } else if (isVisible) {
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        // Scroll-based progress update
+        window.addEventListener('scroll', () => {
+            clearTimeout(window.scrollTimeout);
+            window.scrollTimeout = setTimeout(updateProgress, 50);
+        });
+
+        // Progress Item Click
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const step = item.dataset.step;
+                const targetCard = document.getElementById(step);
+                
+                if (targetCard) {
+                    // Expand target card
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+                    targetCard.classList.add('expanded');
+                    
+                    // Smooth scroll
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Update progress
+                    setTimeout(updateProgress, 300);
+                }
+            });
+        });
+
+        // Management Scenario Navigation
+        function showManagement(scenario) {
+            // Hide all management subsections
+            document.querySelectorAll('[id^="management-"]').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected scenario
+            const targetSection = document.getElementById(`management-${scenario}`);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+                targetSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Add highlight animation
+                targetSection.style.animation = 'pulse 0.5s';
+                setTimeout(() => {
+                    targetSection.style.animation = '';
+                }, 500);
+            }
+            
+            // Ensure management card is expanded
+            const managementCard = document.getElementById('management');
+            if (!managementCard.classList.contains('expanded')) {
+                managementCard.classList.add('expanded');
+            }
+        }
+
+        // Add pulse animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+                50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 158, 206, 0.4); }
+                100% { transform: scale(1); box-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Expand first card by default
+            document.getElementById('assessment').classList.add('expanded');
+            updateProgress();
+            
+            // Add badge tooltips
+            document.querySelectorAll('.badge').forEach(badge => {
+                badge.title = 'Click to learn more about this classification';
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                const activeCard = document.querySelector('.card.expanded');
+                const nextCard = activeCard?.nextElementSibling;
+                if (nextCard?.classList.contains('card')) {
+                    activeCard.classList.remove('expanded');
+                    nextCard.classList.add('expanded');
+                    nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                const activeCard = document.querySelector('.card.expanded');
+                const prevCard = activeCard?.previousElementSibling;
+                if (prevCard?.classList.contains('card')) {
+                    activeCard.classList.remove('expanded');
+                    prevCard.classList.add('expanded');
+                    prevCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

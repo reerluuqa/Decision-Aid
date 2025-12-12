@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warts & Verrucae - Clinical Decision Support</title>
+    <style>
+        :root {
+            --primary: #005eb8;
+            --primary-dark: #003d7a;
+            --secondary: #41b6e6;
+            --accent: #00a499;
+            --success: #00703c;
+            --warning: #f47738;
+            --danger: #d4351c;
+            --purple: #6f42c1;
+            --bg-light: #f8f9fa;
+            --bg-cream: #fef9e7;
+            --bg-blue-light: #e8f4f8;
+            --text-primary: #212b32;
+            --text-secondary: #4c6272;
+            --border: #d8dde0;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+            --radius: 8px;
+            --radius-lg: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-badge {
+            background: var(--accent);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .quick-nav {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .quick-nav-btn {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .quick-nav-btn:hover, .quick-nav-btn.active {
+            background: white;
+            color: var(--primary);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar {
+                display: none;
+            }
+            .sidebar.mobile-open {
+                display: block;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 999;
+                background: white;
+                overflow-y: auto;
+                padding: 1rem;
+            }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+        }
+
+        .nav-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .nav-header {
+            background: var(--bg-light);
+            padding: 1rem;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-item {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-item:last-child {
+            border-bottom: none;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .nav-link:hover {
+            background: var(--bg-blue-light);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 0.875rem;
+        }
+
+        .nav-icon.info { background: #e3f2fd; }
+        .nav-icon.diagnosis { background: #e8f5e9; }
+        .nav-icon.treatment { background: #fff3e0; }
+        .nav-icon.warning { background: #ffebee; }
+        .nav-icon.rx { background: #f3e5f5; }
+
+        /* Filter Bar */
+        .filter-bar {
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 1rem;
+            margin-top: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .filter-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-chip {
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: 2px solid;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .filter-chip.urgent {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+        .filter-chip.urgent.active {
+            background: var(--danger);
+            color: white;
+        }
+
+        .filter-chip.action {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        .filter-chip.action.active {
+            background: var(--success);
+            color: white;
+        }
+
+        .filter-chip.info {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .filter-chip.info.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            min-width: 0;
+        }
+
+        /* Quick Summary Card */
+        .summary-card {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            color: white;
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .summary-item {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius);
+            padding: 1rem;
+        }
+
+        .summary-item h4 {
+            font-size: 0.85rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-item p {
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        /* Section Cards */
+        .section {
+            background: white;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-header:hover {
+            background: var(--bg-light);
+        }
+
+        .section-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .section-icon.blue { background: #e3f2fd; }
+        .section-icon.green { background: #e8f5e9; }
+        .section-icon.orange { background: #fff3e0; }
+        .section-icon.red { background: #ffebee; }
+        .section-icon.purple { background: #f3e5f5; }
+        .section-icon.teal { background: #e0f2f1; }
+
+        .section-title-group {
+            flex: 1;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .section-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .section-toggle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+
+        .section.open .section-toggle {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+        }
+
+        .section.open .section-content {
+            max-height: 5000px;
+        }
+
+        .section-body {
+            padding: 1.5rem;
+        }
+
+        /* Alert Boxes */
+        .alert {
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .alert-urgent {
+            background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
+            border-left: 4px solid var(--danger);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3e0 0%, #fff8e1 100%);
+            border-left: 4px solid var(--warning);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e3f2fd 0%, #e1f5fe 100%);
+            border-left: 4px solid var(--primary);
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Action Box */
+        .action-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 2px solid var(--success);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .action-box-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .action-box-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--success);
+        }
+
+        /* Step Panels */
+        .steps-container {
+            margin: 1.5rem 0;
+        }
+
+        .step {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-content {
+            flex: 1;
+            background: var(--bg-light);
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius);
+            border-left: 3px solid var(--primary);
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Decision Tree */
+        .decision-tree {
+            background: var(--bg-cream);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .decision-node {
+            background: white;
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .decision-question {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .decision-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .decision-option {
+            padding: 1rem;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .decision-option.yes {
+            background: #e8f5e9;
+            border: 2px solid var(--success);
+            color: var(--success);
+        }
+
+        .decision-option.no {
+            background: #fff3e0;
+            border: 2px solid var(--warning);
+            color: var(--warning);
+        }
+
+        .decision-option:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Treatment Cards */
+        .treatment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .treatment-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            border: 2px solid var(--border);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .treatment-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .treatment-card-header {
+            background: linear-gradient(135deg, var(--bg-blue-light) 0%, #e3f2fd 100%);
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .treatment-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .treatment-card-body {
+            padding: 1.25rem;
+        }
+
+        .treatment-detail {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .treatment-detail:last-child {
+            border-bottom: none;
+        }
+
+        .treatment-detail-icon {
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .treatment-detail strong {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        /* Lists */
+        .styled-list {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .styled-list li {
+            padding: 0.5rem 0 0.5rem 1.75rem;
+            position: relative;
+        }
+
+        .styled-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .styled-list.warning li::before {
+            content: '⚠';
+            color: var(--warning);
+        }
+
+        .styled-list.cross li::before {
+            content: '✗';
+            color: var(--danger);
+        }
+
+        .styled-list.bullet li::before {
+            content: '•';
+            color: var(--primary);
+        }
+
+        /* Referral Box */
+        .referral-box {
+            background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
+            border: 2px solid var(--danger);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .referral-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .referral-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--danger);
+        }
+
+        /* Info Chips */
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.875rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .chip-primary {
+            background: #e3f2fd;
+            color: var(--primary);
+        }
+
+        .chip-success {
+            background: #e8f5e9;
+            color: var(--success);
+        }
+
+        .chip-warning {
+            background: #fff3e0;
+            color: var(--warning);
+        }
+
+        .chip-danger {
+            background: #ffebee;
+            color: var(--danger);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 0.875rem 1.5rem;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Differential Diagnosis Grid */
+        .diff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .diff-card {
+            background: var(--bg-light);
+            border-radius: var(--radius);
+            padding: 1rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        .diff-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .diff-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Mobile menu button */
+        .mobile-menu-btn {
+            display: none;
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            z-index: 998;
+        }
+
+        @media (max-width: 1024px) {
+            .mobile-menu-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .sidebar, .mobile-menu-btn, .quick-nav {
+                display: none;
+            }
+            .container {
+                grid-template-columns: 1fr;
+            }
+            .section-content {
+                max-height: none !important;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-light);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>
+                🦠 Warts & Verrucae
+                <span class="header-badge">CKS Clinical Guide</span>
+            </h1>
+            <div class="quick-nav">
+                <button class="quick-nav-btn" onclick="scrollToSection('summary')">Summary</button>
+                <button class="quick-nav-btn" onclick="scrollToSection('diagnosis')">Diagnosis</button>
+                <button class="quick-nav-btn" onclick="scrollToSection('management')">Management</button>
+                <button class="quick-nav-btn" onclick="scrollToSection('prescribing')">Prescribing</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <nav class="nav-card">
+                <div class="nav-header">📋 Navigation</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="#summary" class="nav-link active">
+                            <span class="nav-icon info">📌</span>
+                            Quick Summary
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#scope" class="nav-link">
+                            <span class="nav-icon info">🎯</span>
+                            Scope & Audience
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#background" class="nav-link">
+                            <span class="nav-icon info">📚</span>
+                            Background
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#diagnosis" class="nav-link">
+                            <span class="nav-icon diagnosis">🔬</span>
+                            Diagnosis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#differential" class="nav-link">
+                            <span class="nav-icon diagnosis">🔍</span>
+                            Differential Diagnosis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#management" class="nav-link">
+                            <span class="nav-icon treatment">💊</span>
+                            Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#referral" class="nav-link">
+                            <span class="nav-icon warning">🏥</span>
+                            When to Refer
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#prescribing" class="nav-link">
+                            <span class="nav-icon rx">💉</span>
+                            Prescribing Info
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#advice" class="nav-link">
+                            <span class="nav-icon info">💬</span>
+                            Patient Advice
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="filter-bar">
+                <div class="filter-title">🏷️ Show Content Type</div>
+                <div class="filter-chips">
+                    <button class="filter-chip urgent active" onclick="toggleFilter('urgent')">🚨 Urgent</button>
+                    <button class="filter-chip action active" onclick="toggleFilter('action')">✅ Actions</button>
+                    <button class="filter-chip info active" onclick="toggleFilter('info')">ℹ️ Info</button>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Quick Summary Card -->
+            <section class="summary-card" id="summary">
+                <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡ Quick Summary</h2>
+                <p style="opacity: 0.9;">Cutaneous warts caused by HPV infection. Common, usually self-limiting. Most don't require treatment.</p>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <h4>👶 Age Range</h4>
+                        <p>12 months onwards</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>📊 Prevalence</h4>
+                        <p>5-30% of school children</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>⏱️ Natural Resolution</h4>
+                        <p>90% within 5 years (children)</p>
+                    </div>
+                    <div class="summary-item">
+                        <h4>💊 First-line Treatment</h4>
+                        <p>Salicylic acid (OTC) or Cryotherapy</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scope Section -->
+            <section class="section open" id="scope">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon teal">🎯</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">Scope & Target Audience</h2>
+                        <p class="section-subtitle">What this guide covers</p>
+                    </div>
+                    <div class="section-toggle">▼</div>
+                </div>
+                <div class="section-content">
+                    <div class="section-body">
+                        <div class="alert alert-info" data-type="info">
+                            <span class="alert-icon">ℹ️</span>
+                            <div>
+                                <p class="alert-title">This guide covers:</p>
+                                <p>Management of <strong>cutaneous warts</strong> in primary care for patients aged 12 months and older.</p>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning" data-type="info">
+                            <span class="alert-icon">⚠️</span>
+                            <div>
+                                <p class="alert-title">NOT covered in this guide:</p>
+                                <ul class="styled-list cross">
+                                    <li>Anogenital warts</li>
+                                    <li>Mucosal warts</li>
+                                    <li>Other viral skin infections</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <p style="margin-top: 1rem;"><strong>Related CKS topics:</strong></p>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="chip chip-primary">Herpes simplex - genital</span>
+                            <span class="chip chip-primary">Molluscum contagiosum</span>
+                            <span class="chip chip-primary">Warts - anogenital</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Background Section -->
+            <section class="section" id="background">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon blue">📚</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">Background Information</h2>
+                        <p class="section-subtitle">Definition, prevalence, transmission, prognosis</p>
+                    </div>
+                    <div class="section-toggle">▼</div>
+                </div>
+                <div class="section-content">
+                    <div class="section-body">
+                        <div class="tabs">
+                            <div class="tab active" onclick="switchTab(this, 'definition')">Definition</div>
+                            <div class="tab" onclick="switchTab(this, 'types')">Types</div>
+                            <div class="tab" onclick="switchTab(this, 'transmission')">Transmission</div>
+                            <div class="tab" onclick="switchTab(this, 'prognosis')">Prognosis</div>
+                            <div class="tab" onclick="switchTab(this, 'complications')">Complications</div>
+                        </div>
+
+                        <div class="tab-content active" id="definition" data-type="info">
+                            <p>Cutaneous warts are <strong>small, rough growths</strong> caused by infection of keratinocytes with <strong>human papillomavirus (HPV)</strong>. They can appear anywhere on the skin but are commonly seen on the hands and feet.</p>
+                            <p style="margin-top: 1rem;">A <strong>verruca</strong> (plantar wart) is specifically a wart on the sole of the foot.</p>
+                        </div>
+
+                        <div class="tab-content" id="types" data-type="info">
+                            <div class="diff-grid">
+                                <div class="diff-card">
+                                    <h4>Common wart (Verruca vulgaris)</h4>
+                                    <p>Firm, raised papules with rough cauliflower-like surface. Common on knuckles, knees, fingers.</p>
+                                </div>
+                                <div class="diff-card">
+                                    <h4>Plantar wart (Verruca plantaris)</h4>
+                                    <p>On soles of feet. Often have central dark dots (thrombosed capillaries). May be painful.</p>
+                                </div>
+                                <div class="diff-card">
+                                    <h4>Periungual wart</h4>
+                                    <p>Around fingernails or toenails. Can be painful and disturb nail growth.</p>
+                                </div>
+                                <div class="diff-card">
+                                    <h4>Plane/Flat wart (Verruca plana)</h4>
+                                    <p>Round, flat-topped, skin-coloured or greyish-yellow. Common on face, backs of hands, shins.</p>
+                                </div>
+                                <div class="diff-card">
+                                    <h4>Filiform wart</h4>
+                                    <p>Finger-like appearance, may have a stalk. Most often on face or neck.</p>
+                                </div>
+                                <div class="diff-card">
+                                    <h4>Mosaic warts</h4>
+                                    <p>Occur when palmar or plantar warts coalesce into larger plaques.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="transmission" data-type="info">
+                            <p><strong>Mode of transmission:</strong> Direct skin-to-skin contact, or indirectly via contaminated surfaces (e.g., pool floors, showers).</p>
+                            
+                            <h4 style="margin-top: 1.5rem; margin-bottom: 0.75rem;">Risk factors for developing warts:</h4>
+                            <ul class="styled-list bullet">
+                                <li>Damaged epithelial barrier</li>
+                                <li>Skin conditions causing breaks in skin</li>
+                                <li>Wet and/or macerated skin</li>
+                                <li>Contact with rough surfaces (microtrauma)</li>
+                                <li>Nail biting or picking at warts (autoinoculation)</li>
+                                <li>Occupation involving meat/fish handling</li>
+                                <li>Frequent water immersion</li>
+                                <li>Immunosuppression</li>
+                            </ul>
+                            
+                            <div class="alert alert-info" style="margin-top: 1rem;">
+                                <span class="alert-icon">⏱️</span>
+                                <div>
+                                    <p><strong>Incubation period:</strong> Few weeks to more than a year</p>
+                                    <p><strong>HPV survival:</strong> Months to years on contaminated surfaces</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="prognosis" data-type="info">
+                            <div class="action-box" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: var(--primary);">
+                                <div class="action-box-header">
+                                    <span style="font-size: 1.5rem;">📊</span>
+                                    <span class="action-box-title" style="color: var(--primary);">Natural Resolution Rates</span>
+                                </div>
+                                <p><strong>Children:</strong></p>
+                                <ul class="styled-list">
+                                    <li>~25% resolve within 2-3 months</li>
+                                    <li>~50% clear within 1 year</li>
+                                    <li>~66% clear by 2 years</li>
+                                    <li>~90% resolve within 5 years</li>
+                                </ul>
+                                <p style="margin-top: 1rem;"><strong>Adults:</strong> Resolution tends to be slower - warts may persist 5-10 years.</p>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <p><strong>Immunosuppressed patients:</strong> Warts may be large, extensive, and resistant to treatment.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-content" id="complications" data-type="info">
+                            <ul class="styled-list warning">
+                                <li>Spread from picking at the wart</li>
+                                <li>Spread to contacts</li>
+                                <li>Local infection</li>
+                                <li>Skin pigmentation changes and scarring (from treatments)</li>
+                                <li>Psychosocial impact (embarrassment, teasing)</li>
+                                <li>Nail dystrophy from periungual warts</li>
+                                <li>Pain from plantar warts affecting walking</li>
+                            </ul>
+                            
+                            <div class="alert alert-urgent" style="margin-top: 1rem;" data-type="urgent">
+                                <span class="alert-icon">🔴</span>
+                                <div>
+                                    <p class="alert-title">Rare but important:</p>
+                                    <p>Malignant changes (squamous cell carcinoma) reported in immunosuppressed patients. Consider if lesions change appearance.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="section" id="diagnosis">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon green">🔬</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">How to Diagnose</h2>
+                        <p class="section-subtitle">Clinical features and examination</p>
+                    </div>
+                    <div class="section-toggle">▼</div>
+                </div>
+                <div class="section-content">
+                    <div class="section-body">
+                        <div class="alert alert-success" data-type="action">
+                            <span class="alert-icon">✅</span>
+                            <div>
+                                <p class="alert-title">Diagnosis is clinical</p>
+                                <p>Warts are diagnosed from their <strong>typical appearance</strong>. In most cases, no further investigations are required.</p>
+                            </div>
+                        </div>
+
+                        <h3 style="margin: 1.5rem 0 1rem;">Clinical Features by Type</h3>
+                        
+                        <div class="treatment-grid">
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">✋ Common Warts</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Firm, raised papules</li>
+                                        <li>Rough, cauliflower-like surface</li>
+                                        <li>Common on knuckles, knees, fingers</li>
+                                        <li>Usually asymptomatic but may be tender</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">🦶 Plantar/Palmar Warts</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>On soles of feet or palms</li>
+                                        <li>Central dark dots (thrombosed capillaries)</li>
+                                        <li>Often painful</li>
+                                        <li>May coalesce into mosaic warts</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">💅 Periungual Warts</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Around fingernails or toenails</li>
+                                        <li>Can be painful</li>
+                                        <li>May disturb nail growth</li>
+                                        <li>Nail biting is a risk factor</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">🟡 Plane/Filiform Warts</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Plane: Round, flat-topped, skin-coloured</li>
+                                        <li>Common on face, hands, shins</li>
+                                        <li>Filiform: Finger-like, may have stalk</li>
+                                        <li>More common on face/neck</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="action-box" data-type="action">
+                            <div class="action-box-header">
+                                <span style="font-size: 1.5rem;">🔍</span>
+                                <span class="action-box-title">If Diagnostic Doubt</span>
+                            </div>
+                            <ul class="styled-list">
+                                <li><strong>Light paring</strong> of a wart will reveal tiny black dots (thrombosed capillaries)</li>
+                                <li><strong>Dermoscopy</strong> may be helpful for experienced clinicians</li>
+                                <li>⚠️ Be aware: bleeding from paring may lead to warts spreading</li>
+                            </ul>
+                        </div>
+
+                        <div class="alert alert-urgent" data-type="urgent">
+                            <span class="alert-icon">🚨</span>
+                            <div>
+                                <p class="alert-title">Refer if lesions are atypical</p>
+                                <p>Arrange specialist assessment if the lesion does not have typical wart features.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Differential Diagnosis Section -->
+            <section class="section" id="differential">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon orange">🔍</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">Differential Diagnosis</h2>
+                        <p class="section-subtitle">What else might it be?</p>
+                    </div>
+                    <div class="section-toggle">▼</div>
+                </div>
+                <div class="section-content">
+                    <div class="section-body" data-type="info">
+                        <div class="diff-grid">
+                            <div class="diff-card">
+                                <h4>Molluscum contagiosum</h4>
+                                <p>Umbilicated pinkish or pearly white smooth papules, usually in clusters.</p>
+                            </div>
+                            <div class="diff-card">
+                                <h4>Corns/Calluses</h4>
+                                <p>Over friction/pressure areas. Smooth surface, intact skin markings, no black dots on paring.</p>
+                            </div>
+                            <div class="diff-card">
+                                <h4>Actinic keratosis</h4>
+                                <p>White/yellow flat or thickened papules on sun-exposed areas. Pre-cancerous.</p>
+                            </div>
+                            <div class="diff-card">
+                                <h4>Seborrheic keratosis</h4>
+                                <p>Grey-brown scaly plaques, "stuck-on" appearance, smooth or rough surface.</p>
+                            </div>
+                            <div class="diff-card">
+                                <h4>Bowen's disease</h4>
+                                <p>Non-healing, enlarging hyperkeratotic papules becoming inflamed and tender.</p>
+                            </div>
+                            <div class="diff-card" style="border-left-color: var(--danger);">
+                                <h4>⚠️ Squamous cell carcinoma</h4>
+                                <p>Enlarging, non-healing hyperkeratotic papules, inflamed and tender.</p>
+                            </div>
+                            <div class="diff-card" style="border-left-color: var(--danger);">
+                                <h4>⚠️ Malignant melanoma</h4>
+                                <p>Irregular outline and colour, may itch or bleed. Requires urgent referral.</p>
+                            </div>
+                            <div class="diff-card">
+                                <h4>Lichen planus</h4>
+                                <p>Usually widespread, itchy rash with purple, polygonal papules.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Management Section -->
+            <section class="section" id="management">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon purple">💊</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">Management</h2>
+                        <p class="section-subtitle">Treatment decisions and options</p>
+                    </div>
+                    <div class="section-toggle">▼</div>
+                </div>
+                <div class="section-content">
+                    <div class="section-body">
+                        <!-- Decision to Treat -->
+                        <div class="decision-tree" data-type="action">
+                            <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                                🤔 Should I Treat?
+                            </h3>
+                            
+                            <div class="alert alert-info">
+                                <span class="alert-icon">💡</span>
+                                <div>
+                                    <p class="alert-title">For most people, there is a strong case for NOT treating</p>
+                                    <ul class="styled-list bullet" style="margin-top: 0.5rem;">
+                                        <li>Warts usually don't cause symptoms</li>
+                                        <li>Most resolve spontaneously</li>
+                                        <li>Treatment may be prolonged with adverse effects</li>
+                                        <li>Children: warts more likely to resolve, treatment may not be tolerated</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="decision-node" style="margin-top: 1rem;">
+                                <p class="decision-question">🔹 Consider treatment if:</p>
+                                <ul class="styled-list">
+                                    <li>The wart is <strong>painful</strong> (e.g., on soles of feet or near nails)</li>
+                                    <li>The wart is <strong>cosmetically unsightly</strong> (e.g., on hands or face)</li>
+                                    <li>The person <strong>requests treatment</strong> and the wart is persisting</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Treatment Pathway -->
+                        <h3 style="margin: 2rem 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            🛤️ Treatment Pathway
+                        </h3>
+
+                        <div class="steps-container" data-type="action">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <p class="step-title">Provide General Advice</p>
+                                    <p>Give information about warts, natural history, and transmission prevention. See Patient Advice section.</p>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content" style="border-left-color: var(--warning);">
+                                    <p class="step-title">⚠️ Facial warts - DO NOT treat in primary care</p>
+                                    <p>Refer to dermatology if treatment is indicated.</p>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <p class="step-title">For Non-Facial Warts - Choose Treatment</p>
+                                    <p>Consider patient age, preference, and what has been tried already.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Treatment Options -->
+                        <h3 style="margin: 2rem 0 1rem;">💉 Primary Care Treatment Options</h3>
+
+                        <div class="treatment-grid" data-type="action">
+                            <div class="treatment-card">
+                                <div class="treatment-card-header" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);">
+                                    <h4 class="treatment-card-title">
+                                        <span style="font-size: 1.5rem;">💧</span>
+                                        Topical Salicylic Acid
+                                    </h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">📋</span>
+                                        <div>
+                                            <strong>Concentration</strong>
+                                            12-26% (most OTC preparations)
+                                        </div>
+                                    </div>
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">⏱️</span>
+                                        <div>
+                                            <strong>Duration</strong>
+                                            Daily for up to 12 weeks
+                                        </div>
+                                    </div>
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">👤</span>
+                                        <div>
+                                            <strong>Suitable for</strong>
+                                            All ages (first-line in children)
+                                        </div>
+                                    </div>
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">💰</span>
+                                        <div>
+                                            <strong>NHS England policy</strong>
+                                            Advise OTC purchase
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                                    <h4 class="treatment-card-title">
+                                        <span style="font-size: 1.5rem;">❄️</span>
+                                        Cryotherapy
+                                    </h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">📋</span>
+                                        <div>
+                                            <strong>Agent</strong>
+                                            Liquid nitrogen
+                                        </div>
+                                    </div>
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">⏱️</span>
+                                        <div>
+                                            <strong>Frequency</strong>
+                                            Every 2-4 weeks (max 6 treatments)
+                                        </div>
+                                    </div>
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">👤</span>
+                                        <div>
+                                            <strong>Suitable for</strong>
+                                            Adults and older children who can tolerate
+                                        </div>
+                                    </div>
+                                    <div class="treatment-detail">
+                                        <span class="treatment-detail-icon">⚠️</span>
+                                        <div>
+                                            <strong>Note</strong>
+                                            NOT suitable for young children
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);">
+                                    <h4 class="treatment-card-title">
+                                        <span style="font-size: 1.5rem;">🔄</span>
+                                        Combination Therapy
+                                    </h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <p>Apply topical salicylic acid between cryotherapy sessions (once scabbing has resolved).</p>
+                                    <p style="margin-top: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">May be helpful for resistant or plantar warts.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Special Considerations -->
+                        <h3 style="margin: 2rem 0 1rem;">⚡ Special Considerations</h3>
+
+                        <div class="alert alert-warning" data-type="info">
+                            <span class="alert-icon">✋</span>
+                            <div>
+                                <p class="alert-title">Plane warts on back of hands</p>
+                                <p>Use shorter cryotherapy freeze (5-10 seconds) or weaker salicylic acid (≤17%) - higher risk of scarring.</p>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning" data-type="info">
+                            <span class="alert-icon">🦶</span>
+                            <div>
+                                <p class="alert-title">Plantar warts</p>
+                                <p>Difficult to treat. Cryotherapy less likely to help. Pain usually from thickening - <strong>regular paring</strong> can help comfort. Combination therapy and more aggressive cryotherapy may help.</p>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" data-type="info">
+                            <span class="alert-icon">👶</span>
+                            <div>
+                                <p class="alert-title">Younger children</p>
+                                <p>If treatment wanted, recommend <strong>salicylic acid only</strong>. Do NOT use cryotherapy.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Referral Section -->
+            <section class="section" id="referral">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon red">🏥</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">When to Refer</h2>
+                        <p class="section-subtitle">Secondary care referral criteria</p>
+                    </div>
+                    <div class="section-toggle">▼</div>
+                </div>
+                <div class="section-content">
+                    <div class="section-body">
+                        <div class="referral-box" data-type="urgent">
+                            <div class="referral-header">
+                                <span style="font-size: 1.5rem;">🚨</span>
+                                <span class="referral-title">Consider Dermatology Referral If:</span>
+                            </div>
+                            <ul class="styled-list warning">
+                                <li><strong>Facial wart</strong> requiring treatment</li>
+                                <li><strong>Diagnosis is uncertain</strong></li>
+                                <li>Patient is <strong>immunocompromised</strong></li>
+                                <li><strong>Extensive areas affected</strong> (e.g., mosaic warts of hands/feet)</li>
+                                <li><strong>Persistent warts unresponsive</strong> to both salicylic acid AND cryotherapy</li>
+                            </ul>
+                        </div>
+
+                        <h3 style="margin: 2rem 0 1rem;">🏥 Secondary Care Treatment Options</h3>
+                        
+                        <div class="treatment-grid" data-type="info">
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">Physical Ablation</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Surgery</li>
+                                        <li>Laser treatment</li>
+                                        <li>Microwave therapy</li>
+                                        <li>Photodynamic treatment</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">Antimitotic Treatments</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Topical podophyllin</li>
+                                        <li>Topical or oral retinoids</li>
+                                        <li>Intralesional bleomycin</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">Immunomodulatory</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Topical sensitizers (DPCP, SADBE)</li>
+                                        <li>Topical imiquimod 5%</li>
+                                        <li>Intralesional immunotherapy</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="treatment-card">
+                                <div class="treatment-card-header">
+                                    <h4 class="treatment-card-title">Other Options</h4>
+                                </div>
+                                <div class="treatment-card-body">
+                                    <ul class="styled-list bullet">
+                                        <li>Formaldehyde/glutaraldehyde</li>
+                                        <li>5-fluorouracil</li>
+                                        <li>Cantharidin preparations</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Prescribing Information Section -->
+            <section class="section" id="prescribing">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon purple">💉</div>
+                    <div class="section-title-group">
+                        <h2 class="section-title">Prescribing Information</h2>
+                        <p class="section-subtitle">Detailed product and administration 

@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Neck Lump Clinical Algorithm</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg-body: #0f172a;
+      --bg-surface: #020617;
+      --bg-card: #020617;
+      --border-subtle: rgba(148, 163, 184, 0.35);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --accent-assessment: #0ea5e9;
+      --accent-diagnosis: #a855f7;
+      --accent-treatment: #22c55e;
+      --accent-followup: #f97316;
+      --badge-red: #dc2626;
+      --badge-amber: #d97706;
+      --badge-green: #16a34a;
+      --score-bg: rgba(34, 197, 94, 0.1);
+      --score-border: #22c55e;
+      --radius-lg: 18px;
+      --radius-xl: 24px;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.7);
+      --transition-fast: 180ms ease-out;
+      --transition-normal: 260ms ease;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b 0, #020617 42%, #000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+    }
+
+    .page {
+      display: flex;
+      gap: 1.75rem;
+      padding: 1.75rem clamp(1.2rem, 3vw, 2.3rem);
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    /* Sticky navigation sidebar */
+    .sidebar {
+      flex: 0 0 230px;
+      position: sticky;
+      top: 1.2rem;
+      align-self: flex-start;
+      background: linear-gradient(145deg, #020617, #020617);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      padding: 1rem 1rem 0.9rem;
+      box-shadow: 0 16px 35px rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(18px);
+    }
+
+    .sidebar h2 {
+      margin: 0 0 0.2rem;
+      font-size: 0.95rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #9ca3af;
+    }
+
+    .sidebar-subtitle {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-bottom: 0.65rem;
+    }
+
+    .progress-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0 0.2rem;
+    }
+
+    .progress-item {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.55rem 0.6rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
+
+    .progress-item:hover {
+      background: rgba(15, 23, 42, 0.9);
+      transform: translateX(2px);
+    }
+
+    .progress-item.active {
+      background: linear-gradient(120deg, #0f172a, #020617);
+      color: #e5e7eb;
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.9);
+    }
+
+    .progress-item.completed:not(.active) {
+      color: #a3e635;
+    }
+
+    .progress-bullet {
+      flex: 0 0 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      background: radial-gradient(circle at 30% 0, #111827, #020617);
+    }
+
+    .progress-item.active .progress-bullet {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.5);
+    }
+
+    .progress-item.completed:not(.active) .progress-bullet {
+      border-color: #22c55e;
+    }
+
+    .progress-label-main {
+      font-weight: 500;
+    }
+
+    .progress-label-sub {
+      font-size: 0.7rem;
+      color: #6b7280;
+    }
+
+    .progress-item.active .progress-label-sub {
+      color: #cbd5f5;
+    }
+
+    .sidebar-footer {
+      margin-top: 0.6rem;
+      padding-top: 0.55rem;
+      border-top: 1px dashed rgba(55, 65, 81, 0.8);
+      font-size: 0.72rem;
+      color: #6b7280;
+    }
+
+    .sidebar-footer span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .pill {
+      padding: 0.1rem 0.4rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(55, 65, 81, 0.8);
+      font-size: 0.67rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* Main content */
+    .content {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .page-header {
+      margin-bottom: 1.4rem;
+    }
+
+    .page-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .page-title {
+      font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .page-title span.icon {
+      font-size: 1.55rem;
+      filter: drop-shadow(0 10px 18px rgba(34, 197, 94, 0.35));
+    }
+
+    .page-meta {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+
+    .page-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.55rem;
+    }
+
+    .chip {
+      font-size: 0.72rem;
+      padding: 0.15rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      color: #9ca3af;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.24rem;
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(10px);
+    }
+
+    .chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.25);
+    }
+
+    /* Cards */
+    .card-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+    }
+
+    .step-card {
+      border-radius: var(--radius-xl);
+      background: radial-gradient(circle at top left, #111827 0, #020617 45%, #000 100%);
+      border: 1px solid rgba(75, 85, 99, 0.7);
+      box-shadow: var(--shadow-soft);
+      overflow: hidden;
+      transform-origin: top left;
+      transition: transform var(--transition-normal), box-shadow var(--transition-normal),
+        border-color var(--transition-fast), background 280ms ease-out;
+      position: relative;
+    }
+
+    .step-card:hover {
+      transform: translateY(-2px) translateZ(0);
+      box-shadow: 0 24px 55px rgba(15, 23, 42, 0.9);
+      border-color: rgba(148, 163, 184, 0.85);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.85rem;
+      padding: 0.85rem 1rem 0.3rem 1rem;
+      cursor: pointer;
+    }
+
+    .step-main {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    .step-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 14px 35px rgba(15, 23, 42, 0.75);
+    }
+
+    .step-icon.assessment {
+      background: radial-gradient(circle at 10% 0, #38bdf8, #0f172a);
+    }
+
+    .step-icon.diagnosis {
+      background: radial-gradient(circle at 10% 0, #a855f7, #0f172a);
+    }
+
+    .step-icon.treatment {
+      background: radial-gradient(circle at 10% 0, #22c55e, #0f172a);
+    }
+
+    .step-icon.followup {
+      background: radial-gradient(circle at 10% 0, #fb923c, #0f172a);
+    }
+
+    .step-label {
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 0.1rem;
+    }
+
+    .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .step-subtitle {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 0.1rem;
+    }
+
+    .step-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.4rem;
+      font-size: 0.74rem;
+      color: #6b7280;
+    }
+
+    .step-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid rgba(75, 85, 99, 0.9);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .step-toggle span {
+      font-size: 0.7rem;
+    }
+
+    .step-toggle-icon {
+      transition: transform var(--transition-fast);
+      font-size: 0.95rem;
+    }
+
+    .step-card.collapsed .step-toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .step-badges {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 0.25rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.66rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid transparent;
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .badge-red {
+      color: #fecaca;
+      border-color: rgba(248, 113, 113, 0.8);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(15, 23, 42, 0.9));
+    }
+
+    .badge-amber {
+      color: #fde68a;
+      border-color: rgba(245, 158, 11, 0.85);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.9));
+    }
+
+    .badge-green {
+      color: #bbf7d0;
+      border-color: rgba(34, 197, 94, 0.85);
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(15, 23, 42, 0.9));
+    }
+
+    .step-content-wrapper {
+      overflow: hidden;
+      transition: max-height 280ms ease;
+    }
+
+    .step-card.collapsed .step-content-wrapper {
+      max-height: 0;
+    }
+
+    .step-content {
+      padding: 0 1rem 0.9rem 1rem;
+      border-top: 1px dashed rgba(55, 65, 81, 0.85);
+      margin-top: 0.4rem;
+    }
+
+    .step-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.3fr);
+      gap: 1.2rem;
+      margin-top: 0.75rem;
+    }
+
+    .step-section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #9ca3af;
+      margin-bottom: 0.35rem;
+    }
+
+    .step-section-title span {
+      opacity: 0.9;
+    }
+
+    .step-list {
+      margin: 0;
+      padding-left: 1.05rem;
+      font-size: 0.85rem;
+      color: #d1d5db;
+    }
+
+    .step-list li {
+      margin-bottom: 0.35rem;
+    }
+
+    .muted {
+      color: #9ca3af;
+      font-size: 0.82rem;
+    }
+
+    .pill-inline {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.06rem 0.35rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9ca3af;
+    }
+
+    /* Highlighted clinical score box */
+    .score-box {
+      margin-top: 0.3rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 14px;
+      border: 1px solid var(--score-border);
+      background: radial-gradient(circle at 0 0, rgba(34, 197, 94, 0.22), var(--score-bg));
+      box-shadow: 0 16px 40px rgba(22, 163, 74, 0.3);
+      font-size: 0.83rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .score-box::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 0 -30%, rgba(190, 242, 100, 0.3), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .score-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #bbf7d0;
+    }
+
+    .score-value {
+      font-size: 1rem;
+      font-weight: 650;
+      color: #ecfdf5;
+    }
+
+    .score-desc {
+      font-size: 0.78rem;
+      color: #dcfce7;
+    }
+
+    .score-pill {
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(22, 163, 74, 0.8);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+    }
+
+    /* Small utility card for info */
+    .info-callout {
+      margin-top: 0.8rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: 14px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px dashed rgba(75, 85, 99, 0.9);
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+
+    .info-callout strong {
+      color: #e5e7eb;
+    }
+
+    /* Responsive */
+    @media (max-width: 920px) {
+      .page {
+        flex-direction: column;
+      }
+      .sidebar {
+        position: static;
+        order: -1;
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .step-row {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .page {
+        padding-inline: 1rem;
+      }
+      .step-header {
+        padding-inline: 0.8rem;
+      }
+      .step-content {
+        padding-inline: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <!-- Sticky progress sidebar -->
+    <aside class="sidebar" aria-label="Algorithm progress">
+      <h2>Neck Lump Algorithm</h2>
+      <div class="sidebar-subtitle">Tap a step to jump, scroll to update.</div>
+      <ul class="progress-list">
+        <li class="progress-item active" data-target="step-assessment">
+          <div class="progress-bullet">1</div>
+          <div>
+            <div class="progress-label-main">Assessment</div>
+            <div class="progress-label-sub">History &amp; examination</div>
+          </div>
+        </li>
+        <li class="progress-item" data-target="step-diagnosis">
+          <div class="progress-bullet">2</div>
+          <div>
+            <div class="progress-label-main">Diagnosis</div>
+            <div class="progress-label-sub">Likely aetiology &amp; risk</div>
+          </div>
+        </li>
+        <li class="progress-item" data-target="step-treatment">
+          <div class="progress-bullet">3</div>
+          <div>
+            <div class="progress-label-main">Treatment / Referral</div>
+            <div class="progress-label-sub">Immediate actions</div>
+          </div>
+        </li>
+        <li class="progress-item" data-target="step-followup">
+          <div class="progress-bullet">4</div>
+          <div>
+            <div class="progress-label-main">Follow-up</div>
+            <div class="progress-label-sub">Safety-netting &amp; review</div>
+          </div>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <span>
+          <span class="pill">Primary care</span>
+          &nbsp;Algorithm helper – not a substitute for local policy or clinical judgement.
+        </span>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="content">
+      <header class="page-header">
+        <div class="page-title-row">
+          <div>
+            <h1 class="page-title">
+              <span class="icon">🧭</span>
+              Neck Lump – Interactive Primary Care Pathway
+            </h1>
+            <div class="page-meta">
+              Structured around assessment → diagnosis → treatment/referral → follow-up.
+            </div>
+          </div>
+        </div>
+        <div class="page-chips">
+          <span class="chip">
+            <span class="chip-dot"></span>
+            Age &gt; 1 month
+          </span>
+          <span class="chip">Use for suspected neck mass in primary care</span>
+          <span class="chip">Badges: red = urgent, amber = caution, green = stable</span>
+        </div>
+      </header>
+
+      <section class="card-grid" aria-label="Algorithm steps">
+        <!-- STEP 1: ASSESSMENT -->
+        <article
+          class="step-card"
+          id="step-assessment"
+          data-step="1"
+          data-accent="assessment"
+        >
+          <header class="step-header">
+            <div class="step-main">
+              <div class="step-icon assessment" aria-hidden="true">🔍</div>
+              <div>
+                <div class="step-label">Step 1</div>
+                <div class="step-title">Assessment – history &amp; examination</div>
+                <div class="step-subtitle">
+                  Identify red flags, airway risk and likely category of lump.
+                </div>
+              </div>
+            </div>
+            <div class="step-meta">
+              <button class="step-toggle" type="button" aria-label="Toggle step 1">
+                <span>Collapse</span>
+                <span class="step-toggle-icon">⌄</span>
+              </button>
+              <div class="step-badges">
+                <span class="badge badge-red">
+                  <span class="badge-dot"></span> Airway risk
+                </span>
+                <span class="badge badge-amber">
+                  <span class="badge-dot"></span> Red flag symptoms
+                </span>
+              </div>
+            </div>
+          </header>
+          <div class="step-content-wrapper">
+            <div class="step-content">
+              <div class="step-row">
+                <div>
+                  <div class="step-section-title"><span>History</span></div>
+                  <ul class="step-list">
+                    <li>
+                      Onset, duration and growth pattern (including
+                      <span class="pill-inline">rapid or &gt; 6 weeks</span>).
+                    </li>
+                    <li>
+                      Pain, tenderness, fluctuation, trauma, recent infection, travel, animal
+                      exposure (e.g. cat, tick).
+                    </li>
+                    <li>
+                      Systemic features – weight loss, night sweats, fever, recurrent
+                      infections, bruising/bleeding, fatigue.
+                    </li>
+                    <li>
+                      Local red flags – dysphagia or odynophagia, voice change, stridor,
+                      cough, haemoptysis, unilateral otalgia, nasal obstruction/epistaxis,
+                      oral ulceration, dental symptoms.
+                    </li>
+                    <li>
+                      Risk factors – age ≥ 40, smoking, alcohol excess, previous
+                      head/neck irradiation or cancer, autoimmune thyroiditis, family
+                      history of endocrine tumours.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <div class="step-section-title"><span>Examination</span></div>
+                  <ul class="step-list">
+                    <li>
+                      Look for stridor, respiratory distress, signs of superior vena cava
+                      obstruction (facial/neck swelling, fixed JVP).
+                    </li>
+                    <li>
+                      Palpate neck systemically – site, size, tenderness, mobility,
+                      consistency, pulsatility, overlying skin changes.
+                    </li>
+                    <li>
+                      Check movement: mass that elevates on swallowing (thyroid /
+                      thyroglossal); thyroglossal cysts also move with tongue protrusion.
+                    </li>
+                    <li>
+                      Assess for localized vs generalized lymphadenopathy (neck, axilla,
+                      groin) and hepatosplenomegaly.
+                    </li>
+                    <li>
+                      Full head and neck exam – skin, scalp, ears, nose, oral cavity,
+                      dentition, tonsils, salivary glands.
+                    </li>
+                    <li>
+                      Respiratory and abdominal examination for possible primary / systemic
+                      disease.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="info-callout">
+                <strong>Immediate action:</strong> Any airway compromise, stridor, or
+                suspected superior vena cava obstruction →
+                <span class="badge badge-red">
+                  <span class="badge-dot"></span>
+                  Emergency hospital admission
+                </span>
+                without delay for primary-care investigations.
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 2: DIAGNOSIS -->
+        <article
+          class="step-card"
+          id="step-diagnosis"
+          data-step="2"
+          data-accent="diagnosis"
+        >
+          <header class="step-header">
+            <div class="step-main">
+              <div class="step-icon diagnosis" aria-hidden="true">🧬</div>
+              <div>
+                <div class="step-label">Step 2</div>
+                <div class="step-title">Provisional diagnosis – likely category</div>
+                <div class="step-subtitle">
+                  Use pattern recognition to decide if the lump is inflammatory, benign,
+                  or suspicious for malignancy.
+                </div>
+              </div>
+            </div>
+            <div class="step-meta">
+              <button class="step-toggle" type="button" aria-label="Toggle step 2">
+                <span>Collapse</span>
+                <span class="step-toggle-icon">⌄</span>
+              </button>
+              <div class="step-badges">
+                <span class="badge badge-amber">
+                  <span class="badge-dot"></span>
+                  Unexplained / persistent
+                </span>
+              </div>
+            </div>
+          </header>
+          <div class="step-content-wrapper">
+            <div class="step-content">
+              <div class="step-row">
+                <div>
+                  <div class="step-section-title"><span>Pattern clues</span></div>
+                  <ul class="step-list">
+                    <li>
+                      <strong>Skin lump</strong> – in the dermis, often with punctum or
+                      erythema; may represent cyst, lipoma, abscess, or skin malignancy.
+                    </li>
+                    <li>
+                      <strong>Lymphadenopathy</strong> – multiple mobile tender nodes with
+                      acute infection; hard, fixed, matted or supraclavicular nodes
+                      increase suspicion of malignancy.
+                    </li>
+                    <li>
+                      <strong>Thyroid lump</strong> – midline / anterior, moves with
+                      swallowing; assess for thyroid dysfunction and compressive symptoms.
+                    </li>
+                    <li>
+                      <strong>Salivary gland lump</strong> – parotid or submandibular
+                      region; post-prandial pain/swelling suggests obstruction/calculus.
+                    </li>
+                    <li>
+                      <strong>Congenital / developmental</strong> – midline
+                      thyroglossal cyst, lateral branchial cyst, venous malformation,
+                      lymphangioma, dermoid, etc.
+                    </li>
+                    <li>
+                      <strong>Carotid lump</strong> – pulsatile mass over carotid
+                      bifurcation, may move side-to-side but not vertically.
+                    </li>
+                    <li>
+                      <strong>Unknown cause</strong> – no obvious category after full
+                      assessment.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <div class="step-section-title"><span>Risk level badges</span></div>
+                  <p class="muted">
+                    Use these badges consistently in the pathway to flag severity:
+                  </p>
+                  <ul class="step-list">
+                    <li>
+                      <span class="badge badge-red">
+                        <span class="badge-dot"></span>
+                        Urgent suspected cancer / emergency
+                      </span>
+                      – airway compromise, rapidly enlarging mass, systemic “B-symptoms”,
+                      unexplained or persistent neck lump (especially age ≥ 45), suspicious
+                      skin or mucosal lesions.
+                    </li>
+                    <li>
+                      <span class="badge badge-amber">
+                        <span class="badge-dot"></span>
+                        Caution – investigate / urgent routine
+                      </span>
+                      – persistent lymphadenopathy &gt; 2–4 weeks, supraclavicular node,
+                      unexplained thyroid nodule, unclear diagnosis.
+                    </li>
+                    <li>
+                      <span class="badge badge-green">
+                        <span class="badge-dot"></span>
+                        Stable – suitable for primary care follow-up
+                      </span>
+                      – clearly benign pattern (e.g. small reactive nodes, longstanding
+                      stable lipoma) and no red flags.
+                    </li>
+                  </ul>
+
+                  <!-- Example highlighted clinical score box -->
+                  <div class="score-box">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;">
+                      <div>
+                        <div class="score-label">Clinical risk score (example)</div>
+                        <div class="score-value">Score: 3 / 5</div>
+                        <div class="score-desc">
+                          Intermediate risk – treat possible infection and arrange early
+                          review. Escalate if the score rises or new red-flag features
+                          develop.
+                        </div>
+                      </div>
+                      <div class="score-pill">
+                        Monitoring<br />recommended
+                      </div>
+                    </div>
+                  </div>
+                  <p class="muted" style="margin-top:0.45rem;">
+                    Replace this example with your own validated head &amp; neck or
+                    lymphadenopathy risk tool if you use one in your local pathway.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 3: TREATMENT -->
+        <article
+          class="step-card"
+          id="step-treatment"
+          data-step="3"
+          data-accent="treatment"
+        >
+          <header class="step-header">
+            <div class="step-main">
+              <div class="step-icon treatment" aria-hidden="true">💊</div>
+              <div>
+                <div class="step-label">Step 3</div>
+                <div class="step-title">Treatment &amp; referral</div>
+                <div class="step-subtitle">
+                  Decide whether to treat in primary care, arrange urgent imaging, or refer
+                  via cancer / specialist pathways.
+                </div>
+              </div>
+            </div>
+            <div class="step-meta">
+              <button class="step-toggle" type="button" aria-label="Toggle step 3">
+                <span>Collapse</span>
+                <span class="step-toggle-icon">⌄</span>
+              </button>
+              <div class="step-badges">
+                <span class="badge badge-red">
+                  <span class="badge-dot"></span> Suspected cancer
+                </span>
+                <span class="badge badge-amber">
+                  <span class="badge-dot"></span> Urgent specialist review
+                </span>
+                <span class="badge badge-green">
+                  <span class="badge-dot"></span> Manage in primary care
+                </span>
+              </div>
+            </div>
+          </header>
+          <div class="step-content-wrapper">
+            <div class="step-content">
+              <div class="step-row">
+                <div>
+                  <div class="step-section-title"><span>Primary care management</span></div>
+                  <ul class="step-list">
+                    <li>
+                      <strong>Skin lump clearly benign</strong> (e.g. lipoma, epidermoid
+                      cyst) – reassure; consider elective removal or referral if recurrent
+                      infection or cosmetic concern.
+                    </li>
+                    <li>
+                      <strong>Suspected skin infection / abscess</strong> – manage with
+                      appropriate antibiotics, analgesia and
+                      incision &amp; drainage if required;
+                      <span class="badge badge-amber">
+                        <span class="badge-dot"></span> urgent review
+                      </span>
+                      if systemic symptoms or rapid progression.
+                    </li>
+                    <li>
+                      <strong>Uncomplicated reactive lymphadenopathy</strong> – treat
+                      underlying infection; review if not improving or resolving within
+                      2–4 weeks.
+                    </li>
+                    <li>
+                      <strong>Thyroid nodule without red flags</strong> – arrange TFTs and
+                      routine endocrinology referral if indicated; avoid delaying referral
+                      by ordering non-essential imaging in primary care.
+                    </li>
+                    <li>
+                      <strong>Suspected salivary calculus</strong> – advise hydration,
+                      gland massage, sialogogues; refer to ENT/maxillofacial if recurrent,
+                      persistent or complicated.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <div class="step-section-title"><span>When to refer urgently</span></div>
+                  <ul class="step-list">
+                    <li>
+                      <span class="badge badge-red">
+                        <span class="badge-dot"></span> Emergency admission
+                      </span>
+                      – airway compromise, stridor, significant dysphagia with aspiration,
+                      or suspected expanding vascular lesion after trauma or in known
+                      vasculitis / vascular disease.
+                    </li>
+                    <li>
+                      <span class="badge badge-red">
+                        <span class="badge-dot"></span> 2-week suspected cancer pathway
+                      </span>
+                      – unexplained or persistent neck lump (especially age ≥ 45), thyroid
+                      mass with hoarseness or lymphadenopathy, supraclavicular node,
+                      systemic “B-symptoms” suggestive of lymphoma or leukaemia, or
+                      suspicious oral / skin lesions with associated lymphadenopathy.
+                    </li>
+                    <li>
+                      <span class="badge badge-amber">
+                        <span class="badge-dot"></span> Urgent specialist referral
+                      </span>
+                      – persistent parotid or submandibular gland swelling, suspected
+                      branchial or thyroglossal cyst, venous malformation or carotid
+                      tumour without red-flag vascular features.
+                    </li>
+                    <li>
+                      <span class="badge badge-amber">
+                        <span class="badge-dot"></span> Urgent imaging
+                      </span>
+                      – unexplained enlarging neck lump where neck ultrasound is available
+                      as a fast-track test (follow your local protocol).
+                    </li>
+                  </ul>
+                  <div class="info-callout">
+                    <strong>Tip:</strong> Document the
+                    <em>reason for urgency</em> in the referral (e.g. “unexplained neck
+                    lump, age 52, 6-week history, progressive enlargement, 3&nbsp;cm,
+                    firm, risk of head &amp; neck cancer”).
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- STEP 4: FOLLOW-UP -->
+        <article
+          class="step-card"
+          id="step-followup"
+          data-step="4"
+          data-accent="followup"
+        >
+          <header class="step-header">
+            <div class="step-main">
+              <div class="step-icon followup" aria-hidden="true">📅</div>
+              <div>
+                <div class="step-label">Step 4</div>
+                <div class="step-title">Follow-up &amp; safety-netting</div>
+                <div class="step-subtitle">
+                  Make explicit review plans, red-flag advice, and documentation.
+                </div>
+              </div>
+            </div>
+            <div class="step-meta">
+              <button class="step-toggle" type="button" aria-label="Toggle step 4">
+                <span>Collapse</span>
+                <span class="step-toggle-icon">⌄</span>
+              </button>
+              <div class="step-badges">
+                <span class="badge badge-green">
+                  <span class="badge-dot"></span> Stable / watchful waiting
+                </span>
+              </div>
+            </div>
+          </header>
+          <div class="step-content-wrapper">
+            <div class="step-content">
+              <div class="step-row">
+                <div>
+                  <div class="step-section-title"><span>Review plan</span></div>
+                  <ul class="step-list">
+                    <li>
+                      For suspected reactive lymphadenopathy or benign lumps managed in
+                      primary care:
+                      <ul>
+                        <li>Arrange review in 2–4 weeks.</li>
+                        <li>
+                          Re-measure and re-document size, consistency and associated
+                          symptoms.
+                        </li>
+                        <li>
+                          Escalate to
+                          <span class="badge badge-amber">
+                            <span class="badge-dot"></span> urgent referral
+                          </span>
+                          if enlargement, new nodes, or new red-flag features.
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      Ensure all referrals clearly state urgency, key findings, and any
+                      relevant clinical scores used.
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <div class="step-section-title"><span>Safety-net advice</span></div>
+                  <ul class="step-list">
+                    <li>
+                      Advise the person (and carers/parents) to seek urgent medical help
+                      if:
+                      <ul>
+                        <li>Breathing difficulty, noisy breathing, or stridor develops.</li>
+                        <li>
+                          New difficulty swallowing liquids or saliva, or choking episodes.
+                        </li>
+                        <li>
+                          Rapid increase in size of the lump, new pain, or skin colour
+                          change.
+                        </li>
+                        <li>
+                          They develop unexplained fever, night sweats, weight loss, or
+                          bruising/bleeding.
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      Provide clear written information when possible and record that
+                      safety-netting advice has been given.
+                    </li>
+                  </ul>
+                  <div class="info-callout">
+                    <strong>Documentation prompts:</strong> site and size, suspected
+                    category, risk level badge, actions taken, safety-net advice and
+                    planned follow-up date.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Smooth scroll from sidebar to cards
+    const progressItems = document.querySelectorAll(".progress-item");
+
+    progressItems.forEach((item) => {
+      item.addEventListener("click", () => {
+        const targetId = item.getAttribute("data-target");
+        const section = document.getElementById(targetId);
+        if (!section) return;
+        section.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    // Expand/collapse behaviour for cards
+    const cards = document.querySelectorAll(".step-card");
+
+    cards.forEach((card) => {
+      const header = card.querySelector(".step-header");
+      const wrapper = card.querySelector(".step-content-wrapper");
+
+      // Start expanded and set correct max-height
+      if (wrapper) {
+        wrapper.style.maxHeight = wrapper.scrollHeight + "px";
+      }
+
+      header.addEventListener("click", (event) => {
+        // Avoid toggling when clicking inside a button (for accessibility)
+        if (event.target.closest("button")) {
+          // Button still toggles content though
+        }
+        const isCollapsed = card.classList.contains("collapsed");
+        card.classList.toggle("collapsed");
+
+        if (wrapper) {
+          if (isCollapsed) {
+            wrapper.style.maxHeight = wrapper.scrollHeight + "px";
+          } else {
+            wrapper.style.maxHeight = wrapper.scrollHeight + "px";
+            // Force reflow then animate to 0 for smooth closing
+            requestAnimationFrame(() => {
+              wrapper.style.maxHeight = "0px";
+            });
+          }
+        }
+      });
+    });
+
+    // Highlight active step in sidebar based on scroll
+    const stepSections = document.querySelectorAll(".step-card");
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const card = entry.target;
+          const id = card.id;
+          progressItems.forEach((item) => {
+            if (item.getAttribute("data-target") === id) {
+              item.classList.add("active");
+            } else {
+              item.classList.remove("active");
+            }
+          });
+
+          // Mark previous steps as completed for a “progress” feel
+          const stepNumber = parseInt(card.dataset.step, 10);
+          progressItems.forEach((item) => {
+            const targetId = item.getAttribute("data-target");
+            const stepEl = document.getElementById(targetId);
+            if (!stepEl) return;
+            const s = parseInt(stepEl.dataset.step, 10);
+            if (s < stepNumber) {
+              item.classList.add("completed");
+            }
+          });
+        });
+      },
+      {
+        rootMargin: "-45% 0px -45% 0px",
+        threshold: 0.3,
+      }
+    );
+
+    stepSections.forEach((section) => observer.observe(section));
+
+    // Adjust max-height on window resize to keep transitions correct
+    window.addEventListener("resize", () => {
+      document.querySelectorAll(".step-content-wrapper").forEach((wrapper) => {
+        const parentCard = wrapper.closest(".step-card");
+        if (!parentCard.classList.contains("collapsed")) {
+          wrapper.style.maxHeight = wrapper.scrollHeight + "px";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pityriasis Versicolor Clinical Dashboard</title>
+    <style>
+        :root {
+            --primary: #005eb8; /* NHS Blue */
+            --secondary: #4c6272;
+            --bg-light: #f0f4f5;
+            --white: #ffffff;
+            --alert-red: #d9351d;
+            --alert-bg: #fff5f5;
+            --dose-blue: #e6f0fa;
+            --dose-border: #005eb8;
+            --text-main: #212b32;
+            --success: #007f3b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        header h1 { margin: 0; font-size: 1.4rem; }
+        header .sub-text { font-size: 0.9rem; opacity: 0.9; }
+
+        /* Main Layout */
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Navigation Tabs (Left) */
+        .nav-tabs {
+            width: 220px;
+            background: #dfe6ed;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #ccc;
+        }
+
+        .nav-btn {
+            padding: 15px;
+            border: none;
+            background: transparent;
+            text-align: left;
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 1px solid #ccc;
+            transition: 0.2s;
+        }
+
+        .nav-btn:hover { background: #ced4da; }
+        .nav-btn.active {
+            background: var(--white);
+            color: var(--primary);
+            border-left: 5px solid var(--primary);
+        }
+
+        /* Content Area */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        /* Right Sidebar (Decision Support & Favorites) */
+        .sidebar {
+            width: 300px;
+            background: #f8f9fa;
+            border-left: 1px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        /* Component Styles */
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        h2 { border-bottom: 2px solid var(--secondary); padding-bottom: 5px; margin-top: 0; }
+        h3 { color: var(--primary); margin-top: 20px; }
+
+        /* Visual Hierarchies */
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+        
+        .checklist-item input[type="checkbox"] {
+            margin-top: 5px;
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .key-point {
+            background: #fffbe6;
+            border: 1px solid #ffe58f;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .key-point::before { content: "💡 Key Point: "; font-weight: bold; }
+
+        .drug-box {
+            background-color: var(--dose-blue);
+            border-left: 5px solid var(--dose-border);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .drug-title { font-weight: bold; color: var(--primary); display: block; margin-bottom: 5px; }
+
+        .red-flag {
+            border: 2px solid var(--alert-red);
+            background-color: var(--alert-bg);
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        
+        .red-flag h4 { margin: 0 0 5px 0; color: var(--alert-red); text-transform: uppercase; font-size: 0.9rem;}
+
+        /* Decision Support Box */
+        .decision-box {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .decision-select { width: 100%; padding: 8px; margin: 10px 0; border-radius: 4px; border: 1px solid #ccc;}
+        .decision-result { font-weight: bold; color: var(--primary); min-height: 40px;}
+
+        /* Favorites Panel */
+        .favorites-panel {
+            border: 1px dashed #aaa;
+            min-height: 200px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 4px;
+        }
+        .favorites-panel h3 { margin-top: 0; font-size: 1.1rem; color: #555; }
+        .fav-item {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+        }
+        .fav-item span.remove { color: red; font-weight: bold; }
+
+        /* Draggable styling */
+        .draggable-section {
+            cursor: grab;
+            position: relative;
+        }
+        .draggable-section:hover::after {
+            content: "Drag to Favorites";
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #eee;
+            font-size: 0.7rem;
+            padding: 2px 5px;
+            border: 1px solid #ccc;
+        }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: var(--secondary); color: white; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>Pityriasis Versicolor</h1>
+        <span class="sub-text">Clinical Management Guide (Based on NICE CKS 2025)</span>
+    </div>
+    <div style="text-align: right; font-size: 0.8rem;">
+        Target: UK Primary Care<br>
+        Population: >10 years
+    </div>
+</header>
+
+<div class="container">
+    <!-- Left Navigation -->
+    <nav class="nav-tabs">
+        <button class="nav-btn active" onclick="openTab(event, 'new-dx')">New Diagnosis</button>
+        <button class="nav-btn" onclick="openTab(event, 'mild')">Localized / Mild</button>
+        <button class="nav-btn" onclick="openTab(event, 'failure')">Not Responding</button>
+        <button class="nav-btn" onclick="openTab(event, 'flare')">Recurrence / Flare</button>
+        <button class="nav-btn" onclick="openTab(event, 'referral')">Referral Criteria</button>
+        <button class="nav-btn" onclick="openTab(event, 'compare')">Treatment Options</button>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- Tab 1: New Diagnosis -->
+        <div id="new-dx" class="tab-content active">
+            <h2>New Diagnosis (Widespread)</h2>
+            
+            <div class="draggable-section" draggable="true" data-title="New Dx: History">
+                <h3>1. What to Ask</h3>
+                <div class="checklist-item"><input type="checkbox"> Confirm: Itch is usually mild or absent.</div>
+                <div class="checklist-item"><input type="checkbox"> History: Often noticed after sun exposure (lesions do not tan).</div>
+                <div class="checklist-item"><input type="checkbox"> Risk Factors: Immunosuppression, humid environment, hyperhidrosis.</div>
+            </div>
+
+            <div class="draggable-section" draggable="true" data-title="New Dx: Exam">
+                <h3>2. What to Examine</h3>
+                <div class="checklist-item"><input type="checkbox"> <strong>Distribution:</strong> Upper trunk, back, upper arms, neck (sebum-rich areas).</div>
+                <div class="checklist-item"><input type="checkbox"> <strong>Appearance:</strong> Macules/patches with fine powdery scale.</div>
+                <div class="checklist-item"><input type="checkbox"> <strong>Pigment:</strong> Hypopigmented (dark skin/tanned) or Hyperpigmented (pale skin).</div>
+                <div class="key-point">Diagnostic Aid: Wood's lamp may show yellow/gold fluorescence. Scrapings usually not needed.</div>
+            </div>
+
+            <div class="draggable-section" draggable="true" data-title="New Dx: Prescribe">
+                <h3>3. What to Prescribe (First Line - Widespread)</h3>
+                <div class="drug-box">
+                    <span class="drug-title">Ketoconazole 2% Shampoo</span>
+                    <strong>Dose:</strong> Apply once daily for up to 5 days.<br>
+                    <strong>Instruction:</strong> Use as a body wash. Leave on wet skin for up to 15 minutes before rinsing.<br>
+                    <strong>Age:</strong> Licensed for >12 years.
+                </div>
+            </div>
+
+            <div class="draggable-section" draggable="true" data-title="New Dx: Review">
+                <h3>4. When to Review</h3>
+                <div class="checklist-item"><input type="checkbox"> Advise patient: Scale resolves first. <strong>Pigmentation changes may take months to resolve.</strong></div>
+                <div class="checklist-item"><input type="checkbox"> Only review if symptoms persist or scale remains active.</div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Localized / Mild -->
+        <div id="mild" class="tab-content">
+            <h2>Localized / Mild Infection</h2>
+            <p>For small areas, topical creams may be preferable to shampoo.</p>
+
+            <div class="draggable-section" draggable="true" data-title="Mild: Prescribe">
+                <h3>Prescribing Options</h3>
+                <div class="drug-box">
+                    <span class="drug-title">Topical Antifungal Creams</span>
+                    <strong>Options:</strong> Clotrimazole (preferred in pregnancy), Econazole, Ketoconazole, or Terbinafine.<br>
+                    <strong>Dose:</strong> Apply twice daily.<br>
+                    <strong>Duration:</strong> 2–3 weeks.
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Not Responding -->
+        <div id="failure" class="tab-content">
+            <h2>Treatment Failure / Not Responding</h2>
+            
+            <div class="draggable-section" draggable="true" data-title="Failure: Assessment">
+                <h3>1. Re-Assessment Checklist</h3>
+                <div class="checklist-item"><input type="checkbox"> <strong>Compliance:</strong> Was the shampoo left on for 15 mins?</div>
+                <div class="checklist-item"><input type="checkbox"> <strong>Misconception:</strong> Is the patient concerned about persistent white patches (post-inflammatory hypopigmentation) despite the infection being cleared? <br><em>(If no scale/itch, do not re-treat).</em></div>
+                <div class="checklist-item"><input type="checkbox"> <strong>Diagnosis:</strong> Consider scrapings if diagnosis is uncertain.</div>
+            </div>
+
+            <div class="draggable-section" draggable="true" data-title="Failure: Oral Rx">
+                <h3>2. Second Line: Oral Antifungals</h3>
+                <p>Use if topical fails or disease is severe/widespread.</p>
+                
+                <div class="drug-box">
+                    <span class="drug-title">Itraconazole (Adults)</span>
+                    <strong>Dose:</strong> 200 mg once daily for 7 days.
+                </div>
+                <div class="drug-box">
+                    <span class="drug-title">Fluconazole (Adults)</span>
+                    <strong>Dose:</strong> 50 mg daily for 2–4 weeks<br>
+                    <em>OR</em> 300–400 mg once weekly for 1–3 weeks.
+                </div>
+            </div>
+
+            <div class="red-flag draggable-section" draggable="true" data-title="Failure: Red Flags">
+                <h4>Red Flags & Cautions for Oral Antifungals</h4>
+                <ul>
+                    <li><strong>Pregnancy:</strong> Do NOT use standard oral antifungals.</li>
+                    <li><strong>Liver:</strong> Caution in hepatic impairment; risk of toxicity.</li>
+                    <li><strong>Interactions:</strong> Statins (Simvastatin/Lovastatin contraindicated with Itraconazole), Warfarin (INR changes). Check BNF.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab 4: Recurrence -->
+        <div id="flare" class="tab-content">
+            <h2>Recurrence & Prophylaxis</h2>
+            <div class="key-point">Recurrence is common (up to 80% over 2 years), especially in summer.</div>
+
+            <div class="draggable-section" draggable="true" data-title="Flare: Maintenance">
+                <h3>Maintenance Regimen</h3>
+                <div class="drug-box">
+                    <span class="drug-title">Ketoconazole 2% Shampoo</span>
+                    <strong>Dose:</strong> Apply once every 1–4 weeks (whole body) to prevent relapse.
+                </div>
+            </div>
+
+            <div class="draggable-section" draggable="true" data-title="Flare: Holiday Prophylaxis">
+                <h3>"Holiday" Prophylaxis</h3>
+                <p>For patients who flare in sunny climates:</p>
+                <div class="drug-box">
+                    <span class="drug-title">Ketoconazole 2% Shampoo</span>
+                    <strong>Dose:</strong> Once daily for 3 days <strong>prior</strong> to sun exposure/travel.
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 5: Referral -->
+        <div id="referral" class="tab-content">
+            <h2>Referral Criteria</h2>
+            
+            <div class="red-flag draggable-section" draggable="true" data-title="Referral Criteria">
+                <h4>Consider Dermatology Referral If:</h4>
+                <div class="checklist-item"><input type="checkbox"> Diagnosis is uncertain or microscopy is negative.</div>
+                <div class="checklist-item"><input type="checkbox"> Inadequate response to optimal primary care treatment (Topical + Oral).</div>
+                <div class="checklist-item"><input type="checkbox"> Patient is <strong>Pregnant or < 12 years old</strong> and requires oral treatment (severe/widespread).</div>
+                <div class="checklist-item"><input type="checkbox"> Patient is immunocompromised.</div>
+            </div>
+        </div>
+
+        <!-- Tab 6: Comparison -->
+        <div id="compare" class="tab-content">
+            <h2>Treatment Comparison</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Modality</th>
+                        <th>Drug</th>
+                        <th>Pros</th>
+                        <th>Cons</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Topical Wash</strong></td>
+                        <td>Ketoconazole Shampoo</td>
+                        <td>First-line, treats large areas, low systemic absorption.</td>
+                        <td>Drying to skin, requires 15 min application time.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Topical Cream</strong></td>
+                        <td>Clotrimazole, Terbinafine</td>
+                        <td>Good for small areas, safe in pregnancy (Clotrimazole).</td>
+                        <td>Impractical for large areas, sticky/messy.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Oral</strong></td>
+                        <td>Itraconazole, Fluconazole</td>
+                        <td>High efficacy, convenient dosing.</td>
+                        <td>Drug interactions (Statins/Warfarin), Liver toxicity risk, Contraindicated in pregnancy.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        
+        <!-- Decision Support -->
+        <div class="decision-box">
+            <h3 style="margin-top:0; font-size:1rem;">🧠 Decision Support</h3>
+            <label style="font-size:0.8rem;">Patient Presentation:</label>
+            <select id="severitySelect" class="decision-select" onchange="updateDecision()">
+                <option value="">-- Select Status --</option>
+                <option value="new-wide">New Dx - Widespread</option>
+                <option value="new-local">New Dx - Small Area</option>
+                <option value="resistant">Failed Topical Rx</option>
+                <option value="recurrent">Frequent Recurrence</option>
+                <option value="pregnant">Pregnant Patient</option>
+            </select>
+            <div id="decisionResult" class="decision-result"></div>
+        </div>
+
+        <!-- Favorites -->
+        <div class="favorites-panel" id="favoritesZone">
+            <h3>⭐ Favorites</h3>
+            <p style="font-size:0.8rem; color:#666;">Drag sections from the main content here for quick access.</p>
+            <div id="favList">
+                <!-- Items dropped here -->
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    // Tab Logic
+    function openTab(evt, tabName) {
+        var i, tabContent, tabLinks;
+        tabContent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabContent.length; i++) {
+            tabContent[i].style.display = "none";
+            tabContent[i].classList.remove('active');
+        }
+        tabLinks = document.getElementsByClassName("nav-btn");
+        for (i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        document.getElementById(tabName).classList.add('active');
+        evt.currentTarget.className += " active";
+    }
+
+    // Decision Support Logic
+    function updateDecision() {
+        const val = document.getElementById('severitySelect').value;
+        const res = document.getElementById('decisionResult');
+        
+        switch(val) {
+            case 'new-wide':
+                res.innerHTML = "Rx: Ketoconazole 2% Shampoo. Daily x 5 days. Apply to whole body.";
+                res.style.color = "var(--primary)";
+                break;
+            case 'new-local':
+                res.innerHTML = "Rx: Clotrimazole or Terbinafine cream. BID for 2-3 weeks.";
+                res.style.color = "var(--success)";
+                break;
+            case 'resistant':
+                res.innerHTML = "Check compliance first. If confirmed failure -> Oral Itraconazole 200mg OD x 7 days (Check interactions!).";
+                res.style.color = "#d9351d";
+                break;
+            case 'recurrent':
+                res.innerHTML = "Prevention: Ketoconazole Shampoo once every 1-4 weeks.";
+                res.style.color = "var(--primary)";
+                break;
+            case 'pregnant':
+                res.innerHTML = "Use Topical Clotrimazole. Avoid oral antifungals. Refer if severe.";
+                res.style.color = "#d9351d";
+                break;
+            default:
+                res.innerHTML = "";
+        }
+    }
+
+    // Drag and Drop Logic for Favorites
+    const draggables = document.querySelectorAll('.draggable-section');
+    const dropZone = document.getElementById('favoritesZone');
+    const favList = document.getElementById('favList');
+
+    draggables.forEach(draggable => {
+        draggable.addEventListener('dragstart', () => {
+            draggable.classList.add('dragging');
+        });
+
+        draggable.addEventListener('dragend', () => {
+            draggable.classList.remove('dragging');
+        });
+    });
+
+    dropZone.addEventListener('dragover', e => {
+        e.preventDefault();
+        dropZone.style.background = "#e6f7ff";
+        dropZone.style.border = "1px dashed var(--primary)";
+    });
+
+    dropZone.addEventListener('dragleave', e => {
+        dropZone.style.background = "#fff";
+        dropZone.style.border = "1px dashed #aaa";
+    });
+
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.style.background = "#fff";
+        dropZone.style.border = "1px dashed #aaa";
+        
+        const draggable = document.querySelector('.dragging');
+        const title = draggable.getAttribute('data-title');
+        
+        // Create simple link in favorites
+        addToFavorites(title, draggable.id);
+    });
+
+    function addToFavorites(text, anchorId) {
+        // Prevent duplicates
+        const existing = Array.from(favList.children).find(child => child.innerText.includes(text));
+        if (existing) return;
+
+        const div = document.createElement('div');
+        div.className = 'fav-item';
+        div.innerHTML = `<span>${text}</span> <span class="remove" onclick="this.parentElement.remove()">×</span>`;
+        
+        // Clicking the favorite could ideally navigate to the tab, 
+        // but for this demo, it serves as a mental bookmark.
+        favList.appendChild(div);
+    }
+</script>
+
+</body>
+</html>

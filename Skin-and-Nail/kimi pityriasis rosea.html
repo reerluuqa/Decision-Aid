@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pityriasis Rosea - Clinical Decision Support</title>
+    <style>
+        :root {
+            --primary: #0066CC;
+            --primary-light: #E3F2FD;
+            --urgent: #D32F2F;
+            --warning: #F57C00;
+            --success: #388E3C;
+            --background: #F5F7FA;
+            --surface: #FFFFFF;
+            --text-primary: #2C3E50;
+            --text-secondary: #546E7A;
+            --border: #E0E6ED;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --gradient: linear-gradient(135deg, var(--primary) 0%, #0097A7 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: var(--gradient);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .meta-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .quick-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .summary-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 8px var(--shadow);
+            border-left: 4px solid var(--primary);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px var(--shadow);
+        }
+
+        .summary-card.urgent {
+            border-left-color: var(--urgent);
+            background: #FFEBEE;
+        }
+
+        .summary-card.success {
+            border-left-color: var(--success);
+            background: #E8F5E9;
+        }
+
+        .summary-card h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            max-height: calc(100vh - 4rem);
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .nav-header {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-item {
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .nav-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+            border-left-color: var(--primary);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .nav-item.urgent-nav {
+            color: var(--urgent);
+        }
+
+        .nav-item.urgent-nav:hover,
+        .nav-item.urgent-nav.active {
+            background: #FFEBEE;
+        }
+
+        .filter-search {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .filter-search:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .content-area {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--primary);
+            flex: 1;
+        }
+
+        .toggle-icon {
+            width: 28px;
+            height: 28px;
+            transition: transform 0.3s;
+        }
+
+        .section.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            transition: max-height 0.3s ease-out, opacity 0.3s;
+            overflow: hidden;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+        }
+
+        .flag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+
+        .flag-urgent {
+            background: #FFEBEE;
+            color: var(--urgent);
+            border: 1px solid #EF9A9A;
+        }
+
+        .flag-routine {
+            background: #E8F5E9;
+            color: var(--success);
+            border: 1px solid #A5D6A7;
+        }
+
+        .flag-warning {
+            background: #FFF3E0;
+            color: var(--warning);
+            border: 1px solid #FFCC80;
+        }
+
+        .action-box {
+            background: var(--primary-light);
+            border-left: 6px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .action-box h4 {
+            color: var(--primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-panel {
+            background: var(--surface);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -12px;
+            left: 1rem;
+            background: var(--primary);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .differential-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .differential-item {
+            background: #FAFAFA;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--warning);
+        }
+
+        .differential-item h5 {
+            color: var(--warning);
+            margin-bottom: 0.5rem;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--background);
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            margin: 0.25rem 0.25rem 0.25rem 0;
+        }
+
+        .references {
+            background: #FAFAFA;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                max-height: none;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .highlight {
+            background: #FFF9C4;
+            padding: 0.125rem 0.25rem;
+            border-radius: 4px;
+        }
+
+        .sticky-alert {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            background: var(--urgent);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            max-width: 350px;
+        }
+
+        .sticky-alert.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div>
+                    <h1>Pityriasis Rosea</h1>
+                    <p style="margin-top: 0.5rem; opacity: 0.9;">Clinical Decision Support | NICE CKS Adaptation</p>
+                </div>
+                <div class="meta-badge">
+                    <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                    Last Revised: May 2025
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="quick-summary fade-in">
+            <div class="summary-card success">
+                <h3>
+                    <svg class="icon" fill="#388E3C" viewBox="0 0 24 24">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
+                    Self-Limiting
+                </h3>
+                <p>Resolves spontaneously in 6-8 weeks. No treatment needed except itch management.</p>
+            </div>
+            <div class="summary-card urgent">
+                <h3>
+                    <svg class="icon" fill="#D32F2F" viewBox="0 0 24 24">
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                    </svg>
+                    Pregnancy Alert
+                </h3>
+                <p>First trimester cases: discuss with secondary care. Possible association with adverse outcomes.</p>
+            </div>
+            <div class="summary-card">
+                <h3>
+                    <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Key Features
+                </h3>
+                <p>Herald patch → Christmas tree distribution on trunk. Common in ages 10-35 years.</p>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <aside class="sidebar">
+                <div class="nav-section">
+                    <div class="nav-header">
+                        <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
+                        </svg>
+                        Quick Navigation
+                    </div>
+                    <input type="text" class="filter-search" placeholder="Search content..." id="searchInput">
+                    <nav id="mainNav">
+                        <div class="nav-item active" data-section="diagnosis">
+                            <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                            </svg>
+                            Diagnosis
+                        </div>
+                        <div class="nav-item urgent-nav" data-section="urgent">
+                            <svg class="icon" fill="#D32F2F" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            </svg>
+                            Urgent Considerations
+                        </div>
+                        <div class="nav-item" data-section="management">
+                            <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                <path d="M20 6h-2.18c.11-.31.18-.65.18-1a3 3 0 0 0-6 0c0 .35.07.69.18 1H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM4 8h16v11H4V8z"/>
+                            </svg>
+                            Management
+                        </div>
+                        <div class="nav-item" data-section="prescribing">
+                            <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+                            </svg>
+                            Prescribing
+                        </div>
+                        <div class="nav-item" data-section="references">
+                            <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                            </svg>
+                            References
+                        </div>
+                    </nav>
+                </div>
+            </aside>
+
+            <main class="content-area" id="contentArea">
+                <div class="section fade-in" id="diagnosis-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h2 class="section-title">Diagnosis & Clinical Features</h2>
+                        <svg class="toggle-icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="flag flag-routine">
+                            <svg class="icon" fill="#388E3C" viewBox="0 0 24 24">
+                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                            </svg>
+                            Classic Presentation in 80% of Cases
+                        </div>
+
+                        <div class="action-box">
+                            <h4>
+                                <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                                When to Suspect Pityriasis Rosea
+                            </h4>
+                            <div class="step-panel">
+                                <div class="step-number">1</div>
+                                <strong>Herald Patch:</strong> Single, larger lesion (2-5cm) appears first. 'Collarette' scaling at margin, central depression. Present in up to 90% of cases.
+                            </div>
+                            <div class="step-panel">
+                                <div class="step-number">2</div>
+                                <strong>Generalized Rash:</strong> Appears after 1-3 weeks. Multiple 0.5-1cm oval lesions with peripheral scaling.
+                            </div>
+                            <div class="step-panel">
+                                <div class="step-number">3</div>
+                                <strong>Distribution:</strong> Symmetrical, trunk & proximal limbs. "Christmas tree" pattern along cleavage lines. Face/scalp involvement common in children.
+                            </div>
+                        </div>
+
+                        <h4>Key Clinical Clues:</h4>
+                        <ul style="margin-left: 1.5rem; margin-bottom: 1rem;">
+                            <li><strong>Color:</strong> Pink-red "salmon-colored" (hypopigmented in dark skin)</li>
+                            <li><strong>Scale:</strong> Peripheral collarette, central clearing</li>
+                            <li><strong>Itch:</strong> Variable, often mild to moderate</li>
+                            <li><strong>Prodrome:</strong> Malaise, headache, sore throat (reported but not common)</li>
+                        </ul>
+
+                        <div class="tag">Ages 10-35</div>
+                        <div class="tag">Slightly more common in females</div>
+                        <div class="tag">Winter predominance (temperate climates)</div>
+
+                        <div class="flag flag-warning">
+                            <svg class="icon" fill="#F57C00" viewBox="0 0 24 24">
+                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                            </svg>
+                            Atypical Forms (20% of cases)
+                        </div>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                            <li><strong>Inverse:</strong> Predominantly face, axillae, groin</li>
+                            <li><strong>Pityriasis circinata et marginata:</strong> Few large patches in axillae/inguinal region</li>
+                            <li><strong>Pityriasis gigantea:</strong> Larger lesions</li>
+                            <li><strong>Other variants:</strong> Pustular, purpuric, vesicular</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section fade-in" id="urgent-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h2 class="section-title">Urgent Considerations</h2>
+                        <svg class="toggle-icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="flag flag-urgent">
+                            <svg class="icon" fill="#D32F2F" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                            </svg>
+                            High Priority Situations
+                        </div>
+
+                        <div class="action-box" style="border-left-color: var(--urgent); background: #FFEBEE;">
+                            <h4 style="color: var(--urgent);">
+                                <svg class="icon" fill="#D32F2F" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                                Pregnancy in First Trimester
+                            </h4>
+                            <p><strong>Action:</strong> Discuss with secondary care/dermatology. Consider oral antiviral therapy (acyclovir) if obstetric concerns.</p>
+                            <p><strong>Rationale:</strong> Inconclusive but concerning evidence of possible associations with miscarriage, premature delivery, neonatal hypotonia/hyperactivity.</p>
+                        </div>
+
+                        <div class="action-box" style="border-left-color: var(--warning); background: #FFF3E0;">
+                            <h4 style="color: var(--warning);">
+                                <svg class="icon" fill="#F57C00" viewBox="0 0 24 24">
+                                    <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                                </svg>
+                                Red Flag Differential Diagnoses
+                            </h4>
+                            <p><strong>Investigate for before confirming diagnosis:</strong></p>
+                            <ul style="margin-left: 1.5rem;">
+                                <li><strong>Secondary Syphilis:</strong> Non-itchy maculopapular rash, palms/soles</li>
+                                <li><strong>HIV Seroconversion:</strong> Symmetrical rash including palms/soles</li>
+                            </ul>
+                            <p style="margin-top: 0.5rem;"><strong>Action:</strong> Consider STI screen ± HIV test based on risk assessment.</p>
+                        </div>
+
+                        <div class="action-box">
+                            <h4>
+                                <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                    <path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/>
+                                </svg>
+                                When to Refer
+                            </h4>
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Diagnosis uncertain</li>
+                                <li>Atypical presentation suspected</li>
+                                <li>Extensive disease or severe itch uncontrolled in primary care</li>
+                                <li>Rash persists <strong>>3 months</strong></li>
+                                <li>First trimester pregnancy with concerns</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section fade-in" id="management-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h2 class="section-title">Management</h2>
+                        <svg class="toggle-icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="flag flag-routine">
+                            <svg class="icon" fill="#388E3C" viewBox="0 0 24 24">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Self-Limiting Condition
+                        </div>
+
+                        <div class="action-box" style="border-left-color: var(--success);">
+                            <h4 style="color: var(--success);">
+                                <svg class="icon" fill="#388E3C" viewBox="0 0 24 24">
+                                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                </svg>
+                                Key Counseling Points
+                            </h4>
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Rash may worsen before improving</li>
+                                <li>Lesions fade without treatment in 2-6 weeks (up to 3-5 months)</li>
+                                <li>Only symptomatic treatment needed for itch</li>
+                                <li><strong>Not contagious</strong></li>
+                                <li>Temporary hyper/hypopigmentation may occur (no scarring)</li>
+                                <li>Recurrence rare (3-4%)</li>
+                            </ul>
+                        </div>
+
+                        <h4>Symptomatic Treatment for Itch:</h4>
+                        <div class="step-panel">
+                            <div class="step-number">1</div>
+                            <strong>Emollients:</strong> Liberal application, especially after bathing. See eczema prescribing guidance.
+                        </div>
+                        <div class="step-panel">
+                            <div class="step-number">2</div>
+                            <strong>Oral Antihistamines (off-label):</strong> Consider sedating option (e.g., chlorphenamine) at night if sleep disturbed. <strong>Stop if no relief after 2 weeks.</strong>
+                        </div>
+                        <div class="step-panel">
+                            <div class="step-number">3</div>
+                            <strong>Topical Corticosteroids:</strong> Mildly potent (hydrocortisone 1%) or moderately potent (betamethasone valerate 0.025%, clobetasone 0.05%) for up to 4 weeks.
+                        </div>
+
+                        <div class="flag flag-warning">
+                            <svg class="icon" fill="#F57C00" viewBox="0 0 24 24">
+                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                            </svg>
+                            Patient Resources
+                        </div>
+                        <p>Provide British Association of Dermatologists leaflet: <a href="http://www.bad.org.uk" target="_blank">www.bad.org.uk</a></p>
+                    </div>
+                </div>
+
+                <div class="section fade-in" id="prescribing-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h2 class="section-title">Prescribing Information</h2>
+                        <svg class="toggle-icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="action-box">
+                            <h4>
+                                <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                    <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1z"/>
+                                </svg>
+                                Emollients
+                            </h4>
+                            <p>Liberal application to itchy areas. Applied frequently and generously.</p>
+                            <div class="flag flag-urgent" style="font-size: 0.75rem;">
+                                <svg class="icon" fill="#D32F2F" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                                Safety: Advise patients not to smoke or go near naked flames due to fire risk with paraffin-based emollients.
+                            </div>
+                        </div>
+
+                        <div class="action-box">
+                            <h4>
+                                <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                    <path d="M19.5 9.5C19.5 5.91 16.59 3 13 3S6.5 5.91 6.5 9.5c0 1.22.36 2.35.97 3.31L3 19.36c-.39.39-.39 1.02 0 1.41l.71.71c.39.39 1.02.39 1.41 0l6.05-6.05c.96.61 2.09.97 3.31.97 3.59 0 6.5-2.91 6.5-6.5zm-6.5 5.5c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
+                                </svg>
+                                Topical Corticosteroids
+                            </h4>
+                            <ul style="margin-left: 1.5rem;">
+                                <li><strong>Mild potency:</strong> Hydrocortisone 1%</li>
+                                <li><strong>Moderate potency:</strong> Betamethasone valerate 0.025%, Clobetasone 0.05%</li>
+                                <li><strong>Application:</strong> Once or twice daily for up to 4 weeks</li>
+                                <li><strong>Choice:</strong> Based on itch severity and body site</li>
+                            </ul>
+                        </div>
+
+                        <div class="action-box">
+                            <h4>
+                                <svg class="icon" fill="#0066CC" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                                </svg>
+                                Oral Antihistamines
+                            </h4>
+                            <ul style="margin-left: 1.5rem;">
+                                <li>Off-label use for itch in pityriasis rosea</li>
+                                <li>Consider <strong>sedating</strong> option (chlorphenamine) at night if sleep disturbed</li>
+                                <li>Discontinue if no benefit after <strong>2 weeks</strong></li>
+                                <li>See CKS Itch - widespread for full prescribing details</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section fade-in" id="differential-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h2 class="section-title">Differential Diagnosis</h2>
+                        <svg class="toggle-icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <div class="flag flag-warning">
+                            <svg class="icon" fill="#F57C00" viewBox="0 0 24 24">
+                                <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                            </svg>
+                            Most Common Mimics
+                        </div>
+                        <div class="differential-grid">
+                            <div class="differential-item">
+                                <h5>Guttate Psoriasis</h5>
+                                <p>Small pink/red scaly papules. Often follows streptococcal throat infection.</p>
+                            </div>
+                            <div class="differential-item">
+                                <h5>Discoid Eczema</h5>
+                                <p>Intensely itchy, coin-shaped plaques. May be vesicular or crusted.</p>
+                            </div>
+                            <div class="differential-item">
+                                <h5>Secondary Syphilis</h5>
+                                <p><strong>Non-itchy</strong>, maculopapular rash. Involves palms/soles.</p>
+                            </div>
+                            <div class="differential-item">
+                                <h5>Drug Reaction</h5>
+                                <p>No herald patch, violet-red lesions, severe pruritus, eosinophilia.</p>
+                            </div>
+                            <div class="differential-item">
+                                <h5>Pityriasis Versicolor</h5>
+                                <p>Fine scale at edges, variable color (fawn, pink, brown). Affects chest/back/arms.</p>
+                            </div>
+                            <div class="differential-item">
+                                <h5>Tinea Corporis</h5>
+                                <p>Annular patches with active scaly edge and clear center. Gradually enlarge.</p>
+                            </div>
+                        </div>
+
+                        <p style="margin-top: 1.5rem;"><strong>To differentiate:</strong> Look for herald patch, collarette scaling, Christmas tree distribution, and lack of palmar/plantar involvement.</p>
+                    </div>
+                </div>
+
+                <div class="section fade-in" id="references-section">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <h2 class="section-title">References & Evidence Base</h2>
+                        <svg class="toggle-icon" fill="#0066CC" viewBox="0 0 24 24">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="section-content">
+                        <p><strong>Evidence Sources:</strong></p>
+                        <div class="references">
+                            <ol>
+                                <li>Chuh A, et al. (2016) Position statement on management of patients with pityriasis rosea. J Eur Acad Dermatol Venereol. 30(10):1670-1681.</li>
+                                <li>Harwood CA & Sterling JC (2024) Pityriasis rosea. In: Rook's Textbook of Dermatology, 10th edn.</li>
+                                <li>Villalon-Gomez JM (2018) Pityriasis rosea: diagnosis and treatment. Am Fam Physician. 97(1):38-44.</li>
+                                <li>Drago F, et al. (2016) Pityriasis rosea: a comprehensive classification. Dermatology. 232(4):431-437.</li>
+                                <li>Contreras-Ruiz J, et al. (2019) Interventions for pityriasis rosea. Cochrane Database.</li>
+                                <li>Eisman S & Sinclair R (2015) Practice pointer: pityriasis rosea. BMJ. 351:h5233.</li>
+                                <li>Rebora A, et al. (2019) Pityriasis rosea and other infectious eruptions during pregnancy. Clin Dermatol. 38(1):105-112.</li>
+                            </ol>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-secondary);">
+                            <strong>Search Strategy:</strong> EBSCOhost MEDLINE, Cochrane Library, NICE Evidence, February 2020 - January 2025.
+                        </p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="sticky-alert" id="urgentAlert">
+        <svg class="icon" fill="white" viewBox="0 0 24 24" style="width: 20px; height: 20px;">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <span style="margin-left: 0.5rem;">Review pregnancy and red flag sections</span>
+        <button onclick="closeAlert()" style="margin-left: 1rem; background: none; border: none; color: white; cursor: pointer; font-weight: bold;">×</button>
+    </div>
+
+    <script>
+        // Section toggle functionality
+        function toggleSection(header) {
+            const section = header.parentElement;
+            const content = section.querySelector('.section-content');
+            section.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+            
+            if (content.classList.contains('collapsed')) {
+                content.style.maxHeight = '0';
+            } else {
+                content.style.maxHeight = content.scrollHeight + 'px';
+            }
+        }
+
+        // Navigation functionality
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all nav items
+                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                // Add active class to clicked item
+                this.classList.add('active');
+                
+                // Smooth scroll to section
+                const targetSection = this.dataset.section;
+                const element = document.getElementById(targetSection + '-section');
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const sections = document.querySelectorAll('.section');
+            
+            sections.forEach(section => {
+                const content = section.textContent.toLowerCase();
+                if (content.includes(searchTerm)) {
+                    section.style.display = 'block';
+                    section.classList.add('fade-in');
+                } else {
+                    section.style.display = searchTerm === '' ? 'block' : 'none';
+                }
+            });
+            
+            // Highlight matching text
+            const bodyText = document.querySelector('.content-area');
+            const walker = document.createTreeWalker(
+                bodyText,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const textNodes = [];
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+            
+            textNodes.forEach(textNode => {
+                const parent = textNode.parentElement;
+                if (parent && !parent.classList.contains('section-title') && !parent.classList.contains('nav-item')) {
+                    const text = textNode.textContent;
+                    if (searchTerm && text.toLowerCase().includes(searchTerm)) {
+                        const regex = new RegExp(`(${searchTerm})`, 'gi');
+                        const highlightedText = text.replace(regex, '<span class="highlight">$1</span>');
+                        if (!parent.innerHTML.includes('highlight')) {
+                            parent.innerHTML = parent.innerHTML.replace(text, highlightedText);
+                        }
+                    } else {
+                        parent.innerHTML = parent.innerHTML.replace(/<span class="highlight">(.*?)<\/span>/gi, '$1');
+                    }
+                }
+            });
+        });
+
+        // Show urgent alert on page load (disappears after 10 seconds)
+        window.addEventListener('load', function() {
+            const alert = document.getElementById('urgentAlert');
+            alert.classList.add('show');
+            
+            // Highlight urgent nav item briefly
+            const urgentNav = document.querySelector('.urgent-nav');
+            urgentNav.style.background = '#FFEBEE';
+            urgentNav.style.fontWeight = '700';
+            
+            setTimeout(() => {
+                alert.classList.remove('show');
+                urgentNav.style.background = '';
+                urgentNav.style.fontWeight = '';
+            }, 10000);
+        });
+
+        function closeAlert() {
+            document.getElementById('urgentAlert').classList.remove('show');
+        }
+
+        // Initialize section heights
+        document.querySelectorAll('.section-content').forEach(content => {
+            content.style.maxHeight = content.scrollHeight + 'px';
+        });
+    </script>
+</body>
+</html>

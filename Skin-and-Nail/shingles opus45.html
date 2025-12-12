@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shingles Management Algorithm - NICE CKS Guidelines</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --assessment-color: #3498db;
+            --assessment-light: #ebf5fb;
+            --diagnosis-color: #9b59b6;
+            --diagnosis-light: #f5eef8;
+            --treatment-color: #e74c3c;
+            --treatment-light: #fdedec;
+            --followup-color: #27ae60;
+            --followup-light: #eafaf1;
+            --urgent-red: #c0392b;
+            --caution-amber: #f39c12;
+            --stable-green: #27ae60;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --bg-light: #f8f9fa;
+            --white: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            width: 280px;
+            height: fit-content;
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+            flex-shrink: 0;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--bg-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-list {
+            list-style: none;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-item:hover {
+            background: var(--bg-light);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .progress-item .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+            margin-right: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .step-number {
+            background: white;
+            color: #667eea;
+        }
+
+        .progress-item.completed .step-number {
+            background: var(--stable-green);
+            color: white;
+        }
+
+        .progress-item .step-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .progress-connector {
+            position: absolute;
+            left: 29px;
+            top: 40px;
+            width: 2px;
+            height: 20px;
+            background: var(--bg-light);
+        }
+
+        .progress-item.completed .progress-connector {
+            background: var(--stable-green);
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid var(--bg-light);
+        }
+
+        .legend h3 {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+
+        .legend-badge {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .legend-badge.urgent { background: var(--urgent-red); }
+        .legend-badge.caution { background: var(--caution-amber); }
+        .legend-badge.stable { background: var(--stable-green); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .header {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .header .nice-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-top: 12px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border-left: 5px solid;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .card.assessment { border-left-color: var(--assessment-color); }
+        .card.diagnosis { border-left-color: var(--diagnosis-color); }
+        .card.treatment { border-left-color: var(--treatment-color); }
+        .card.followup { border-left-color: var(--followup-color); }
+
+        .card-header {
+            padding: 20px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s ease;
+        }
+
+        .card.assessment .card-header { background: var(--assessment-light); }
+        .card.diagnosis .card-header { background: var(--diagnosis-light); }
+        .card.treatment .card-header { background: var(--treatment-light); }
+        .card.followup .card-header { background: var(--followup-light); }
+
+        .card-header:hover {
+            filter: brightness(0.97);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .card.assessment .card-icon { background: var(--assessment-color); }
+        .card.diagnosis .card-icon { background: var(--diagnosis-color); }
+        .card.treatment .card-icon { background: var(--treatment-color); }
+        .card.followup .card-icon { background: var(--followup-color); }
+
+        .card-title h2 {
+            font-size: 1.3rem;
+            color: var(--text-dark);
+        }
+
+        .card-title p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .expand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.3s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+            padding: 24px;
+        }
+
+        /* Subsections */
+        .subsection {
+            background: var(--bg-light);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .subsection:last-child {
+            margin-bottom: 0;
+        }
+
+        .subsection-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+
+        .subsection-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .subsection-icon {
+            font-size: 1.1rem;
+        }
+
+        .subsection-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .subsection.expanded .subsection-content {
+            max-height: 2000px;
+        }
+
+        .subsection-toggle {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            transition: transform 0.3s ease;
+        }
+
+        .subsection.expanded .subsection-toggle {
+            transform: rotate(180deg);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            gap: 5px;
+        }
+
+        .badge.urgent {
+            background: #fdeaea;
+            color: var(--urgent-red);
+            border: 1px solid var(--urgent-red);
+        }
+
+        .badge.caution {
+            background: #fef9e7;
+            color: var(--caution-amber);
+            border: 1px solid var(--caution-amber);
+        }
+
+        .badge.stable {
+            background: #eafaf1;
+            color: var(--stable-green);
+            border: 1px solid var(--stable-green);
+        }
+
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .badge.urgent .badge-dot { background: var(--urgent-red); }
+        .badge.caution .badge-dot { background: var(--caution-amber); }
+        .badge.stable .badge-dot { background: var(--stable-green); }
+
+        /* Lists */
+        .info-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .info-list li {
+            padding: 10px 0;
+            padding-left: 28px;
+            position: relative;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .info-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 14px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-light);
+        }
+
+        .info-list.urgent li::before { background: var(--urgent-red); }
+        .info-list.caution li::before { background: var(--caution-amber); }
+        .info-list.stable li::before { background: var(--stable-green); }
+
+        /* Alert Boxes */
+        .alert-box {
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .alert-box.urgent {
+            background: linear-gradient(135deg, #fdeaea 0%, #f8d7da 100%);
+            border: 1px solid var(--urgent-red);
+        }
+
+        .alert-box.caution {
+            background: linear-gradient(135deg, #fef9e7 0%, #fcefc7 100%);
+            border: 1px solid var(--caution-amber);
+        }
+
+        .alert-box.stable {
+            background: linear-gradient(135deg, #eafaf1 0%, #d4efdf 100%);
+            border: 1px solid var(--stable-green);
+        }
+
+        .alert-box .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .alert-box.urgent .alert-icon { color: var(--urgent-red); }
+        .alert-box.caution .alert-icon { color: var(--caution-amber); }
+        .alert-box.stable .alert-icon { color: var(--stable-green); }
+
+        .alert-box h4 {
+            font-size: 1rem;
+            margin-bottom: 6px;
+        }
+
+        .alert-box.urgent h4 { color: var(--urgent-red); }
+        .alert-box.caution h4 { color: var(--caution-amber); }
+        .alert-box.stable h4 { color: var(--stable-green); }
+
+        .alert-box p, .alert-box ul {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        .alert-box ul {
+            margin-top: 8px;
+            padding-left: 20px;
+        }
+
+        .alert-box li {
+            margin-bottom: 4px;
+        }
+
+        /* Drug Tables */
+        .drug-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 0.9rem;
+        }
+
+        .drug-table th, .drug-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .drug-table th {
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .drug-table tr:hover {
+            background: var(--bg-light);
+        }
+
+        .drug-name {
+            font-weight: 600;
+            color: var(--treatment-color);
+        }
+
+        /* Decision Tree */
+        .decision-tree {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 16px;
+            border: 2px dashed var(--text-light);
+        }
+
+        .decision-node {
+            text-align: center;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .decision-arrows {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 16px;
+        }
+
+        .decision-arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .arrow-down {
+            font-size: 1.5rem;
+            color: var(--text-light);
+        }
+
+        .decision-outcomes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .outcome-box {
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .outcome-box.yes {
+            background: var(--treatment-light);
+            border: 2px solid var(--urgent-red);
+        }
+
+        .outcome-box.no {
+            background: var(--followup-light);
+            border: 2px solid var(--stable-green);
+        }
+
+        /* Expandable Details */
+        .expandable-detail {
+            margin-top: 12px;
+        }
+
+        .expandable-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .expandable-trigger:hover {
+            color: #764ba2;
+        }
+
+        .expandable-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.2s ease;
+            background: white;
+            border-radius: 8px;
+        }
+
+        .expandable-body.open {
+            max-height: 1000px;
+            padding: 16px;
+            margin-top: 12px;
+            border: 1px solid var(--bg-light);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            background: var(--bg-light);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px 16px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            color: var(--text-light);
+        }
+
+        .tab:hover {
+            background: white;
+            color: var(--text-dark);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px 0;
+            gap: 12px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--text-light);
+            border-radius: 6px;
+            flex-shrink: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .checkbox:hover {
+            border-color: #667eea;
+        }
+
+        .checkbox.checked {
+            background: var(--stable-green);
+            border-color: var(--stable-green);
+            color: white;
+        }
+
+        /* Info Cards */
+        .info-card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .info-card.info {
+            border-left-color: var(--assessment-color);
+        }
+
+        .info-card.warning {
+            border-left-color: var(--caution-amber);
+        }
+
+        .info-card.success {
+            border-left-color: var(--stable-green);
+        }
+
+        .info-card h5 {
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-card p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--assessment-color), var(--followup-color));
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 24px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 4px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--assessment-color);
+        }
+
+        .timeline-item:nth-child(2)::before {
+            border-color: var(--diagnosis-color);
+        }
+
+        .timeline-item:nth-child(3)::before {
+            border-color: var(--treatment-color);
+        }
+
+        .timeline-item:nth-child(4)::before {
+            border-color: var(--followup-color);
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .timeline-desc {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 24px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .footer p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: relative;
+                top: 0;
+                width: 100%;
+            }
+
+            .progress-list {
+                display: flex;
+                overflow-x: auto;
+                gap: 8px;
+                padding-bottom: 8px;
+            }
+
+            .progress-item {
+                flex-shrink: 0;
+                margin-bottom: 0;
+            }
+
+            .progress-connector {
+                display: none;
+            }
+
+            .legend {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 12px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .card-header {
+                padding: 16px;
+            }
+
+            .card.expanded .card-content {
+                padding: 16px;
+            }
+
+            .decision-outcomes {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar {
+                display: none;
+            }
+
+            .card-content {
+                max-height: none !important;
+                padding: 24px !important;
+            }
+
+            .card {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Sidebar -->
+        <aside class="sidebar">
+            <h2>
+                <span>📋</span>
+                Algorithm Progress
+            </h2>
+            <ul class="progress-list">
+                <li class="progress-item active" data-section="assessment" onclick="scrollToSection('assessment')">
+                    <span class="step-number">1</span>
+                    <span class="step-icon">🔍</span>
+                    Assessment
+                    <div class="progress-connector"></div>
+                </li>
+                <li class="progress-item" data-section="diagnosis" onclick="scrollToSection('diagnosis')">
+                    <span class="step-number">2</span>
+                    <span class="step-icon">🩺</span>
+                    Diagnosis
+                    <div class="progress-connector"></div>
+                </li>
+                <li class="progress-item" data-section="treatment" onclick="scrollToSection('treatment')">
+                    <span class="step-number">3</span>
+                    <span class="step-icon">💊</span>
+                    Treatment
+                    <div class="progress-connector"></div>
+                </li>
+                <li class="progress-item" data-section="followup" onclick="scrollToSection('followup')">
+                    <span class="step-number">4</span>
+                    <span class="step-icon">📅</span>
+                    Follow-up
+                </li>
+            </ul>
+
+            <div class="legend">
+                <h3>Severity Key</h3>
+                <div class="legend-item">
+                    <div class="legend-badge urgent"></div>
+                    <span>Urgent Referral</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-badge caution"></div>
+                    <span>Caution / Consider</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-badge stable"></div>
+                    <span>Stable / Routine</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>Shingles (Herpes Zoster) Management Algorithm</h1>
+                <p class="subtitle">Clinical pathway based on NICE Clinical Knowledge Summaries</p>
+                <span class="nice-badge">NICE CKS • Last revised May 2025</span>
+            </header>
+
+            <!-- Assessment Card -->
+            <section class="card assessment expanded" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">🔍</div>
+                        <div>
+                            <h2>Step 1: Assessment</h2>
+                            <p>Clinical features, history & examination</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <!-- Prodrome Subsection -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">⚡</span>
+                                Prodromal Phase
+                                <span class="badge stable"><span class="badge-dot"></span>Recognition</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="info-card info">
+                                <h5>⏱️ Duration</h5>
+                                <p>Typically 2-3 days, but can last 7 days or more before rash appears</p>
+                            </div>
+                            <ul class="info-list">
+                                <li><strong>Abnormal skin sensations:</strong> pruritus, paraesthesia, dysesthesia, numbness</li>
+                                <li><strong>Pain characteristics:</strong> burning, shooting, stabbing, throbbing or pulsating</li>
+                                <li>Pain may be intermittent or constant</li>
+                                <li>Can be severe enough to interfere with sleep and quality of life</li>
+                                <li>Pain location corresponds to affected dermatome</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Rash Characteristics -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">🔴</span>
+                                Rash Characteristics
+                                <span class="badge stable"><span class="badge-dot"></span>Key Feature</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Day 0: Rash Onset</div>
+                                    <div class="timeline-desc">Unilateral erythematous maculopapular rash in dermatomal distribution</div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Days 1-2: Vesicle Formation</div>
+                                    <div class="timeline-desc">Erythematous macules and papules develop into vesicles</div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Days 3-4: New Vesicles</div>
+                                    <div class="timeline-desc">New vesicles continue to form over 3-4 days</div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Days 5-7: Pustulation & Crusting</div>
+                                    <div class="timeline-desc">Pustulation occurs within one week, followed by ulceration and crusting after 3-5 days</div>
+                                </div>
+                            </div>
+                            <div class="info-card warning" style="margin-top: 16px;">
+                                <h5>⚠️ Healing</h5>
+                                <p>Healing occurs over 2-4 weeks, often resulting in scarring and permanent pigmentation</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Systemic Symptoms -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">🤒</span>
+                                Systemic Symptoms
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <p style="margin-bottom: 12px;"><strong>Around 20% of people</strong> present with systemic symptoms:</p>
+                            <ul class="info-list">
+                                <li>Headache</li>
+                                <li>Fever</li>
+                                <li>Malaise</li>
+                                <li>Fatigue</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Risk Factors -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">⚠️</span>
+                                Risk Factors
+                                <span class="badge caution"><span class="badge-dot"></span>Assess Risk</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="tabs">
+                                <div class="tab active" onclick="switchTab(this, 'risk-general')">General Risk</div>
+                                <div class="tab" onclick="switchTab(this, 'risk-complications')">Complications Risk</div>
+                            </div>
+                            <div class="tab-content active" id="risk-general">
+                                <ul class="info-list caution">
+                                    <li><strong>Increasing age</strong> — incidence and severity increase with age</li>
+                                    <li><strong>Immunocompromise</strong> — HIV, malignancies, immunosuppressive treatment, organ transplantation</li>
+                                    <li><strong>Comorbidities:</strong>
+                                        <ul style="margin-top: 8px; padding-left: 20px;">
+                                            <li>Asthma and COPD</li>
+                                            <li>Cardiovascular disorders</li>
+                                            <li>Chronic kidney disease</li>
+                                            <li>Depression</li>
+                                            <li>Inflammatory bowel disease</li>
+                                            <li>Malignancies</li>
+                                            <li>Rheumatoid arthritis</li>
+                                            <li>Type 1 diabetes</li>
+                                        </ul>
+                                    </li>
+                                    <li><strong>Psychological stress</strong></li>
+                                    <li><strong>Female sex</strong></li>
+                                </ul>
+                            </div>
+                            <div class="tab-content" id="risk-complications">
+                                <ul class="info-list urgent">
+                                    <li>Increasing age</li>
+                                    <li>Immunocompromised status</li>
+                                    <li>Severe predisposing skin conditions (e.g., atopic dermatitis)</li>
+                                    <li>Herpes zoster of the head and/or neck area</li>
+                                    <li>Moderate to severe prodromal or acute pain</li>
+                                    <li>Severe skin lesions and/or signs of cutaneous dissemination</li>
+                                    <li>Signs of CNS involvement</li>
+                                    <li>Signs of visceral involvement</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- What to Ask -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">❓</span>
+                                History Taking Checklist
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <ul class="checklist">
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Signs and symptoms — timing, location, duration, severity</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Systemic symptoms — fever, headache, malaise, fatigue</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Eye symptoms — pain, photophobia, visual changes, redness</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Risk factors for severe disease and complications</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Immunocompromised status</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Contact with vulnerable individuals (pregnancy, newborns)</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Card -->
+            <section class="card diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">🩺</div>
+                        <div>
+                            <h2>Step 2: Diagnosis</h2>
+                            <p>Clinical diagnosis & differential considerations</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <!-- Clinical Diagnosis -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">✅</span>
+                                Clinical Diagnosis
+                                <span class="badge stable"><span class="badge-dot"></span>Primary Care</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="alert-box stable">
+                                <span class="alert-icon">ℹ️</span>
+                                <div>
+                                    <h4>Diagnose on Clinical Features</h4>
+                                    <p>Shingles is diagnosed on the basis of typical clinical features. Investigations are not usually required in primary care.</p>
+                                </div>
+                            </div>
+                            <div class="info-card info">
+                                <h5>🔬 When Investigations May Be Needed</h5>
+                                <p>If there is diagnostic uncertainty, refer or seek specialist advice. Viral culture, PCR, or direct fluorescent antibody testing may be used in secondary care.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Typical Presentation -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">📋</span>
+                                Key Diagnostic Features
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <ul class="info-list stable">
+                                <li><strong>Unilateral</strong> distribution (does not cross midline)</li>
+                                <li><strong>Dermatomal</strong> pattern (follows single nerve root)</li>
+                                <li>Prodromal pain preceding rash by 2-3 days</li>
+                                <li>Vesicular rash on erythematous base</li>
+                                <li>T1-L2 dermatomes most commonly affected in immunocompetent people</li>
+                            </ul>
+                            <div class="info-card warning" style="margin-top: 16px;">
+                                <h5>⚠️ Atypical Presentations</h5>
+                                <p><strong>Older people:</strong> Rash may not be vesicular<br>
+                                <strong>Immunocompromised:</strong> Rash may be severe or long-lasting<br>
+                                <strong>Rare:</strong> Zoster sine herpete (pain without rash)</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Differential Diagnosis -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">🔄</span>
+                                Differential Diagnosis
+                                <span class="badge caution"><span class="badge-dot"></span>Consider</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="tabs">
+                                <div class="tab active" onclick="switchTab(this, 'diff-skin')">Skin Conditions</div>
+                                <div class="tab" onclick="switchTab(this, 'diff-eye')">Eye Conditions</div>
+                                <div class="tab" onclick="switchTab(this, 'diff-prodrome')">Prodromal Mimics</div>
+                            </div>
+                            <div class="tab-content active" id="diff-skin">
+                                <ul class="info-list">
+                                    <li><strong>Herpes simplex virus (HSV)</strong> — multiple recurrences, oral/genital location, no chronic pain</li>
+                                    <li><strong>Candidal skin infection</strong> — soreness, itching, thin-walled pustules</li>
+                                    <li><strong>Contact dermatitis</strong> — pain and rash occur simultaneously</li>
+                                    <li><strong>Impetigo</strong> — vesicles that rupture and crust</li>
+                                    <li><strong>Insect bite/sting</strong> — local pain, swelling, erythema</li>
+                                    <li><strong>Scabies</strong> — intensely itchy, characteristic pattern</li>
+                                    <li><strong>Urticaria</strong> — red, raised, itchy rash</li>
+                                </ul>
+                            </div>
+                            <div class="tab-content" id="diff-eye">
+                                <ul class="info-list">
+                                    <li><strong>Acute angle closure glaucoma</strong> — periorbital pain, blurred vision, headache</li>
+                                    <li><strong>HSV ocular infection</strong> — eye pain, vesicles on lid margin</li>
+                                    <li><strong>Trigeminal neuralgia</strong> — stabbing electric shock-like facial pain</li>
+                                    <li><strong>Ulcerative keratitis</strong> — pain, redness, visual changes</li>
+                                </ul>
+                            </div>
+                            <div class="tab-content" id="diff-prodrome">
+                                <ul class="info-list">
+                                    <li><strong>Acute appendicitis</strong> — right lower quadrant pain</li>
+                                    <li><strong>Cholecystitis</strong> — right upper quadrant pain, nausea, fever</li>
+                                    <li><strong>Migraine</strong> — moderate/severe headache, photophobia</li>
+                                    <li><strong>Renal calculi</strong> — severe colicky flank pain</li>
+                                </ul>
+                            </div>
+                            <div class="alert-box urgent" style="margin-top: 16px;">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <h4>HIV Indicator Condition</h4>
+                                    <p>Herpes zoster is an HIV indicator condition. Consider HIV testing, particularly in younger patients or those with atypical presentations.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Card -->
+            <section class="card treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        <div>
+                            <h2>Step 3: Treatment</h2>
+                            <p>Referral, antiviral therapy & pain management</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <!-- Urgent Referral -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">🚨</span>
+                                Urgent Referral Criteria
+                                <span class="badge urgent"><span class="badge-dot"></span>Admit/Refer Immediately</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="alert-box urgent">
+                                <span class="alert-icon">🏥</span>
+                                <div>
+                                    <h4>Admit to Hospital or Seek Immediate Specialist Advice If:</h4>
+                                    <ul>
+                                        <li>Serious complications suspected (meningitis, encephalitis, myelitis)</li>
+                                        <li><strong>Ophthalmic distribution</strong> of trigeminal nerve, especially with:
+                                            <ul>
+                                                <li>Hutchinson's sign (rash on tip, side, or root of nose)</li>
+                                                <li>Eye pain or photophobia</li>
+                                                <li>Reduced corneal sensitivity</li>
+                                                <li>Visual impairment</li>
+                                                <li>Unexplained red eye</li>
+                                            </ul>
+                                        </li>
+                                        <li>Head and neck affected, especially in elderly</li>
+                                        <li>Haemorrhagic/necrotic lesions, multisegmental involvement</li>
+                                        <li>Aberrant vesicles/satellite lesions, mucosal involvement</li>
+                                        <li>Generalized herpes zoster</li>
+                                        <li>Severely immunosuppressed patient</li>
+                                        <li>Immunocompromised child with shingles</li>
+                                        <li>Signs of visceral or CNS involvement</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Antiviral Treatment -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">💉</span>
+                                Antiviral Treatment
+                                <span class="badge caution"><span class="badge-dot"></span>Within 72 Hours</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="decision-tree">
+                                <div class="decision-node">Should I prescribe antivirals?</div>
+                                <div class="decision-arrows">
+                                    <div class="decision-arrow">
+                                        <span>✓ Yes</span>
+                                        <span class="arrow-down">↓</span>
+                                    </div>
+                                    <div class="decision-arrow">
+                                        <span>○ Consider</span>
+                                        <span class="arrow-down">↓</span>
+                                    </div>
+                                </div>
+                                <div class="decision-outcomes">
+                                    <div class="outcome-box yes">
+                                        <strong>Offer antivirals to:</strong>
+                                        <ul style="text-align: left; font-size: 0.85rem; margin-top: 8px;">
+                                            <li>Immunocompromised (not severe)</li>
+                                            <li>Age ≥50 years</li>
+                                            <li>Non-truncal involvement</li>
+                                            <li>Moderate/severe pain or rash</li>
+                                            <li>Predisposing skin conditions</li>
+                                        </ul>
+                                    </div>
+                                    <div class="outcome-box no">
+                                        <strong>Consider for:</strong>
+                                        <ul style="text-align: left; font-size: 0.85rem; margin-top: 8px;">
+                                            <li>Under 50s with trunk/extremity involvement</li>
+                                            <li>Based on clinical judgment</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-card warning" style="margin-top: 16px;">
+                                <h5>⏰ Timing</h5>
+                                <p><strong>Ideal:</strong> Start within 72 hours of rash onset<br>
+                                <strong>Consider:</strong> Up to 1 week if higher risk (continued vesicle formation, immunocompromised, older age, severe pain)</p>
+                            </div>
+
+                            <h4 style="margin: 20px 0 12px 0;">Antiviral Drug Options</h4>
+                            <table class="drug-table">
+                                <thead>
+                                    <tr>
+                                        <th>Drug</th>
+                                        <th>Dose</th>
+                                        <th>Duration</th>
+                                        <th>Renal Adjustment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="drug-name">Aciclovir</td>
+                                        <td>800mg 5 times daily (4-hourly)</td>
+                                        <td>7 days</td>
+                                        <td>Reduce if eGFR <25</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="drug-name">Valaciclovir</td>
+                                        <td>1000mg 3 times daily</td>
+                                        <td>7 days</td>
+                                        <td>Reduce if eGFR <50</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="drug-name">Famciclovir</td>
+                                        <td>500mg 3 times daily<br><em>or 750mg 1-2 times daily</em></td>
+                                        <td>7 days</td>
+                                        <td>Reduce if CrCl <60</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="alert-box caution" style="margin-top: 16px;">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <h4>Special Populations</h4>
+                                    <p><strong>Immunocompromised:</strong> Continue treatment for 2 days after lesions have crusted<br>
+                                    <strong>Children:</strong> Antivirals not recommended in immunocompetent children<br>
+                                    <strong>Pregnancy/Breastfeeding:</strong> Seek specialist advice before prescribing</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pain Management -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">💊</span>
+                                Pain Management
+                                <span class="badge stable"><span class="badge-dot"></span>Step-wise Approach</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="tabs">
+                                <div class="tab active" onclick="switchTab(this, 'pain-adult')">Adults</div>
+                                <div class="tab" onclick="switchTab(this, 'pain-child')">Children</div>
+                            </div>
+                            <div class="tab-content active" id="pain-adult">
+                                <div class="info-card success">
+                                    <h5>Mild to Moderate Pain</h5>
+                                    <p>Paracetamol or NSAID (ibuprofen) ± weak opioid (codeine)</p>
+                                </div>
+                                <div class="info-card warning">
+                                    <h5>Moderate to Severe Pain</h5>
+                                    <p>Offer a choice of:<br>
+                                    • <strong>Amitriptyline</strong> (off-label)<br>
+                                    • <strong>Duloxetine</strong> (off-label)<br>
+                                    • <strong>Gabapentin</strong><br>
+                                    • <strong>Pregabalin</strong></p>
+                                </div>
+                                <div class="info-card info">
+                                    <h5>Topical Option</h5>
+                                    <p><strong>Capsaicin cream</strong> — for localised pain in those wishing to avoid or unable to tolerate oral treatments</p>
+                                </div>
+                                <div class="alert-box caution" style="margin-top: 12px;">
+                                    <span class="alert-icon">💡</span>
+                                    <div>
+                                        <h4>Corticosteroids</h4>
+                                        <p>Consider oral corticosteroids (in first 2 weeks after rash onset) for immunocompetent adults with localized shingles if pain is severe — <strong>only in combination with antiviral treatment</strong>.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-content" id="pain-child">
+                                <div class="info-card success">
+                                    <h5>First-line</h5>
+                                    <p>Paracetamol (avoid NSAIDs in children with shingles)</p>
+                                </div>
+                                <div class="alert-box urgent" style="margin-top: 12px;">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <h4>If Not Effective</h4>
+                                        <p>Seek specialist advice for children with pain not controlled by paracetamol</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Referral Criteria -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">📤</span>
+                                Non-urgent Referral Criteria
+                                <span class="badge caution"><span class="badge-dot"></span>Seek Advice</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <ul class="info-list caution">
+                                <li>New vesicles forming after 7 days of oral antiviral treatment</li>
+                                <li>Delayed healing despite treatment</li>
+                                <li>Two episodes of shingles in an immunocompetent person</li>
+                                <li>Recurrent shingles in an immunocompromised person</li>
+                                <li>Pain inadequately controlled by oral analgesia</li>
+                                <li>Strong opioid (morphine) being considered</li>
+                            </ul>
+                            <div class="info-card info" style="margin-top: 12px;">
+                                <h5>🏥 Specialist Options</h5>
+                                <p>Consider referral to: Ophthalmology, Dermatology, Obstetrics, Immunology, or Pain Specialist depending on presenting problem</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Card -->
+            <section class="card followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">📅</div>
+                        <div>
+                            <h2>Step 4: Follow-up & Prevention</h2>
+                            <p>Patient advice, monitoring & vaccination</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <!-- Patient Information -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">📋</span>
+                                Patient Information & Advice
+                                <span class="badge stable"><span class="badge-dot"></span>Essential</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="alert-box caution">
+                                <span class="alert-icon">⚡</span>
+                                <div>
+                                    <h4>Infectivity</h4>
+                                    <p>People with active lesions can transmit varicella-zoster virus to susceptible people (who haven't had chickenpox) to cause chickenpox. <strong>Infectious until all vesicles have crusted over</strong> (approximately 7 days after rash onset).</p>
+                                </div>
+                            </div>
+
+                            <h4 style="margin: 20px 0 12px 0;">Advise Patients To:</h4>
+                            <ul class="checklist">
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Avoid contact with high-risk people (immunocompromised, newborns, elderly, pregnant women without chickenpox immunity) until rash crusts over</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Avoid sharing clothes and towels</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Avoid touching or scratching the rash</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Wash hands frequently</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Wear loose-fitting clothes to reduce irritation</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Cover lesions not under clothes while rash is weeping</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Avoid topical antibiotics and adhesive dressings</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Keep rash clean and dry to reduce bacterial superinfection risk</span>
+                                </li>
+                                <li>
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span>Avoid work/school/daycare if rash is weeping and cannot be covered</span>
+                                </li>
+                            </ul>
+
+                            <div class="info-card warning" style="margin-top: 16px;">
+                                <h5>🌡️ When to Seek Medical Advice</h5>
+                                <p>If temperature increases, as this may indicate bacterial superinfection</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Complications Monitoring -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">⚠️</span>
+                                Complications to Monitor
+                                <span class="badge caution"><span class="badge-dot"></span>Awareness</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <ul class="info-list caution">
+                                <li><strong>Post-herpetic neuralgia</strong> — pain persisting >90 days after rash onset (most common complication)</li>
+                                <li><strong>Cardiovascular</strong> — increased risk of stroke, TIA, MI</li>
+                                <li><strong>CNS complications</strong> — encephalitis, meningoencephalitis, myelitis</li>
+                                <li><strong>Herpes zoster ophthalmicus</strong> — keratitis, corneal ulceration, blindness</li>
+                                <li><strong>Ramsay Hunt syndrome</strong> — facial paralysis, hearing/vestibular symptoms</li>
+                                <li><strong>Skin changes</strong> — scarring, pigmentation changes</li>
+                                <li><strong>Superinfection</strong> — cellulitis, rarely necrotizing fasciitis, sepsis</li>
+                                <li><strong>Systemic dissemination</strong> — pneumonia, hepatitis (especially in severely immunocompromised)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Vaccination -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">💉</span>
+                                Shingles Vaccination (Shingrix®)
+                                <span class="badge stable"><span class="badge-dot"></span>Prevention</span>
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="alert-box stable">
+                                <span class="alert-icon">✅</span>
+                                <div>
+                                    <h4>Eligible Groups for Two-Dose Shingrix®</h4>
+                                    <ul>
+                                        <li><strong>Aged 70-79 years</strong> — eligible until 80th birthday</li>
+                                        <li><strong>Aged 60+ years</strong> — as they become eligible during phased rollout</li>
+                                        <li><strong>Aged 50+ years who are immunocompromised</strong> — no upper age limit</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h4 style="margin: 20px 0 12px 0;">Shingrix® Dosing</h4>
+                            <table class="drug-table">
+                                <thead>
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th>Immunocompetent</th>
+                                        <th>Immunocompromised</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Number of doses</td>
+                                        <td>2 doses of 0.5mL</td>
+                                        <td>2 doses of 0.5mL</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Dose interval</td>
+                                        <td>6-12 months</td>
+                                        <td>8 weeks to 6 months</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Route</td>
+                                        <td colspan="2">Intramuscular (deltoid preferred)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="info-card info" style="margin-top: 16px;">
+                                <h5>📋 Previous Zostavax Recipients</h5>
+                                <p>Immunocompetent and mildly immunosuppressed individuals who received Zostavax before becoming eligible should be offered Shingrix when they reach eligible age, leaving one year since Zostavax.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resources -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">📚</span>
+                                Patient Resources
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <ul class="info-list stable">
+                                <li><strong>British Association of Dermatologists</strong> — Patient information leaflet on Shingles</li>
+                                <li><strong>NHS Website</strong> — Patient information on Shingles</li>
+                                <li><strong>Shingles Support Society</strong> — Information on Shingles and Post-herpetic neuralgia</li>
+                                <li><strong>UKHSA</strong> — Shingles vaccination leaflet</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Prognosis -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <div class="subsection-title">
+                                <span class="subsection-icon">📊</span>
+                                Prognosis
+                            </div>
+                            <span class="subsection-toggle">▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="info-card success">
+                                <h5>✅ Typical Outcome</h5>
+                                <p>Shingles is usually self-limiting in immunocompetent individuals. Recurrence is uncommon (approximately 4% experience recurrence).</p>
+                            </div>
+                            <div class="info-card warning">
+                                <h5>⚠️ Immunocompromised Patients</h5>
+                                <p>51% higher risk of developing shingles, 25% higher recurrence rate, and 2.37 times higher risk of complications compared to immunocompetent people.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p>Based on <a href="https://cks.nice.org.uk/topics/shingles/" target="_blank">NICE Clinical Knowledge Summaries</a> — Shingles (Last revised May 2025)</p>
+                <p style="margin-top: 8px; font-size: 0.8rem;">This algorithm is for educational purposes only. Always refer to the full guidelines and use clinical judgment.</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.closest('.card');
+            card.classList.toggle('expanded');
+            updateProgress();
+        }
+
+        // Toggle subsection expansion
+        function toggleSubsection(header) {
+            const subsection = header.closest('.subsection');
+            subsection.classList.toggle('expanded');
+        }
+
+        // Toggle checkbox
+        function toggleCheckbox(checkbox) {
+            checkbox.classList.toggle('checked');
+            if (checkbox.classList.contains('checked')) {
+                checkbox.innerHTML = '✓';
+            } else {
+                checkbox.innerHTML = '';
+            }
+        }
+
+        // Switch tabs
+        function switchTab(tab, contentId) {
+            const container = tab.closest('.subsection-content');
+            
+            // Update tab styling
+            container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update content visibility
+            container.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(contentId).classList.add('active');
+        }
+
+        // Scroll to section
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                // Expand the card
+                section.classList.add('expanded');
+                
+                // Scroll with offset for header
+                const yOffset = -100;
+                const y = section.getBoundingClientRect().top + window.pageYOffset + yOffset;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+                
+                updateProgress();
+            }
+        }
+
+        // Update progress sidebar based on scroll position
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const scrollPosition = window.scrollY + 200;
+            
+            let currentSection = sections[0];
+            
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                if (section && section.offsetTop <= scrollPosition) {
+                    currentSection = sectionId;
+                }
+            });
+            
+            // Update progress items
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active', 'completed');
+                const itemSection = item.dataset.section;
+                
+                if (itemSection === currentSection) {
+                    item.classList.add('active');
+                } else if (sections.indexOf(itemSection) < sections.indexOf(currentSection)) {
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        // Expandable details toggle
+        document.querySelectorAll('.expandable-trigger').forEach(trigger => {
+            trigger.addEventListener('click', function() {
+                const body = this.nextElementSibling;
+                body.classList.toggle('open');
+                const icon = this.querySelector('span:last-child');
+                icon.textContent = body.classList.contains('open') ? '▲' : '▼';
+            });
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up scroll listener
+            window.addEventListener('scroll', updateProgress);
+            
+            // Initial progress update
+            updateProgress();
+            
+            // Expand first card by default
+            document.querySelector('.card.assessment').classList.add('expanded');
+        });
+
+        // Intersection Observer for animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            observer.observe(card);
+        });
+
+        // Fix initial visibility
+        setTimeout(() => {
+            document.querySelectorAll('.card').forEach(card => {
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            });
+        }, 100);
+    </script>
+</body>
+</html>

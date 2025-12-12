@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neck Lump Clinical Pathway Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --assessment-color: #3498db;
+            --diagnosis-color: #9b59b6;
+            --management-color: #e74c3c;
+            --followup-color: #2ecc71;
+            --urgent-color: #e74c3c;
+            --caution-color: #f39c12;
+            --stable-color: #27ae60;
+            --bg-color: #f8f9fa;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(to right, var(--assessment-color), var(--management-color));
+            color: white;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            display: flex;
+            gap: 30px;
+            flex: 1;
+        }
+        
+        .sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            padding: 20px;
+        }
+        
+        .progress-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .progress-steps {
+            list-style: none;
+        }
+        
+        .progress-step {
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+        }
+        
+        .progress-step:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .progress-step.active {
+            border-left-color: var(--assessment-color);
+            background-color: #e8f4fc;
+            font-weight: 600;
+        }
+        
+        .step-icon {
+            width: 24px;
+            margin-right: 10px;
+            text-align: center;
+        }
+        
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .algorithm-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        
+        .algorithm-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            padding: 20px 25px;
+            display: flex;
+            align-items: center;
+            color: white;
+            cursor: pointer;
+        }
+        
+        .card-header h2 {
+            font-size: 1.5rem;
+            margin-left: 15px;
+        }
+        
+        .card-icon {
+            font-size: 1.8rem;
+        }
+        
+        .assessment .card-header {
+            background-color: var(--assessment-color);
+        }
+        
+        .diagnosis .card-header {
+            background-color: var(--diagnosis-color);
+        }
+        
+        .management .card-header {
+            background-color: var(--management-color);
+        }
+        
+        .followup .card-header {
+            background-color: var(--followup-color);
+        }
+        
+        .card-content {
+            padding: 0 25px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+        
+        .card-content.expanded {
+            padding: 25px;
+            max-height: 2000px;
+        }
+        
+        .severity-badges {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .urgent {
+            background-color: var(--urgent-color);
+        }
+        
+        .caution {
+            background-color: var(--caution-color);
+        }
+        
+        .stable {
+            background-color: var(--stable-color);
+        }
+        
+        .clinical-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--assessment-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .clinical-box h4 {
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        .scenario-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #ddd;
+        }
+        
+        .scenario-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        .action-item {
+            padding: 10px 15px;
+            margin: 10px 0;
+            background-color: white;
+            border-radius: 6px;
+            border-left: 4px solid #ddd;
+            transition: var(--transition);
+        }
+        
+        .action-item:hover {
+            border-left-color: var(--assessment-color);
+            background-color: #f8fafc;
+        }
+        
+        .reference {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 992px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            
+            .progress-steps {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .progress-step {
+                flex: 1;
+                min-width: 150px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            body {
+                padding: 10px;
+            }
+            
+            .card-header {
+                padding: 15px;
+            }
+            
+            .card-header h2 {
+                font-size: 1.3rem;
+            }
+            
+            .card-content.expanded {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-stethoscope"></i> Neck Lump Clinical Pathway</h1>
+        <p class="subtitle">Interactive algorithm based on NICE CKS guidelines (Last revised: May 2025). For patients aged 1 month onwards.</p>
+    </header>
+    
+    <div class="container">
+        <div class="sidebar">
+            <div class="progress-title">Algorithm Progress</div>
+            <ul class="progress-steps">
+                <li class="progress-step active" data-target="assessment">
+                    <div class="step-icon"><i class="fas fa-clipboard-check"></i></div>
+                    <div>Initial Assessment</div>
+                </li>
+                <li class="progress-step" data-target="diagnosis">
+                    <div class="step-icon"><i class="fas fa-diagnoses"></i></div>
+                    <div>Differential Diagnosis</div>
+                </li>
+                <li class="progress-step" data-target="management">
+                    <div class="step-icon"><i class="fas fa-tasks"></i></div>
+                    <div>Management Scenarios</div>
+                </li>
+                <li class="progress-step" data-target="followup">
+                    <div class="step-icon"><i class="fas fa-calendar-check"></i></div>
+                    <div>Follow-up & Referrals</div>
+                </li>
+            </ul>
+            
+            <div style="margin-top: 30px;">
+                <div class="progress-title">Severity Indicators</div>
+                <div class="severity-badges" style="margin-top: 15px;">
+                    <div class="badge urgent">Urgent Referral</div>
+                    <div class="badge caution">Caution</div>
+                    <div class="badge stable">Stable/Monitor</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- Assessment Card -->
+            <div class="algorithm-card assessment" id="assessment">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
+                    <h2>Initial Assessment</h2>
+                </div>
+                <div class="card-content">
+                    <p>If a person presents with a suspected neck lump, assess the clinical features to determine the underlying cause.</p>
+                    
+                    <div class="clinical-box">
+                        <h4>Key Clinical Questions:</h4>
+                        <ul>
+                            <li><strong>Onset & Duration:</strong> When did it appear? Is it growing rapidly?</li>
+                            <li><strong>Location:</strong> Anterior triangle, posterior triangle, or midline?</li>
+                            <li><strong>Size & Growth:</strong> Persistent (>6 weeks) or rapidly growing lumps may indicate malignancy</li>
+                            <li><strong>Associated Symptoms:</strong> Pain, fever, weight loss, night sweats, dysphagia, hoarseness</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="severity-badges">
+                        <div class="badge urgent">Red Flag: Age ≥40 with persistent lump</div>
+                        <div class="badge caution">Caution: Unexplained lump for 2-4 weeks</div>
+                        <div class="badge stable">Stable: Likely reactive lymphadenopathy</div>
+                    </div>
+                    
+                    <h3>Examination Steps:</h3>
+                    <div class="action-item">
+                        <strong>1. General Inspection:</strong> Assess for stridor, superior vena cava compression
+                    </div>
+                    <div class="action-item">
+                        <strong>2. Palpation:</strong> Stand behind patient, palpate neck areas
+                        <ul style="margin-top: 8px; margin-left: 20px;">
+                            <li>Anterior triangle: Thyroid, submandibular, lymph nodes</li>
+                            <li>Posterior triangle: Lymph nodes, carotid, lipoma</li>
+                            <li>Midline: Thyroid, thyroglossal cyst, dermoid cysts</li>
+                        </ul>
+                    </div>
+                    <div class="action-item">
+                        <strong>3. Lump Characteristics:</strong> Position, size, tenderness, mobility, consistency
+                    </div>
+                    <div class="action-item">
+                        <strong>4. Special Maneuvers:</strong> Ask to swallow (thyroid lumps move upwards), protrude tongue (thyroglossal cysts move)
+                    </div>
+                    
+                    <div class="clinical-box">
+                        <h4>Malignancy Risk Factors:</h4>
+                        <ul>
+                            <li>Age ≥40 years</li>
+                            <li>Smoking, excess alcohol intake</li>
+                            <li>Previous head/neck cancer or irradiation</li>
+                            <li>Hashimoto's thyroiditis (increased lymphoma risk)</li>
+                            <li>Family history of head/neck cancer or endocrine tumours</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Diagnosis Card -->
+            <div class="algorithm-card diagnosis" id="diagnosis">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-diagnoses"></i></div>
+                    <h2>Differential Diagnosis</h2>
+                </div>
+                <div class="card-content">
+                    <p>Neck lumps can be categorized by their most likely causes based on patient age and clinical presentation.</p>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Children (Mostly Benign)</div>
+                        <div class="action-item">
+                            <strong>Reactive Cervical Lymphadenopathy:</strong> Most common cause
+                            <span class="badge stable">Stable</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Congenital Causes:</strong> Thyroglossal cyst, branchial cyst, cystic hygroma
+                            <span class="badge stable">Stable</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Infectious:</strong> Viral URTI, EBV, bacterial infection
+                            <span class="badge caution">Caution if persistent</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Young Adults</div>
+                        <div class="action-item">
+                            <strong>Inflammatory/Infectious:</strong> Reactive lymphadenopathy, glandular fever
+                            <span class="badge stable">Stable</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Developmental:</strong> Branchial cysts, thyroglossal cysts
+                            <span class="badge stable">Stable</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Less Common:</strong> Lymphoma, thyroid cancer
+                            <span class="badge caution">Caution</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Adults ≥40 (Increased Malignancy Risk)</div>
+                        <div class="action-item">
+                            <strong>Malignancy:</strong> Lymphoma, metastatic SCC, thyroid cancer
+                            <span class="badge urgent">Urgent referral</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Thyroid Nodules:</strong> 7-15% risk of malignancy
+                            <span class="badge caution">Caution</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Salivary Gland Tumors:</strong> 80% benign, higher malignancy in submandibular
+                            <span class="badge caution">Caution</span>
+                        </div>
+                    </div>
+                    
+                    <div class="clinical-box">
+                        <h4>Normal Structures That Can Be Mistaken for Lumps:</h4>
+                        <ul>
+                            <li>Transverse process of C1/C2 vertebra</li>
+                            <li>Hyoid bone, thyroid/cricoid cartilage</li>
+                            <li>Submandibular glands (normal anatomy)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Management Card -->
+            <div class="algorithm-card management" id="management">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-tasks"></i></div>
+                    <h2>Management Scenarios</h2>
+                </div>
+                <div class="card-content">
+                    <p>Management depends on the suspected cause of the neck lump.</p>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Skin Lump</div>
+                        <div class="action-item">
+                            <strong>Concerning features</strong> (dark/irregular pigmentation, ulceration, bleeding):
+                            <span class="badge urgent">Urgent cancer pathway referral</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Benign diagnosis</strong> (lipoma, epidermoid cyst):
+                            <span class="badge stable">Reassure, no action needed</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Suspected skin infection/abscess:</strong>
+                            <span class="badge caution">Antibiotics, consider incision & drainage</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Lymphadenopathy</div>
+                        <div class="action-item">
+                            <strong>Suspected upper airway obstruction:</strong>
+                            <span class="badge urgent">Emergency hospital admission</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Suspected viral URTI:</strong>
+                            <span class="badge stable">Review if unwell or persistent >7 days</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Unexplained lymphadenopathy in adult ≥25:</strong>
+                            <span class="badge urgent">Urgent FBC, consider cancer referral</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Persistent cervical lymphadenopathy in adult ≥40:</strong>
+                            <span class="badge urgent">Urgent CXR to exclude lung cancer</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Thyroid Lump</div>
+                        <div class="action-item">
+                            <strong>Upper airway obstruction (stridor):</strong>
+                            <span class="badge urgent">Emergency admission</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Unexplained thyroid lump with red flags:</strong>
+                            <span class="badge urgent">Urgent cancer pathway referral</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Non-suspicious nodule with normal TFTs:</strong>
+                            <span class="badge stable">Routine endocrinology referral</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Longstanding unchanging nodule, no red flags:</strong>
+                            <span class="badge stable">Monitor in primary care</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Salivary Gland Lump</div>
+                        <div class="action-item">
+                            <strong>Persistent/unexplained parotid/submandibular swelling:</strong>
+                            <span class="badge urgent">Urgent ENT referral (within 2 weeks)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Follow-up Card -->
+            <div class="algorithm-card followup" id="followup">
+                <div class="card-header">
+                    <div class="card-icon"><i class="fas fa-calendar-check"></i></div>
+                    <h2>Follow-up & Referrals</h2>
+                </div>
+                <div class="card-content">
+                    <p>Key referral pathways and follow-up recommendations based on NICE guidelines.</p>
+                    
+                    <div class="clinical-box">
+                        <h4>NICE Quality Standards for Suspected Cancer:</h4>
+                        <ul>
+                            <li>GPs have direct access to diagnostic endoscopy, ultrasound, MRI, X-ray and CT for people with suspected cancer</li>
+                            <li>People with suspected cancer who are referred to a cancer service are given written information encouraging them to attend</li>
+                            <span class="reference">NICE, 2021</span>
+                        </ul>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Referral Timeframes</div>
+                        <div class="action-item">
+                            <strong>Emergency admission:</strong> Stridor, superior vena cava obstruction, dysphagia with aspiration
+                            <span class="badge urgent">Immediate</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Urgent suspected cancer pathway:</strong> Unexplained neck lump in person ≥45, or persistent at any age
+                            <span class="badge urgent">Within 2 weeks</span>
+                        </div>
+                        <div class="action-item">
+                            <strong>Very urgent referral (children/young adults ≤24):</strong> Ultrasound findings uncertain or suggestive of sarcoma
+                            <span class="badge urgent">Within 48 hours</span>
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Investigations in Primary Care</div>
+                        <div class="action-item">
+                            <strong>Do NOT delay</strong> specialist referral by undertaking investigations if serious cause suspected
+                        </div>
+                        <div class="action-item">
+                            <strong>Consider:</strong> FBC for generalized lymphadenopathy, TFTs for thyroid lumps, CXR for ≥40 with supraclavicular nodes
+                        </div>
+                        <div class="action-item">
+                            <strong>Avoid:</strong> Routine neck ultrasound in primary care (may cause diagnostic delay)
+                        </div>
+                    </div>
+                    
+                    <div class="scenario-section">
+                        <div class="scenario-title">Key Decision Points</div>
+                        <div class="action-item">
+                            <strong>Persistent lymphadenopathy (>2-4 weeks):</strong> Urgent ENT referral
+                        </div>
+                        <div class="action-item">
+                            <strong>Rapidly growing neck mass:</strong> Higher suspicion for malignancy
+                        </div>
+                        <div class="action-item">
+                            <strong>Lymph node >3cm:</strong> More indicative of malignancy
+                        </div>
+                        <div class="action-item">
+                            <strong>Supraclavicular lymphadenopathy:</strong> Consider primary below clavicle (lung, GI, breast)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Algorithm based on NICE Clinical Knowledge Summaries (CKS) topic "Neck Lump" (Last revised: May 2025)</p>
+        <p>For healthcare professionals working within the NHS in the UK, providing first contact or primary healthcare.</p>
+        <p style="margin-top: 10px; font-size: 0.8rem;">This tool is for educational purposes. Always follow local guidelines and use clinical judgment.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand/collapse cards
+            const cardHeaders = document.querySelectorAll('.card-header');
+            
+            cardHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const cardContent = this.nextElementSibling;
+                    const isExpanded = cardContent.classList.contains('expanded');
+                    
+                    // Close all other card contents
+                    document.querySelectorAll('.card-content.expanded').forEach(content => {
+                        if (content !== cardContent) {
+                            content.classList.remove('expanded');
+                        }
+                    });
+                    
+                    // Toggle current card
+                    cardContent.classList.toggle('expanded');
+                    
+                    // Update progress tracker
+                    const cardId = this.parentElement.id;
+                    updateProgressTracker(cardId);
+                    
+                    // Scroll to the card if it's being expanded
+                    if (!isExpanded) {
+                        this.parentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+            
+            // Progress tracker click events
+            const progressSteps = document.querySelectorAll('.progress-step');
+            
+            progressSteps.forEach(step => {
+                step.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const targetCard = document.getElementById(targetId);
+                    
+                    // Close all card contents
+                    document.querySelectorAll('.card-content.expanded').forEach(content => {
+                        content.classList.remove('expanded');
+                    });
+                    
+                    // Expand the target card
+                    const targetContent = targetCard.querySelector('.card-content');
+                    targetContent.classList.add('expanded');
+                    
+                    // Update progress tracker
+                    updateProgressTracker(targetId);
+                    
+                    // Scroll to the target card
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+            
+            // Function to update progress tracker
+            function updateProgressTracker(activeId) {
+                progressSteps.forEach(step => {
+                    step.classList.remove('active');
+                    if (step.getAttribute('data-target') === activeId) {
+                        step.classList.add('active');
+                    }
+                });
+            }
+            
+            // Set initial state: expand the first card
+            document.querySelector('.card-content').classList.add('expanded');
+            updateProgressTracker('assessment');
+            
+            // Add hover effects to action items
+            const actionItems = document.querySelectorAll('.action-item');
+            actionItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(5px)';
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                });
+            });
+            
+            // Auto-scroll to active section when window is resized (for mobile)
+            window.addEventListener('resize', function() {
+                const activeStep = document.querySelector('.progress-step.active');
+                if (activeStep) {
+                    const targetId = activeStep.getAttribute('data-target');
+                    const targetCard = document.getElementById(targetId);
+                    
+                    // Only scroll if the card is expanded
+                    if (targetCard.querySelector('.card-content.expanded')) {
+                        setTimeout(() => {
+                            targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 300);
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

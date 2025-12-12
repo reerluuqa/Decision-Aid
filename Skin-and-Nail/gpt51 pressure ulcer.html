@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pressure Ulcer Primary Care Algorithm</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-elevated: #111827;
+      --border-subtle: #1f2937;
+      --accent-assessment: #38bdf8;
+      --accent-diagnosis: #a855f7;
+      --accent-treatment: #22c55e;
+      --accent-followup: #f59e0b;
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --badge-red: #ef4444;
+      --badge-amber: #f97316;
+      --badge-green: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 60%);
+      color: var(--text-main);
+      min-height: 100vh;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+      display: grid;
+      grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    header.page-header {
+      grid-column: 1 / -1;
+      margin-bottom: 0.75rem;
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .page-title {
+      font-size: 1.6rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .page-title span.icon {
+      font-size: 1.4rem;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 640px;
+    }
+
+    /* Sticky progress sidebar */
+
+    .sidebar {
+      position: relative;
+      height: fit-content;
+    }
+
+    @media (min-width: 901px) {
+      .sidebar-inner {
+        position: sticky;
+        top: 1rem;
+      }
+    }
+
+    .sidebar-card {
+      background: linear-gradient(145deg, #020617, #020617);
+      border-radius: 1rem;
+      border: 1px solid var(--border-subtle);
+      padding: 1rem 1.1rem;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .sidebar-heading {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .sidebar-heading span.dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--accent-assessment);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+      flex-shrink: 0;
+    }
+
+    .sidebar-description {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .progress-list {
+      list-style: none;
+      margin: 0.5rem 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .progress-item {
+      font-size: 0.85rem;
+      border-radius: 999px;
+      padding: 0.35rem 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+      color: var(--text-muted);
+    }
+
+    .progress-item:hover {
+      background: rgba(15, 23, 42, 0.9);
+      border-color: #1e293b;
+      transform: translateY(-1px);
+    }
+
+    .progress-item .label {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .progress-item .step-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #4b5563;
+      flex-shrink: 0;
+    }
+
+    .progress-item span.step-index {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+    }
+
+    .progress-item-active {
+      background: linear-gradient(135deg, #0f172a, #020617);
+      border-color: #22c55e;
+      color: var(--text-main);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.1), 0 0 30px rgba(34, 197, 94, 0.2);
+    }
+
+    .progress-item-active .step-dot {
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+    }
+
+    /* Main cards */
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .step-card {
+      background: radial-gradient(circle at top left, rgba(148, 163, 184, 0.08), #020617);
+      border-radius: 1.4rem;
+      border: 1px solid #1f2937;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 22px 50px rgba(15, 23, 42, 0.9);
+      transform-origin: center;
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease,
+        background 0.2s ease;
+    }
+
+    .step-card:hover {
+      transform: translateY(-3px) scale(1.01);
+      box-shadow: 0 28px 70px rgba(0, 0, 0, 0.9);
+      border-color: #334155;
+    }
+
+    .step-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 1.3rem;
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-card-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .step-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 0.95rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.7);
+    }
+
+    .step-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.12rem;
+    }
+
+    .step-title {
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .step-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .step-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .chip {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: var(--text-muted);
+      background: rgba(15, 23, 42, 0.7);
+    }
+
+    .chevron {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      font-size: 0.9rem;
+      transition: transform 0.22s ease, background 0.18s ease;
+    }
+
+    .step-card.active .chevron {
+      transform: rotate(180deg);
+      background: rgba(148, 163, 184, 0.15);
+    }
+
+    /* Colored top accents */
+
+    .step-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      border-top: 3px solid transparent;
+    }
+
+    .step-card[data-step="assessment"]::before {
+      border-top-color: var(--accent-assessment);
+      box-shadow: 0 -6px 40px rgba(56, 189, 248, 0.4);
+    }
+
+    .step-card[data-step="diagnosis"]::before {
+      border-top-color: var(--accent-diagnosis);
+      box-shadow: 0 -6px 40px rgba(168, 85, 247, 0.4);
+    }
+
+    .step-card[data-step="treatment"]::before {
+      border-top-color: var(--accent-treatment);
+      box-shadow: 0 -6px 40px rgba(34, 197, 94, 0.4);
+    }
+
+    .step-card[data-step="followup"]::before {
+      border-top-color: var(--accent-followup);
+      box-shadow: 0 -6px 40px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Body (expandable) */
+
+    .step-body {
+      padding: 0 1.3rem 1rem;
+      border-top: 1px solid rgba(55, 65, 81, 0.9);
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition:
+        max-height 0.3s ease,
+        opacity 0.25s ease,
+        transform 0.25s ease;
+    }
+
+    .step-card.active .step-body {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .step-body-inner {
+      padding-top: 0.85rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 720px) {
+      .step-body-inner {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .step-section-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .step-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.4rem 0 0.6rem;
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    .step-list li {
+      font-size: 0.9rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+      line-height: 1.4;
+    }
+
+    .step-list li::before {
+      content: "•";
+      color: #6b7280;
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+
+    .note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Badges */
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.35rem;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      white-space: nowrap;
+    }
+
+    .badge span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .badge-red {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.55);
+      color: var(--badge-red);
+    }
+
+    .badge-amber {
+      background: rgba(251, 146, 60, 0.14);
+      border-color: rgba(251, 146, 60, 0.6);
+      color: var(--badge-amber);
+    }
+
+    .badge-green {
+      background: rgba(74, 222, 128, 0.1);
+      border-color: rgba(74, 222, 128, 0.65);
+      color: var(--badge-green);
+    }
+
+    /* Footer controls */
+
+    .step-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 0.7rem;
+    }
+
+    .btn {
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 0.35rem 0.9rem;
+      font-size: 0.8rem;
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-main);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.15s ease,
+        box-shadow 0.18s ease;
+    }
+
+    .btn span.icon {
+      font-size: 0.9rem;
+    }
+
+    .btn:hover {
+      background: #020617;
+      border-color: #e5e7eb;
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(15, 23, 42, 0.8);
+    }
+
+    .btn-outline {
+      background: transparent;
+    }
+
+    .btn-primary {
+      border-color: #22c55e;
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: rgba(22, 163, 74, 0.18);
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div class="title-row">
+        <div>
+          <div class="page-title">
+            <span class="icon">📊</span>
+            Pressure Ulcer Primary Care Algorithm
+          </div>
+          <p class="subtitle">
+            Card-based interactive flow for assessment, diagnosis, treatment and follow-up of suspected or confirmed pressure ulcers in primary care.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <div class="sidebar-card">
+          <div class="sidebar-heading">
+            <span class="dot"></span>
+            Progress
+          </div>
+          <div class="sidebar-description">
+            Click a step to jump. The highlight updates as you move through the algorithm.
+          </div>
+          <ul class="progress-list" id="progressList">
+            <li class="progress-item progress-item-active" data-target="assessment">
+              <div class="label">
+                <span class="step-dot"></span>
+                <span>Assessment</span>
+              </div>
+              <span class="step-index">1/4</span>
+            </li>
+            <li class="progress-item" data-target="diagnosis">
+              <div class="label">
+                <span class="step-dot"></span>
+                <span>Diagnosis</span>
+              </div>
+              <span class="step-index">2/4</span>
+            </li>
+            <li class="progress-item" data-target="treatment">
+              <div class="label">
+                <span class="step-dot"></span>
+                <span>Treatment</span>
+              </div>
+              <span class="step-index">3/4</span>
+            </li>
+            <li class="progress-item" data-target="followup">
+              <div class="label">
+                <span class="step-dot"></span>
+                <span>Follow-up</span>
+              </div>
+              <span class="step-index">4/4</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main id="algorithm">
+
+      <!-- Assessment -->
+      <section class="step-card active" id="step-assessment" data-step="assessment">
+        <header class="step-card-header">
+          <div class="step-card-heading">
+            <div class="step-icon">🩺</div>
+            <div class="step-title-group">
+              <div class="step-title">Step 1 – Assessment</div>
+              <div class="step-subtitle">Who is at risk? Initial review and severity signalling.</div>
+            </div>
+          </div>
+          <div class="step-controls">
+            <span class="chip">Start here</span>
+            <div class="chevron">⌃</div>
+          </div>
+        </header>
+        <div class="step-body">
+          <div class="step-body-inner">
+            <div>
+              <div class="step-section-title">Risk factors &amp; triage</div>
+              <ul class="step-list">
+                <li>Check for significantly reduced mobility, sensory loss, cognitive impairment, poor posture or inability to reposition.</li>
+                <li>Review comorbidities affecting perfusion (for example diabetes, heart failure, peripheral arterial disease, sepsis) and overall frailty.</li>
+                <li>Perform a structured risk assessment (for example Braden, Waterlow, Norton or PURPOSE-T) and document the score.</li>
+                <li>Perform a full skin assessment focusing on bony prominences, heels and any device contact sites.</li>
+              </ul>
+              <p class="note">
+                Reassess risk whenever there is a significant change in condition (post-surgery, acute illness, change in mobility or environment).
+              </p>
+            </div>
+            <div>
+              <div class="step-section-title">Severity indicators</div>
+              <p style="font-size:0.9rem;margin:0.2rem 0 0.3rem;">
+                Tag the assessment using severity badges:
+              </p>
+              <div class="badge-row">
+                <span class="badge badge-red">
+                  <span class="dot"></span>
+                  Urgent referral
+                </span>
+                <span class="badge badge-amber">
+                  <span class="dot"></span>
+                  Caution
+                </span>
+                <span class="badge badge-green">
+                  <span class="dot"></span>
+                  Stable
+                </span>
+              </div>
+              <ul class="step-list" style="margin-top:0.5rem;">
+                <li><strong>Red</strong>: suspected deep tissue injury, rapidly worsening ulcer, systemic sepsis, severe pain, or safeguarding concerns.</li>
+                <li><strong>Amber</strong>: multiple risk factors, non-blanching erythema, early ulceration, high scores on risk scales.</li>
+                <li><strong>Green</strong>: low-risk patient, intact skin, modifiable risks addressed, good mobility and perfusion.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="step-footer">
+            <button class="btn btn-primary" data-next="diagnosis">
+              <span>Next: Diagnosis</span>
+              <span class="icon">➡️</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Diagnosis -->
+      <section class="step-card" id="step-diagnosis" data-step="diagnosis">
+        <header class="step-card-header">
+          <div class="step-card-heading">
+            <div class="step-icon">🧩</div>
+            <div class="step-title-group">
+              <div class="step-title">Step 2 – Diagnosis &amp; Staging</div>
+              <div class="step-subtitle">Confirm pressure ulcer, stage and rule out differentials.</div>
+            </div>
+          </div>
+          <div class="step-controls">
+            <span class="chip">Clinical decision</span>
+            <div class="chevron">⌃</div>
+          </div>
+        </header>
+        <div class="step-body">
+          <div class="step-body-inner">
+            <div>
+              <div class="step-section-title">Confirm pressure ulcer</div>
+              <ul class="step-list">
+                <li>Suspect a pressure ulcer where skin damage overlies a bony prominence or device site in a person with risk factors.</li>
+                <li>Look for non-blanchable erythema, local heat, colour change or discolouration (especially in darker skin tones).</li>
+                <li>Assess for localized pain, induration, oedema or tissue breakdown.</li>
+                <li>Consider differential diagnoses (for example diabetic foot ulcer, venous ulcer, moisture lesions, dermatological conditions or malignancy).</li>
+              </ul>
+            </div>
+            <div>
+              <div class="step-section-title">Stage &amp; safeguard</div>
+              <ul class="step-list">
+                <li>Stage the ulcer (for example NPUAP/EPUAP categories I–IV, unstageable and suspected deep tissue injury) and document location, size and depth.</li>
+                <li>Assess for infection: cellulitis, osteomyelitis, systemic signs or offensive exudate.</li>
+                <li>Consider possible neglect or abuse if there is malnutrition, lack of repositioning or poor continence care, particularly in children or dependent adults.</li>
+              </ul>
+              <div class="badge-row">
+                <span class="badge badge-red">
+                  <span class="dot"></span>
+                  Red – urgent specialist review
+                </span>
+              </div>
+              <p class="note">
+                Red-flag situations (for example spreading cellulitis, systemic features, suspected deep tissue injury or safeguarding concerns) should trigger urgent referral or same-day specialist advice.
+              </p>
+            </div>
+          </div>
+          <div class="step-footer">
+            <button class="btn btn-outline" data-prev="assessment">
+              <span class="icon">⬅️</span>
+              <span>Back: Assessment</span>
+            </button>
+            <button class="btn btn-primary" data-next="treatment">
+              <span>Next: Treatment</span>
+              <span class="icon">➡️</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Treatment -->
+      <section class="step-card" id="step-treatment" data-step="treatment">
+        <header class="step-card-header">
+          <div class="step-card-heading">
+            <div class="step-icon">💊</div>
+            <div class="step-title-group">
+              <div class="step-title">Step 3 – Treatment &amp; Support</div>
+              <div class="step-subtitle">Local wound care plus risk-factor optimisation.</div>
+            </div>
+          </div>
+          <div class="step-controls">
+            <span class="chip">Active management</span>
+            <div class="chevron">⌃</div>
+          </div>
+        </header>
+        <div class="step-body">
+          <div class="step-body-inner">
+            <div>
+              <div class="step-section-title">Core management</div>
+              <ul class="step-list">
+                <li>Optimise pressure redistribution: high-specification foam surface; consider dynamic support if ulcers persist or multiple sites are involved.</li>
+                <li>Plan repositioning schedule (for example at least every 4 hours in high-risk adults; adjust for children and frailty).</li>
+                <li>Address skin care: barrier products for incontinence, emollients for dry or inflamed skin; avoid massage over bony prominences.</li>
+                <li>Screen for malnutrition and dehydration. Refer to dietitian if nutritional deficit or complex needs are identified.</li>
+              </ul>
+              <div class="badge-row">
+                <span class="badge badge-amber">
+                  <span class="dot"></span>
+                  Amber – monitor response
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="step-section-title">Wound-focused actions</div>
+              <ul class="step-list">
+                <li>Select dressings that promote a warm, moist healing environment for category II–IV ulcers; avoid plain gauze as primary dressing.</li>
+                <li>Consider autolytic debridement for necrotic tissue; sharp or surgical debridement only by appropriately trained clinicians.</li>
+                <li>Use systemic antibiotics only where there is clinical evidence of infection (for example sepsis, spreading cellulitis or osteomyelitis).</li>
+                <li>Avoid routine use of topical antiseptics/antimicrobials or negative pressure therapy unless specifically indicated.</li>
+              </ul>
+              <p class="note">
+                Document treatment objectives, expected trajectory and review date; involve the person and carers in shared decision-making.
+              </p>
+            </div>
+          </div>
+          <div class="step-footer">
+            <button class="btn btn-outline" data-prev="diagnosis">
+              <span class="icon">⬅️</span>
+              <span>Back: Diagnosis</span>
+            </button>
+            <button class="btn btn-primary" data-next="followup">
+              <span>Next: Follow-up</span>
+              <span class="icon">➡️</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Follow-up -->
+      <section class="step-card" id="step-followup" data-step="followup">
+        <header class="step-card-header">
+          <div class="step-card-heading">
+            <div class="step-icon">📅</div>
+            <div class="step-title-group">
+              <div class="step-title">Step 4 – Follow-up &amp; Review</div>
+              <div class="step-subtitle">Monitoring, escalation and prevention of recurrence.</div>
+            </div>
+          </div>
+          <div class="step-controls">
+            <span class="chip">Ongoing care</span>
+            <div class="chevron">⌃</div>
+          </div>
+        </header>
+        <div class="step-body">
+          <div class="step-body-inner">
+            <div>
+              <div class="step-section-title">Monitoring plan</div>
+              <ul class="step-list">
+                <li>Set review frequency according to severity and risk (for example weekly for early or improving ulcers; more frequently for complex or infected wounds).</li>
+                <li>Track changes in size, depth, exudate, pain and surrounding skin; re-stage ulcers if they progress or improve.</li>
+                <li>Reassess risk factors and repositioning plan at each review; update care plan and equipment needs.</li>
+              </ul>
+              <div class="badge-row">
+                <span class="badge badge-green">
+                  <span class="dot"></span>
+                  Green – stable / improving
+                </span>
+              </div>
+            </div>
+            <div>
+              <div class="step-section-title">Escalation &amp; prevention</div>
+              <ul class="step-list">
+                <li>Escalate to specialist tissue-viability or surgical services if ulcers fail to improve, deteriorate, or if complex comorbidities limit community management.</li>
+                <li>Provide ongoing education for the person, carers and care-home staff on early skin changes and repositioning strategies.</li>
+                <li>Plan long-term prevention for those discharged from acute care or after ulcer healing, including maintenance of equipment and regular skin checks.</li>
+              </ul>
+              <p class="note">
+                When healed, record ulcer history clearly in the notes and maintain a prevention plan, as previous pressure ulcers confer ongoing high risk.
+              </p>
+            </div>
+          </div>
+          <div class="step-footer">
+            <button class="btn btn-outline" data-prev="treatment">
+              <span class="icon">⬅️</span>
+              <span>Back: Treatment</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      const cards = Array.from(document.querySelectorAll(".step-card"));
+      const progressItems = Array.from(document.querySelectorAll(".progress-item"));
+
+      function setActiveCard(stepKey, expand = true, scroll = true) {
+        const card = document.querySelector(`#step-${stepKey}`);
+        if (!card) return;
+
+        cards.forEach(c => {
+          const body = c.querySelector(".step-body");
+          if (c === card && expand) {
+            c.classList.add("active");
+            // Smoothly expand by matching scrollHeight
+            if (body) {
+              body.style.maxHeight = body.scrollHeight + "px";
+            }
+          } else {
+            c.classList.remove("active");
+            if (body) {
+              body.style.maxHeight = "0px";
+            }
+          }
+        });
+
+        // Update sidebar
+        progressItems.forEach(item => {
+          if (item.getAttribute("data-target") === stepKey) {
+            item.classList.add("progress-item-active");
+          } else {
+            item.classList.remove("progress-item-active");
+          }
+        });
+
+        if (scroll) {
+          card.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+
+      // Initialise card heights for all expanded cards (only first on load)
+      function syncHeights() {
+        cards.forEach(c => {
+          const body = c.querySelector(".step-body");
+          if (!body) return;
+          if (c.classList.contains("active")) {
+            body.style.maxHeight = body.scrollHeight + "px";
+          } else {
+            body.style.maxHeight = "0px";
+          }
+        });
+      }
+
+      window.addEventListener("resize", syncHeights);
+
+      // Header click -> toggle current card
+      cards.forEach(card => {
+        const header = card.querySelector(".step-card-header");
+        const body = card.querySelector(".step-body");
+        const stepKey = card.getAttribute("data-step");
+        if (!header || !body || !stepKey) return;
+
+        header.addEventListener("click", () => {
+          const isActive = card.classList.contains("active");
+          if (isActive) {
+            card.classList.remove("active");
+            body.style.maxHeight = "0px";
+          } else {
+            setActiveCard(stepKey, true, false);
+          }
+        });
+      });
+
+      // Sidebar clicks
+      progressItems.forEach(item => {
+        item.addEventListener("click", () => {
+          const stepKey = item.getAttribute("data-target");
+          setActiveCard(stepKey, true, true);
+        });
+      });
+
+      // Next / Back buttons
+      document.querySelectorAll("[data-next]").forEach(btn => {
+        btn.addEventListener("click", e => {
+          const stepKey = btn.getAttribute("data-next");
+          setActiveCard(stepKey, true, true);
+        });
+      });
+
+      document.querySelectorAll("[data-prev]").forEach(btn => {
+        btn.addEventListener("click", e => {
+          const stepKey = btn.getAttribute("data-prev");
+          setActiveCard(stepKey, true, true);
+        });
+      });
+
+      // Intersection observer to update sidebar as user scrolls manually
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          entries => {
+            const visible = entries
+              .filter(entry => entry.isIntersecting)
+              .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+            if (!visible.length) return;
+            const top = visible[0].target;
+            const stepKey = top.getAttribute("data-step");
+            if (!stepKey) return;
+
+            // Do not auto-expand/collapse, just update sidebar highlight
+            progressItems.forEach(item => {
+              if (item.getAttribute("data-target") === stepKey) {
+                item.classList.add("progress-item-active");
+              } else {
+                item.classList.remove("progress-item-active");
+              }
+            });
+          },
+          {
+            threshold: [0.25, 0.5],
+          }
+        );
+
+        cards.forEach(card => observer.observe(card));
+      }
+
+      // Initial heights
+      syncHeights();
+    })();
+  </script>
+</body>
+</html>

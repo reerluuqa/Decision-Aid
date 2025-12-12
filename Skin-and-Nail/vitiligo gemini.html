@@ -1,0 +1,389 @@
+Here is a self-contained, interactive Clinical Dashboard for Vitiligo. It is designed to be a single HTML file that acts as a high-yield app.
+
+You can save the code block below as an `.html` file (e.g., `vitiligo_guide.html`) and open it in any web browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitiligo: Clinical Decision Support</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #005eb8; /* NHS Blue */
+            --primary-dark: #003087;
+            --success: #007f3b; /* Green for Actions */
+            --success-bg: #e7f5ee;
+            --danger: #d4351c; /* Red for Alerts */
+            --danger-bg: #fbebe8;
+            --warning: #ffb81c;
+            --warning-bg: #fff9e6;
+            --gray-light: #f0f4f5;
+            --gray-med: #d8dde0;
+            --text: #212b32;
+            --white: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--gray-light);
+            color: var(--text);
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Header */
+        header {
+            background: var(--primary);
+            color: var(--white);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 { margin: 0; font-size: 1.5rem; font-weight: 600; }
+        .subtitle { font-size: 0.9rem; opacity: 0.9; }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two column layout */
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-top: 4px solid var(--primary);
+            transition: transform 0.2s ease;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            color: var(--primary-dark);
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--gray-med);
+            padding-bottom: 10px;
+        }
+
+        /* Special Cards */
+        .card.referral { border-top-color: var(--danger); background-color: #fffcfc; }
+        .card.referral h2 { color: var(--danger); }
+        
+        .card.action { border-top-color: var(--success); }
+        .card.action h2 { color: var(--success); }
+
+        /* Accordions */
+        .accordion {
+            background-color: #fff;
+            cursor: pointer;
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            border: 1px solid var(--gray-med);
+            border-radius: 4px;
+            margin-top: 8px;
+            outline: none;
+            transition: 0.4s;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .accordion:hover { background-color: #f8f9fa; }
+        .accordion.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+        .accordion:after { content: '\002B'; font-weight: bold; float: right; margin-left: 5px; }
+        .accordion.active:after { content: "\2212"; }
+
+        .panel {
+            padding: 0 15px;
+            background-color: white;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            border-left: 3px solid var(--gray-med);
+            margin-bottom: 10px;
+        }
+        .panel p, .panel ul { margin: 15px 0; }
+
+        /* Badges & Tags */
+        .badge {
+            display: inline-block;
+            padding: 0.25em 0.6em;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 1rem;
+            text-transform: uppercase;
+            margin-right: 5px;
+        }
+        .badge-red { background-color: var(--danger-bg); color: var(--danger); }
+        .badge-green { background-color: var(--success-bg); color: var(--success); }
+        .badge-blue { background-color: #e6f0f9; color: var(--primary); }
+
+        /* Checklists */
+        .checklist { list-style: none; padding: 0; }
+        .checklist li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .checklist li:before {
+            content: '\f0c8'; /* square */
+            font-family: "Font Awesome 5 Free";
+            position: absolute;
+            left: 0;
+            color: var(--gray-med);
+        }
+        .checklist li.checked:before {
+            content: '\f14a'; /* check-square */
+            color: var(--success);
+            font-weight: 900;
+        }
+
+        /* Grid helpers */
+        .full-width { grid-column: 1 / -1; }
+
+        /* Dosage Box */
+        .dosage-box {
+            background-color: var(--gray-light);
+            border-left: 4px solid var(--primary);
+            padding: 10px;
+            font-family: monospace;
+            margin-top: 10px;
+        }
+
+        /* Tooltip/Hover hint */
+        .tooltip {
+            border-bottom: 1px dotted var(--text);
+            cursor: help;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>Vitiligo CKS Guide</h1>
+        <span class="subtitle">Revised April 2025 | Rapid Primary Care Dashboard</span>
+    </div>
+    <div>
+        <i class="fas fa-user-md fa-2x"></i>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- 1. IMMEDIATE REFERRAL CRITERIA (Red Flags) -->
+    <article class="card referral full-width">
+        <h2><i class="fas fa-exclamation-circle"></i> Referral Criteria</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+            <div class="alert-item">
+                <span class="badge badge-red">Urgent/Routine</span>
+                <strong>Diagnosis Uncertain</strong>
+                <p class="small">Features atypical (inflammation, scaling, scarring).</p>
+            </div>
+            <div class="alert-item">
+                <span class="badge badge-red">Urgent</span>
+                <strong>Rapid Progression</strong>
+                <p class="small">Spreading quickly or active disease.</p>
+            </div>
+            <div class="alert-item">
+                <span class="badge badge-red">Routine</span>
+                <strong>Segmental Vitiligo</strong>
+                <p class="small">Unilateral/dermatomal distribution (stabilizes quickly, harder to treat).</p>
+            </div>
+            <div class="alert-item">
+                <span class="badge badge-red">Routine</span>
+                <strong>High Impact</strong>
+                <p class="small">>10% Body Surface Area OR Significant psychosocial distress.</p>
+            </div>
+            <div class="alert-item">
+                <span class="badge badge-red">Routine</span>
+                <strong>Treatment Failure</strong>
+                <p class="small">No response to topical treatments or contraindications exist.</p>
+            </div>
+        </div>
+    </article>
+
+    <!-- 2. DIAGNOSIS & ASSESSMENT -->
+    <section class="column-left">
+        <article class="card">
+            <h2><i class="fas fa-search"></i> Diagnosis & Assessment</h2>
+            
+            <p><strong>Presentation:</strong> Well-demarcated, chalky white macules. Non-scaly. Often symmetrical (non-segmental).</p>
+            
+            <button class="accordion">Key Assessment Questions</button>
+            <div class="panel">
+                <ul>
+                    <li><strong>Onset:</strong> Age? Speed? Trigger (stress, trauma)?</li>
+                    <li><strong>Symptoms:</strong> Usually asymptomatic, itch may precede lesions.</li>
+                    <li><strong>History:</strong> Family hx of vitiligo or Autoimmune (Thyroid, Addison's, B12, Diabetes).</li>
+                    <li><strong>Skin Type:</strong> Fitzpatrick classification (affects treatment options).</li>
+                </ul>
+            </div>
+
+            <button class="accordion">Signs of Active Disease</button>
+            <div class="panel">
+                <ul>
+                    <li><strong>Koebner Phenomenon:</strong> Depigmentation at trauma sites.</li>
+                    <li><strong>Trichrome:</strong> Three shades of color.</li>
+                    <li><strong>Inflamed borders:</strong> Redness at edges.</li>
+                    <li><strong>Confetti-like:</strong> Small scattered macules.</li>
+                </ul>
+            </div>
+
+            <button class="accordion">Differential Diagnosis (Rule Out)</button>
+            <div class="panel">
+                <ul>
+                    <li><strong>Pityriasis Versicolor:</strong> <span class="badge badge-blue">Scale</span> Fine scale, upper trunk.</li>
+                    <li><strong>Pityriasis Alba:</strong> <span class="badge badge-blue">Children</span> Ill-defined, subtle scale, face/arms.</li>
+                    <li><strong>Post-inflammatory:</strong> History of eczema/psoriasis.</li>
+                    <li><strong>Halo Naevus:</strong> Mole with white ring.</li>
+                    <li><strong>Chemical Depigmentation:</strong> Occ hx (phenols, dyes).</li>
+                </ul>
+            </div>
+
+            <div style="margin-top: 15px; background: var(--warning-bg); padding: 10px; border-radius: 4px;">
+                <strong><i class="fas fa-vial"></i> Investigations:</strong>
+                <br>Check <strong>Thyroid Function & Antibodies</strong> (TPO) for all patients. Consider B12/Folate or Glucose if indicated.
+            </div>
+        </article>
+
+        <article class="card">
+            <h2><i class="fas fa-users"></i> Psychosocial Support</h2>
+            <p>Assess impact on QoL (DLQI, PHQ-9). Vitiligo carries high risk of anxiety/depression.</p>
+            <ul>
+                <li><strong>Mild distress:</strong> Self-help resources (see below).</li>
+                <li><strong>Mod/Severe distress:</strong> Refer for psychological services (CBT).</li>
+            </ul>
+            <hr>
+            <strong>Resources:</strong>
+            <ul>
+                <li><a href="https://vitiligosociety.org" target="_blank">The Vitiligo Society</a></li>
+                <li><a href="https://www.changingfaces.org.uk" target="_blank">Changing Faces</a> (Camouflage advice)</li>
+            </ul>
+        </article>
+    </section>
+
+    <!-- 3. MANAGEMENT -->
+    <section class="column-right">
+        <article class="card action">
+            <h2><i class="fas fa-clipboard-check"></i> Management Steps</h2>
+            
+            <div class="step">
+                <h3>1. General Advice (For All)</h3>
+                <ul class="checklist">
+                    <li><strong>Sun Protection:</strong> SPF 50+, 5-star UVA. (Prescribe: <em>Uvistat®</em> ACBS).</li>
+                    <li><strong>Avoid Trauma:</strong> Reduce friction (clothing) to prevent Koebnerization.</li>
+                    <li><strong>Camouflage:</strong> Offer referral to skin camouflage service. (Prescribe: <em>Dermacolor®, Covermark®</em> ACBS).</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <h3>2. Topical Corticosteroids (TCS)</h3>
+                <span class="badge badge-green">First Line</span> <span class="badge badge-blue">Off-label</span>
+                <p>For adults with non-segmental vitiligo (Body/Limbs).</p>
+                <div class="dosage-box">
+                    <strong>Rx:</strong> Potent (e.g., Betamethasone 0.1%) or Very Potent (e.g., Clobetasol)<br>
+                    <strong>Dose:</strong> Apply OD (Once Daily).<br>
+                    <strong>Review:</strong> Every 3-6 months. Monitor for atrophy/striae.
+                </div>
+                <p class="small text-muted"><em>Note: Avoid potent TCS on face/neck long-term.</em></p>
+            </div>
+
+            <div class="step">
+                <h3>3. Topical Calcineurin Inhibitors (TCI)</h3>
+                <span class="badge badge-warning">Consider</span> <span class="badge badge-blue">Face/Flexures</span>
+                <p>Alternative to TCS for <strong>Face/Neck</strong> or children. *</p>
+                <div class="dosage-box">
+                    <strong>Rx:</strong> Tacrolimus 0.03%/0.1% or Pimecrolimus<br>
+                    <strong>Dose:</strong> Apply BD (Twice Daily).<br>
+                    <strong>Safety:</strong> Avoid in pregnancy. Sun protection crucial.
+                </div>
+                <p class="small" style="color: var(--danger);">* <em>Caveat:</em> CKS states "if expertise available" or seek specialist advice. Check local formulary.</p>
+            </div>
+        </article>
+
+        <article class="card">
+            <h2><i class="fas fa-info-circle"></i> Prognosis & Skin Types</h2>
+            <button class="accordion">Fitzpatrick Skin Types</button>
+            <div class="panel">
+                <table style="width:100%; font-size: 0.9rem; border-collapse: collapse;">
+                    <tr><th style="text-align:left">Type</th><th>Features</th></tr>
+                    <tr><td>I-II</td><td>Pale/Fair. Burns easily. No/Poor tan.</td></tr>
+                    <tr><td>III-IV</td><td>White to Light Brown. Tans.</td></tr>
+                    <tr><td>V-VI</td><td>Brown to Black. Rarely burns.</td></tr>
+                </table>
+                <p class="small"><em>Note: Vitiligo is more visually prominent in Types IV-VI, potentially causing higher psychosocial impact.</em></p>
+            </div>
+
+            <button class="accordion">Course of Disease</button>
+            <div class="panel">
+                <ul>
+                    <li><strong>Non-segmental:</strong> Unpredictable. Flares and stability. Spontaneous repigmentation uncommon.</li>
+                    <li><strong>Segmental:</strong> Rapid onset, stabilizes quickly. Persistent.</li>
+                    <li><strong>Best response:</strong> Face, neck, trunk.</li>
+                    <li><strong>Poor response:</strong> Hands, feet, lips.</li>
+                </ul>
+            </div>
+        </article>
+    </section>
+
+</div>
+
+<script>
+    // Accordion Functionality
+    var acc = document.getElementsByClassName("accordion");
+    var i;
+
+    for (i = 0; i < acc.length; i++) {
+        acc[i].addEventListener("click", function() {
+            this.classList.toggle("active");
+            var panel = this.nextElementSibling;
+            if (panel.style.maxHeight) {
+                panel.style.maxHeight = null;
+            } else {
+                panel.style.maxHeight = panel.scrollHeight + "px";
+            }
+        });
+    }
+
+    // Simple Checklist Toggle
+    var checklistItems = document.querySelectorAll('.checklist li');
+    checklistItems.forEach(function(item) {
+        item.addEventListener('click', function() {
+            this.classList.toggle('checked');
+        });
+    });
+</script>
+
+</body>
+</html>

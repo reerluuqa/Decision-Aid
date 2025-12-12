@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PID — Quick Reference Algorithm (NICE CKS 2024)</title>
+  <style>
+    :root{
+      --bg: #0f172a;              /* slate-900 */
+      --panel: #0b1223;           /* darker slate */
+      --card: #111827;            /* gray-900 */
+      --muted: #94a3b8;           /* slate-400 */
+      --text: #e5e7eb;            /* gray-200 */
+      --brand: #22d3ee;           /* cyan-400 */
+      --brand-2: #60a5fa;         /* blue-400 */
+      --accent: #34d399;          /* emerald-400 */
+      --warn: #fb7185;            /* rose-400 */
+      --amber: #f59e0b;           /* amber-500 */
+      --shadow: 0 10px 30px rgba(0,0,0,.45), 0 6px 12px rgba(0,0,0,.25);
+      --radius: 18px;
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg:#f8fafc; --panel:#f1f5f9; --card:#ffffff; --text:#0f172a; --muted:#475569;
+        --shadow: 0 10px 30px rgba(2,6,23,.06), 0 6px 12px rgba(2,6,23,.04);
+      }
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background: radial-gradient(1200px 800px at 10% -10%, rgba(34,211,238,.12), transparent 60%), radial-gradient(900px 700px at 110% 10%, rgba(96,165,250,.12), transparent 55%), var(--bg);
+      color:var(--text); font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      background: linear-gradient(135deg, rgba(34,211,238,.25), rgba(96,165,250,.25)), var(--panel);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .wrap{max-width:1100px; margin:0 auto; padding: 18px 20px}
+    .title{display:flex; align-items:center; gap:14px; flex-wrap:wrap}
+    .logo{display:grid; place-items:center; width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: var(--shadow)}
+    .logo svg{width:26px; height:26px; color:#00111a}
+    h1{margin:0; font-weight:800; letter-spacing:.2px; font-size: clamp(22px, 2.2vw + 10px, 34px)}
+    .sub{color:var(--muted); font-size: 14px}
+    .actions{margin-left:auto; display:flex; gap:10px; flex-wrap:wrap}
+    button, .btn{
+      appearance:none; border:0; padding:10px 14px; border-radius:12px; font-weight:700; color:#0b1223;
+      background: linear-gradient(180deg, var(--brand), var(--brand-2)); cursor:pointer; box-shadow: var(--shadow);
+    }
+    .btn.secondary{background:linear-gradient(180deg,#e2e8f0,#cbd5e1); color:#0f172a}
+    main{padding: 28px 20px}
+    .grid{max-width:1100px; margin:0 auto; display:grid; grid-template-columns: repeat(12, 1fr); gap:20px}
+    .card{
+      grid-column: span 12; background: var(--card); padding:18px; border-radius: var(--radius); box-shadow: var(--shadow);
+      border: 1px solid rgba(148,163,184,.18);
+    }
+    .card h2{margin:0 0 8px; font-size: 18px; letter-spacing:.3px}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:13px; font-weight:700; background:rgba(34,211,238,.15); color:var(--brand)}
+    .pill.warn{background:rgba(251,113,133,.15); color:var(--warn)}
+    .pill.accent{background:rgba(52,211,153,.15); color:var(--accent)}
+    .list{margin:8px 0 0 0; padding:0 0 0 18px}
+    .list li{margin:6px 0}
+    .cols{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px}
+    .muted{color:var(--muted)}
+    .flow{display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+    .step{display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; background:rgba(148,163,184,.12);}
+    .badge{width:28px; height:28px; border-radius:999px; display:grid; place-items:center; font-weight:800; color:#0b1223; background:linear-gradient(180deg, var(--brand), var(--brand-2))}
+    .arrow{opacity:.5}
+    .regimen{border-left:4px solid var(--brand); padding-left:10px}
+    .regimen strong{display:block}
+    .twoCol{display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px}
+    .threeCol{display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px}
+    .cta{display:flex; gap:12px; flex-wrap:wrap; margin-top:6px}
+    .kdb{padding: 6px 10px; background:rgba(148,163,184,.15); border-radius:8px; font-size:13px}
+
+    /* Responsive */
+    @media (max-width: 900px){ .cols, .twoCol, .threeCol{grid-template-columns:1fr} }
+
+    /* Print styles: compact, white background */
+    @media print{
+      body{background:#fff}
+      header{position:relative; box-shadow:none; background:#fff}
+      .btn, .actions{display:none}
+      .card{page-break-inside:avoid}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="title">
+        <div class="logo" aria-hidden="true">
+          <!-- stethoscope icon -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 3v5a4 4 0 0 0 8 0V3"/>
+            <path d="M8 15a5 5 0 0 0 10 0v-3"/>
+            <circle cx="19" cy="10" r="2"/>
+            <path d="M2 3h4"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Pelvic Inflammatory Disease — Quick Reference Algorithm</h1>
+          <div class="sub">Aligned to NICE CKS (last revised June 2024). Designed for fast decision‑making in primary care.</div>
+        </div>
+        <div class="actions">
+          <a class="btn secondary" href="/mnt/data/PID_quick_reference_algorithm.pdf" target="_blank" rel="noopener">Download PDF</a>
+          <button onclick="window.print()" class="btn" title="Print this page">Print</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+      <!-- High‑risk / Admit -->
+      <section class="card" style="border:1px solid rgba(251,113,133,.35)">
+        <h2><span class="pill warn">Red flags — admit / urgent same‑day review</span></h2>
+        <ul class="list">
+          <li>Pregnant or ectopic pregnancy suspected.</li>
+          <li>Severe systemic illness or adnexal mass suggesting tubo‑ovarian abscess or pelvic peritonitis.</li>
+          <li>Systemically unwell with diagnostic uncertainty, or unable to follow/tolerate outpatient management.</li>
+        </ul>
+      </section>
+
+      <!-- Flow overview -->
+      <section class="card">
+        <h2>Care pathway overview</h2>
+        <div class="flow" aria-label="Algorithm">
+          <div class="step"><span class="badge">1</span> Suspect PID (history + exam)</div>
+          <div class="arrow">➜</div>
+          <div class="step"><span class="badge">2</span> Pregnancy test + swabs (don’t delay antibiotics)</div>
+          <div class="arrow">➜</div>
+          <div class="step"><span class="badge">3</span> Start empiric antibiotics now</div>
+          <div class="arrow">➜</div>
+          <div class="step"><span class="badge">4</span> Review at 72 hours; adjust if needed</div>
+        </div>
+        <div class="cta">
+          <span class="kdb">Abstain from sex until both patient and partners complete treatment & are symptom‑free.</span>
+          <span class="kdb">Offer analgesia (paracetamol and/or ibuprofen if no contraindications).</span>
+        </div>
+      </section>
+
+      <!-- Assessment -->
+      <section class="card">
+        <h2><span class="pill">Assessment — make a working diagnosis</span></h2>
+        <div class="cols">
+          <div>
+            <strong>Typical symptoms</strong>
+            <ul class="list">
+              <li>New pelvic/lower abdominal pain (often bilateral), deep dyspareunia.</li>
+              <li>Abnormal bleeding: intermenstrual, post‑coital, or heavy menses.</li>
+              <li>Mucopurulent vaginal/cervical discharge; secondary dysmenorrhoea.</li>
+              <li>RUQ/shoulder pain (consider perihepatitis).</li>
+              <li>± fever, nausea/vomiting or malaise (may be absent).</li>
+            </ul>
+          </div>
+          <div>
+            <strong>Examination</strong>
+            <ul class="list">
+              <li>Cervical motion, uterine and/or adnexal tenderness; ± palpable mass.</li>
+              <li>Abnormal discharge and/or cervical friability.</li>
+            </ul>
+            <strong>Key questions</strong>
+            <ul class="list">
+              <li>Pregnancy risk; recent IUD insertion; sexual history (new/multiple partners).</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Investigations -->
+      <section class="card">
+        <h2>Investigations (do not delay treatment)</h2>
+        <div class="twoCol">
+          <ul class="list">
+            <li>Urine/serum pregnancy test for all sexually active patients.</li>
+            <li>Endocervical/vaginal swabs for <em>C. trachomatis</em> and <em>N. gonorrhoeae</em>; consider <em>M. genitalium</em> if available.</li>
+            <li>Wet‑mount microscopy for pus cells if available; absence makes PID unlikely.</li>
+          </ul>
+          <ul class="list">
+            <li>Consider CRP/ESR, WCC.</li>
+            <li>Offer HIV, hepatitis, and syphilis serology as part of STI screen.</li>
+          </ul>
+        </div>
+        <p class="muted">A negative swab does not exclude PID — treat on clinical grounds.</p>
+      </section>
+
+      <!-- Antibiotics -->
+      <section class="card">
+        <h2><span class="pill accent">Empiric antibiotic treatment</span></h2>
+        <div class="threeCol">
+          <div class="regimen">
+            <strong>High risk of gonorrhoea</strong>
+            <div>• <b>Ceftriaxone</b> 1 g IM once, then</div>
+            <div>• <b>Doxycycline</b> 100 mg PO bd × 14 days <span class="muted">+</span></div>
+            <div>• <b>Metronidazole</b> 400 mg PO bd × 14 days</div>
+          </div>
+          <div class="regimen">
+            <strong>Low risk of gonorrhoea — first line</strong>
+            <div>Same as above (Ceftriaxone 1 g IM once → Doxycycline + Metronidazole for 14 days).</div>
+            <strong style="margin-top:8px; display:block">Second‑line options</strong>
+            <div>• <b>Ofloxacin</b> 400 mg PO bd × 14 days <span class="muted">+</span> <b>Metronidazole</b> 400 mg PO bd × 14 days</div>
+            <div>• <b>Levofloxacin</b> 500 mg PO od × 14 days <span class="muted">+</span> <b>Metronidazole</b> 400 mg PO bd × 14 days</div>
+            <div>• <b>Moxifloxacin</b> 400 mg PO od × 14 days (monotherapy)</div>
+          </div>
+          <div class="regimen">
+            <strong>Special situations</strong>
+            <div>• <b><em>M. genitalium</em> positive:</b> <b>Moxifloxacin</b> 400 mg PO od × 14 days.</div>
+            <div>• <b>All first/second‑line unsuitable:</b> <b>Ceftriaxone</b> 1 g IM once → <b>Azithromycin</b> 1 g PO weekly × 2 weeks.</div>
+            <div>• <b>Very early pregnancy risk:</b> start empiric therapy — benefits outweigh risks.</div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:8px"><b>Fluoroquinolones:</b> prescribe only when other recommended antibiotics are inappropriate; counsel on rare but potentially serious adverse effects (per MHRA).</p>
+      </section>
+
+      <!-- IUD handling -->
+      <section class="card">
+        <h2>IUD in situ</h2>
+        <ul class="list">
+          <li><b>Mild–moderate PID:</b> IUD can remain if improving within 48–72 hours of antibiotics; remove if no improvement.</li>
+          <li><b>Severe PID at presentation:</b> remove IUD.</li>
+        </ul>
+        <p class="muted">If removed, consider emergency contraception, follow‑up pregnancy testing, and ongoing contraception.</p>
+      </section>
+
+      <!-- Follow up -->
+      <section class="card">
+        <h2>Follow‑up</h2>
+        <div class="twoCol">
+          <div>
+            <ul class="list">
+              <li>Review within <b>72 hours</b>. If not improving, check adherence, reconsider diagnosis, and consider urgent admission.</li>
+              <li>Continue antibiotics even if swabs are negative.</li>
+              <li>Metronidazole intolerance with mild–moderate PID: may stop metronidazole but continue other agents.</li>
+            </ul>
+          </div>
+          <div>
+            <ul class="list">
+              <li>Further review <b>2–4 weeks</b> after completion: symptom resolution, adherence, partner treatment, contraception advice.</li>
+              <li><b>Test‑of‑cure / re‑testing (as indicated):</b>
+                <ul class="list">
+                  <li>Gonorrhoea: repeat test <b>2–4 weeks</b> post‑treatment.</li>
+                  <li>Chlamydia: repeat at <b>3–5 weeks</b> if symptoms persist or concerns about adherence/contact tracing.</li>
+                  <li><em>M. genitalium</em>: repeat at <b>4 weeks</b> post‑treatment.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Partners -->
+      <section class="card">
+        <h2>Managing sexual partners</h2>
+        <ul class="list">
+          <li>Current and recent partners (past 6 months) should attend sexual health services for screening, treatment, and contact tracing.</li>
+          <li>If a male partner cannot attend, offer empirical <b>doxycycline 100 mg bd × 7 days</b> while awaiting results.</li>
+          <li>If the index case is <em>M. genitalium</em> positive, screen (and, if positive, treat) partners accordingly.</li>
+          <li>Abstain from sexual activity until all parties have completed therapy and are symptom‑free (and test‑of‑cure performed where indicated).</li>
+        </ul>
+      </section>
+
+      <!-- Differentials -->
+      <section class="card">
+        <h2>Consider differential diagnoses</h2>
+        <div class="twoCol">
+          <ul class="list">
+            <li>Ectopic pregnancy; threatened miscarriage.</li>
+            <li>Acute appendicitis.</li>
+            <li>Ovarian cyst complications (torsion, rupture, haemorrhage).</li>
+            <li>Endometriosis.</li>
+          </ul>
+          <ul class="list">
+            <li>UTI/pyelonephritis; renal colic.</li>
+            <li>Acute gastroenteritis; IBS; diverticulitis; bowel obstruction/perforation/necrosis.</li>
+            <li>Mittelschmerz; ruptured corpus luteal cyst; functional pelvic pain.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="card" style="grid-column: span 12; text-align:center">
+        <span class="muted">© For clinical reference. Use local antimicrobial guidance and specialist advice where appropriate.</span>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
