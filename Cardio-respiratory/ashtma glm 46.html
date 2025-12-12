@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asthma Clinical Reference Tool</title>
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --danger-color: #d32f2f;
+            --warning-color: #ff9800;
+            --success-color: #388e3c;
+            --light-bg: #f8f9fa;
+            --border-color: #e0e0e0;
+            --text-color: #333;
+            --light-text: #666;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            color: var(--text-color);
+            line-height: 1.5;
+            background-color: #fff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Header with search */
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: none;
+            border-radius: 30px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--light-text);
+        }
+
+        /* Busy clinic mode toggle */
+        .busy-mode-toggle {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 5px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active .toggle-slider {
+            transform: translateX(20px);
+            background-color: var(--success-color);
+        }
+
+        /* Main content layout */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Left sidebar */
+        .left-sidebar {
+            width: 200px;
+            background-color: var(--light-bg);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 15px 0;
+        }
+
+        .section-nav {
+            list-style: none;
+        }
+
+        .section-nav li {
+            margin-bottom: 5px;
+        }
+
+        .section-nav a {
+            display: block;
+            padding: 10px 15px;
+            color: var(--text-color);
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .section-nav a:hover, .section-nav a.active {
+            background-color: rgba(0,102,204,0.1);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        /* Center content */
+        .center-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .content-section {
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 5px;
+        }
+
+        .panel {
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 15px;
+            background-color: var(--light-bg);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header:hover {
+            background-color: #e0e0e0;
+        }
+
+        .panel-title {
+            font-weight: 600;
+        }
+
+        .panel-icon {
+            transition: transform 0.3s;
+        }
+
+        .panel-content {
+            padding: 15px;
+            display: none;
+        }
+
+        .panel.active .panel-content {
+            display: block;
+        }
+
+        .panel.active .panel-icon {
+            transform: rotate(180deg);
+        }
+
+        .panel-content ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        .panel-content li {
+            margin-bottom: 8px;
+        }
+
+        /* Urgency banners */
+        .banner {
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+
+        .banner-danger {
+            background-color: rgba(211, 47, 47, 0.1);
+            border-left: 4px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .banner-warning {
+            background-color: rgba(255, 152, 0, 0.1);
+            border-left: 4px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        .banner-success {
+            background-color: rgba(56, 142, 60, 0.1);
+            border-left: 4px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        /* Right sidebar */
+        .right-sidebar {
+            width: 250px;
+            background-color: var(--light-bg);
+            border-left: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .quick-actions {
+            margin-bottom: 20px;
+        }
+
+        .quick-action {
+            background-color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+
+        .quick-action:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .quick-action-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .quick-action-desc {
+            font-size: 14px;
+            color: var(--light-text);
+        }
+
+        /* Busy clinic mode styles */
+        .busy-mode .left-sidebar,
+        .busy-mode .right-sidebar {
+            display: none;
+        }
+
+        .busy-mode .center-content {
+            font-size: 18px;
+        }
+
+        .busy-mode .panel-header {
+            font-size: 20px;
+            padding: 15px;
+        }
+
+        .busy-mode .panel-content {
+            font-size: 18px;
+            padding: 20px;
+        }
+
+        .busy-mode .section-title {
+            font-size: 28px;
+        }
+
+        .busy-mode .banner {
+            font-size: 20px;
+            padding: 15px;
+        }
+
+        /* Highlight search results */
+        .highlight {
+            background-color: yellow;
+            padding: 2px;
+            border-radius: 3px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .left-sidebar {
+                width: 150px;
+            }
+            .right-sidebar {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            .left-sidebar, .right-sidebar {
+                width: 100%;
+                height: auto;
+            }
+            .center-content {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="search-container">
+                <input type="text" class="search-bar" id="searchBar" placeholder="Search asthma information...">
+                <span class="search-icon">🔍</span>
+            </div>
+            <div class="busy-mode-toggle" id="busyModeToggle">
+                <span>Busy Clinic Mode</span>
+                <div class="toggle-switch" id="toggleSwitch">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="left-sidebar">
+                <ul class="section-nav">
+                    <li><a href="#overview" class="nav-link active">Overview</a></li>
+                    <li><a href="#diagnosis" class="nav-link">Diagnosis</a></li>
+                    <li><a href="#management" class="nav-link">Management</a></li>
+                    <li><a href="#referral" class="nav-link">Referral Criteria</a></li>
+                    <li><a href="#emergency" class="nav-link">Emergency</a></li>
+                    <li><a href="#safety" class="nav-link">Safety Netting</a></li>
+                </ul>
+            </div>
+
+            <div class="center-content">
+                <div id="overview" class="content-section active">
+                    <h2 class="section-title">Asthma Overview</h2>
+                    
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Definition</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Chronic respiratory condition associated with airway inflammation and hyper-responsiveness</li>
+                                <li>Characterized by symptoms including cough, wheeze, chest tightness, shortness of breath</li>
+                                <li>Variable expiratory airflow limitation that can vary over time and in intensity</li>
+                                <li>Symptoms may resolve spontaneously or in response to medication</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Prevalence</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>3,886,879 people over 6 years diagnosed with asthma in England (2023/24)</li>
+                                <li>6.5% of the population in England</li>
+                                <li>More common in childhood (boys > girls) and adulthood (women > men)</li>
+                                <li>Occupational exposures account for ~17% of adult asthma cases</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Risk Factors</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Personal or family history of atopy (asthma, eczema, allergic rhinitis)</li>
+                                <li>Comorbid rhinitis/sinusitis or food allergy</li>
+                                <li>Preterm birth and low birth weight</li>
+                                <li>Overweight and obesity</li>
+                                <li>Exposure to smoking (active or passive)</li>
+                                <li>Environmental exposures (air pollution, moulds, chemicals)</li>
+                                <li>Allergen exposure (if sensitized)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="diagnosis" class="content-section">
+                    <h2 class="section-title">Diagnosis</h2>
+                    
+                    <div class="banner banner-success">
+                        From age 1 month onwards. This CKS topic covers primary care diagnosis and management of asthma in adults, young people, and children.
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Objective Tests</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>People aged 5 years and over with suspected asthma should have objective tests to support diagnosis</li>
+                                <li>Use different objective tests depending on age-group</li>
+                                <li>Record objective test between 3 months before or 3 months after diagnosis</li>
+                                <li>Tests may include spirometry, peak flow variability, FeNO, bronchodilator reversibility</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Diagnostic Criteria</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>History of variable respiratory symptoms</li>
+                                <li>Wheeze, cough, chest tightness, shortness of breath</li>
+                                <li>Symptoms worse at night or in early morning</li>
+                                <li>Symptoms triggered by exercise, allergens, cold air</li>
+                                <li>Personal or family history of atopic disease</li>
+                                <li>Objective evidence of variable airflow limitation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="management" class="content-section">
+                    <h2 class="section-title">Management</h2>
+                    
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Initial Treatment</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>For people aged 12 years and over: consider anti-inflammatory reliever (AIR) therapy or maintenance and reliever therapy (MART) using an inhaled corticosteroid (ICS)/formoterol combination inhaler first-line</li>
+                                <li>For children aged 5 to 11 years: consider a MART regime with an ICS/formoterol combination inhaler (off-label indication)</li>
+                                <li>Provide a personalized asthma action plan</li>
+                                <li>Arrange appropriate and regular review in primary care</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Review and Monitoring</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Review asthma patients at least annually</li>
+                                <li>Assess asthma control, inhaler technique, and adherence</li>
+                                <li>Review triggers and environmental factors</li>
+                                <li>Update personalized action plan</li>
+                                <li>Consider stepping down treatment if asthma is well controlled</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Self-Management</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Provide written personalized action plan</li>
+                                <li>Educate on proper inhaler technique</li>
+                                <li>Teach recognition of worsening symptoms</li>
+                                <li>Advise on trigger avoidance</li>
+                                <li>Encourage regular exercise as tolerated</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="referral" class="content-section">
+                    <h2 class="section-title">Referral Criteria</h2>
+                    
+                    <div class="banner banner-danger">
+                        Refer immediately if life-threatening asthma or severe exacerbation not responding to initial treatment
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Urgent Referral</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Suspected severe or difficult-to-treat asthma</li>
+                                <li>History of near-fatal asthma requiring intubation</li>
+                                <li>Frequent severe exacerbations requiring oral corticosteroids</li>
+                                <li>Persistent symptoms despite optimized treatment</li>
+                                <li>Occupational asthma suspected</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Routine Referral</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Diagnostic uncertainty despite objective tests</li>
+                                <li>Possible occupational asthma</li>
+                                <li>Consideration for specialist treatments (biologics)</li>
+                                <li>Women planning pregnancy with poorly controlled asthma</li>
+                                <li>Children with recurrent severe exacerbations</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="emergency" class="content-section">
+                    <h2 class="section-title">Emergency Management</h2>
+                    
+                    <div class="banner banner-danger">
+                        Arrange emergency hospital admission or call 999 if any life-threatening features present
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Life-threatening Features</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Altered conscious level (confusion, drowsiness)</li>
+                                <li>Cyanosis or silent chest</li>
+                                <li>Poor respiratory effort</li>
+                                <li>Bradycardia or hypotension</li>
+                                <li>PEF < 33% best or predicted</li>
+                                <li>Exhaustion</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Acute Management</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>High-flow oxygen to maintain SpO2 94-98%</li>
+                                <li>High-dose inhaled SABA via spacer</li>
+                                <li>Oral corticosteroids (prednisolone 40-50mg daily for 5 days)</li>
+                                <li>Consider intravenous magnesium sulfate for severe exacerbations</li>
+                                <li>Consider intravenous or oral theophylline if severe or life-threatening</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="safety" class="content-section">
+                    <h2 class="section-title">Safety Netting</h2>
+                    
+                    <div class="banner banner-warning">
+                        Advise patients to seek urgent medical help if symptoms worsen rapidly or not responding to usual reliever
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Red Flag Symptoms</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>Worsening symptoms despite increased reliever use</li>
+                                <li>Waking at night with asthma symptoms</li>
+                                <li>Need for reliever inhaler more than 3 times/week</li>
+                                <li>Inability to complete full sentences due to breathlessness</li>
+                                <li>Peak flow < 60% of personal best</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Follow-up</span>
+                            <span class="panel-icon">▼</span>
+                        </div>
+                        <div class="panel-content">
+                            <ul>
+                                <li>People who receive treatment in emergency care for asthma should be followed up by their GP within 2 working days</li>
+                                <li>Review inhaler technique and adherence</li>
+                                <li>Check understanding of personal action plan</li>
+                                <li>Identify and address trigger factors</li>
+                                <li>Consider stepping up treatment if appropriate</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-sidebar">
+                <div class="quick-actions">
+                    <h3>Quick Actions</h3>
+                    
+                    <div class="quick-action" id="peakFlowCalculator">
+                        <div class="quick-action-title">Peak Flow Calculator</div>
+                        <div class="quick-action-desc">Calculate predicted peak flow based on age, height, and sex</div>
+                    </div>
+                    
+                    <div class="quick-action" id="inhalerTechnique">
+                        <div class="quick-action-title">Inhaler Technique Guide</div>
+                        <div class="quick-action-desc">Visual guides for correct inhaler technique</div>
+                    </div>
+                    
+                    <div class="quick-action" id="asthmaControl">
+                        <div class="quick-action-title">Asthma Control Test</div>
+                        <div class="quick-action-desc">Quick assessment of asthma control</div>
+                    </div>
+                    
+                    <div class="quick-action" id="steroidCard">
+                        <div class="quick-action-title">Steroid Emergency Card</div>
+                        <div class="quick-action-desc">Information for patients on long-term steroids</div>
+                    </div>
+                </div>
+
+                <div class="referral-criteria">
+                    <h3>Referral Criteria</h3>
+                    
+                    <div class="banner banner-danger">
+                        Immediate Referral
+                        <ul>
+                            <li>Life-threatening asthma</li>
+                            <li>Severe exacerbation not responding</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="banner banner-warning">
+                        Urgent Referral
+                        <ul>
+                            <li>Suspected severe asthma</li>
+                            <li>History of near-fatal asthma</li>
+                            <li>Frequent severe exacerbations</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Navigation between sections
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links and sections
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    contentSections.forEach(s => s.classList.remove('active'));
+                    
+                    // Add active class to clicked link and corresponding section
+                    this.classList.add('active');
+                    const targetId = this.getAttribute('href').substring(1);
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+            
+            // Panel toggles
+            const panelHeaders = document.querySelectorAll('.panel-header');
+            
+            panelHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const panel = this.parentElement;
+                    panel.classList.toggle('active');
+                });
+            });
+            
+            // Initialize all panels as active for better visibility
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.add('active');
+            });
+            
+            // Search functionality
+            const searchBar = document.getElementById('searchBar');
+            
+            searchBar.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                if (searchTerm.length > 2) {
+                    // Hide all sections initially
+                    contentSections.forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Search through all panels and show matching content
+                    const panels = document.querySelectorAll('.panel');
+                    let foundSection = null;
+                    
+                    panels.forEach(panel => {
+                        const panelContent = panel.textContent.toLowerCase();
+                        if (panelContent.includes(searchTerm)) {
+                            // Highlight matching text
+                            const content = panel.querySelector('.panel-content');
+                            if (content) {
+                                const text = content.innerHTML;
+                                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                                content.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
+                            }
+                            
+                            // Show the section containing this panel
+                            const section = panel.closest('.content-section');
+                            if (section) {
+                                section.classList.add('active');
+                                if (!foundSection) {
+                                    foundSection = section.id;
+                                    
+                                    // Update active nav link
+                                    navLinks.forEach(link => {
+                                        link.classList.remove('active');
+                                        if (link.getAttribute('href') === `#${foundSection}`) {
+                                            link.classList.add('active');
+                                        }
+                                    });
+                                }
+                            }
+                        } else {
+                            // Remove highlights from non-matching panels
+                            const content = panel.querySelector('.panel-content');
+                            if (content) {
+                                const text = content.innerHTML;
+                                content.innerHTML = text.replace(/<span class="highlight">(.*?)<\/span>/gi, '$1');
+                            }
+                        }
+                    });
+                } else {
+                    // If search is cleared, show the first section
+                    contentSections.forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    document.querySelector('.content-section').classList.add('active');
+                    
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                    });
+                    document.querySelector('.nav-link').classList.add('active');
+                    
+                    // Remove all highlights
+                    document.querySelectorAll('.highlight').forEach(highlight => {
+                        const parent = highlight.parentNode;
+                        parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                        parent.normalize();
+                    });
+                }
+            });
+            
+            // Busy clinic mode toggle
+            const busyModeToggle = document.getElementById('busyModeToggle');
+            const toggleSwitch = document.getElementById('toggleSwitch');
+            const container = document.querySelector('.container');
+            
+            busyModeToggle.addEventListener('click', function() {
+                toggleSwitch.classList.toggle('active');
+                container.classList.toggle('busy-mode');
+                
+                // In busy mode, expand all panels for better visibility
+                if (container.classList.contains('busy-mode')) {
+                    document.querySelectorAll('.panel').forEach(panel => {
+                        panel.classList.add('active');
+                    });
+                }
+            });
+            
+            // Quick actions (placeholder functionality)
+            document.getElementById('peakFlowCalculator').addEventListener('click', function() {
+                alert('Peak Flow Calculator would open here with input fields for age, height, and sex.');
+            });
+            
+            document.getElementById('inhalerTechnique').addEventListener('click', function() {
+                alert('Inhaler Technique Guide with visual instructions would open here.');
+            });
+            
+            document.getElementById('asthmaControl').addEventListener('click', function() {
+                alert('Asthma Control Test questionnaire would open here.');
+            });
+            
+            document.getElementById('steroidCard').addEventListener('click', function() {
+                alert('Steroid Emergency Card information would display here.');
+            });
+        });
+    </script>
+</body>
+</html>

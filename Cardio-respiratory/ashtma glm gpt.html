@@ -1,0 +1,1342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clinical Dashboard — Asthma Pathway (Local)</title>
+  <style>
+    :root{
+      --bg: #0b1220;
+      --panel: #0f1a2d;
+      --card: #111f38;
+      --text: #e8eefc;
+      --muted: #a8b5d6;
+      --line: rgba(232,238,252,.10);
+
+      --blue: #4ea1ff;
+      --green:#30d18b;
+      --red:  #ff5a6a;
+      --amber:#ffcc66;
+
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --shadow-soft: 0 6px 16px rgba(0,0,0,.28);
+      --radius: 16px;
+      --radius-sm: 12px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(78,161,255,.18), transparent 55%),
+        radial-gradient(900px 650px at 70% 20%, rgba(48,209,139,.12), transparent 55%),
+        radial-gradient(900px 650px at 60% 80%, rgba(255,90,106,.10), transparent 60%),
+        linear-gradient(180deg, #070c16 0%, #0b1220 100%);
+    }
+
+    /* Layout */
+    .app{
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 18px;
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap: 18px;
+      align-items:start;
+    }
+
+    /* Sidebar */
+    .sidebar{
+      position: sticky;
+      top: 14px;
+      align-self:start;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-soft);
+      overflow:hidden;
+    }
+    .sb-head{
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(78,161,255,.12), rgba(255,255,255,0));
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .brand .logo{
+      width:34px;height:34px;
+      border-radius:10px;
+      display:grid;place-items:center;
+      background: rgba(78,161,255,.16);
+      border:1px solid rgba(78,161,255,.25);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+    .brand h1{
+      font-size: 14px;
+      letter-spacing:.2px;
+      margin:0;
+      line-height:1.15;
+    }
+    .brand p{
+      margin:2px 0 0;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .sb-tools{
+      padding: 12px 16px 14px;
+      display:grid;
+      gap:10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .search{
+      display:flex;gap:10px;align-items:center;
+      padding:10px 12px;
+      border-radius: 12px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+    }
+    .search input{
+      width:100%;
+      background: transparent;
+      border:0;
+      outline:none;
+      color:var(--text);
+      font-size:13px;
+    }
+    .chips{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .chip{
+      font-size:12px;
+      color:var(--muted);
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      padding:6px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .chip:hover{transform: translateY(-1px); border-color: rgba(232,238,252,.20)}
+    .chip[data-filter="red"]{border-color: rgba(255,90,106,.35)}
+    .chip[data-filter="blue"]{border-color: rgba(78,161,255,.35)}
+    .chip[data-filter="green"]{border-color: rgba(48,209,139,.35)}
+    .chip.active{
+      color: var(--text);
+      background: rgba(255,255,255,.07);
+      border-color: rgba(232,238,252,.25);
+    }
+
+    .nav{
+      padding: 10px 8px 12px;
+      max-height: calc(100vh - 240px);
+      overflow:auto;
+    }
+    .nav h3{
+      margin:10px 10px 6px;
+      font-size:11px;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color: rgba(232,238,252,.55);
+    }
+    .nav a{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      text-decoration:none;
+      color: var(--muted);
+      font-size:13px;
+      padding:10px 10px;
+      margin:4px 6px;
+      border-radius: 12px;
+      border:1px solid transparent;
+      transition: background .12s ease, color .12s ease, border-color .12s ease;
+    }
+    .nav a:hover{
+      background: rgba(255,255,255,.04);
+      border-color: rgba(232,238,252,.12);
+      color: var(--text);
+    }
+    .nav a.active{
+      background: rgba(78,161,255,.12);
+      border-color: rgba(78,161,255,.25);
+      color: var(--text);
+    }
+    .nav .tag{
+      margin-left:auto;
+      font-size:11px;
+      padding:3px 8px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      color: rgba(232,238,252,.70);
+      background: rgba(0,0,0,.10);
+    }
+    .tag.red{border-color: rgba(255,90,106,.35)}
+    .tag.blue{border-color: rgba(78,161,255,.35)}
+    .tag.green{border-color: rgba(48,209,139,.35)}
+    .tag.amber{border-color: rgba(255,204,102,.40)}
+
+    /* Main */
+    .main{
+      display:grid;
+      gap: 14px;
+    }
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius);
+      border:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      box-shadow: var(--shadow-soft);
+    }
+    .topbar .title{
+      display:grid; gap: 4px;
+    }
+    .topbar h2{
+      margin:0;
+      font-size: 16px;
+      letter-spacing:.2px;
+    }
+    .topbar .sub{
+      margin:0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+    .topbar .meta{
+      text-align:right;
+      font-size:12px;
+      color: var(--muted);
+      display:grid;
+      gap:6px;
+      min-width: 220px;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      justify-content:flex-end;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.12);
+      color: rgba(232,238,252,.85);
+      font-family: var(--mono);
+      font-size: 11px;
+      white-space:nowrap;
+    }
+
+    /* Cards */
+    section.module{
+      scroll-margin-top: 16px;
+    }
+
+    .card{
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .card::before{
+      content:"";
+      position:absolute;
+      left:0; top:0; bottom:0;
+      width: 5px;
+      background: rgba(255,255,255,.15);
+    }
+    .card.red::before{ background: linear-gradient(180deg, rgba(255,90,106,1), rgba(255,90,106,.55));}
+    .card.blue::before{ background: linear-gradient(180deg, rgba(78,161,255,1), rgba(78,161,255,.55));}
+    .card.green::before{background: linear-gradient(180deg, rgba(48,209,139,1), rgba(48,209,139,.55));}
+    .card.amber::before{background: linear-gradient(180deg, rgba(255,204,102,1), rgba(255,204,102,.55));}
+
+    .card-head{
+      padding: 14px 16px 10px 18px;
+      display:flex;
+      align-items:flex-start;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background:
+        radial-gradient(600px 200px at 20% 0%, rgba(78,161,255,.12), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.06), transparent);
+    }
+    .card-head .icon{
+      width:38px;height:38px;
+      border-radius: 12px;
+      display:grid;place-items:center;
+      border:1px solid rgba(232,238,252,.12);
+      background: rgba(0,0,0,.16);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+      flex:0 0 auto;
+    }
+    .card-head .hgroup{flex:1 1 auto;}
+    .card-head h3{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .card-head .hint{
+      margin:4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+    .actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex:0 0 auto;
+    }
+    .btn{
+      cursor:pointer;
+      border:1px solid rgba(232,238,252,.14);
+      background: rgba(255,255,255,.04);
+      color: rgba(232,238,252,.85);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 12px;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      user-select:none;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(232,238,252,.24); background: rgba(255,255,255,.06); }
+    .btn:active{ transform: translateY(0px); }
+
+    .card-body{
+      padding: 12px 16px 16px 18px;
+      display:grid;
+      gap: 12px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr}
+      .sidebar{position:relative; top:0}
+      .grid2{grid-template-columns: 1fr}
+      .topbar{flex-direction:column}
+      .topbar .meta{text-align:left; min-width:unset}
+      .nav{max-height: unset}
+    }
+
+    .kpi{
+      border: 1px solid rgba(232,238,252,.12);
+      background: rgba(0,0,0,.12);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+    }
+    .kpi .k{
+      display:grid; gap: 2px;
+    }
+    .kpi .label{
+      font-size: 11px;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color: rgba(232,238,252,.55);
+    }
+    .kpi .value{
+      font-size: 14px;
+      font-family: var(--mono);
+      color: rgba(232,238,252,.92);
+    }
+    .kpi .note{
+      margin-top:2px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.35;
+    }
+
+    .list{
+      margin:0;
+      padding-left: 18px;
+      color: rgba(232,238,252,.88);
+      line-height:1.5;
+      font-size: 13px;
+    }
+    .list li{margin: 6px 0}
+    .muted{color:var(--muted)}
+    .mono{font-family:var(--mono)}
+    .hr{
+      height:1px;
+      background: var(--line);
+      margin: 4px 0 2px;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(232,238,252,.14);
+      background: rgba(0,0,0,.12);
+      font-size: 12px;
+      color: rgba(232,238,252,.88);
+      width: fit-content;
+    }
+    .badge.red{border-color: rgba(255,90,106,.35)}
+    .badge.blue{border-color: rgba(78,161,255,.35)}
+    .badge.green{border-color: rgba(48,209,139,.35)}
+    .badge.amber{border-color: rgba(255,204,102,.40)}
+
+    .callout{
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      border: 1px dashed rgba(232,238,252,.18);
+      background: rgba(255,255,255,.03);
+      display:grid;
+      gap: 8px;
+    }
+    .callout-title{
+      display:flex; align-items:center; gap: 10px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .callout p{
+      margin:0;
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.45;
+    }
+
+    .footer{
+      padding: 12px 14px;
+      color: rgba(232,238,252,.60);
+      font-size: 12px;
+      border-top: 1px solid var(--line);
+      background: rgba(0,0,0,.08);
+    }
+
+    /* Collapse */
+    .collapsed .card-body{display:none}
+    .collapsed .card-head{border-bottom: 0}
+    .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border: 1px solid rgba(232,238,252,.14);
+      background: rgba(0,0,0,.18);
+      color: rgba(232,238,252,.85);
+    }
+
+    /* Small icon strokes */
+    svg{display:block}
+    .i-stroke{stroke: rgba(232,238,252,.92); stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round;}
+    .i-fill{fill: rgba(232,238,252,.92);}
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" aria-label="Navigation">
+      <div class="sb-head">
+        <div class="brand">
+          <div class="logo" aria-hidden="true">
+            <!-- simple cross icon -->
+            <svg width="18" height="18" viewBox="0 0 24 24">
+              <path class="i-stroke" d="M12 3v18M3 12h18"/>
+            </svg>
+          </div>
+          <div>
+            <h1>Asthma Clinical Dashboard</h1>
+            <p>Two-column pathway modules</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-tools">
+        <div class="search" role="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+            <path class="i-stroke" d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"/>
+            <path class="i-stroke" d="M16.2 16.2 21 21"/>
+          </svg>
+          <input id="q" type="text" placeholder="Filter modules (e.g., FeNO, MART, red flags)..." autocomplete="off" />
+          <span class="kbd" title="Keyboard shortcut">/</span>
+        </div>
+
+        <div class="chips" aria-label="Quick filters">
+          <div class="chip" data-filter="all">All</div>
+          <div class="chip" data-filter="red">Red flags</div>
+          <div class="chip" data-filter="blue">Standard care</div>
+          <div class="chip" data-filter="green">Good response</div>
+          <div class="chip" data-filter="tools">Tools</div>
+          <div class="chip" data-filter="meds">Meds</div>
+          <div class="chip" data-filter="referral">Referral</div>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav">
+        <h3>Sections</h3>
+        <a href="#overview" data-kind="blue">
+          <span class="mono">Overview</span>
+          <span class="tag blue">BLUE</span>
+        </a>
+        <a href="#redflags" data-kind="red">
+          <span class="mono">Red flags</span>
+          <span class="tag red">RED</span>
+        </a>
+        <a href="#assessment" data-kind="blue" data-topic="tools">
+          <span class="mono">Assessment tools</span>
+          <span class="tag blue">TOOLS</span>
+        </a>
+        <a href="#initial" data-kind="blue" data-topic="meds">
+          <span class="mono">Initial treatment</span>
+          <span class="tag blue">MEDS</span>
+        </a>
+        <a href="#followup" data-kind="green">
+          <span class="mono">Follow-up &amp; control</span>
+          <span class="tag green">GREEN</span>
+        </a>
+        <a href="#referral" data-kind="amber" data-topic="referral">
+          <span class="mono">Referral criteria</span>
+          <span class="tag amber">REF</span>
+        </a>
+        <a href="#documentation" data-kind="blue">
+          <span class="mono">Documentation</span>
+          <span class="tag blue">BLUE</span>
+        </a>
+
+        <h3>Utilities</h3>
+        <a href="#checklist" data-kind="green">
+          <span class="mono">Checklist</span>
+          <span class="tag green">QA</span>
+        </a>
+        <a href="#notes" data-kind="blue">
+          <span class="mono">Notes</span>
+          <span class="tag blue">MD</span>
+        </a>
+      </nav>
+
+      <div class="footer">
+        <div class="muted">Local UI scaffold (no external dependencies).</div>
+        <div class="muted">Tip: Press <span class="kbd">/</span> to focus search.</div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main" id="main">
+      <header class="topbar">
+        <div class="title">
+          <h2>Asthma Pathway — Clinical Dashboard</h2>
+          <p class="sub">
+            Modular cards with color-coded risk signalling, iconography for tools/meds/referral, and fast navigation.
+          </p>
+        </div>
+        <div class="meta">
+          <div class="pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="i-stroke" d="M12 6v6l4 2"/>
+              <path class="i-stroke" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <span id="now">—</span>
+          </div>
+          <div class="pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+              <path class="i-stroke" d="M7 7h10v10H7z"/>
+              <path class="i-stroke" d="M9 3h6M9 21h6"/>
+            </svg>
+            <span>Keyboard: <span class="kbd">/</span> search · <span class="kbd">C</span> collapse card</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- OVERVIEW -->
+      <section class="module" id="overview" data-kind="blue">
+        <article class="card blue" data-tags="overview standard">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- dashboard icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M4 13a8 8 0 1 1 16 0"/>
+                <path class="i-stroke" d="M12 13l4-4"/>
+                <path class="i-stroke" d="M4 13h16"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Clinical overview</h3>
+              <p class="hint">High-yield structure for assessment → treatment → follow-up → escalation.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse title="Collapse/expand (C)">
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="grid2">
+              <div class="kpi">
+                <div aria-hidden="true">
+                  <!-- stethoscope-ish -->
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path class="i-stroke" d="M6 3v6a6 6 0 0 0 12 0V3"/>
+                    <path class="i-stroke" d="M8 3v5"/>
+                    <path class="i-stroke" d="M16 3v5"/>
+                    <path class="i-stroke" d="M12 15v2a5 5 0 0 0 10 0v-1"/>
+                    <path class="i-stroke" d="M21 16a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/>
+                  </svg>
+                </div>
+                <div class="k">
+                  <div class="label">Workflow</div>
+                  <div class="value">Confirm → Treat → Reassess</div>
+                  <div class="note">Objective testing supports diagnosis; then optimise inhaled therapy and self-management.</div>
+                </div>
+              </div>
+
+              <div class="kpi">
+                <div aria-hidden="true">
+                  <!-- shield/check -->
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path class="i-stroke" d="M12 3l8 4v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4Z"/>
+                    <path class="i-stroke" d="M8.5 12.5l2.2 2.2 4.8-5.2"/>
+                  </svg>
+                </div>
+                <div class="k">
+                  <div class="label">Safety focus</div>
+                  <div class="value">Red-flag recognition</div>
+                  <div class="note">Early escalation signals are isolated in a dedicated RED module for rapid scanning.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="callout">
+              <div class="callout-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M12 2 2 20h20L12 2Z"/>
+                  <path class="i-stroke" d="M12 9v4"/>
+                  <path class="i-stroke" d="M12 17h.01"/>
+                </svg>
+                Implementation note
+              </div>
+              <p>
+                Replace placeholder clinical bullets with your site-specific protocol and medication formulary (keep the color semantics consistent:
+                <span class="mono">RED</span> = danger/escalation, <span class="mono">BLUE</span> = routine care, <span class="mono">GREEN</span> = reassuring response).
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- RED FLAGS -->
+      <section class="module" id="redflags" data-kind="red">
+        <article class="card red" data-tags="red flags escalation acute severe">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- alert icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M12 2 2 20h20L12 2Z"/>
+                <path class="i-stroke" d="M12 9v5"/>
+                <path class="i-stroke" d="M12 17h.01"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Red flags & immediate escalation</h3>
+              <p class="hint">Signals of high risk of deterioration or life-threatening asthma.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="badge red">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path class="i-stroke" d="M12 9v5"/>
+                <path class="i-stroke" d="M12 17h.01"/>
+                <path class="i-stroke" d="M12 2 2 20h20L12 2Z"/>
+              </svg>
+              Treat as high acuity if present
+            </div>
+
+            <ul class="list">
+              <li><span class="mono">Impending respiratory failure</span>: exhaustion, reduced conscious level, silent chest, cyanosis.</li>
+              <li><span class="mono">Severe work of breathing</span>: inability to complete sentences, marked accessory muscle use.</li>
+              <li><span class="mono">Oxygenation/ventilation concern</span>: persistent hypoxaemia or rising CO₂ (if measured) despite therapy.</li>
+              <li><span class="mono">High-risk history</span>: prior ICU/intubation, recent ED attendances/hospitalisation, recent systemic steroids.</li>
+              <li><span class="mono">Poor response to initial bronchodilator/anti-inflammatory therapy</span> on serial reassessment.</li>
+            </ul>
+
+            <div class="callout">
+              <div class="callout-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M20 6 9 17l-5-5"/>
+                </svg>
+                UI pattern
+              </div>
+              <p>
+                Use this card as the single “stop-scroll” area: keep bullets short, action-biased, and include your local escalation triggers.
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- ASSESSMENT TOOLS -->
+      <section class="module" id="assessment" data-kind="blue">
+        <article class="card blue" data-tags="assessment tools feno spirometry peakflow act" data-topic="tools">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- clipboard/check -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M9 5h6l1 2h3v14H5V7h3l1-2Z"/>
+                <path class="i-stroke" d="M9 13l2 2 4-5"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Assessment tools</h3>
+              <p class="hint">Objective testing + structured symptom control measures.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="grid2">
+              <div class="kpi">
+                <div aria-hidden="true">
+                  <!-- airflow icon -->
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path class="i-stroke" d="M4 10h11a3 3 0 1 0-3-3"/>
+                    <path class="i-stroke" d="M4 14h14a3 3 0 1 1-3 3"/>
+                  </svg>
+                </div>
+                <div class="k">
+                  <div class="label">Objective tests</div>
+                  <div class="value">FeNO · Spirometry · PEF</div>
+                  <div class="note">Document pre/post bronchodilator response where relevant; trend peak flow variability when used.</div>
+                </div>
+              </div>
+
+              <div class="kpi">
+                <div aria-hidden="true">
+                  <!-- sliders icon -->
+                  <svg width="20" height="20" viewBox="0 0 24 24">
+                    <path class="i-stroke" d="M4 6h16"/>
+                    <path class="i-stroke" d="M4 12h16"/>
+                    <path class="i-stroke" d="M4 18h16"/>
+                    <path class="i-stroke" d="M9 6v0"/>
+                    <path class="i-stroke" d="M15 12v0"/>
+                    <path class="i-stroke" d="M7 18v0"/>
+                    <path class="i-stroke" d="M9 6a2 2 0 1 0 0 .01"/>
+                    <path class="i-stroke" d="M15 12a2 2 0 1 0 0 .01"/>
+                    <path class="i-stroke" d="M7 18a2 2 0 1 0 0 .01"/>
+                  </svg>
+                </div>
+                <div class="k">
+                  <div class="label">Control measures</div>
+                  <div class="value">ACT/Child-ACT (site choice)</div>
+                  <div class="note">Standardise one tool locally to reduce variation; record exacerbation frequency and reliever use.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="callout">
+              <div class="callout-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M12 20V10"/>
+                  <path class="i-stroke" d="M12 6h.01"/>
+                  <path class="i-stroke" d="M4 22h16"/>
+                </svg>
+                Data capture fields (recommended)
+              </div>
+              <ul class="list">
+                <li>Symptoms: daytime frequency, nocturnal waking, activity limitation; triggers pattern.</li>
+                <li>Reliever use: frequency + context (exercise, allergen exposure).</li>
+                <li>Exacerbations: oral steroid bursts, ED attendances, admissions, ICU/intubation history.</li>
+                <li>Objective: FeNO/spirometry/PEF (include dates and device used).</li>
+                <li>Technique/adherence: observed inhaler technique + refill/adherence signal.</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- INITIAL TREATMENT -->
+      <section class="module" id="initial" data-kind="blue">
+        <article class="card blue" data-tags="initial treatment medications ics laba mart air" data-topic="meds">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- inhaler icon (stylised) -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M8 4h8v4H8z"/>
+                <path class="i-stroke" d="M10 8v4"/>
+                <path class="i-stroke" d="M14 8v4"/>
+                <path class="i-stroke" d="M7 12h10v8H7z"/>
+                <path class="i-stroke" d="M9 20h6"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Initial pharmacotherapy module</h3>
+              <p class="hint">Medication “blocks” for rapid ordering, counselling, and step-up logic.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="badge blue">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path class="i-stroke" d="M4 12h16"/>
+                <path class="i-stroke" d="M12 4v16"/>
+              </svg>
+              Standard care block
+            </div>
+
+            <div class="grid2">
+              <div class="callout">
+                <div class="callout-title">
+                  <!-- meds icon -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="i-stroke" d="M10 7h7a4 4 0 0 1 0 8h-7a4 4 0 0 1 0-8Z"/>
+                    <path class="i-stroke" d="M13 7v8"/>
+                  </svg>
+                  Core controller strategy
+                </div>
+                <ul class="list">
+                  <li>ICS-containing regimen as baseline controller (local guideline: AIR/MART vs fixed dosing).</li>
+                  <li>Technique optimisation: device match, spacer use, observed technique.</li>
+                  <li>Trigger/risk modification: smoke exposure, rhinitis, obesity, adherence barriers.</li>
+                </ul>
+              </div>
+
+              <div class="callout">
+                <div class="callout-title">
+                  <!-- bolt icon -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="i-stroke" d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/>
+                  </svg>
+                  Step-up logic (UI placeholder)
+                </div>
+                <ul class="list">
+                  <li>If symptoms persist: verify diagnosis + adherence + technique first.</li>
+                  <li>Escalate intensity per protocol (dose step, add-on therapy, or switch regimen).</li>
+                  <li>Reassess in 6–12 weeks post change (or earlier if unstable).</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="kpi">
+              <div aria-hidden="true">
+                <!-- warning on SABA alone -->
+                <svg width="20" height="20" viewBox="0 0 24 24">
+                  <path class="i-stroke" d="M12 2 2 20h20L12 2Z"/>
+                  <path class="i-stroke" d="M12 9v4"/>
+                  <path class="i-stroke" d="M12 17h.01"/>
+                </svg>
+              </div>
+              <div class="k">
+                <div class="label">Safety rule</div>
+                <div class="value">Avoid “reliever-only” strategy</div>
+                <div class="note">Embed a hard UI reminder: ensure an ICS-containing plan accompanies reliever prescribing.</div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- FOLLOW-UP -->
+      <section class="module" id="followup" data-kind="green">
+        <article class="card green" data-tags="followup review good response control action plan technique">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- trending up -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M4 16l6-6 4 4 6-8"/>
+                <path class="i-stroke" d="M20 6v6h-6"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Good response / control indicators</h3>
+              <p class="hint">Signals suggesting stability and readiness for step-down consideration.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="badge green">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path class="i-stroke" d="M20 6 9 17l-5-5"/>
+              </svg>
+              Reassuring trajectory
+            </div>
+
+            <ul class="list">
+              <li>Minimal day symptoms; no nocturnal waking; normal activity tolerance.</li>
+              <li>Low reliever requirement; no recent exacerbations requiring systemic steroids.</li>
+              <li>Objective measures stable/improving (e.g., PEF trend, spirometry if followed).</li>
+              <li>Observed inhaler technique correct; adherence barriers addressed.</li>
+              <li>Written personalised action plan issued and understood.</li>
+            </ul>
+
+            <div class="callout">
+              <div class="callout-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M4 4h16v16H4z"/>
+                  <path class="i-stroke" d="M8 12h8"/>
+                </svg>
+                Step-down guardrails (UI placeholder)
+              </div>
+              <p>
+                Only consider step-down after a sustained period of control; document rationale and give explicit “what to do if worse” instructions.
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- REFERRAL -->
+      <section class="module" id="referral" data-kind="amber">
+        <article class="card amber" data-tags="referral criteria severe asthma specialist occupational" data-topic="referral">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- referral arrow -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M4 12h10"/>
+                <path class="i-stroke" d="M12 6l6 6-6 6"/>
+                <path class="i-stroke" d="M4 6v12"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Referral criteria module</h3>
+              <p class="hint">When to involve respiratory/asthma specialist services.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="badge amber">
+              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <path class="i-stroke" d="M12 2 2 20h20L12 2Z"/>
+                <path class="i-stroke" d="M12 9v4"/>
+                <path class="i-stroke" d="M12 17h.01"/>
+              </svg>
+              Escalate for specialist input
+            </div>
+
+            <ul class="list">
+              <li><span class="mono">Diagnostic uncertainty</span>: discordant history vs tests; atypical features; consider bronchial challenge or alternative diagnoses.</li>
+              <li><span class="mono">Poor control despite optimisation</span>: persistent symptoms despite verified technique/adherence and appropriate step-up.</li>
+              <li><span class="mono">Frequent severe exacerbations</span> or high-risk history (ICU/intubation).</li>
+              <li><span class="mono">Suspected occupational asthma</span> or complex comorbid drivers requiring multidisciplinary management.</li>
+              <li><span class="mono">Consideration for biologics / severe asthma pathway</span> based on phenotype and prior treatment response.</li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <!-- DOCUMENTATION -->
+      <section class="module" id="documentation" data-kind="blue">
+        <article class="card blue" data-tags="documentation coding action plan qof review">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- document icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M7 3h7l3 3v15H7V3Z"/>
+                <path class="i-stroke" d="M14 3v4h4"/>
+                <path class="i-stroke" d="M9 12h6"/>
+                <path class="i-stroke" d="M9 16h6"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Documentation & coding</h3>
+              <p class="hint">Structured recording fields to support safety, continuity, and audit.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="grid2">
+              <div class="callout">
+                <div class="callout-title">
+                  <!-- pen icon -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="i-stroke" d="M3 21h4l14-14-4-4L3 17v4Z"/>
+                    <path class="i-stroke" d="M14 6l4 4"/>
+                  </svg>
+                  Core fields
+                </div>
+                <ul class="list">
+                  <li>Working diagnosis + objective tests (and dates).</li>
+                  <li>Current regimen + inhaler device + technique check.</li>
+                  <li>Exacerbation history + admissions/ICU.</li>
+                  <li>Personalised action plan issued (yes/no) + education provided.</li>
+                </ul>
+              </div>
+
+              <div class="callout">
+                <div class="callout-title">
+                  <!-- checklist icon -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="i-stroke" d="M9 6h12"/>
+                    <path class="i-stroke" d="M9 12h12"/>
+                    <path class="i-stroke" d="M9 18h12"/>
+                    <path class="i-stroke" d="M3 6l1 1 2-2"/>
+                    <path class="i-stroke" d="M3 12l1 1 2-2"/>
+                    <path class="i-stroke" d="M3 18l1 1 2-2"/>
+                  </svg>
+                  Review template
+                </div>
+                <ul class="list">
+                  <li>Control score (ACT/Child-ACT if used).</li>
+                  <li>Reliever use frequency.</li>
+                  <li>Smoking status + cessation intervention if relevant.</li>
+                  <li>Vaccinations and comorbid rhinitis/sinus disease status.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- CHECKLIST -->
+      <section class="module" id="checklist" data-kind="green">
+        <article class="card green" data-tags="checklist qa safety">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- tick icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M20 6 9 17l-5-5"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Quick checklist</h3>
+              <p class="hint">Fast final sweep before discharge / clinic close.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" id="resetChecklist">
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M21 12a9 9 0 1 1-3-6.7"/>
+                  <path class="i-stroke" d="M21 3v6h-6"/>
+                </svg>
+                Reset
+              </div>
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="callout" id="checkWrap">
+              <div class="callout-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M12 3l8 4v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4Z"/>
+                </svg>
+                Completion tracker <span class="muted">(saved locally)</span>
+              </div>
+
+              <ul class="list" style="list-style:none; padding-left:0; margin:0; display:grid; gap:10px;">
+                <li><label><input type="checkbox" data-check="dx" /> Diagnosis supported by objective testing (or plan for it).</label></li>
+                <li><label><input type="checkbox" data-check="tech" /> Inhaler technique observed/optimised (device/spacer).</label></li>
+                <li><label><input type="checkbox" data-check="plan" /> Personalised action plan provided/updated.</label></li>
+                <li><label><input type="checkbox" data-check="risk" /> Risk factors addressed (smoke, rhinitis, adherence barriers).</label></li>
+                <li><label><input type="checkbox" data-check="fu" /> Follow-up arranged (timeframe and escalation advice).</label></li>
+              </ul>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <!-- NOTES -->
+      <section class="module" id="notes" data-kind="blue">
+        <article class="card blue" data-tags="notes free text">
+          <div class="card-head">
+            <div class="icon" aria-hidden="true">
+              <!-- note icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path class="i-stroke" d="M7 3h10v18H7z"/>
+                <path class="i-stroke" d="M9 7h6"/>
+                <path class="i-stroke" d="M9 11h6"/>
+                <path class="i-stroke" d="M9 15h6"/>
+              </svg>
+            </div>
+            <div class="hgroup">
+              <h3>Notes</h3>
+              <p class="hint">Local protocol deltas, formulary notes, and service contacts.</p>
+            </div>
+            <div class="actions">
+              <div class="btn" data-collapse>
+                <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M6 9l6 6 6-6"/>
+                </svg>
+                Collapse
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="callout">
+              <div class="callout-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path class="i-stroke" d="M4 4h16v16H4z"/>
+                  <path class="i-stroke" d="M8 12h8"/>
+                  <path class="i-stroke" d="M12 8v8"/>
+                </svg>
+                Editable local notes <span class="muted">(persisted locally)</span>
+              </div>
+              <textarea id="freeNotes" rows="6" style="
+                width:100%;
+                border-radius:14px;
+                border:1px solid rgba(232,238,252,.14);
+                background: rgba(0,0,0,.14);
+                color: rgba(232,238,252,.92);
+                padding:12px;
+                outline:none;
+                font-size:13px;
+                line-height:1.45;
+              " placeholder="Add local numbers, escalation pathways, preferred inhalers, shared-care rules, etc."></textarea>
+              <div class="muted" style="font-size:12px; display:flex; justify-content:space-between; gap:12px; margin-top:8px;">
+                <span>Autosaves to localStorage.</span>
+                <span class="mono" id="noteCount">0 chars</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <div style="height: 10px;"></div>
+    </main>
+  </div>
+
+  <script>
+    // ---- small helpers ----
+    const $ = (q, el=document) => el.querySelector(q);
+    const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+
+    // ---- clock ----
+    const nowEl = $("#now");
+    function tick(){
+      const d = new Date();
+      nowEl.textContent = d.toLocaleString(undefined, { weekday:"short", year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+    }
+    tick(); setInterval(tick, 30_000);
+
+    // ---- collapse cards ----
+    function setCollapsed(card, collapsed){
+      card.classList.toggle("collapsed", collapsed);
+      const btn = card.querySelector("[data-collapse]");
+      if(btn) btn.lastChild && (btn.lastChild.textContent = collapsed ? " Expand" : " Collapse");
+    }
+    $$("[data-collapse]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".card");
+        setCollapsed(card, !card.classList.contains("collapsed"));
+      });
+    });
+
+    // Keyboard: "C" toggles collapse for the card nearest top of viewport
+    function nearestCard(){
+      const cards = $$(".card");
+      let best = null, bestDist = Infinity;
+      for(const c of cards){
+        const r = c.getBoundingClientRect();
+        const dist = Math.abs(r.top - 80);
+        if(r.bottom > 80 && dist < bestDist){ best = c; bestDist = dist; }
+      }
+      return best;
+    }
+    window.addEventListener("keydown", (e) => {
+      if(e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA"){
+        e.preventDefault();
+        $("#q").focus();
+      }
+      if((e.key === "c" || e.key === "C") && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA"){
+        const card = nearestCard();
+        if(card) setCollapsed(card, !card.classList.contains("collapsed"));
+      }
+    });
+
+    // ---- scrollspy ----
+    const navLinks = $$("#nav a[href^='#']");
+    const sections = navLinks
+      .map(a => document.getElementById(a.getAttribute("href").slice(1)))
+      .filter(Boolean);
+
+    const spy = new IntersectionObserver((entries) => {
+      // pick most visible intersecting section
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+
+      if(!visible) return;
+      const id = visible.target.id;
+      navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#"+id));
+    }, { root: null, threshold: [0.18, 0.28, 0.38, 0.5, 0.65] });
+
+    sections.forEach(s => spy.observe(s));
+
+    // ---- search + filtering ----
+    const q = $("#q");
+    const chips = $$(".chip");
+    const cards = $$(".card");
+
+    let activeChip = "all";
+
+    function applyFilters(){
+      const term = (q.value || "").trim().toLowerCase();
+      cards.forEach(card => {
+        const text = (card.innerText || "").toLowerCase();
+        const kind = (card.classList.contains("red") && "red")
+                  || (card.classList.contains("green") && "green")
+                  || (card.classList.contains("blue") && "blue")
+                  || (card.classList.contains("amber") && "amber") || "blue";
+        const topic = card.getAttribute("data-topic") || "";
+        const tags = (card.getAttribute("data-tags") || "").toLowerCase();
+
+        const termOk = !term || text.includes(term) || tags.includes(term);
+        const chipOk =
+          activeChip === "all" ? true :
+          ["red","blue","green"].includes(activeChip) ? (kind === activeChip) :
+          activeChip === "tools" ? (topic === "tools" || tags.includes("tools")) :
+          activeChip === "meds" ? (topic === "meds" || tags.includes("med")) :
+          activeChip === "referral" ? (topic === "referral" || tags.includes("referral")) :
+          true;
+
+        const show = termOk && chipOk;
+        card.closest(".module").style.display = show ? "" : "none";
+      });
+
+      // Also gray out sidebar links for hidden sections
+      navLinks.forEach(a => {
+        const id = a.getAttribute("href").slice(1);
+        const sec = document.getElementById(id);
+        const visible = sec && sec.style.display !== "none";
+        a.style.opacity = visible ? "1" : ".35";
+        a.style.pointerEvents = visible ? "" : "none";
+      });
+    }
+
+    q.addEventListener("input", applyFilters);
+
+    chips.forEach(ch => {
+      ch.addEventListener("click", () => {
+        chips.forEach(x => x.classList.remove("active"));
+        ch.classList.add("active");
+        activeChip = ch.getAttribute("data-filter");
+        applyFilters();
+      });
+    });
+    // default active chip
+    chips.find(c => c.dataset.filter === "all")?.classList.add("active");
+
+    // ---- checklist persistence ----
+    const CHECK_KEY = "asthma_dashboard_checklist_v1";
+    const checks = $$("input[type='checkbox'][data-check]");
+    function loadChecklist(){
+      try{
+        const raw = localStorage.getItem(CHECK_KEY);
+        if(!raw) return;
+        const st = JSON.parse(raw);
+        checks.forEach(cb => cb.checked = !!st[cb.dataset.check]);
+      }catch{}
+    }
+    function saveChecklist(){
+      const st = {};
+      checks.forEach(cb => st[cb.dataset.check] = cb.checked);
+      try{ localStorage.setItem(CHECK_KEY, JSON.stringify(st)); }catch{}
+    }
+    checks.forEach(cb => cb.addEventListener("change", saveChecklist));
+    $("#resetChecklist").addEventListener("click", () => {
+      checks.forEach(cb => cb.checked = false);
+      saveChecklist();
+    });
+    loadChecklist();
+
+    // ---- notes persistence ----
+    const NOTES_KEY = "asthma_dashboard_notes_v1";
+    const ta = $("#freeNotes");
+    const noteCount = $("#noteCount");
+    function updateCount(){ noteCount.textContent = (ta.value.length || 0) + " chars"; }
+    function loadNotes(){
+      try{
+        const raw = localStorage.getItem(NOTES_KEY);
+        if(raw) ta.value = raw;
+      }catch{}
+      updateCount();
+    }
+    function saveNotes(){
+      try{ localStorage.setItem(NOTES_KEY, ta.value); }catch{}
+      updateCount();
+    }
+    ta.addEventListener("input", saveNotes);
+    loadNotes();
+
+    // initial filter pass
+    applyFilters();
+  </script>
+</body>
+</html>

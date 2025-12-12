@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICE COPD Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e6f0ff 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .main-content {
+            flex: 1;
+            padding-right: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #1a3a6c 0%, #2c5282 100%);
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(26, 58, 108, 0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .algorithm-section {
+            margin-bottom: 2.5rem;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .algorithm-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border-left: 6px solid;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card.assessment {
+            border-left-color: #3498db;
+        }
+
+        .card.diagnosis {
+            border-left-color: #9b59b6;
+        }
+
+        .card.treatment {
+            border-left-color: #27ae60;
+        }
+
+        .card.followup {
+            border-left-color: #f39c12;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .assessment .card-icon {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .diagnosis .card-icon {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .treatment .card-icon {
+            background: linear-gradient(135deg, #27ae60, #219151);
+        }
+
+        .followup .card-icon {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-title p {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            color: #95a5a6;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+            padding: 0 1rem;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+            padding: 2rem 1rem 1rem;
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .step-list li:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 2rem;
+            height: 2rem;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            color: #1a3a6c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .severity-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .badge.red {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge.amber {
+            background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);
+            color: white;
+        }
+
+        .badge.green {
+            background: linear-gradient(135deg, #27ae60 0%, #219151 100%);
+            color: white;
+        }
+
+        .sidebar {
+            width: 280px;
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+        }
+
+        .progress-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .progress-card h3 {
+            margin-bottom: 1.5rem;
+            color: #1a3a6c;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            opacity: 1;
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            opacity: 1;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            background: #e3f2fd;
+            color: #1a3a6c;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: linear-gradient(135deg, #27ae60 0%, #219151 100%);
+            color: white;
+        }
+
+        .progress-item.active .progress-icon {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #1a3a6c 0%, #2c5282 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(26, 58, 108, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .floating-action:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 30px rgba(26, 58, 108, 0.4);
+        }
+
+        .sub-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #3498db;
+        }
+
+        .sub-section h4 {
+            color: #1a3a6c;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #e3f2fd;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            border-color: #3498db;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mrc-scale {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+        }
+
+        .mrc-scale h5 {
+            color: #1a3a6c;
+            margin-bottom: 1rem;
+        }
+
+        .mrc-item {
+            background: white;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mrc-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .mrc-number {
+            font-weight: bold;
+            color: #1a3a6c;
+            min-width: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card {
+                padding: 1.5rem;
+            }
+
+            .card-header {
+                flex-wrap: wrap;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-lungs"></i> COPD Management Algorithm</h1>
+        <p>NICE Clinical Knowledge Summary - Primary Care Pathway</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.8;">Last revised: October 2025 | For adults aged ≥35 years</p>
+    </div>
+
+    <div class="container">
+        <main class="main-content">
+            <!-- ASSESSMENT SECTION -->
+            <section class="algorithm-section" data-section="assessment">
+                <div class="card assessment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Assessment</h2>
+                            <p>Initial evaluation and risk factor identification</p>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ol class="step-list">
+                            <li>
+                                <strong>Suspect COPD in patients ≥35 years with:</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Exposure to risk factors (smoking, occupational/environmental)</li>
+                                    <li>Symptoms: persistent breathlessness, chronic cough, sputum production, wheeze</li>
+                                </ul>
+                                <div class="severity-badges">
+                                    <span class="badge red"><i class="fas fa-exclamation-circle"></i> Urgent: Hemoptysis, rapid decline, suspicious chest X-ray</span>
+                                    <span class="badge amber"><i class="fas fa-clock"></i> <40 years old: Consider α1-antitrypsin deficiency</span>
+                                </div>
+                            </li>
+                            <li>
+                                <strong>Take detailed history:</strong>
+                                <div class="feature-grid">
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-smoking"></i> Smoking</h5>
+                                        <p>Pack-years = (cigarettes/day ÷ 20) × years smoked</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-industry"></i> Occupational</h5>
+                                        <p>Dusts (coal, silica, grains), fumes, chemicals</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-running"></i> Impact</h5>
+                                        <p>Use MRC dyspnea scale or CAT score</p>
+                                    </div>
+                                </div>
+                            </li>
+                        </ol>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-chart-line"></i> MRC Dyspnoea Scale</h4>
+                            <div class="mrc-scale">
+                                <div class="mrc-item">
+                                    <span class="mrc-number">1</span>
+                                    Not troubled by breathlessness except during strenuous exercise
+                                </div>
+                                <div class="mrc-item">
+                                    <span class="mrc-number">2</span>
+                                    Short of breath when hurrying or walking up a slight hill
+                                </div>
+                                <div class="mrc-item">
+                                    <span class="mrc-number">3</span>
+                                    Walks slower than contemporaries on level, or stops for breath
+                                </div>
+                                <div class="mrc-item">
+                                    <span class="mrc-number">4</span>
+                                    Stops for breath after walking about 100m or few minutes on level
+                                </div>
+                                <div class="mrc-item">
+                                    <span class="mrc-number">5</span>
+                                    Too breathless to leave house, or breathless when dressing/undressing
+                                </div>
+                            </div>
+                            <div class="severity-badges">
+                                <span class="badge green">MRC 1-2: Mild symptoms</span>
+                                <span class="badge amber">MRC 3-4: Moderate-severe</span>
+                                <span class="badge red">MRC 5: Very severe</span>
+                            </div>
+                        </div>
+
+                        <ol class="step-list" start="3">
+                            <li>
+                                <strong>Physical examination may show:</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Hyperinflation, wheeze, crackles, cyanosis</li>
+                                    <li>Cor pulmonale signs: raised JVP, peripheral oedema</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>Initial investigations:</strong>
+                                <div class="feature-grid">
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-x-ray"></i> Chest X-ray</h5>
+                                        <p>Exclude lung cancer, TB, bronchiectasis</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-tint"></i> Full blood count</h5>
+                                        <p>Identify anaemia or polycythaemia</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-lungs-virus"></i> Spirometry</h5>
+                                        <p>Post-bronchodilator FEV1/FVC <0.7 confirms COPD</p>
+                                    </div>
+                                </div>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DIAGNOSIS SECTION -->
+            <section class="algorithm-section" data-section="diagnosis">
+                <div class="card diagnosis">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Diagnosis & Severity</h2>
+                            <p>Spirometry-based confirmation and grading</p>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ol class="step-list">
+                            <li>
+                                <strong>Spirometry confirmation:</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Perform post-bronchodilator spirometry (15-20 mins after 400mcg salbutamol)</li>
+                                    <li>FEV1/FVC <0.7 confirms persistent airflow obstruction</li>
+                                    <li>Consider alternative diagnoses if older patient without typical symptoms</li>
+                                </ul>
+                                <div class="severity-badges">
+                                    <span class="badge red"><i class="fas fa-exclamation-triangle"></i> Do not rely on reversibility testing for diagnosis</span>
+                                </div>
+                            </li>
+                            <li>
+                                <strong>Severity grading (post-bronchodilator FEV1):</strong>
+                                <div class="feature-grid">
+                                    <div class="feature-card">
+                                        <h5 style="color: #27ae60;"><i class="fas fa-leaf"></i> Stage 1: Mild</h5>
+                                        <p>FEV1 ≥80% predicted</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #f39c12;"><i class="fas fa-exclamation-circle"></i> Stage 2: Moderate</h5>
+                                        <p>FEV1 50-79% predicted</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #e67e22;"><i class="fas fa-ambulance"></i> Stage 3: Severe</h5>
+                                        <p>FEV1 30-49% predicted</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #e74c3c;"><i class="fas fa-heartbeat"></i> Stage 4: Very Severe</h5>
+                                        <p>FEV1 <30% predicted or <50% with respiratory failure</p>
+                                    </div>
+                                </div>
+                            </li>
+                            <li>
+                                <strong>Differential diagnosis to consider:</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Asthma (variable symptoms, nocturnal symptoms, atopy)</li>
+                                    <li>Bronchiectasis (copious sputum, childhood pneumonia)</li>
+                                    <li>Heart failure (breathless when lying flat, fine crepitations)</li>
+                                    <li>Lung cancer (persistent cough, haemoptysis, weight loss)</li>
+                                    <li>Tuberculosis (productive cough, systemic symptoms)</li>
+                                </ul>
+                            </li>
+                        </ol>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-dna"></i> α1-Antitrypsin Deficiency</h4>
+                            <p>Consider in patients:</p>
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Age <40 years with COPD symptoms</li>
+                                <li>Minimal smoking history</li>
+                                <li>Family history of COPD/liver disease</li>
+                            </ul>
+                            <div class="severity-badges">
+                                <span class="badge amber"><i class="fas fa-user-md"></i> Requires specialist referral and family screening</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TREATMENT SECTION -->
+            <section class="algorithm-section" data-section="treatment">
+                <div class="card treatment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Treatment & Management</h2>
+                            <p>Pharmacological and non-pharmacological interventions</p>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-section">
+                            <h4><i class="fas fa-ban-smoking"></i> Essential for All Patients</h4>
+                            <div class="feature-grid">
+                                <div class="feature-card">
+                                    <h5 style="color: #27ae60;"><i class="fas fa-smoking-ban"></i> Smoking Cessation</h5>
+                                    <p>Offer at every opportunity - most effective intervention</p>
+                                </div>
+                                <div class="feature-card">
+                                    <h5 style="color: #27ae60;"><i class="fas fa-syringe"></i> Vaccinations</h5>
+                                    <p>Influenza (annual), pneumococcal (once-only), COVID-19</p>
+                                </div>
+                                <div class="feature-card">
+                                    <h5 style="color: #27ae60;"><i class="fas fa-running"></i> Pulmonary Rehabilitation</h5>
+                                    <p>Refer if MRC ≥3 or recent hospitalization</p>
+                                </div>
+                                <div class="feature-card">
+                                    <h5 style="color: #27ae60;"><i class="fas fa-book-medical"></i> Self-Management Plan</h5>
+                                    <p>Personalized plan for exacerbation recognition</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ol class="step-list">
+                            <li>
+                                <strong>Initial pharmacological treatment (based on GOLD ABCE groups):</strong>
+                                <div class="sub-section" style="margin-top: 1rem;">
+                                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden;">
+                                        <thead>
+                                            <tr style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);">
+                                                <th style="padding: 1rem; text-align: left;">Group</th>
+                                                <th style="padding: 1rem;">Characteristics</th>
+                                                <th style="padding: 1rem;">Initial Therapy</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr style="border-bottom: 1px solid #ecf0f1;">
+                                                <td style="padding: 1rem; font-weight: bold; color: #27ae60;">A</td>
+                                                <td style="padding: 1rem;">0-1 exacerbations (not hospitalized), mMRC 0-1 or CAT <10</td>
+                                                <td style="padding: 1rem;">Bronchodilator (prefer long-acting)</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ecf0f1;">
+                                                <td style="padding: 1rem; font-weight: bold; color: #f39c12;">B</td>
+                                                <td style="padding: 1rem;">0-1 exacerbations (not hospitalized), mMRC ≥2 or CAT ≥10</td>
+                                                <td style="padding: 1rem;">LABA + LAMA</td>
+                                            </tr>
+                                            <tr style="border-bottom: 1px solid #ecf0f1;">
+                                                <td style="padding: 1rem; font-weight: bold; color: #e67e22;">E</td>
+                                                <td style="padding: 1rem;">≥2 exacerbations or ≥1 hospitalized</td>
+                                                <td style="padding: 1rem;">LABA + LAMA (consider +ICS if eos >300)</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="severity-badges">
+                                    <span class="badge green">LABA: Salmeterol, Formoterol, Indacaterol</span>
+                                    <span class="badge amber">LAMA: Tiotropium, Aclidinium, Glycopyrronium</span>
+                                    <span class="badge red">ICS: Risk of pneumonia - discuss with patient</span>
+                                </div>
+                            </li>
+                            <li>
+                                <strong>Inhaled corticosteroid considerations:</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Add to LABA+LAMA if blood eosinophils >300 cells/µL</li>
+                                    <li>Do NOT use LABA+ICS alone in COPD</li>
+                                    <li>Increased risk of pneumonia - warn patient</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>Other pharmacological options:</strong>
+                                <div class="feature-grid" style="margin-top: 1rem;">
+                                    <div class="feature-card">
+                                        <h5 style="color: #f39c12;"><i class="fas fa-capsules"></i> Mucolytics</h5>
+                                        <p>Consider if chronic productive cough</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #e67e22;"><i class="fas fa-prescription-bottle"></i> Theophylline</h5>
+                                        <p>Specialist use, monitor plasma levels</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #e74c3c;"><i class="fas fa-pills"></i> Roflumilast</h5>
+                                        <p>Severe COPD with chronic bronchitis (FEV1<50%)</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #9b59b6;"><i class="fas fa-bacteria"></i> Azithromycin</h5>
+                                        <p>Prophylaxis if ≥3 exacerbations/year + hospitalization</p>
+                                    </div>
+                                </div>
+                            </li>
+                        </ol>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-ambulance"></i> When to Refer</h4>
+                            <div class="severity-badges">
+                                <span class="badge red"><i class="fas fa-hospital"></i> Urgent: Lung cancer suspicion, cor pulmonale, rapid decline</span>
+                                <span class="badge amber"><i class="fas fa-stethoscope"></i> Specialist: Diagnostic uncertainty, severe disease, α1-antitrypsin deficiency</span>
+                                <span class="badge amber"><i class="fas fa-flask"></i> Assessment: Oxygen therapy, long-term steroids, surgery</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- FOLLOW-UP SECTION -->
+            <section class="algorithm-section" data-section="followup">
+                <div class="card followup">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Follow-up & Monitoring</h2>
+                            <p>Regular review and exacerbation management</p>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ol class="step-list">
+                            <li>
+                                <strong>Review frequency:</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Mild/moderate/severe COPD: At least annually</li>
+                                    <li>Very severe COPD: At least twice yearly</li>
+                                    <li>Severe COPD with interventions: Specialist review</li>
+                                </ul>
+                            </li>
+                            <li>
+                                <strong>At each review assess:</strong>
+                                <div class="feature-grid" style="margin-top: 1rem;">
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-clipboard-list"></i> Symptoms</h5>
+                                        <p>MRC scale, exacerbation frequency, impact on life</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-inhaler"></i> Inhaler Technique</h5>
+                                        <p>Check technique and adherence before stepping up</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-weight"></i> BMI & Smoking</h5>
+                                        <p>Record BMI, smoking status - offer support</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-lungs"></i> Spirometry</h5>
+                                        <p>Monitor FEV1 decline (≥500ml/5y = rapid progression)</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-shield-alt"></i> Vaccinations</h5>
+                                        <p>Ensure influenza, pneumococcal, COVID-19 up to date</p>
+                                    </div>
+                                    <div class="feature-card">
+                                        <h5 style="color: #1a3a6c;"><i class="fas fa-heartbeat"></i> Comorbidities</h5>
+                                        <p>Screen for anxiety, depression, CVD, osteoporosis</p>
+                                    </div>
+                                </div>
+                            </li>
+                            <li>
+                                <strong>Exacerbation management:</strong>
+                                <div class="sub-section" style="margin-top: 1rem;">
+                                    <h4><i class="fas fa-exclamation-triangle"></i> Recognizing Exacerbations</h4>
+                                    <p>Acute worsening of symptoms beyond normal day-to-day variation:</p>
+                                    <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                        <li>Increased breathlessness, cough, sputum volume/purulence</li>
+                                        <li>Upper respiratory symptoms, fever, increased wheeze</li>
+                                        <li>Reduced exercise tolerance, fatigue, ankle swelling</li>
+                                    </ul>
+                                    <div class="severity-badges">
+                                        <span class="badge red"><i class="fas fa-hospital"></i> Admit if: Severe dyspnea, cyanosis, SpO2<90%, confusion, acute confusion</span>
+                                        <span class="badge amber"><i class="fas fa-home"></i> Home management possible if: No red flags, can cope at home</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="sub-section">
+                                    <h4><i class="fas fa-medkit"></i> Home Treatment</h4>
+                                    <ol style="padding-left: 1.5rem;">
+                                        <li>Increase short-acting bronchodilator frequency</li>
+                                        <li>Prednisolone 30mg daily for 5 days (<strong>if</strong> increased breathlessness)</li>
+                                        <li>Antibiotic if sputum purulent and increased volume/thickness:
+                                            <ul style="margin-top: 0.5rem;">
+                                                <li>First choice: Amoxicillin, doxycycline, or clarithromycin for 5 days</li>
+                                            </ul>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </li>
+                            <li>
+                                <strong>Post-exacerbation follow-up (6 weeks):</strong>
+                                <ul style="margin-top: 0.5rem; padding-left: 1rem;">
+                                    <li>Assess residual symptoms and optimize management</li>
+                                    <li>Review inhaler technique and adherence</li>
+                                    <li>Consider referral/re-referral for pulmonary rehabilitation</li>
+                                    <li>Provide rescue medications (steroids/antibiotics) for future exacerbations</li>
+                                    <li>Investigate if ≥3 courses steroids/antibiotics in past year</li>
+                                </ul>
+                            </li>
+                        </ol>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-plane"></i> Special Considerations</h4>
+                            <div class="feature-grid">
+                                <div class="feature-card">
+                                    <h5 style="color: #f39c12;"><i class="fas fa-plane-departure"></i> Air Travel</h5>
+                                    <p>Assess if FEV1<30%, bullous disease, recent exacerbation</p>
+                                </div>
+                                <div class="feature-card">
+                                    <h5 style="color: #27ae60;"><i class="fas fa-car"></i> Driving</h5>
+                                    <p>Notify DVLA only if complications with syncope/dizziness</p>
+                                </div>
+                                <div class="feature-card">
+                                    <h5 style="color: #e74c3c;"><i class="fas fa-hospital-alt"></i> Palliative Care</h5>
+                                    <p>Consider if life expectancy <6-12 months</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="sidebar">
+            <div class="progress-card">
+                <h3><i class="fas fa-route"></i> Progress</h3>
+                <div class="progress-item" data-target="assessment" onclick="scrollToSection('assessment')">
+                    <div class="progress-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <span>Assessment</span>
+                </div>
+                <div class="progress-item" data-target="diagnosis" onclick="scrollToSection('diagnosis')">
+                    <div class="progress-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <span>Diagnosis</span>
+                </div>
+                <div class="progress-item" data-target="treatment" onclick="scrollToSection('treatment')">
+                    <div class="progress-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <span>Treatment</span>
+                </div>
+                <div class="progress-item" data-target="followup" onclick="scrollToSection('followup')">
+                    <div class="progress-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <span>Follow-up</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="floating-action pulse" onclick="expandAllCards()" title="Expand All">
+        <i class="fas fa-expand"></i>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            updateProgress();
+        }
+
+        function expandAllCards() {
+            const cards = document.querySelectorAll('.card');
+            const allExpanded = Array.from(cards).every(card => card.classList.contains('expanded'));
+            
+            cards.forEach(card => {
+                if (allExpanded) {
+                    card.classList.remove('expanded');
+                } else {
+                    card.classList.add('expanded');
+                }
+            });
+            
+            const fab = document.querySelector('.floating-action');
+            fab.innerHTML = allExpanded ? '<i class="fas fa-expand"></i>' : '<i class="fas fa-compress"></i>';
+            fab.title = allExpanded ? 'Expand All' : 'Collapse All';
+        }
+
+        // Scroll to section functionality
+        function scrollToSection(sectionName) {
+            const section = document.querySelector(`[data-section="${sectionName}"]`);
+            if (section) {
+                const offsetTop = section.offsetTop - 100;
+                window.scrollTo({
+                    top: offsetTop,
+                    behavior: 'smooth'
+                });
+                section.classList.add('fade-in');
+            }
+        }
+
+        // Progress tracking
+        function updateProgress() {
+            const sections = document.querySelectorAll('.algorithm-section');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            let currentSection = null;
+            let lastCompletedSection = null;
+            
+            sections.forEach((section, index) => {
+                const rect = section.getBoundingClientRect();
+                const card = section.querySelector('.card');
+                const isVisible = rect.top < window.innerHeight * 0.4;
+                const isExpanded = card.classList.contains('expanded');
+                
+                if (isVisible) {
+                    currentSection = section.dataset.section;
+                }
+                
+                if (isExpanded) {
+                    lastCompletedSection = section.dataset.section;
+                }
+                
+                // Show section with animation
+                if (isVisible) {
+                    section.classList.add('visible');
+                }
+            });
+            
+            // Update progress indicators
+            progressItems.forEach(item => {
+                const target = item.dataset.target;
+                item.classList.remove('active', 'completed');
+                
+                if (target === currentSection) {
+                    item.classList.add('active');
+                } else if (target === lastCompletedSection || 
+                          sections[target === 'assessment' ? 0 : 
+                                  target === 'diagnosis' ? 1 :
+                                  target === 'treatment' ? 2 : 3]
+                                  .querySelector('.card').classList.contains('expanded')) {
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        // Intersection Observer for scroll animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            threshold: 0.1
+        });
+
+        document.querySelectorAll('.algorithm-section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Throttled scroll handler
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            if (scrollTimeout) clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(updateProgress, 50);
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auto-expand first card
+            const firstCard = document.querySelector('.card');
+            if (firstCard) {
+                setTimeout(() => {
+                    firstCard.classList.add('expanded');
+                    updateProgress();
+                }, 500);
+            }
+            
+            // Add pulse animation to urgent badges
+            document.querySelectorAll('.badge.red').forEach(badge => {
+                badge.classList.add('pulse');
+                // Remove pulse after 3 seconds to allow hover effects
+                setTimeout(() => badge.classList.remove('pulse'), 3000);
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                window.scrollBy({ top: 300, behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp') {
+                window.scrollBy({ top: -300, behavior: 'smooth' });
+            } else if (e.key === 'Home') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (e.key === 'End') {
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+</html>

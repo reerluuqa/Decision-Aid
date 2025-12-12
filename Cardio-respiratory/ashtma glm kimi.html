@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asthma Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-size: 1.4rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            position: relative;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: rgba(102, 126, 234, 0.1);
+            border-left: 4px solid #667eea;
+        }
+
+        .progress-item.completed {
+            opacity: 1;
+            background: rgba(39, 174, 96, 0.1);
+            border-left: 4px solid #27ae60;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .progress-item.active .progress-icon {
+            background: #667eea;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: #27ae60;
+        }
+
+        .progress-item:not(.active):not(.completed) .progress-icon {
+            background: #bdc3c7;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 20px 25px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header .left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            padding: 0 25px;
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.5s ease;
+            background: #f8f9fa;
+        }
+
+        .card.expanded .card-content {
+            padding: 25px;
+            max-height: 2000px;
+        }
+
+        /* Card Colors */
+        .card.assessment .card-header { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .card.diagnosis .card-header { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .card.treatment .card-header { background: linear-gradient(135deg, #27ae60, #229954); }
+        .card.followup .card-header { background: linear-gradient(135deg, #e67e22, #d35400); }
+        .card.emergency .card-header { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-urgent {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-stable {
+            background: #27ae60;
+            color: white;
+        }
+
+        /* Content Styling */
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #dee2e6;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-content {
+            color: #555;
+            line-height: 1.7;
+        }
+
+        .step-content ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .step-content li {
+            margin-bottom: 8px;
+        }
+
+        .test-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+
+        .emergency-box {
+            background: #ffebee;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #f44336;
+            margin: 15px 0;
+        }
+
+        .drug-info {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #4caf50;
+        }
+
+        /* Navigation Buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: relative;
+                height: auto;
+            }
+            
+            .main-content {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Progress -->
+        <nav class="sidebar">
+            <h2><i class="fas fa-stethoscope"></i> Algorithm Progress</h2>
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon"><i class="fas fa-clipboard-check"></i></div>
+                <span>Initial Assessment</span>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon"><i class="fas fa-microscope"></i></div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon"><i class="fas fa-pills"></i></div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon"><i class="fas fa-calendar-check"></i></div>
+                <span>Follow-up</span>
+            </div>
+            <div class="progress-item" data-section="emergency">
+                <div class="progress-icon"><i class="fas fa-ambulance"></i></div>
+                <span>Acute Exacerbation</span>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-lungs"></i> Asthma Management Algorithm</h1>
+                <p>Primary Care Guidelines - NICE CKS (May 2025)</p>
+            </div>
+
+            <!-- Assessment Section -->
+            <section class="section active" id="assessment">
+                <div class="card assessment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-user-md"></i></div>
+                            <span class="card-title">Clinical Assessment</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-question-circle"></i>
+                                Key Symptoms to Assess
+                            </div>
+                            <div class="step-content">
+                                Suspect asthma if patient presents with:
+                                <ul>
+                                    <li>Variable wheeze, cough, breathlessness, chest tightness</li>
+                                    <li>Symptoms worse at night/early morning or seasonal</li>
+                                    <li>Triggers: exercise, viral infections, allergens, NSAIDs, beta-blockers</li>
+                                    <li>Expiratory polyphonic wheeze on examination</li>
+                                    <li><strong class="badge badge-caution">Note:</strong> Normal exam doesn't exclude asthma</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-briefcase-medical"></i>
+                                Occupational Asthma Red Flags
+                            </div>
+                            <div class="step-content">
+                                Suspect occupational asthma if:
+                                <ul>
+                                    <li>Working age with new or worsening symptoms</li>
+                                    <li>High-risk occupation (baking, painting, healthcare, etc.)</li>
+                                    <li>Symptoms improve away from work/holidays</li>
+                                </ul>
+                                <span class="badge badge-urgent">Urgent Referral</span> to occupational lung service
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Atypical Features - Consider Alternative Diagnosis
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li>Persistent cough without lung function abnormalities</li>
+                                    <li>Prominent systemic features (fever, weight loss, hemoptysis)</li>
+                                    <li>Finger clubbing, cyanosis, focal chest signs</li>
+                                    <li>Onset >35 years with >30 pack-year smoking history</li>
+                                    <li>Unexplained restrictive spirometry</li>
+                                    <li>Persistent chest X-ray changes</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card assessment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-microscope"></i></div>
+                            <span class="card-title">Objective Tests by Age Group</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="test-box">
+                            <strong>Adults & Young People (>16 years):</strong>
+                            <ul>
+                                <li>Blood eosinophils > lab reference range OR FeNO ≥50 ppb</li>
+                                <li>If negative: Bronchodilator reversibility (FEV1 ↑≥12% & ≥200mL)</li>
+                                <li>If still uncertain: Peak flow variability ≥20% over 2 weeks</li>
+                                <li>If still suspected: Bronchial challenge test</li>
+                            </ul>
+                        </div>
+
+                        <div class="test-box">
+                            <strong>Children (5-16 years):</strong>
+                            <ul>
+                                <li>FeNO ≥35 ppb</li>
+                                <li>If negative: Bronchodilator reversibility (FEV1 ↑≥12%)</li>
+                                <li>If uncertain: Peak flow variability ≥20%</li>
+                                <li>If still suspected: Skin prick test or IgE/eosinophil count</li>
+                            </ul>
+                        </div>
+
+                        <div class="test-box">
+                            <strong>Children under 5 years:</strong>
+                            <ul>
+                                <li>Objective testing difficult</li>
+                                <li>Trial of low-dose ICS for 8-12 weeks</li>
+                                <li>Review response - if ineffective, reassess diagnosis</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="previousSection()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextSection()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="section" id="diagnosis">
+                <div class="card diagnosis">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-diagnoses"></i></div>
+                            <span class="card-title">Confirming Diagnosis</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-check-circle"></i>
+                                Diagnostic Criteria
+                            </div>
+                            <div class="step-content">
+                                Do NOT diagnose without:
+                                <ul>
+                                    <li>Suggestive clinical history AND</li>
+                                    <li>Supporting objective test result</li>
+                                </ul>
+                                <span class="badge badge-caution">Code as 'suspected asthma' until confirmed</span>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-stethoscope"></i>
+                                Differential Diagnoses to Consider
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li><strong>COPD:</strong> Age >35, smoking history >30 pack-years</li>
+                                    <li><strong>Bronchiectasis:</strong> Persistent productive cough, recurrent infections</li>
+                                    <li><strong>Heart failure:</strong> Orthopnea, PND, peripheral edema</li>
+                                    <li><strong>Pulmonary embolism:</strong> Acute dyspnea, pleuritic pain</li>
+                                    <li><strong>Vocal cord dysfunction:</strong> Recurrent 'asthma' without objective evidence</li>
+                                    <li><strong>Gastroesophageal reflux:</strong> Postural/food-related cough</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-user-times"></i>
+                                Red Flags for Specialist Referral
+                            </div>
+                            <div class="step-content">
+                                <span class="badge badge-urgent">Urgent Referral if:</span>
+                                <ul>
+                                    <li>Diagnostic uncertainty</li>
+                                    <li>Suspected occupational asthma</li>
+                                    <li>Symptoms despite optimized therapy for 3-6 months</li>
+                                    <li>Severe/difficult-to-treat asthma</li>
+                                    <li>History of near-fatal asthma</li>
+                                    <li>Asthma-COPD overlap with uncertainty</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="previousSection()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextSection()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="section" id="treatment">
+                <div class="card treatment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-pills"></i></div>
+                            <span class="card-title">Initial Treatment by Age</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="drug-info">
+                            <strong>Age 12+ Years:</strong>
+                            <ul>
+                                <li><strong>As-needed AIR therapy:</strong> Low-dose ICS/formoterol combination inhaler for symptom relief</li>
+                                <li><strong>Highly symptomatic:</strong> Low-dose MART (maintenance & reliever therapy)</li>
+                                <li><strong>Not controlled:</strong> Step up to moderate-dose MART</li>
+                                <li><span class="badge badge-urgent">NEVER prescribe SABA alone</span></li>
+                            </ul>
+                        </div>
+
+                        <div class="drug-info">
+                            <strong>Children 5-11 Years:</strong>
+                            <ul>
+                                <li><strong>Step 1:</strong> Twice-daily low-dose ICS + SABA as needed</li>
+                                <li><strong>Uncontrolled:</strong> Consider low-dose MART (off-label) OR add LTRA</li>
+                                <li><strong>Continue stepping up:</strong> Low-dose ICS/LABA → Moderate-dose ICS/LABA</li>
+                            </ul>
+                        </div>
+
+                        <div class="drug-info">
+                            <strong>Children under 5:</strong>
+                            <ul>
+                                <li><strong>Trial period:</strong> 8-12 weeks low-dose ICS twice daily</li>
+                                <li>If ineffective: Check technique, adherence, triggers</li>
+                                <li>If symptoms resolve: Consider stopping treatment and review after 3 months</li>
+                                <li>If symptoms recur: Restart ICS; consider moderate-dose</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card treatment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-syringe"></i></div>
+                            <span class="card-title">Additional Therapies</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-plus-circle"></i>
+                                Step-Up Options
+                            </div>
+                            <div class="step-content">
+                                If uncontrolled on moderate-dose MART:
+                                <ul>
+                                    <li>Check FeNO and blood eosinophils</li>
+                                    <li>If raised: Refer to respiratory specialist</li>
+                                    <li>If normal: Trial LTRA or LAMA for 8-12 weeks</li>
+                                    <li>If still uncontrolled: Refer to specialist</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="drug-info">
+                            <strong>Montelukast (LTRA):</strong>
+                            <ul>
+                                <li>Adults: 10mg daily in evening</li>
+                                <li>6-14 years: 5mg daily</li>
+                                <li>6 months-5 years: 4mg daily</li>
+                                <li><span class="badge badge-caution">Watch for neuropsychiatric effects</span></li>
+                            </ul>
+                        </div>
+
+                        <div class="drug-info">
+                            <strong>Tiotropium (LAMA):</strong>
+                            <ul>
+                                <li>Age 12+: 5 micrograms once daily</li>
+                                <li>Add-on for uncontrolled asthma</li>
+                                <li>Caution: Cardiac disease, bladder obstruction</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="previousSection()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextSection()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="section" id="followup">
+                <div class="card followup">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-calendar-alt"></i></div>
+                            <span class="card-title">Follow-up & Monitoring</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-clock"></i>
+                                Review Frequency
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li><span class="badge badge-stable">At least annually</span> when stable</li>
+                                    <li><span class="badge badge-caution">Within 2 working days</span> after any exacerbation</li>
+                                    <li><span class="badge badge-urgent">Early pregnancy & post-partum</span></li>
+                                    <li>Whenever control deteriorates</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-tasks"></i>
+                                Review Components
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li><strong>Symptoms:</strong> Day/night symptoms, activity limitation</li>
+                                    <li><strong>Inhaler technique:</strong> Check at every review</li>
+                                    <li><strong>Adherence:</strong> Prescription records, SABA overuse (>2 inhalers/year)</li>
+                                    <li><strong>Exacerbations:</strong> OCS courses (≥2/year indicates poor control)</li>
+                                    <li><strong>Risk factors:</strong> Smoking, occupational exposures, psychosocial issues</li>
+                                    <li><strong>Comorbidities:</strong> Rhinitis, GERD, obesity, anxiety/depression</li>
+                                    <li><strong>FeNO monitoring:</strong> In adults at regular review</li>
+                                    <li><strong>Growth:</strong> Monitor children annually</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-file-medical"></i>
+                                Asthma Action Plans
+                            </div>
+                            <div class="step-content">
+                                <span class="badge badge-stable">Essential for all patients</span>
+                                <ul>
+                                    <li>Based on symptoms (children) or PEF</li>
+                                    <li>Include triggers and avoidance strategies</li>
+                                    <li>Clear instructions for recognizing deterioration</li>
+                                    <li>Step-by-step medication changes</li>
+                                    <li>When to seek urgent medical attention</li>
+                                    <li>Review and update at every asthma attendance</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-arrow-down"></i>
+                                Step-Down Criteria
+                            </div>
+                            <div class="step-content">
+                                Consider reducing therapy if:
+                                <ul>
+                                    <li>Well controlled for 8-12 weeks</li>
+                                    <li>At annual review</li>
+                                    <li>Discuss risks/benefits with patient</li>
+                                    <li>Reduce gradually, monitoring response</li>
+                                    <li>Allow 8-12 weeks between changes</li>
+                                </ul>
+                                <span class="badge badge-caution">Specialist advice if uncertain</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="previousSection()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextSection()">
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Emergency Section -->
+            <section class="section" id="emergency">
+                <div class="card emergency">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="left">
+                            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <span class="card-title">Acute Exacerbation Management</span>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="emergency-box">
+                            <h3><i class="fas fa-ambulance"></i> Severity Assessment</h3>
+                            
+                            <div class="step">
+                                <div class="step-title">
+                                    <span class="badge badge-urgent">LIFE-THREATENING</span>
+                                </div>
+                                <ul>
+                                    <li>SpO2 <92% on air</li>
+                                    <li>PEF <33% best/predicted</li>
+                                    <li>Silent chest, cyanosis, poor respiratory effort</li>
+                                    <li>Hypotension, exhaustion, confusion, drowsiness</li>
+                                </ul>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-title">
+                                    <span class="badge badge-caution">ACUTE SEVERE</span>
+                                </div>
+                                <ul>
+                                    <li>Adults: Can't complete sentences, RR >25, HR >110, SpO2 <92%</li>
+                                    <li>Children: Too breathless to talk/feed, accessory muscle use</li>
+                                    <li>PEF 33-50% best/predicted</li>
+                                </ul>
+                            </div>
+
+                            <div class="step">
+                                <div class="step-title">
+                                    <span class="badge badge-stable">MODERATE</span>
+                                </div>
+                                <ul>
+                                    <li>Talking in sentences, no accessory muscle use</li>
+                                    <li>SpO2 ≥92%, PEF >50%</li>
+                                    <li>Can be managed at home if responds to treatment</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-first-aid"></i>
+                                Emergency Treatment
+                            </div>
+                            <div class="step-content">
+                                <span class="badge badge-urgent">Immediate Actions:</span>
+                                <ul>
+                                    <li><strong>Oxygen:</strong> Aim SpO2 94-98% (don't delay if no pulse oximetry)</li>
+                                    <li><strong>Bronchodilator:</strong> Salbutamol 5mg nebulized (or 10 puffs via spacer)</li>
+                                    <li><strong>Add ipratropium:</strong> 0.5mg if severe (0.25mg children 2-12 years)</li>
+                                    <li><strong>Oral prednisolone:</strong> 40-50mg adults/children 16+, 30-40mg 6-15 years, 20mg 2-5 years</li>
+                                    <li><span class="badge badge-urgent">Immediate hospital referral</span> if life-threatening features</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-home"></i>
+                                Home Management of Moderate Exacerbation
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li><strong>On MART/AIR:</strong> Continue maintenance dose, increase reliever doses to max licensed</li>
+                                    <li><strong>On ICS maintenance:</strong> Quadruplicate ICS dose for up to 7 days (adults)</li>
+                                    <li><strong>SABA:</strong> 2 puffs every 30-60 seconds up to 10 puffs, repeat after 10 min if needed</li>
+                                    <li><strong>Prednisolone:</strong> Continue 5 days minimum (adults) or 3-5 days (children)</li>
+                                    <li><span class="badge badge-caution">Call 999 if no improvement</span></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step">
+                            <div class="step-title">
+                                <i class="fas fa-calendar-alt"></i>
+                                Post-Exacerbation Follow-up
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li><span class="badge badge-urgent">Review within 2 working days</span></li>
+                                    <li>Reassess symptoms and signs</li>
+                                    <li>Check inhaler technique and adherence</li>
+                                    <li>Identify and address triggers</li>
+                                    <li>Update personalized asthma action plan</li>
+                                    <li>Consider home rescue prednisolone</li>
+                                    <li>Ensure regular follow-up arranged</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="previousSection()">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="goToSection('assessment')">
+                        Restart Algorithm <i class="fas fa-redo"></i>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        let currentSection = 'assessment';
+        const sections = ['assessment', 'diagnosis', 'treatment', 'followup', 'emergency'];
+
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show target section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Update progress sidebar
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active', 'completed');
+                if (item.dataset.section === sectionId) {
+                    item.classList.add('active');
+                } else if (sections.indexOf(item.dataset.section) < sections.indexOf(sectionId)) {
+                    item.classList.add('completed');
+                }
+            });
+            
+            currentSection = sectionId;
+            
+            // Smooth scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function nextSection() {
+            const currentIndex = sections.indexOf(currentSection);
+            if (currentIndex < sections.length - 1) {
+                showSection(sections[currentIndex + 1]);
+            }
+        }
+
+        function previousSection() {
+            const currentIndex = sections.indexOf(currentSection);
+            if (currentIndex > 0) {
+                showSection(sections[currentIndex - 1]);
+            }
+        }
+
+        function goToSection(sectionId) {
+            showSection(sectionId);
+        }
+
+        // Initialize progress sidebar click handlers
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                goToSection(item.dataset.section);
+            });
+        });
+
+        // Auto-expand first card in each section
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.section.active .card').forEach((card, index) => {
+                if (index === 0) {
+                    card.classList.add('expanded');
+                }
+            });
+        });
+
+        // Scroll spy for progress bar
+        window.addEventListener('scroll', () => {
+            const cards = document.querySelectorAll('.card');
+            const scrollPosition = window.scrollY + 200;
+            
+            cards.forEach(card => {
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition <= cardBottom) {
+                    // Add subtle animation to visible cards
+                    card.style.opacity = '1';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

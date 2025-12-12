@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Asthma Management Algorithm — Interactive</title>
+<style>
+  :root{
+    /* Palette inspired by your screenshots */
+    --bg1:#6b70d6;
+    --bg2:#7b5cc7;
+    --surface:#ffffff;
+    --surface2:#f6f8ff;
+    --ink:#1f2a44;
+    --muted:#6b7280;
+    --border:#e6e9f4;
+
+    --shadow: 0 18px 40px rgba(15, 23, 42, .18);
+    --shadow2: 0 10px 22px rgba(15, 23, 42, .12);
+
+    /* Step colors */
+    --c-assess:#2f8bc9;   /* blue */
+    --c-dx:#8b4bb0;       /* purple */
+    --c-tx:#1f9e59;       /* green */
+    --c-fu:#e07a14;       /* orange */
+
+    /* Severity badges */
+    --sev-red:#e23b3b;
+    --sev-amber:#f59e0b;
+    --sev-green:#17a34a;
+
+    --radius:18px;
+    --radius-sm:14px;
+    --t: 220ms;
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 900px at 30% 10%, rgba(255,255,255,.16), transparent 55%),
+      radial-gradient(900px 650px at 80% 40%, rgba(255,255,255,.10), transparent 60%),
+      linear-gradient(135deg, var(--bg1), var(--bg2));
+  }
+
+  .app{
+    max-width: 1260px;
+    margin: 0 auto;
+    padding: 18px 18px 36px;
+    display:grid;
+    grid-template-columns: 320px 1fr;
+    gap: 18px;
+    align-items:start;
+  }
+
+  /* Sidebar */
+  .sidebar{
+    position: sticky;
+    top: 16px;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,.92);
+    box-shadow: var(--shadow2);
+    overflow:hidden;
+    border: 1px solid rgba(255,255,255,.50);
+    backdrop-filter: blur(10px);
+  }
+  .sb-head{
+    padding: 16px 16px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sb-title{
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .sb-title h1{
+    font-size: 18px;
+    margin:0;
+    letter-spacing:.2px;
+  }
+  .sb-title .mini{
+    width:38px;height:38px;border-radius:14px;
+    display:grid;place-items:center;
+    background: linear-gradient(135deg, rgba(107,112,214,.22), rgba(123,92,199,.22));
+    border: 1px solid rgba(107,112,214,.28);
+  }
+  .sb-sub{
+    margin:8px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    line-height:1.3;
+  }
+
+  .sb-progress{
+    padding: 12px 12px 16px;
+    display:grid;
+    gap: 8px;
+  }
+  .nav-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    cursor:pointer;
+    user-select:none;
+    transition: transform var(--t) ease, background var(--t) ease, border-color var(--t) ease;
+    color: var(--muted);
+  }
+  .nav-item:hover{
+    transform: translateY(-1px);
+    background: rgba(17,24,39,.04);
+    border-color: rgba(17,24,39,.06);
+    color: var(--ink);
+  }
+  .nav-item.active{
+    background: rgba(17,24,39,.04);
+    border-color: rgba(17,24,39,.08);
+    color: var(--ink);
+  }
+  .nav-dot{
+    width:40px;height:40px;border-radius:16px;
+    display:grid;place-items:center;
+    background: #eef2ff;
+    border: 1px solid rgba(99,102,241,.18);
+    position:relative;
+    overflow:hidden;
+  }
+  .nav-dot::before{
+    content:"";
+    position:absolute; left:0; top:0; bottom:0; width:5px;
+    background: rgba(99,102,241,.55);
+  }
+  .nav-item[data-step="assessment"] .nav-dot{ background: rgba(47,139,201,.12); border-color: rgba(47,139,201,.18); }
+  .nav-item[data-step="assessment"] .nav-dot::before{ background: var(--c-assess); }
+
+  .nav-item[data-step="diagnosis"] .nav-dot{ background: rgba(139,75,176,.12); border-color: rgba(139,75,176,.18); }
+  .nav-item[data-step="diagnosis"] .nav-dot::before{ background: var(--c-dx); }
+
+  .nav-item[data-step="treatment"] .nav-dot{ background: rgba(31,158,89,.12); border-color: rgba(31,158,89,.18); }
+  .nav-item[data-step="treatment"] .nav-dot::before{ background: var(--c-tx); }
+
+  .nav-item[data-step="followup"] .nav-dot{ background: rgba(224,122,20,.12); border-color: rgba(224,122,20,.18); }
+  .nav-item[data-step="followup"] .nav-dot::before{ background: var(--c-fu); }
+
+  .nav-label{
+    display:grid;
+    gap:2px;
+    flex:1;
+  }
+  .nav-label .name{
+    font-weight: 700;
+    font-size: 14px;
+    color: inherit;
+  }
+  .nav-label .desc{
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .nav-check{
+    width: 22px; height: 22px;
+    border-radius: 999px;
+    display:grid; place-items:center;
+    background: rgba(17,24,39,.06);
+    border:1px solid rgba(17,24,39,.08);
+    opacity:.0;
+    transform: scale(.9);
+    transition: opacity var(--t) ease, transform var(--t) ease;
+  }
+  .nav-item.done .nav-check{
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Main header */
+  .hero{
+    border-radius: 22px;
+    background: rgba(255,255,255,.95);
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255,255,255,.55);
+    padding: 22px 22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 16px;
+    overflow:hidden;
+    position:relative;
+  }
+  .hero::after{
+    content:"";
+    position:absolute; inset:-2px;
+    background:
+      radial-gradient(900px 220px at 30% 0%, rgba(107,112,214,.14), transparent 60%),
+      radial-gradient(700px 220px at 75% 0%, rgba(123,92,199,.12), transparent 60%);
+    pointer-events:none;
+  }
+  .hero-left{display:flex; align-items:center; gap:14px; position:relative; z-index:1}
+  .hero-ico{
+    width: 54px; height:54px; border-radius: 18px;
+    background: linear-gradient(135deg, rgba(47,139,201,.16), rgba(139,75,176,.16));
+    border: 1px solid rgba(47,139,201,.22);
+    display:grid; place-items:center;
+  }
+  .hero h2{
+    margin:0;
+    font-size: 34px;
+    letter-spacing:.2px;
+  }
+  .hero p{
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .hero-right{
+    position:relative; z-index:1;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding: 10px 12px;
+    border-radius: 999px;
+    background: rgba(17,24,39,.04);
+    border: 1px solid rgba(17,24,39,.06);
+    color: var(--muted);
+    font-size: 13px;
+    white-space:nowrap;
+  }
+
+  /* Step cards */
+  .stack{display:grid; gap: 14px; margin-top: 14px;}
+  .step{
+    border-radius: var(--radius);
+    overflow:hidden;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255,255,255,.45);
+    transform: translateY(0);
+    transition: transform var(--t) ease, box-shadow var(--t) ease, opacity var(--t) ease;
+  }
+  .step:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 22px 50px rgba(15,23,42,.20);
+  }
+
+  .step-head{
+    padding: 16px 18px;
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    color: white;
+    cursor:pointer;
+    user-select:none;
+    position:relative;
+  }
+  .step-head .step-ico{
+    width: 44px; height: 44px; border-radius: 16px;
+    display:grid; place-items:center;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.22);
+    flex: 0 0 auto;
+  }
+  .step-head h3{
+    margin:0;
+    font-size: 18px;
+    letter-spacing:.2px;
+  }
+  .step-head .meta{
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap: 12px;
+  }
+  .chev{
+    width: 34px; height: 34px;
+    border-radius: 14px;
+    display:grid; place-items:center;
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.18);
+    transition: transform var(--t) ease;
+  }
+  .step.open .chev{ transform: rotate(180deg); }
+
+  .step-body{
+    background: rgba(255,255,255,.92);
+    padding: 14px 16px 16px;
+  }
+
+  /* Inner cards */
+  .panel{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 8px 18px rgba(15,23,42,.08);
+    padding: 14px 14px 12px;
+  }
+  .panel + .panel{ margin-top: 12px; }
+
+  .panel-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom: 6px;
+  }
+  .panel-head .pico{
+    width: 28px; height: 28px; border-radius: 12px;
+    display:grid; place-items:center;
+    background: rgba(17,24,39,.04);
+    border: 1px solid rgba(17,24,39,.06);
+  }
+  .panel-head .ptitle{
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  ul{
+    margin: 8px 0 0;
+    padding-left: 18px;
+    color: #374151;
+    line-height: 1.55;
+    font-size: 14px;
+  }
+  li{ margin: 6px 0; }
+
+  /* Expandable sub-panels (accordion inside step) */
+  details.sub{
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 8px 18px rgba(15,23,42,.07);
+    overflow:hidden;
+    margin-top: 12px;
+  }
+  details.sub summary{
+    list-style:none;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    padding: 12px 14px;
+    cursor:pointer;
+    user-select:none;
+  }
+  details.sub summary::-webkit-details-marker{display:none}
+  .sub-title{
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .sub-right{
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .sub-chevron{
+    width: 28px; height: 28px;
+    border-radius: 12px;
+    display:grid; place-items:center;
+    background: rgba(17,24,39,.04);
+    border: 1px solid rgba(17,24,39,.06);
+    transition: transform var(--t) ease;
+  }
+  details.sub[open] .sub-chevron{ transform: rotate(180deg); }
+  .sub-body{
+    padding: 0 14px 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Badges */
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing:.02em;
+    border: 1px solid rgba(0,0,0,.06);
+    background: rgba(17,24,39,.04);
+    color: #111827;
+    white-space:nowrap;
+  }
+  .badge.red{
+    background: rgba(226,59,59,.10);
+    border-color: rgba(226,59,59,.18);
+    color: #b91c1c;
+  }
+  .badge.amber{
+    background: rgba(245,158,11,.14);
+    border-color: rgba(245,158,11,.22);
+    color: #92400e;
+  }
+  .badge.green{
+    background: rgba(23,163,74,.12);
+    border-color: rgba(23,163,74,.18);
+    color: #166534;
+  }
+
+  /* Footer nav buttons */
+  .nav-cta{
+    display:flex;
+    justify-content:space-between;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .btn{
+    border:0;
+    cursor:pointer;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-weight: 800;
+    font-size: 14px;
+    display:inline-flex;
+    align-items:center;
+    gap: 10px;
+    transition: transform var(--t) ease, filter var(--t) ease, opacity var(--t) ease;
+    box-shadow: 0 10px 18px rgba(15,23,42,.12);
+  }
+  .btn:hover{ transform: translateY(-1px); filter: brightness(1.02); }
+  .btn:active{ transform: translateY(0px); opacity:.92; }
+  .btn.secondary{
+    background: rgba(255,255,255,.85);
+    color: var(--ink);
+    border: 1px solid rgba(17,24,39,.08);
+  }
+  .btn.primary{
+    background: rgba(99,102,241,.92);
+    color: white;
+    border: 1px solid rgba(99,102,241,.20);
+  }
+
+  /* Step theme backgrounds */
+  .step[data-step="assessment"] .step-head{ background: linear-gradient(90deg, var(--c-assess), #1f77b4); }
+  .step[data-step="diagnosis"]  .step-head{ background: linear-gradient(90deg, var(--c-dx), #7c3aed); }
+  .step[data-step="treatment"]  .step-head{ background: linear-gradient(90deg, var(--c-tx), #15803d); }
+  .step[data-step="followup"]   .step-head{ background: linear-gradient(90deg, var(--c-fu), #c2410c); }
+
+  /* Smooth transitions between sections */
+  .fade{
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 260ms ease, transform 260ms ease;
+  }
+  .fade.show{
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Responsive */
+  @media (max-width: 980px){
+    .app{grid-template-columns: 1fr;}
+    .sidebar{position:relative; top:0}
+    .hero{flex-direction:column; align-items:flex-start}
+    .hero-right{width:100%; justify-content:flex-start; flex-wrap:wrap}
+  }
+
+  /* Tiny inline SVG styling */
+  svg{display:block}
+  .st{stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round;}
+  .fl{fill: currentColor;}
+</style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Progress Sidebar">
+      <div class="sb-head">
+        <div class="sb-title">
+          <div class="mini" aria-hidden="true">
+            <!-- stethoscope -->
+            <svg width="20" height="20" viewBox="0 0 24 24">
+              <path class="st" d="M6 3v6a6 6 0 0 0 12 0V3"/>
+              <path class="st" d="M8 3v5M16 3v5"/>
+              <path class="st" d="M12 15v2a5 5 0 0 0 10 0v-1"/>
+              <path class="st" d="M21 16a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/>
+            </svg>
+          </div>
+          <div>
+            <h1>Algorithm Progress</h1>
+          </div>
+        </div>
+        <div class="sb-sub">Interactive pathway with expandable cards and severity badges.</div>
+      </div>
+
+      <div class="sb-progress" id="progressNav">
+        <!-- injected by JS -->
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main>
+      <header class="hero">
+        <div class="hero-left">
+          <div class="hero-ico" aria-hidden="true">
+            <!-- lungs -->
+            <svg width="28" height="28" viewBox="0 0 24 24" style="color:#1f2a44">
+              <path class="st" d="M12 12V4"/>
+              <path class="st" d="M12 12c-2-2-4-3-6-2-2 1-3 4-2 7 1 3 3 5 6 5"/>
+              <path class="st" d="M12 12c2-2 4-3 6-2 2 1 3 4 2 7-1 3-3 5-6 5"/>
+              <path class="st" d="M10 6h4"/>
+            </svg>
+          </div>
+          <div>
+            <h2>Asthma Management Algorithm</h2>
+            <p>Primary care structured workflow · card-based · expandable sections · progress tracking</p>
+          </div>
+        </div>
+
+        <div class="hero-right">
+          <div class="pill" id="clockPill" aria-label="Current time">
+            <!-- clock -->
+            <svg width="16" height="16" viewBox="0 0 24 24">
+              <path class="st" d="M12 6v6l4 2"/>
+              <path class="st" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+            <span id="clock">—</span>
+          </div>
+          <div class="pill" title="Keyboard shortcuts">
+            <span><strong>Keys noting:</strong> <span style="font-weight:800">1–4</span> jump · <span style="font-weight:800">N/P</span> next/prev</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="stack fade" id="stack">
+        <!-- injected by JS -->
+      </section>
+
+      <div class="nav-cta fade" id="cta">
+        <button class="btn secondary" id="prevBtn" type="button">
+          <!-- left arrow -->
+          <svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M15 18l-6-6 6-6"/><path class="st" d="M9 12h12"/></svg>
+          Previous
+        </button>
+        <button class="btn primary" id="nextBtn" type="button">
+          Next
+          <!-- right arrow -->
+          <svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M9 6l6 6-6 6"/><path class="st" d="M3 12h12"/></svg>
+        </button>
+      </div>
+    </main>
+  </div>
+
+<script>
+/* -----------------------------
+   DATA MODEL (edit content here)
+-------------------------------- */
+const STEPS = [
+  {
+    id: "assessment",
+    name: "Initial Assessment",
+    desc: "Symptoms · risk · red flags",
+    icon: "clipboard",
+    color: "assessment",
+    panels: [
+      {
+        title: "Key symptoms to assess",
+        icon: "question",
+        bullets: [
+          "Variable wheeze, cough, breathlessness, chest tightness",
+          "Worse at night/early morning; episodic pattern; triggers",
+          "Trigger review: exercise, viral infections, allergens, NSAIDs, beta-blockers",
+          "Examination may be normal between episodes"
+        ],
+        badges: [{type:"amber", text:"Caution: atypical features"}]
+      },
+      {
+        title: "Occupational asthma red flags",
+        icon: "briefcase",
+        bullets: [
+          "Working-age with new or worsening symptoms",
+          "Symptoms improve on days off / holidays",
+          "High-risk exposure (e.g., flour, isocyanates, animals, healthcare sensitizers)"
+        ],
+        badges: [{type:"red", text:"Urgent referral if suspected"}]
+      },
+      {
+        title: "Immediate safety screen",
+        icon: "alert",
+        bullets: [
+          "Signs of severe/near-fatal asthma or poor response to initial therapy",
+          "Prior ICU/intubation, frequent ED attendance, systemic steroid bursts",
+          "Consider alternative diagnoses if pleuritic pain, haemoptysis, fever, cardiac features"
+        ],
+        badges: [{type:"red", text:"Urgent escalation"}]
+      }
+    ],
+    sub: [
+      {
+        title: "Quick documentation (minimum set)",
+        icon: "doc",
+        bullets: [
+          "Presenting pattern + triggers + variability",
+          "Exacerbations (OCS/ED/admission) and high-risk history",
+          "Smoking/vaping, rhinitis/eczema, occupational exposures",
+          "Baseline vitals + exam; current inhalers + technique/adherence signal"
+        ],
+        badges: [{type:"green", text:"Stable: capture baseline"}]
+      }
+    ]
+  },
+
+  {
+    id: "diagnosis",
+    name: "Diagnosis",
+    desc: "Objective tests · differentials",
+    icon: "microscope",
+    color: "diagnosis",
+    panels: [
+      {
+        title: "Diagnostic criteria",
+        icon: "check",
+        bullets: [
+          "Do not diagnose without suggestive clinical history AND supporting objective test",
+          "Code as “suspected asthma” until confirmed (if you use coding states)",
+          "Review inhaler exposure prior to testing (may blunt results)"
+        ],
+        badges: [{type:"amber", text:"Avoid premature labelling"}]
+      },
+      {
+        title: "Objective testing (select locally)",
+        icon: "gauge",
+        bullets: [
+          "Spirometry with bronchodilator reversibility where appropriate",
+          "FeNO to support eosinophilic airway inflammation (if available)",
+          "PEF diary/variability when spirometry not feasible"
+        ],
+        badges: [{type:"green", text:"Preferred: objective confirmation"}]
+      },
+      {
+        title: "Differential diagnoses to consider",
+        icon: "list",
+        bullets: [
+          "COPD (age >35, smoking history, persistent symptoms)",
+          "Bronchiectasis (chronic productive cough, recurrent infections)",
+          "Heart failure (orthopnoea/PND, oedema)",
+          "Pulmonary embolism (acute pleuritic pain, risk factors)",
+          "Vocal cord dysfunction/inducible laryngeal obstruction"
+        ],
+        badges: [{type:"amber", text:"Caution: mimic syndromes"}]
+      }
+    ],
+    sub: [
+      {
+        title: "When to refer during diagnostic phase",
+        icon: "arrow",
+        bullets: [
+          "Diagnostic uncertainty after appropriate testing strategy",
+          "Suspected occupational asthma (do not delay referral)",
+          "Frequent severe attacks or high-risk features"
+        ],
+        badges: [{type:"red", text:"Urgent referral criteria"}]
+      }
+    ]
+  },
+
+  {
+    id: "treatment",
+    name: "Treatment",
+    desc: "Controller strategy · step-up",
+    icon: "pill",
+    color: "treatment",
+    panels: [
+      {
+        title: "Initial treatment by age / regimen strategy",
+        icon: "capsule",
+        bullets: [
+          "Use an ICS-containing regimen as the foundation (local guideline: AIR/MART vs fixed ICS ± LABA)",
+          "Ensure device choice matches patient ability; use spacer where appropriate",
+          "Education: inhaler technique, adherence plan, trigger mitigation"
+        ],
+        badges: [{type:"green", text:"Stable: optimise fundamentals"}]
+      },
+      {
+        title: "Additional therapies / step-up logic",
+        icon: "plus",
+        bullets: [
+          "Before stepping up: verify diagnosis, adherence, technique, comorbid drivers",
+          "Escalate per protocol: dose step, add-on therapy, or regimen switch",
+          "Set reassessment interval after changes (typically 6–12 weeks)"
+        ],
+        badges: [{type:"amber", text:"Caution: fix modifiable causes first"}]
+      },
+      {
+        title: "High-risk prescribing signals",
+        icon: "alert",
+        bullets: [
+          "Avoid reliever-only management strategy",
+          "Monitor excessive reliever use; treat as risk marker",
+          "Plan for action plan + follow-up if steroid burst required"
+        ],
+        badges: [{type:"red", text:"Urgent: high-risk pattern"}]
+      }
+    ],
+    sub: [
+      {
+        title: "Technique + adherence micro-checklist",
+        icon: "tool",
+        bullets: [
+          "Observed technique (not self-report)",
+          "Dose timing and missed-dose pattern",
+          "Device suitability (hand strength, coordination, inspiratory flow)",
+          "Refill history / overuse signals"
+        ],
+        badges: [{type:"green", text:"Best practice"}]
+      }
+    ]
+  },
+
+  {
+    id: "followup",
+    name: "Follow-up",
+    desc: "Monitoring · step-down · escalation",
+    icon: "calendar",
+    color: "followup",
+    panels: [
+      {
+        title: "Review frequency",
+        icon: "clock",
+        bullets: [
+          "At least annually when stable",
+          "After exacerbation: early review (local interval) to optimise plan",
+          "Additional review whenever control deteriorates"
+        ],
+        badges: [
+          {type:"green", text:"Stable"},
+          {type:"amber", text:"Caution: post-exacerbation"},
+          {type:"red", text:"Urgent: recurrent attacks"}
+        ]
+      },
+      {
+        title: "Review components",
+        icon: "list",
+        bullets: [
+          "Symptoms (day/night, activity limitation) + reliever use",
+          "Inhaler technique at every review",
+          "Adherence assessment + side effects",
+          "Exacerbations: OCS courses, ED visits, admissions"
+        ],
+        badges: [{type:"green", text:"Structured review"}]
+      },
+      {
+        title: "Stepping down therapy",
+        icon: "trend",
+        bullets: [
+          "Consider step-down only after sustained control",
+          "Document rationale, provide safety-net instructions",
+          "Maintain access to an ICS-containing plan"
+        ],
+        badges: [{type:"amber", text:"Caution: step-down guardrails"}]
+      }
+    ],
+    sub: [
+      {
+        title: "Specialist referral from follow-up",
+        icon: "arrow",
+        bullets: [
+          "Persistent poor control despite optimisation",
+          "Frequent systemic steroid bursts or admissions",
+          "Consider severe asthma pathway / phenotype assessment"
+        ],
+        badges: [{type:"red", text:"Urgent referral"}]
+      }
+    ]
+  }
+];
+
+/* -----------------------------
+   ICONS (inline SVG, self-contained)
+-------------------------------- */
+const ICONS = {
+  clipboard: () => `<svg width="20" height="20" viewBox="0 0 24 24"><path class="st" d="M9 4h6l1 2h3v15H5V6h3l1-2Z"/><path class="st" d="M9 12h6"/><path class="st" d="M9 16h6"/></svg>`,
+  microscope: () => `<svg width="20" height="20" viewBox="0 0 24 24"><path class="st" d="M6 18h12"/><path class="st" d="M10 2v6"/><path class="st" d="M8 8h6"/><path class="st" d="M12 14a4 4 0 1 1-8 0c0-2.2 1.8-4 4-4"/></svg>`,
+  pill: () => `<svg width="20" height="20" viewBox="0 0 24 24"><path class="st" d="M10 7h7a4 4 0 0 1 0 8h-7a4 4 0 0 1 0-8Z"/><path class="st" d="M13 7v8"/></svg>`,
+  calendar: () => `<svg width="20" height="20" viewBox="0 0 24 24"><path class="st" d="M7 3v3M17 3v3"/><path class="st" d="M4 7h16"/><path class="st" d="M6 5h12a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/></svg>`,
+  question: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M9.1 9a3 3 0 1 1 4.9 2.3c-.9.7-2 1.2-2 2.7"/><path class="st" d="M12 17h.01"/><path class="st" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>`,
+  briefcase: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M10 6V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v1"/><path class="st" d="M4 7h16v13H4z"/><path class="st" d="M4 12h16"/></svg>`,
+  alert: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M12 2 2 20h20L12 2Z"/><path class="st" d="M12 9v4"/><path class="st" d="M12 17h.01"/></svg>`,
+  doc: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M7 3h7l3 3v15H7V3Z"/><path class="st" d="M14 3v4h4"/><path class="st" d="M9 12h6"/><path class="st" d="M9 16h6"/></svg>`,
+  check: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M20 6 9 17l-5-5"/></svg>`,
+  gauge: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M4 13a8 8 0 1 1 16 0"/><path class="st" d="M12 13l4-4"/><path class="st" d="M4 13h16"/></svg>`,
+  list: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M9 6h12"/><path class="st" d="M9 12h12"/><path class="st" d="M9 18h12"/><path class="st" d="M4 6h.01"/><path class="st" d="M4 12h.01"/><path class="st" d="M4 18h.01"/></svg>`,
+  arrow: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M4 12h10"/><path class="st" d="M12 6l6 6-6 6"/><path class="st" d="M4 6v12"/></svg>`,
+  capsule: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M10 7h7a4 4 0 0 1 0 8h-7a4 4 0 0 1 0-8Z"/><path class="st" d="M13 7v8"/></svg>`,
+  plus: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M12 5v14"/><path class="st" d="M5 12h14"/></svg>`,
+  tool: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6 6L5 20l6-6a4 4 0 0 0 5.4-5.4Z"/></svg>`,
+  clock: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M12 6v6l4 2"/><path class="st" d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>`,
+  trend: () => `<svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M4 16l6-6 4 4 6-8"/><path class="st" d="M20 6v6h-6"/></svg>`
+};
+
+/* -----------------------------
+   RENDER
+-------------------------------- */
+const $ = (q, el=document) => el.querySelector(q);
+const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+
+function badgeHTML(b){
+  return `<span class="badge ${b.type}">
+    ${b.type === "red" ? ICONS.alert() : b.type === "amber" ? ICONS.question() : ICONS.check()}
+    ${b.text}
+  </span>`;
+}
+
+function panelHTML(p){
+  const badges = (p.badges || []).map(badgeHTML).join(" ");
+  return `
+    <div class="panel">
+      <div class="panel-head">
+        <div class="pico" aria-hidden="true">${ICONS[p.icon]?.() || ICONS.list()}</div>
+        <div class="ptitle">${p.title}</div>
+        <div style="margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">${badges}</div>
+      </div>
+      <ul>
+        ${(p.bullets || []).map(x => `<li>${x}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+}
+
+function subHTML(s){
+  const badges = (s.badges || []).map(badgeHTML).join(" ");
+  return `
+    <details class="sub">
+      <summary>
+        <div class="pico" aria-hidden="true">${ICONS[s.icon]?.() || ICONS.list()}</div>
+        <div class="sub-title">${s.title}</div>
+        <div class="sub-right">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end">${badges}</div>
+          <div class="sub-chevron" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24"><path class="st" d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+      </summary>
+      <div class="sub-body">
+        <ul>
+          ${(s.bullets || []).map(x => `<li>${x}</li>`).join("")}
+        </ul>
+      </div>
+    </details>
+  `;
+}
+
+function stepHTML(step){
+  return `
+    <article class="step" id="${step.id}" data-step="${step.id}">
+      <div class="step-head" data-toggle-step="${step.id}">
+        <div class="step-ico" aria-hidden="true">${ICONS[step.icon]?.() || ICONS.list()}</div>
+        <div>
+          <h3>${step.name}</h3>
+          <div style="opacity:.92; font-size:13px">${step.desc}</div>
+        </div>
+        <div class="meta">
+          <span class="badge green" data-status-badge="${step.id}" title="Completion status">
+            ${ICONS.check()} Not completed
+          </span>
+          <div class="chev" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path class="st" d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="step-body">
+        ${step.panels.map(panelHTML).join("")}
+        ${(step.sub || []).map(subHTML).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function navItemHTML(step){
+  return `
+    <div class="nav-item" data-nav="${step.id}" data-step="${step.id}" role="button" tabindex="0" aria-label="Go to ${step.name}">
+      <div class="nav-dot" aria-hidden="true">${ICONS[step.icon]?.() || ICONS.list()}</div>
+      <div class="nav-label">
+        <div class="name">${step.name}</div>
+        <div class="desc">${step.desc}</div>
+      </div>
+      <div class="nav-check" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24"><path class="st" d="M20 6 9 17l-5-5"/></svg>
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  $("#stack").innerHTML = STEPS.map(stepHTML).join("");
+  $("#progressNav").innerHTML = STEPS.map(navItemHTML).join("");
+
+  // Default open first, collapse others
+  STEPS.forEach((s, idx) => setStepOpen(s.id, idx === 0, false));
+
+  // Fade in
+  requestAnimationFrame(() => {
+    $("#stack").classList.add("show");
+    $("#cta").classList.add("show");
+  });
+}
+
+/* -----------------------------
+   INTERACTION / STATE
+-------------------------------- */
+const STATE_KEY = "asthma_algo_progress_v2";
+let state = { openStep: "assessment", done: {} };
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STATE_KEY);
+    if(raw) state = JSON.parse(raw);
+  }catch{}
+}
+function saveState(){
+  try{ localStorage.setItem(STATE_KEY, JSON.stringify(state)); }catch{}
+}
+
+function setActiveNav(stepId){
+  $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === stepId));
+}
+
+function setDoneUI(){
+  STEPS.forEach(s => {
+    const done = !!state.done[s.id];
+    const nav = $(`.nav-item[data-nav="${s.id}"]`);
+    if(nav) nav.classList.toggle("done", done);
+
+    const badge = $(`[data-status-badge="${s.id}"]`);
+    if(badge){
+      badge.classList.remove("red","amber","green");
+      if(done){
+        badge.classList.add("green");
+        badge.innerHTML = `${ICONS.check()} Completed`;
+      }else{
+        badge.classList.add("amber");
+        badge.innerHTML = `${ICONS.question()} In progress`;
+      }
+    }
+  });
+}
+
+function setStepOpen(stepId, open=true, smooth=true){
+  $$(".step").forEach(step => {
+    const isTarget = step.dataset.step === stepId;
+    step.classList.toggle("open", isTarget && open);
+    step.querySelector(".step-body").style.display = (isTarget && open) ? "block" : "none";
+  });
+
+  state.openStep = stepId;
+  saveState();
+  setActiveNav(stepId);
+  updateCtas();
+
+  if(smooth){
+    const target = document.getElementById(stepId);
+    target?.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+}
+
+function markStepDone(stepId, done=true){
+  state.done[stepId] = done;
+  saveState();
+  setDoneUI();
+}
+
+function currentIndex(){
+  return Math.max(0, STEPS.findIndex(s => s.id === state.openStep));
+}
+
+function updateCtas(){
+  const idx = currentIndex();
+  $("#prevBtn").disabled = idx === 0;
+  $("#nextBtn").disabled = idx === STEPS.length - 1;
+
+  $("#prevBtn").style.opacity = idx === 0 ? .55 : 1;
+  $("#nextBtn").style.opacity = idx === STEPS.length - 1 ? .55 : 1;
+}
+
+function bind(){
+  // Step header toggles
+  $$("[data-toggle-step]").forEach(h => {
+    h.addEventListener("click", () => {
+      const id = h.dataset.toggleStep;
+      const isOpen = state.openStep === id;
+      // clicking an open step marks it done (opinionated UX for algorithms)
+      if(isOpen) markStepDone(id, true);
+      setStepOpen(id, true, true);
+    });
+  });
+
+  // Sidebar navigation
+  $$(".nav-item").forEach(item => {
+    const go = () => setStepOpen(item.dataset.nav, true, true);
+    item.addEventListener("click", go);
+    item.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); }
+    });
+  });
+
+  // Prev/Next
+  $("#prevBtn").addEventListener("click", () => {
+    const idx = currentIndex();
+    if(idx > 0) setStepOpen(STEPS[idx-1].id, true, true);
+  });
+  $("#nextBtn").addEventListener("click", () => {
+    const idx = currentIndex();
+    if(idx < STEPS.length-1){
+      // mark current as done when advancing
+      markStepDone(STEPS[idx].id, true);
+      setStepOpen(STEPS[idx+1].id, true, true);
+    }
+  });
+
+  // Keyboard shortcuts: 1-4 jump; N/P next/prev
+  window.addEventListener("keydown", (e) => {
+    if(["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)) return;
+    if(e.key >= "1" && e.key <= String(STEPS.length)){
+      const idx = Number(e.key) - 1;
+      setStepOpen(STEPS[idx].id, true, true);
+    }
+    if(e.key === "n" || e.key === "N") $("#nextBtn").click();
+    if(e.key === "p" || e.key === "P") $("#prevBtn").click();
+  });
+
+  // Scrollspy-ish: update active nav when user scrolls past steps
+  const obs = new IntersectionObserver((entries) => {
+    const vis = entries
+      .filter(x => x.isIntersecting)
+      .sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if(!vis) return;
+    const stepId = vis.target.id;
+    if(stepId && stepId !== state.openStep){
+      state.openStep = stepId;
+      saveState();
+      setActiveNav(stepId);
+      updateCtas();
+    }
+  }, {threshold:[0.35, 0.5, 0.65]});
+
+  $$(".step").forEach(s => obs.observe(s));
+}
+
+function tickClock(){
+  const d = new Date();
+  const str = d.toLocaleString(undefined, {weekday:"short", year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit"});
+  $("#clock").textContent = str;
+}
+tickClock(); setInterval(tickClock, 30_000);
+
+/* -----------------------------
+   INIT
+-------------------------------- */
+loadState();
+render();
+bind();
+
+// Apply stored state
+setStepOpen(state.openStep || "assessment", true, false);
+setDoneUI();
+updateCtas();
+</script>
+</body>
+</html>

@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COPD Clinical Decision Support</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #004080;
+            --accent-color: #e6f2ff;
+            --danger-color: #cc0000;
+            --danger-bg: #ffeeee;
+            --success-color: #008800;
+            --warning-color: #ff9900;
+            --light-gray: #f5f5f5;
+            --medium-gray: #e0e0e0;
+            --dark-gray: #333333;
+            --box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-gray);
+            background-color: #f9f9f9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: var(--box-shadow);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 20px;
+        }
+
+        .tabs-container {
+            flex: 3;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+        }
+
+        .favorites-panel {
+            flex: 1;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: var(--box-shadow);
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .favorites-panel h2 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .favorites-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .favorites-list li {
+            padding: 10px;
+            margin-bottom: 8px;
+            background-color: var(--light-gray);
+            border-radius: 5px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .favorites-list li:hover {
+            background-color: var(--accent-color);
+        }
+
+        .favorites-list li.dragging {
+            opacity: 0.5;
+        }
+
+        .remove-favorite {
+            color: var(--danger-color);
+            cursor: pointer;
+        }
+
+        .tab-buttons {
+            display: flex;
+            background-color: var(--light-gray);
+            overflow-x: auto;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 15px 20px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-button:hover {
+            background-color: var(--medium-gray);
+        }
+
+        .tab-button.active {
+            background-color: white;
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        .tab-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--medium-gray);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist input[type="checkbox"] {
+            margin-top: 5px;
+        }
+
+        .key-points {
+            background-color: var(--accent-color);
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .key-points h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .drug-dosing {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .drug-dosing h3 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .red-flags {
+            border: 2px solid var(--danger-color);
+            background-color: var(--danger-bg);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .red-flags h3 {
+            color: var(--danger-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--medium-gray);
+        }
+
+        .comparison-table th {
+            background-color: var(--light-gray);
+            font-weight: bold;
+        }
+
+        .comparison-table tr:hover {
+            background-color: var(--light-gray);
+        }
+
+        .decision-support {
+            background-color: #f0f8e6;
+            border: 1px solid #b7eb8f;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+
+        .decision-support h3 {
+            color: var(--success-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .severity-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .severity-option {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid var(--medium-gray);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .severity-option:hover {
+            background-color: var(--light-gray);
+        }
+
+        .severity-option.selected {
+            background-color: var(--accent-color);
+            border-color: var(--primary-color);
+        }
+
+        .draggable {
+            cursor: move;
+        }
+
+        .draggable:hover {
+            background-color: var(--light-gray);
+        }
+
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--success-color);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: var(--box-shadow);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .favorites-panel {
+                position: static;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .tab-buttons {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-lungs"></i> COPD Clinical Decision Support</h1>
+            <p>Based on NICE Guidelines (Last revised October 2025)</p>
+        </header>
+
+        <div class="main-content">
+            <div class="tabs-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="openTab(event, 'new-diagnosis')">
+                        <i class="fas fa-stethoscope"></i> New Diagnosis
+                    </button>
+                    <button class="tab-button" onclick="openTab(event, 'stable-management')">
+                        <i class="fas fa-clipboard-check"></i> Stable Management
+                    </button>
+                    <button class="tab-button" onclick="openTab(event, 'acute-exacerbation')">
+                        <i class="fas fa-exclamation-triangle"></i> Acute Exacerbation
+                    </button>
+                    <button class="tab-button" onclick="openTab(event, 'not-responding')">
+                        <i class="fas fa-question-circle"></i> Not Responding
+                    </button>
+                    <button class="tab-button" onclick="openTab(event, 'referral-criteria')">
+                        <i class="fas fa-user-md"></i> Referral Criteria
+                    </button>
+                </div>
+
+                <!-- New Diagnosis Tab -->
+                <div id="new-diagnosis" class="tab-content active">
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-question"></i> What to Ask</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Onset, variability, and progression of symptoms (breathlessness, cough, sputum)</li>
+                            <li><input type="checkbox"> Impact on daily life and occupation</li>
+                            <li><input type="checkbox"> Previous exacerbations or hospitalizations</li>
+                            <li><input type="checkbox"> Exposure to risk factors (smoking history in pack-years, occupational/environmental)</li>
+                            <li><input type="checkbox"> Past medical history and comorbidities (anxiety, depression, cardiovascular disease)</li>
+                            <li><input type="checkbox"> Family history (consider alpha-1-antitrypsin deficiency if <40 years)</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-points">
+                        <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                        <p>Suspect COPD in people aged over 35 years with a risk factor and one or more of: breathlessness, chronic cough, regular sputum production, frequent lower respiratory infections, or wheeze.</p>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-search"></i> What to Examine</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Vital signs (heart rate, blood pressure, temperature, respiratory rate)</li>
+                            <li><input type="checkbox"> General appearance (cachexia, cyanosis)</li>
+                            <li><input type="checkbox"> Chest examination (hyperinflation, use of accessory muscles, wheeze, crackles)</li>
+                            <li><input type="checkbox"> Cardiovascular examination (raised JVP, peripheral oedema - consider cor pulmonale)</li>
+                            <li><input type="checkbox"> Calculate BMI (low BMI associated with increased mortality)</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-vial"></i> Investigations</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Post-bronchodilator spirometry (FEV1/FVC < 0.7 confirms airflow obstruction)</li>
+                            <li><input type="checkbox"> Consider chest X-ray to exclude alternative diagnoses</li>
+                            <li><input type="checkbox"> Full blood count (to identify polycythemia or anemia)</li>
+                            <li><input type="checkbox"> Consider alpha-1-antitrypsin level if <40 years or family history</li>
+                        </ul>
+                    </div>
+
+                    <div class="red-flags">
+                        <h3><i class="fas fa-exclamation-circle"></i> Red Flags</h3>
+                        <ul>
+                            <li>Chest pain - consider other causes</li>
+                            <li>Haemoptysis - consider lung cancer</li>
+                            <li>Unexplained weight loss - consider malignancy</li>
+                            <li>Cor pulmonale signs (peripheral oedema, raised JVP)</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-pills"></i> What to Prescribe</h2>
+                        <div class="drug-dosing">
+                            <h3>Initial Pharmacological Treatment</h3>
+                            <p>For symptomatic patients with COPD:</p>
+                            <ul>
+                                <li>Short-acting bronchodilator (SABA or SAMA) as needed for breathlessness</li>
+                                <li>Consider LAMA or LABA for patients with persistent symptoms or exacerbations</li>
+                                <li>Consider combination LAMA/LABA for patients with persistent symptoms despite monotherapy</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-calendar-check"></i> When to Review</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Review 4-6 weeks after starting new treatment</li>
+                            <li><input type="checkbox"> Annual review for all patients (including spirometry)</li>
+                            <li><input type="checkbox"> Review inhaler technique at initiation and at least annually</li>
+                        </ul>
+                    </div>
+
+                    <div class="decision-support">
+                        <h3><i class="fas fa-brain"></i> Decision Support</h3>
+                        <p>Select severity to see next steps:</p>
+                        <div class="severity-selector">
+                            <div class="severity-option" onclick="selectSeverity(this, 'mild')">Mild</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'moderate')">Moderate</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'severe')">Severe</div>
+                        </div>
+                        <div id="severity-recommendation"></div>
+                    </div>
+                </div>
+
+                <!-- Stable Management Tab -->
+                <div id="stable-management" class="tab-content">
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-question"></i> What to Ask</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Current symptom burden (use CAT or mMRC scale)</li>
+                            <li><input type="checkbox"> Frequency and severity of exacerbations in past year</li>
+                            <li><input type="checkbox"> Current inhaler use and technique</li>
+                            <li><input type="checkbox"> Smoking status (if current smoker, offer cessation support)</li>
+                            <li><input type="checkbox"> Physical activity levels</li>
+                            <li><input type="checkbox"> Vaccination status (influenza, pneumococcal)</li>
+                            <li><input type="checkbox"> Mental health screening (anxiety, depression)</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-points">
+                        <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                        <p>Management should be personalized based on symptoms, exacerbation risk, and comorbidities. Pulmonary rehabilitation should be offered to all appropriate patients.</p>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-search"></i> What to Examine</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Assess breathlessness using Medical Research Council (MRC) dyspnoea scale</li>
+                            <li><input type="checkbox"> Check for signs of cor pulmonale (peripheral oedema, raised JVP)</li>
+                            <li><input type="checkbox"> Calculate BMI (monitor for weight loss)</li>
+                            <li><input type="checkbox"> Assess oxygen saturation (consider ABGs if ≤92%)</li>
+                            <li><input type="checkbox"> Review inhaler technique</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-pills"></i> What to Prescribe</h2>
+                        <div class="drug-dosing">
+                            <h3>Pharmacological Treatment by Severity</h3>
+                            <p>For patients with persistent symptoms:</p>
+                            <ul>
+                                <li><strong>Group A (Low symptoms, low risk):</strong> SABA/SAMA PRN</li>
+                                <li><strong>Group B (High symptoms, low risk):</strong> LAMA or LABA</li>
+                                <li><strong>Group C (Low symptoms, high risk):</strong> LAMA or LABA + ICS if blood eosinophils ≥300 cells/μL</li>
+                                <li><strong>Group D (High symptoms, high risk):</strong> LAMA/LABA ± ICS if blood eosinophils ≥300 cells/μL</li>
+                            </ul>
+                        </div>
+
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Medication</th>
+                                    <th>Efficacy</th>
+                                    <th>Common Side Effects</th>
+                                    <th>Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>SABA (e.g., Salbutamol)</td>
+                                    <td>Rapid symptom relief</td>
+                                    <td>Tremor, tachycardia</td>
+                                    <td>Low</td>
+                                </tr>
+                                <tr>
+                                    <td>LAMA (e.g., Tiotropium)</td>
+                                    <td>Improves lung function, reduces exacerbations</td>
+                                    <td>Dry mouth</td>
+                                    <td>Medium</td>
+                                </tr>
+                                <tr>
+                                    <td>LABA (e.g., Formoterol)</td>
+                                    <td>Improves lung function, symptoms</td>
+                                    <td>Tremor, tachycardia</td>
+                                    <td>Medium</td>
+                                </tr>
+                                <tr>
+                                    <td>ICS (e.g., Beclomethasone)</td>
+                                    <td>Reduces inflammation, exacerbations</td>
+                                    <td>Oral thrush, dysphonia, pneumonia risk</td>
+                                    <td>Medium-High</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-calendar-check"></i> When to Review</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Review 4-6 weeks after starting new treatment</li>
+                            <li><input type="checkbox"> Annual review for all patients</li>
+                            <li><input type="checkbox"> Review more frequently if frequent exacerbations or deteriorating symptoms</li>
+                            <li><input type="checkbox"> Review inhaler technique at least annually</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-user-md"></i> Non-Pharmacological Management</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Refer to pulmonary rehabilitation (especially if MRC ≥3)</li>
+                            <li><input type="checkbox"> Offer smoking cessation support</li>
+                            <li><input type="checkbox"> Provide self-management plan</li>
+                            <li><input type="checkbox"> Consider nutritional advice</li>
+                            <li><input type="checkbox"> Advise on exercise and physical activity</li>
+                            <li><input type="checkbox"> Ensure vaccinations are up to date</li>
+                        </ul>
+                    </div>
+
+                    <div class="decision-support">
+                        <h3><i class="fas fa-brain"></i> Decision Support</h3>
+                        <p>Select treatment goal to see recommendations:</p>
+                        <div class="severity-selector">
+                            <div class="severity-option" onclick="selectSeverity(this, 'symptoms')">Improve Symptoms</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'exacerbations')">Reduce Exacerbations</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'both')">Both</div>
+                        </div>
+                        <div id="severity-recommendation"></div>
+                    </div>
+                </div>
+
+                <!-- Acute Exacerbation Tab -->
+                <div id="acute-exacerbation" class="tab-content">
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-question"></i> What to Ask</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Onset and duration of increased symptoms</li>
+                            <li><input type="checkbox"> Change in dyspnoea, sputum volume, and sputum purulence</li>
+                            <li><input type="checkbox"> Previous exacerbation history and hospitalizations</li>
+                            <li><input type="checkbox"> Current medications and adherence</li>
+                            <li><input type="checkbox"> Comorbidities (heart failure, diabetes, etc.)</li>
+                            <li><input type="checkbox"> Home oxygen use</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-points">
+                        <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                        <p>An acute exacerbation is defined as an acute worsening of respiratory symptoms beyond normal day-to-day variations that requires additional therapy.</p>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-search"></i> What to Examine</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Vital signs (respiratory rate, heart rate, blood pressure, temperature, oxygen saturation)</li>
+                            <li><input type="checkbox"> Use of accessory muscles, ability to speak in sentences</li>
+                            <li><input type="checkbox"> Chest examination (wheeze, crackles, signs of consolidation)</li>
+                            <li><input type="checkbox"> Signs of right heart failure (raised JVP, peripheral oedema)</li>
+                            <li><input type="checkbox"> Mental status (confusion, drowsiness)</li>
+                        </ul>
+                    </div>
+
+                    <div class="red-flags">
+                        <h3><i class="fas fa-exclamation-circle"></i> Red Flags - Hospital Admission Required</h3>
+                        <ul>
+                            <li>Severe breathlessness at rest</li>
+                            <li>Confusion or drowsiness</li>
+                            <li>Cyanosis</li>
+                            <li>Peripheral oedema</li>
+                            <li>Oxygen saturation < 92% on room air</li>
+                            <li>Unable to care for self at home</li>
+                            <li>Rapid deterioration despite treatment</li>
+                            <li>Acidotic hypercapnic respiratory failure (PaCO2 > 6.0 kPa, pH < 7.35)</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-pills"></i> What to Prescribe</h2>
+                        <div class="drug-dosing">
+                            <h3>Pharmacological Treatment</h3>
+                            <p>For patients managed in the community:</p>
+                            <ul>
+                                <li><strong>Short-acting bronchodilators:</strong> Increase frequency/dose of SABA (e.g., salbutamol 2-4 puffs every 2-4 hours PRN)</li>
+                                <li><strong>Oral corticosteroids:</strong> Prednisolone 30mg daily for 5 days (no taper required)</li>
+                                <li><strong>Antibiotics:</strong> Consider if increased sputum purulence</li>
+                            </ul>
+                        </div>
+
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Antibiotic Option</th>
+                                    <th>Indications</th>
+                                    <th>Dosage</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Amoxicillin</td>
+                                    <td>First-line if no recent antibiotic use</td>
+                                    <td>500mg TDS</td>
+                                    <td>5 days</td>
+                                </tr>
+                                <tr>
+                                    <td>Doxycycline</td>
+                                    <td>First-line if recent antibiotic use or penicillin allergy</td>
+                                    <td>200mg on day 1, then 100mg daily</td>
+                                    <td>5 days</td>
+                                </tr>
+                                <tr>
+                                    <td>Clarithromycin</td>
+                                    <td>Second-line or if penicillin allergy</td>
+                                    <td>500mg BD</td>
+                                    <td>5 days</td>
+                                </tr>
+                                <tr>
+                                    <td>Co-amoxiclav</td>
+                                    <td>Second-line if treatment failure</td>
+                                    <td>500/125mg TDS</td>
+                                    <td>5 days</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-lungs"></i> Oxygen Therapy</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Target oxygen saturation 88-92% for most patients</li>
+                            <li><input type="checkbox"> Use Venturi mask to deliver controlled oxygen if required</li>
+                            <li><input type="checkbox"> Monitor ABGs if oxygen therapy required or if known hypercapnia</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-calendar-check"></i> When to Review</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Review within 48 hours if not admitted to hospital</li>
+                            <li><input type="checkbox"> Consider earlier review if high-risk patient</li>
+                            <li><input type="checkbox"> Review inhaler technique after exacerbation</li>
+                            <li><input type="checkbox"> Review maintenance therapy 2-4 weeks after exacerbation</li>
+                        </ul>
+                    </div>
+
+                    <div class="decision-support">
+                        <h3><i class="fas fa-brain"></i> Decision Support</h3>
+                        <p>Select exacerbation severity to see management recommendations:</p>
+                        <div class="severity-selector">
+                            <div class="severity-option" onclick="selectSeverity(this, 'mild')">Mild</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'moderate')">Moderate</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'severe')">Severe</div>
+                        </div>
+                        <div id="severity-recommendation"></div>
+                    </div>
+                </div>
+
+                <!-- Not Responding Tab -->
+                <div id="not-responding" class="tab-content">
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-question"></i> What to Ask</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Adherence to prescribed medications</li>
+                            <li><input type="checkbox"> Inhaler technique (ask patient to demonstrate)</li>
+                            <li><input type="checkbox"> Continued smoking status and exposure to other risk factors</li>
+                            <li><input type="checkbox"> Presence of comorbidities (heart failure, anxiety, depression)</li>
+                            <li><input type="checkbox"> Symptoms of alternative diagnoses (GERD, obstructive sleep apnoea)</li>
+                            <li><input type="checkbox"> Frequency of rescue inhaler use</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-points">
+                        <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                        <p>Before escalating treatment, ensure correct diagnosis, assess adherence and inhaler technique, and exclude alternative diagnoses or comorbidities.</p>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-search"></i> What to Examine</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Repeat spirometry (if not done within 12 months)</li>
+                            <li><input type="checkbox"> Chest X-ray (to exclude alternative diagnoses)</li>
+                            <li><input type="checkbox"> Full blood count (to check for polycythemia or anemia)</li>
+                            <li><input type="checkbox"> Consider blood eosinophil count (to guide ICS use)</li>
+                            <li><input type="checkbox"> Consider echocardiogram if signs of cor pulmonale</li>
+                            <li><input type="checkbox"> Consider sleep study if symptoms suggest OSA</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-pills"></i> Treatment Optimization</h2>
+                        <div class="drug-dosing">
+                            <h3>Pharmacological Options</h3>
+                            <ul>
+                                <li><strong>Review inhaler technique and device choice</strong> - Consider spacer or nebulizer if needed</li>
+                                <li><strong>Step-up therapy:</strong> Add LAMA if on LABA alone or vice versa</li>
+                                <li><strong>Consider triple therapy:</strong> LAMA + LABA + ICS for patients with frequent exacerbations</li>
+                                <li><strong>Consider roflumilast:</strong> For severe COPD with chronic bronchitis and frequent exacerbations</li>
+                                <li><strong>Consider prophylactic antibiotics:</strong> For patients with frequent exacerbations despite optimal therapy</li>
+                            </ul>
+                        </div>
+
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Additional Treatment</th>
+                                    <th>Indications</th>
+                                    <th>Benefits</th>
+                                    <th>Side Effects</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Roflumilast</td>
+                                    <td>Severe COPD with chronic bronchitis and frequent exacerbations</td>
+                                    <td>Reduces exacerbations</td>
+                                    <td>Diarrhoea, weight loss, nausea, headache</td>
+                                </tr>
+                                <tr>
+                                    <td>Prophylactic antibiotics (e.g., Azithromycin)</td>
+                                    <td>Frequent exacerbations despite optimal inhaled therapy</td>
+                                    <td>Reduces exacerbation frequency</td>
+                                    <td>Diarrhoea, hearing loss, QT prolongation, antimicrobial resistance</td>
+                                </tr>
+                                <tr>
+                                    <td>Mucolytics (e.g., Carbocisteine)</td>
+                                    <td>Chronic cough with sputum production</td>
+                                    <td>May reduce exacerbations</td>
+                                    <td>GI upset</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-user-md"></i> Non-Pharmacological Options</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox> Refer to pulmonary rehabilitation (if not already done)</li>
+                            <li><input type="checkbox"> Consider long-term oxygen therapy if persistent hypoxia</li>
+                            <li><input type="checkbox"> Consider non-invasive ventilation if hypercapnic respiratory failure</li>
+                            <li><input type="checkbox"> Treat comorbidities (e.g., heart failure, anxiety, depression)</li>
+                            <li><input type="checkbox> Consider nutritional support if underweight</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-calendar-check"></i> When to Review</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Review 4-6 weeks after treatment optimization</li>
+                            <li><input type="checkbox"> Monitor for side effects of new medications</li>
+                            <li><input type="checkbox"> Reassess symptom control and exacerbation frequency</li>
+                        </ul>
+                    </div>
+
+                    <div class="decision-support">
+                        <h3><i class="fas fa-brain"></i> Decision Support</h3>
+                        <p>Select the main issue to see next steps:</p>
+                        <div class="severity-selector">
+                            <div class="severity-option" onclick="selectSeverity(this, 'symptoms')">Persistent Symptoms</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'exacerbations')">Frequent Exacerbations</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'technique')">Poor Technique/Adherence</div>
+                        </div>
+                        <div id="severity-recommendation"></div>
+                    </div>
+                </div>
+
+                <!-- Referral Criteria Tab -->
+                <div id="referral-criteria" class="tab-content">
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-user-md"></i> When to Refer to Specialist</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Diagnostic uncertainty (e.g., atypical presentation, young age <40)</li>
+                            <li><input type="checkbox"> Rapid decline in FEV1 or progressive symptoms despite optimal therapy</li>
+                            <li><input type="checkbox"> Frequent severe exacerbations requiring hospital admission</li>
+                            <li><input type="checkbox"> Complications such as cor pulmonale or respiratory failure</li>
+                            <li><input type="checkbox"> Consideration for lung volume reduction surgery or lung transplantation</li>
+                            <li><input type="checkbox"> Assessment for long-term oxygen therapy</li>
+                            <li><input type="checkbox"> Assessment for non-invasive ventilation</li>
+                            <li><input type="checkbox"> Occupational lung disease suspected</li>
+                            <li><input type="checkbox"> Alpha-1-antitrypsin deficiency suspected</li>
+                        </ul>
+                    </div>
+
+                    <div class="key-points">
+                        <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                        <p>Consider referral to a respiratory specialist when diagnosis is uncertain, symptoms are not controlled with optimal therapy, or complications develop.</p>
+                    </div>
+
+                    <div class="red-flags">
+                        <h3><i class="fas fa-exclamation-circle"></i> Urgent Referral Required</h3>
+                        <ul>
+                            <li>Suspected lung cancer (unexplained weight loss, haemoptysis, chest pain)</li>
+                            <li>Severe or rapidly progressive breathlessness</li>
+                            <li>Acute confusion or significant drowsiness</li>
+                            <li>Cyanosis or severe hypoxia</li>
+                            <li>Signs of severe right heart failure</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-hospital"></i> Referral Pathways</h2>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Referral Type</th>
+                                    <th>Indications</th>
+                                    <th>Expected Timeline</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Routine Respiratory Outpatient</td>
+                                    <td>Diagnostic uncertainty, treatment optimization</td>
+                                    <td>4-6 weeks</td>
+                                </tr>
+                                <tr>
+                                    <td>Urgent Respiratory Outpatient</td>
+                                    <td>Rapidly declining symptoms, frequent exacerbations</td>
+                                    <td>2 weeks</td>
+                                </tr>
+                                <tr>
+                                    <td>Same-Day Assessment</td>
+                                    <td>Severe symptoms, hypoxia, confusion</td>
+                                    <td>Same day</td>
+                                </tr>
+                                <tr>
+                                    <td>Emergency Admission</td>
+                                    <td>Acute severe exacerbation, respiratory failure</td>
+                                    <td>Immediate</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-clipboard-list"></i> Information to Include in Referral</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> Reason for referral (specific question)</li>
+                            <li><input type="checkbox"> Relevant history (onset, progression, risk factors)</li>
+                            <li><input type="checkbox"> Current symptoms and impact on daily life</li>
+                            <li><input type="checkbox"> Current medications and response to treatment</li>
+                            <li><input type="checkbox"> Spirometry results (including post-bronchodilator values)</li>
+                            <li><input type="checkbox"> Recent blood test results</li>
+                            <li><input type="checkbox"> Imaging results (chest X-ray, CT if done)</li>
+                            <li><input type="checkbox"> Comorbidities and their management</li>
+                            <li><input type="checkbox"> Smoking status and cessation attempts</li>
+                            <li><input type="checkbox"> Patient's understanding of condition and preferences</li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="section-header"><i class="fas fa-user-friends"></i> Other Referrals</h2>
+                        <ul class="checklist">
+                            <li><input type="checkbox"> <strong>Pulmonary Rehabilitation:</strong> All patients with MRC ≥3</li>
+                            <li><input type="checkbox"> <strong>Smoking Cessation Services:</strong> All current smokers</li>
+                            <li><input type="checkbox"> <strong>Dietitian:</strong> If BMI < 20 or significant weight loss</li>
+                            <li><input type="checkbox"> <strong>Physiotherapy:</strong> For airway clearance techniques</li>
+                            <li><input type="checkbox"> <strong>Occupational Therapy:</strong> For energy conservation techniques</li>
+                            <li><input type="checkbox"> <strong>Mental Health Services:</strong> If anxiety or depression</li>
+                            <li><input type="checkbox"> <strong>Social Services:</strong> For home support needs</li>
+                            <li><input type="checkbox"> <strong>Palliative Care:</strong> For advanced disease</li>
+                        </ul>
+                    </div>
+
+                    <div class="decision-support">
+                        <h3><i class="fas fa-brain"></i> Decision Support</h3>
+                        <p>Select patient scenario to see referral recommendation:</p>
+                        <div class="severity-selector">
+                            <div class="severity-option" onclick="selectSeverity(this, 'diagnosis')">Diagnostic Uncertainty</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'symptoms')">Uncontrolled Symptoms</div>
+                            <div class="severity-option" onclick="selectSeverity(this, 'exacerbations')">Frequent Exacerbations</div>
+                        </div>
+                        <div id="severity-recommendation"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="favorites-panel">
+                <h2><i class="fas fa-star"></i> Favorites</h2>
+                <p>Drag sections here for quick access:</p>
+                <ul class="favorites-list" id="favorites-list">
+                    <!-- Favorites will be added here dynamically -->
+                </ul>
+                <p><small>Drag and drop to reorder. Click X to remove.</small></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Tab functionality
+        function openTab(evt, tabName) {
+            var i, tabcontent, tabbuttons;
+            
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            
+            tabbuttons = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tabbuttons.length; i++) {
+                tabbuttons[i].classList.remove("active");
+            }
+            
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // Decision support functionality
+        function selectSeverity(element, severity) {
+            // Remove selected class from all options
+            const options = element.parentElement.querySelectorAll('.severity-option');
+            options.forEach(opt => opt.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            element.classList.add('selected');
+            
+            // Show recommendation based on selected severity
+            const recommendationDiv = document.getElementById('severity-recommendation');
+            
+            // Get current active tab
+            const activeTab = document.querySelector('.tab-content.active').id;
+            
+            // Provide recommendations based on active tab and selected severity
+            let recommendation = '';
+            
+            if (activeTab === 'new-diagnosis') {
+                if (severity === 'mild') {
+                    recommendation = '<p><strong>Recommendation:</strong> Consider SABA or SAMA as needed. Provide smoking cessation advice if applicable. Review in 4-6 weeks.</p>';
+                } else if (severity === 'moderate') {
+                    recommendation = '<p><strong>Recommendation:</strong> Start LAMA or LABA. Provide smoking cessation advice. Consider pulmonary referral if uncertain diagnosis. Review in 4-6 weeks.</p>';
+                } else if (severity === 'severe') {
+                    recommendation = '<p><strong>Recommendation:</strong> Start LAMA/LABA combination. Consider ICS if blood eosinophils ≥300 cells/μL. Urgent referral to respiratory specialist. Review within 2-4 weeks.</p>';
+                }
+            } else if (activeTab === 'stable-management') {
+                if (severity === 'symptoms') {
+                    recommendation = '<p><strong>Recommendation:</strong> Optimize bronchodilator therapy (consider LAMA/LABA). Review inhaler technique. Refer to pulmonary rehabilitation. Review in 4-6 weeks.</p>';
+                } else if (severity === 'exacerbations') {
+                    recommendation = '<p><strong>Recommendation:</strong> Consider adding ICS if blood eosinophils ≥300 cells/μL. Consider roflumilast if chronic bronchitis. Ensure vaccinations up to date. Review in 4-6 weeks.</p>';
+                } else if (severity === 'both') {
+                    recommendation = '<p><strong>Recommendation:</strong> Consider triple therapy (LAMA/LABA/ICS). Refer to pulmonary rehabilitation. Consider prophylactic antibiotics if frequent exacerbations despite optimal therapy. Review in 4-6 weeks.</p>';
+                }
+            } else if (activeTab === 'acute-exacerbation') {
+                if (severity === 'mild') {
+                    recommendation = '<p><strong>Recommendation:</strong> Manage in community. Increase SABA frequency. Consider 5-day course of oral steroids. Consider antibiotics if increased sputum purulence. Review within 48 hours.</p>';
+                } else if (severity === 'moderate') {
+                    recommendation = '<p><strong>Recommendation:</strong> Consider hospital assessment. Oral steroids for 5 days. Antibiotics if indicated. Consider nebulized bronchodilators. Review within 24 hours.</p>';
+                } else if (severity === 'severe') {
+                    recommendation = '<p><strong>Recommendation:</strong> Urgent hospital admission. Consider controlled oxygen therapy (target 88-92%). IV steroids if unable to take oral. Consider antibiotics. Monitor for respiratory failure.</p>';
+                }
+            } else if (activeTab === 'not-responding') {
+                if (severity === 'symptoms') {
+                    recommendation = '<p><strong>Recommendation:</strong> Review inhaler technique and adherence. Consider changing inhaler device. Step-up bronchodilator therapy. Refer to pulmonary rehabilitation. Consider non-pharmacological options.</p>';
+                } else if (severity === 'exacerbations') {
+                    recommendation = '<p><strong>Recommendation:</strong> Assess blood eosinophils to guide ICS use. Consider triple therapy. Consider prophylactic antibiotics. Exclude comorbidities. Consider specialist referral.</p>';
+                } else if (severity === 'technique') {
+                    recommendation = '<p><strong>Recommendation:</strong> Arrange inhaler technique review. Consider spacer device. Simplify regimen if possible. Consider different inhaler device. Review adherence and address barriers.</p>';
+                }
+            } else if (activeTab === 'referral-criteria') {
+                if (severity === 'diagnosis') {
+                    recommendation = '<p><strong>Recommendation:</strong> Routine respiratory referral. Include full history, examination findings, spirometry results, and imaging. Consider alpha-1-antitrypsin testing if <40 years.</p>';
+                } else if (severity === 'symptoms') {
+                    recommendation = '<p><strong>Recommendation:</strong> Urgent respiratory referral. Document current therapy, response to treatment, and impact on quality of life. Consider referral for pulmonary rehabilitation while awaiting specialist review.</p>';
+                } else if (severity === 'exacerbations') {
+                    recommendation = '<p><strong>Recommendation:</strong> Urgent respiratory referral. Document frequency and severity of exacerbations, previous hospital admissions, and current preventive measures. Consider assessment for long-term antibiotics or other specialist interventions.</p>';
+                }
+            }
+            
+            recommendationDiv.innerHTML = recommendation;
+        }
+
+        // Favorites functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const favoritesList = document.getElementById('favorites-list');
+            const sections = document.querySelectorAll('.section');
+            const notification = document.getElementById('notification');
+            
+            // Make sections draggable
+            sections.forEach(section => {
+                section.classList.add('draggable');
+                section.draggable = true;
+                
+                section.addEventListener('dragstart', function(e) {
+                    e.dataTransfer.effectAllowed = 'copy';
+                    e.dataTransfer.setData('text/html', this.innerHTML);
+                    e.dataTransfer.setData('header', this.querySelector('.section-header').textContent);
+                });
+            });
+            
+            // Make favorites list droppable
+            favoritesList.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            });
+            
+            favoritesList.addEventListener('drop', function(e) {
+                e.preventDefault();
+                
+                const header = e.dataTransfer.getData('header');
+                const content = e.dataTransfer.getData('text/html');
+                
+                // Check if already in favorites
+                const existingItems = favoritesList.querySelectorAll('li');
+                let alreadyExists = false;
+                
+                existingItems.forEach(item => {
+                    if (item.querySelector('.favorite-header').textContent === header) {
+                        alreadyExists = true;
+                    }
+                });
+                
+                if (!alreadyExists) {
+                    // Create new favorite item
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div>
+                            <div class="favorite-header">${header}</div>
+                            <small>Added just now</small>
+                        </div>
+                        <span class="remove-favorite"><i class="fas fa-times"></i></span>
+                    `;
+                    
+                    // Add remove functionality
+                    li.querySelector('.remove-favorite').addEventListener('click', function() {
+                        li.remove();
+                        showNotification('Removed from favorites');
+                    });
+                    
+                    favoritesList.appendChild(li);
+                    showNotification('Added to favorites');
+                } else {
+                    showNotification('Already in favorites');
+                }
+            });
+            
+            // Make favorites list sortable
+            let draggedItem = null;
+            
+            favoritesList.addEventListener('dragstart', function(e) {
+                if (e.target.tagName === 'LI') {
+                    draggedItem = e.target;
+                    e.target.classList.add('dragging');
+                }
+            });
+            
+            favoritesList.addEventListener('dragend', function(e) {
+                if (e.target.tagName === 'LI') {
+                    e.target.classList.remove('dragging');
+                }
+            });
+            
+            favoritesList.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(favoritesList, e.clientY);
+                if (afterElement == null) {
+                    favoritesList.appendChild(draggedItem);
+                } else {
+                    favoritesList.insertBefore(draggedItem, afterElement);
+                }
+            });
+            
+            function getDragAfterElement(container, y) {
+                const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+                
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = y - box.top - box.height / 2;
+                    
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            
+            // Notification function
+            function showNotification(message) {
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
