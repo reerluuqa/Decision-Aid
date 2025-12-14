@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allergy Clinic Pathway Interactive Algorithm</title>
+        <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #1e3a8a;
+            --primary-teal: #0d9488;
+            --light-gray: #f8fafc;
+            --text-dark: #1e293b;
+            --text-medium: #64748b;
+            --white: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --urgent-red: #dc2626;
+            --caution-amber: #d97706;
+            --stable-green: #059669;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%);
+            color: var(--text-dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 320px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .progress-header {
+            padding: 25px;
+            background: linear-gradient(135deg, var(--primary-blue), #2563eb);
+            color: var(--white);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-header h2 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .progress-indicator {
+            background: rgba(255, 255, 255, 0.2);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 15px 0;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #38bdf8, #22d3ee);
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+            border-radius: 3px;
+        }
+
+        .progress-percentage {
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .progress-steps {
+            padding: 20px;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .progress-step:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .progress-step.active {
+            background: linear-gradient(135deg, var(--primary-blue), #3b82f6);
+            color: var(--white);
+            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-step.completed {
+            background: linear-gradient(135deg, var(--stable-green), #10b981);
+            color: var(--white);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .step-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2em;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active .step-icon,
+        .progress-step.completed .step-icon {
+            background: rgba(255, 255, 255, 0.25);
+        }
+
+        .step-content h4 {
+            font-size: 1em;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .step-content p {
+            font-size: 0.85em;
+            opacity: 0.8;
+        }
+
+        .progress-step.active .step-content p,
+        .progress-step.completed .step-content p {
+            opacity: 0.9;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 320px;
+            flex: 1;
+            padding: 40px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-teal));
+            color: var(--white);
+            padding: 50px 40px;
+            border-radius: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 12px;
+            font-weight: 700;
+            position: relative;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            max-width: 700px;
+            position: relative;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--white);
+            border-radius: 20px;
+            box-shadow: 0 8px 20px var(--shadow);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: var(--white);
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, var(--card-color), var(--card-color-dark));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-header.assessment {
+            --card-color: #3b82f6;
+            --card-color-dark: #2563eb;
+        }
+
+        .card-header.diagnosis {
+            --card-color: #8b5cf6;
+            --card-color-dark: #7c3aed;
+        }
+
+        .card-header.treatment {
+            --card-color: #0d9488;
+            --card-color-dark: #0f766e;
+        }
+
+        .card-header.followup {
+            --card-color: #f59e0b;
+            --card-color-dark: #d97706;
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-title h3 {
+            font-size: 1.4em;
+            margin-bottom: 5px;
+            font-weight: 600;
+            letter-spacing: -0.25px;
+        }
+
+        .card-title p {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.5em;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), padding 0.5s ease;
+        }
+
+        .card.expanded .card-body {
+            max-height: 1000px;
+            padding: 0 25px 25px;
+        }
+
+        .card-content {
+            padding-top: 25px;
+        }
+
+        /* Badge Styles */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            margin: 8px 8px 8px 0;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge.urgent {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: var(--white);
+        }
+
+        .badge.caution {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: var(--white);
+        }
+
+        .badge.stable {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: var(--white);
+        }
+
+        .badge-icon {
+            font-size: 1.1em;
+        }
+
+        /* Decision Trees */
+        .decision-tree {
+            background: rgba(248, 250, 252, 0.7);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 20px 0;
+            border-left: 4px solid var(--primary-blue);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+        }
+
+        .decision-tree:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .decision-node {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            position: relative;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .decision-node:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .decision-node::before {
+            content: '';
+            position: absolute;
+            left: -25px;
+            top: 50%;
+            width: 25px;
+            height: 2px;
+            background: var(--primary-blue);
+            opacity: 0.3;
+        }
+
+        .decision-question {
+            font-weight: 600;
+            color: var(--primary-blue);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .decision-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .option {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .option:hover {
+            border-color: var(--primary-blue);
+            background: rgba(219, 234, 254, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .option.selected {
+            background: linear-gradient(135deg, var(--primary-blue), #3b82f6);
+            color: var(--white);
+            border-color: transparent;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(30, 58, 138, 0.2);
+        }
+
+        /* Action Items */
+        .action-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 18px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            margin: 12px 0;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .action-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(8px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .action-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--primary-blue);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        .action-item:hover .action-icon {
+            transform: scale(1.1);
+            background: var(--primary-teal);
+        }
+
+        .action-content h5 {
+            font-size: 1em;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+
+        .action-content p {
+            font-size: 0.9em;
+            color: var(--text-medium);
+            line-height: 1.5;
+        }
+
+        /* Checklist */
+        .checklist {
+            background: rgba(248, 250, 252, 0.7);
+            border-radius: 16px;
+            padding: 25px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+        }
+
+        .checklist:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item:hover {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding-left: 10px;
+            padding-right: 10px;
+            margin: 0 -10px;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--primary-blue);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            flex-shrink: 0;
+        }
+
+        .checkbox:hover {
+            border-color: var(--primary-teal);
+            transform: scale(1.1);
+        }
+
+        .checkbox.checked {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--white);
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .checklist-item.completed .checklist-text {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .progress-sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .menu-toggle {
+                display: block;
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                z-index: 1001;
+                background: var(--primary-blue);
+                color: var(--white);
+                border: none;
+                border-radius: 8px;
+                width: 45px;
+                height: 45px;
+                font-size: 1.3em;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .menu-toggle:hover {
+                background: var(--primary-teal);
+                transform: scale(1.05);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .decision-options {
+                grid-template-columns: 1fr;
+            }
+
+            .card-header-content {
+                gap: 15px;
+            }
+
+            .card-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5em;
+            }
+
+            .card-title h3 {
+                font-size: 1.3em;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .slide-in {
+            animation: slideIn 0.5s ease forwards;
+        }
+
+        /* Mobile menu toggle */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: var(--primary-blue);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            width: 45px;
+            height: 45px;
+            font-size: 1.3em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-toggle:hover {
+            background: var(--primary-teal);
+            transform: scale(1.05);
+        }
+
+        /* Additional styling for better UX */
+        .card-body h4 {
+            color: var(--primary-blue);
+            margin: 20px 0 12px;
+            font-size: 1.2em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body strong {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        .card-body ul {
+            padding-left: 20px;
+            margin: 12px 0;
+        }
+
+        .card-body li {
+            margin: 8px 0;
+            position: relative;
+        }
+
+        .card-body li::before {
+            content: '•';
+            color: var(--primary-blue);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        .card-body a {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px dashed rgba(30, 58, 138, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .card-body a:hover {
+            color: var(--primary-teal);
+            border-bottom: 1px solid var(--primary-teal);
+        }
+
+        /* Floating action button for better mobile experience */
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-teal));
+            color: var(--white);
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fab:hover {
+            transform: scale(1.1) rotate(10deg);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Smooth scroll behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Focus styles for accessibility */
+        .card-header:focus,
+        .option:focus,
+        .checkbox:focus,
+        .menu-toggle:focus,
+        .fab:focus {
+            outline: 2px solid var(--primary-blue);
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .progress-sidebar,
+            .menu-toggle,
+            .fab {
+                display: none !important;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+            }
+
+            .card-body {
+                max-height: none !important;
+                padding: 25px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar" id="progressSidebar">
+            <div class="progress-header">
+                <h2>Pathway Progress</h2>
+                <div class="progress-indicator">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <div class="progress-percentage" id="progressPercentage">0% Complete</div>
+            </div>
+            
+            <div class="progress-steps">
+                <div class="progress-step active" data-step="assessment" onclick="scrollToSection('assessment')">
+                    <div class="step-icon">📋</div>
+                    <div class="step-content">
+                        <h4>Assessment</h4>
+                        <p>Initial patient evaluation</p>
+                    </div>
+                </div>
+                
+                <div class="progress-step" data-step="diagnosis" onclick="scrollToSection('diagnosis')">
+                    <div class="step-icon">🔍</div>
+                    <div class="step-content">
+                        <h4>Diagnosis</h4>
+                        <p>Determine condition type</p>
+                    </div>
+                </div>
+                
+                <div class="progress-step" data-step="treatment" onclick="scrollToSection('treatment')">
+                    <div class="step-icon">💊</div>
+                    <div class="step-content">
+                        <h4>Treatment</h4>
+                        <p>Management plan</p>
+                    </div>
+                </div>
+                
+                <div class="progress-step" data-step="followup" onclick="scrollToSection('followup')">
+                    <div class="step-icon">📈</div>
+                    <div class="step-content">
+                        <h4>Follow-up</h4>
+                        <p>Monitoring & referral</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Allergy Clinic Interactive Pathway</h1>
+                <p>Comprehensive guidance for managing patients with suspected allergic reactions and angioedema</p>
+            </div>
+
+            <div class="content-grid">
+                <!-- Assessment Card -->
+                <div class="card fade-in" id="assessment-card">
+                    <div class="card-header assessment" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon">📋</div>
+                            <div class="card-title">
+                                <h3>Initial Assessment</h3>
+                                <p>Comprehensive patient evaluation</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="badge urgent">
+                                <span class="badge-icon">🚨</span>
+                                Airway compromise - Call 999
+                            </div>
+                            
+                            <h4>Key Assessment Points</h4>
+                            <div class="checklist">
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Airway, breathing, circulation assessment</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Detailed history of onset and progression</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Identify potential triggers</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Photograph skin manifestations</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Review current medications (especially ACE inhibitors)</span>
+                                </div>
+                            </div>
+
+                            <div class="decision-tree">
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge caution">Critical Question</span>
+                                        Is there airway involvement?
+                                    </div>
+                                    <div class="decision-options">
+                                        <div class="option" onclick="selectOption(this, 'airway-yes')">
+                                            <strong>Yes</strong><br>
+                                            Breathing difficulty, throat constriction, or light-headedness
+                                        </div>
+                                        <div class="option" onclick="selectOption(this, 'airway-no')">
+                                            <strong>No</strong><br>
+                                            No respiratory or cardiovascular symptoms
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="action-item">
+                                <div class="action-icon">📧</div>
+                                <div class="action-content">
+                                    <h5>Email Communication</h5>
+                                    <p>Use <strong>Clinical.Immunology@mft.nhs.uk</strong> for non-urgent communication. Be aware of email security risks as outlined in the disclaimer.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card fade-in" id="diagnosis-card">
+                    <div class="card-header diagnosis" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon">🔍</div>
+                            <div class="card-title">
+                                <h3>Diagnostic Process</h3>
+                                <p>Identify condition type and cause</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="badge caution">
+                                <span class="badge-icon">⚠️</span>
+                                Persistent swelling >24hrs - Consider alternative diagnoses
+                            </div>
+
+                            <h4>Differential Diagnosis</h4>
+                            <div class="decision-tree">
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge stable">First Branch Point</span>
+                                        Does the patient have urticaria with angioedema?
+                                    </div>
+                                    <div class="decision-options">
+                                        <div class="option" onclick="selectOption(this, 'urticaria-yes')">
+                                            <strong>Yes</strong><br>
+                                            Likely spontaneous urticaria
+                                        </div>
+                                        <div class="option" onclick="selectOption(this, 'urticaria-no')">
+                                            <strong>No</strong><br>
+                                            Isolated angioedema - Consider complement C4 testing
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge caution">Medication Review</span>
+                                        Is the patient taking an ACE inhibitor?
+                                    </div>
+                                    <div class="decision-options">
+                                        <div class="option" onclick="selectOption(this, 'acei-yes')">
+                                            <strong>Yes</strong><br>
+                                            Consider ACE inhibitor-induced angioedema
+                                        </div>
+                                        <div class="option" onclick="selectOption(this, 'acei-no')">
+                                            <strong>No</strong><br>
+                                            Consider other causes
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4>Key Diagnostic Features</h4>
+                            <div class="action-item">
+                                <div class="action-icon">⏱️</div>
+                                <div class="action-content">
+                                    <h5>Temporal Relationship</h5>
+                                    <p>Record exact time from trigger exposure to symptom onset. Angioedema typically resolves within 24 hours.</p>
+                                </div>
+                            </div>
+
+                            <div class="action-item">
+                                <div class="action-icon">🔄</div>
+                                <div class="action-content">
+                                    <h5>Reproducibility</h5>
+                                    <p>Determine if symptoms occur with every exposure or only intermittently.</p>
+                                </div>
+                            </div>
+
+                            <div class="action-item">
+                                <div class="action-icon">📸</div>
+                                <div class="action-content">
+                                    <h5>Photographic Evidence</h5>
+                                    <p>Attach photos of skin manifestations to aid diagnosis and monitoring.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card fade-in" id="treatment-card">
+                    <div class="card-header treatment" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon">💊</div>
+                            <div class="card-title">
+                                <h3>Treatment Strategy</h3>
+                                <p>Evidence-based management approach</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="badge stable">
+                                <span class="badge-icon">✓</span>
+                                Most cases resolve spontaneously within 3 years
+                            </div>
+
+                            <h4>First-Line Management</h4>
+                            <div class="checklist">
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Non-sedating antihistamines as required for infrequent symptoms</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Regular antihistamines if symptoms are weekly or more</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Consider dose escalation (double, triple, or quadruple)</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Loratadine 10mg, cetirizine 10mg, or fexofenadine 180mg as first choice</span>
+                                </div>
+                            </div>
+
+                            <h4>Condition-Specific Management</h4>
+                            <div class="decision-tree">
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge caution">ACE Inhibitor-Induced</span>
+                                        Management approach
+                                    </div>
+                                    <div class="action-item">
+                                        <div class="action-icon">🚫</div>
+                                        <div class="action-content">
+                                            <h5>Discontinue ACE inhibitor</h5>
+                                            <p>Strict avoidance of all ACE inhibitors. Episodes may persist for up to 3 months.</p>
+                                        </div>
+                                    </div>
+                                    <div class="action-item">
+                                        <div class="action-icon">💊</div>
+                                        <div class="action-content">
+                                            <h5>Alternative Medication</h5>
+                                            <p>Angiotensin receptor blockers are usually tolerated and offer similar cardioprotective benefits.</p>
+                                        </div>
+                                    </div>
+                                    <div class="badge caution">
+                                        <span class="badge-icon">ℹ️</span>
+                                        Antihistamines, glucocorticoids, and adrenaline are usually ineffective
+                                    </div>
+                                </div>
+
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge stable">Spontaneous Urticaria</span>
+                                        Stepwise approach
+                                    </div>
+                                    <div class="action-item">
+                                        <div class="action-icon">📊</div>
+                                        <div class="action-content">
+                                            <h5>Stepwise Management</h5>
+                                            <p>Leave 1-4 weeks between each incremental step. Once controlled, remain for 3-6 months before stepping down.</p>
+                                        </div>
+                                    </div>
+                                    <div class="action-item">
+                                        <div class="action-icon">💊</div>
+                                        <div class="action-content">
+                                            <h5>Tranexamic Acid</h5>
+                                            <p>Trial of 1000mg three times daily may benefit some patients if antihistamines are inadequate.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="badge urgent">
+                                <span class="badge-icon">🚨</span>
+                                Airway involvement requires urgent hospital attention
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card fade-in" id="followup-card">
+                    <div class="card-header followup" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon">📈</div>
+                            <div class="card-title">
+                                <h3>Follow-up & Referral</h3>
+                                <p>Monitoring and escalation pathways</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <h4>Monitoring Requirements</h4>
+                            <div class="checklist">
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Complete allergic reaction diary</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Regular symptom assessment</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">Medication adherence review</span>
+                                </div>
+                                <div class="checklist-item">
+                                    <div class="checkbox" onclick="toggleCheckbox(this)"></div>
+                                    <span class="checklist-text">UAS7 scoring for urticaria patients</span>
+                                </div>
+                            </div>
+
+                            <h4>Referral Pathways</h4>
+                            <div class="decision-tree">
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge urgent">Specialist Referral Indicated</span>
+                                        When to refer
+                                    </div>
+                                    <div class="action-item">
+                                        <div class="action-icon">🏥</div>
+                                        <div class="action-content">
+                                            <h5>Urticaria Service</h5>
+                                            <p>For protracted cases despite high-dose antihistamines (loratadine or cetirizine 20mg BD or fexofenadine 360mg BD)</p>
+                                        </div>
+                                    </div>
+                                    <div class="decision-options">
+                                        <div class="option" onclick="selectOption(this, 'wythenshawe')">
+                                            <strong>Wythenshawe Allergy Centre</strong><br>
+                                            Dr Susana Marinho's service - Omalizumab therapy available
+                                        </div>
+                                        <div class="option" onclick="selectOption(this, 'salford')">
+                                            <strong>Salford Royal</strong><br>
+                                            Dr Pablo Garcia-Martinez's unit - Omalizumab and immunosuppressive therapies
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="decision-node">
+                                    <div class="decision-question">
+                                        <span class="badge caution">Complement Testing</span>
+                                        When to perform
+                                    </div>
+                                    <div class="action-item">
+                                        <div class="action-icon">🧪</div>
+                                        <div class="action-content">
+                                            <h5>C4 Complement Level</h5>
+                                            <p>Send blood for complement C4 testing in cases of isolated angioedema without urticaria.</p>
+                                        </div>
+                                    </div>
+                                    <div class="decision-options">
+                                        <div class="option" onclick="selectOption(this, 'c4-low')">
+                                            <strong>Low C4</strong><br>
+                                            Re-refer to clinic with results
+                                        </div>
+                                        <div class="option" onclick="selectOption(this, 'c4-normal')">
+                                            <strong>Normal/Elevated C4</strong><br>
+                                            Consider spontaneous angioedema
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4>Patient Education</h4>
+                            <div class="action-item">
+                                <div class="action-icon">📚</div>
+                                <div class="action-content">
+                                    <h5>Condition Explanation</h5>
+                                    <p>Spontaneous urticaria/angioedema is a benign nuisance affecting 1-20% of population. Most cases resolve within 3 years. No known deaths globally from spontaneous urticaria.</p>
+                                </div>
+                            </div>
+
+                            <div class="action-item">
+                                <div class="action-icon">⚠️</div>
+                                <div class="action-content">
+                                    <h5>Trigger Avoidance</h5>
+                                    <p>Identify and avoid co-factors: stress, trauma, infection, exercise, temperature changes, pressure, NSAIDs, alcohol, fatigue.</p>
+                                </div>
+                            </div>
+
+                            <div class="badge stable">
+                                <span class="badge-icon">📊</span>
+                                UAS7 Scoring: <a href="https://www.imperial.nhs.uk/~/media/website/services/dermatology/patient-forms/uas7-weekly-urtic" target="_blank">Available here</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card fade-in" style="margin-top: 30px;">
+                <div class="card-header" style="--card-color: #6b7280; --card-color-dark: #4b5563;" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">
+                            <h3>Patient Diary Template</h3>
+                            <p>Click to expand for diary template</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <h4>Allergic Reaction Diary</h4>
+                        <p>Patient should complete the following table for all suspected reactions:</p>
+                        
+                        <div style="overflow-x: auto; margin: 20px 0;">
+                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb;">
+                                <thead style="background: #f9fafb;">
+                                    <tr>
+                                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Item/Suspected Trigger</th>
+                                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Symptoms</th>
+                                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Time from Exposure to Onset</th>
+                                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Reproducible?</th>
+                                        <th style="padding: 12px; border: 1px solid #e5e7eb; text-align: left;">Treatment & Response</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;">[Example] Penicillin</td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Facial swelling, Spotty rash</td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;">3 days into course, 2 hours after dose</td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Every exposure</td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;">Antihistamines at home, hospital treatment, better in 1 day</td>
+                                    </tr>
+                                    <tr style="background: #f9fafb;">
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;">[Patient entry]</td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;"></td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;"></td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;"></td>
+                                        <td style="padding: 12px; border: 1px solid #e5e7eb;"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="badge caution">
+                            <span class="badge-icon">📸</span>
+                            Attach photos if available
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Action Button for Mobile -->
+    <button class="fab" onclick="scrollToTop()" title="Scroll to top">↑</button>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update progress
+            updateProgress();
+        }
+
+        // Checkbox toggle
+        function toggleCheckbox(checkbox) {
+            checkbox.classList.toggle('checked');
+            const item = checkbox.parentElement;
+            item.classList.toggle('completed');
+            
+            // Update progress
+            updateProgress();
+        }
+
+        // Option selection
+        function selectOption(option, value) {
+            // Remove selected class from siblings
+            const siblings = option.parentElement.querySelectorAll('.option');
+            siblings.forEach(sibling => sibling.classList.remove('selected'));
+            
+            // Add selected class to clicked option
+            option.classList.add('selected');
+            
+            // Show feedback
+            showSelectionFeedback(option, value);
+            
+            // Update progress
+            updateProgress();
+        }
+
+        // Show selection feedback
+        function showSelectionFeedback(option, value) {
+            const originalText = option.innerHTML;
+            const feedback = getFeedbackForSelection(value);
+            
+            // Create feedback element
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'fade-in';
+            feedbackDiv.style.marginTop = '10px';
+            feedbackDiv.style.padding = '10px';
+            feedbackDiv.style.background = '#e0f2fe';
+            feedbackDiv.style.borderRadius = '8px';
+            feedbackDiv.style.color = '#0c4a6e';
+            feedbackDiv.style.fontSize = '0.9em';
+            feedbackDiv.innerHTML = `<strong>✓ Selected:</strong> ${feedback}`;
+            
+            // Add feedback after option
+            option.parentElement.parentElement.appendChild(feedbackDiv);
+            
+            // Remove feedback after 3 seconds
+            setTimeout(() => {
+                feedbackDiv.remove();
+            }, 3000);
+        }
+
+        // Get feedback for different selections
+        function getFeedbackForSelection(value) {
+            const feedback = {
+                'airway-yes': 'Immediate emergency response required - Call 999',
+                'airway-no': 'Continue with standard assessment protocol',
+                'urticaria-yes': 'Manage as spontaneous urticaria pathway',
+                'urticaria-no': 'Consider complement testing and alternative diagnoses',
+                'acei-yes': 'Discontinue ACE inhibitor, monitor for 3 months',
+                'acei-no': 'Evaluate other potential causes',
+                'wythenshawe': 'Referral to Wythenshawe Allergy Centre recommended',
+                'salford': 'Referral to Salford Royal Tertiary Urticaria Unit recommended',
+                'c4-low': 'Complement deficiency identified - specialist referral needed',
+                'c4-normal': 'Typical spontaneous angioedema - standard management'
+            };
+            return feedback[value] || 'Selection recorded';
+        }
+
+        // Progress tracking
+        function updateProgress() {
+            const totalItems = document.querySelectorAll('.checkbox').length;
+            const checkedItems = document.querySelectorAll('.checkbox.checked').length;
+            const selectedOptions = document.querySelectorAll('.option.selected').length;
+            
+            const totalPossible = totalItems + selectedOptions;
+            const completed = checkedItems + selectedOptions;
+            
+            const percentage = totalPossible > 0 ? Math.round((completed / totalPossible) * 100) : 0;
+            
+            // Update progress bar
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressPercentage');
+            
+            progressBar.style.width = percentage + '%';
+            progressText.textContent = percentage + '% Complete';
+            
+            // Update step completion
+            updateStepCompletion();
+        }
+
+        // Update step completion status
+        function updateStepCompletion() {
+            const cards = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            
+            cards.forEach((step, index) => {
+                const card = document.getElementById(step + '-card');
+                const progressStep = document.querySelector(`[data-step="${step}"]`);
+                
+                if (card && progressStep) {
+                    const totalItems = card.querySelectorAll('.checkbox').length;
+                    const checkedItems = card.querySelectorAll('.checkbox.checked').length;
+                    const selectedOptions = card.querySelectorAll('.option.selected').length;
+                    
+                    const totalPossible = totalItems + selectedOptions;
+                    const completed = checkedItems + selectedOptions;
+                    
+                    if (totalPossible > 0 && completed === totalPossible) {
+                        progressStep.classList.add('completed');
+                        progressStep.classList.remove('active');
+                    } else if (totalPossible > 0 && completed > 0) {
+                        progressStep.classList.add('active');
+                        progressStep.classList.remove('completed');
+                    }
+                }
+            });
+        }
+
+        // Scroll to section
+        function scrollToSection(sectionId) {
+            const card = document.getElementById(sectionId + '-card');
+            if (card) {
+                // Expand the card
+                card.classList.add('expanded');
+                
+                // Scroll to card
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Update active state
+                document.querySelectorAll('.progress-step').forEach(step => {
+                    step.classList.remove('active');
+                });
+                document.querySelector(`[data-step="${sectionId}"]`).classList.add('active');
+                
+                // Hide sidebar on mobile
+                if (window.innerWidth <= 1024) {
+                    document.getElementById('progressSidebar').classList.remove('active');
+                }
+            }
+        }
+
+        // Scroll to top
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Toggle sidebar on mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('progressSidebar');
+            sidebar.classList.toggle('active');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('progressSidebar');
+            const menuToggle = document.querySelector('.menu-toggle');
+            
+            if (window.innerWidth <= 1024 && 
+                sidebar.classList.contains('active') && 
+                !sidebar.contains(event.target) && 
+                !menuToggle.contains(event.target)) {
+                sidebar.classList.remove('active');
+            }
+        });
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand first card by default
+            const firstCard = document.querySelector('.card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+            }
+            
+            // Initialize progress
+            updateProgress();
+            
+            // Add scroll event listener for progress updates
+            window.addEventListener('scroll', function() {
+                updateProgress();
+            });
+            
+            // Add animation to cards on scroll
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('slide-in');
+                    }
+                });
+            });
+            
+            document.querySelectorAll('.card').forEach(card => {
+                observer.observe(card);
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                // Close expanded cards
+                document.querySelectorAll('.card.expanded').forEach(card => {
+                    card.classList.remove('expanded');
+                });
+                
+                // Close sidebar on mobile
+                if (window.innerWidth <= 1024) {
+                    document.getElementById('progressSidebar').classList.remove('active');
+                }
+            }
+        });
+
+        // Smooth transitions for all interactive elements
+        document.querySelectorAll('button, .option, .checkbox, .card-header').forEach(element => {
+            element.addEventListener('mousedown', function() {
+                this.style.transform = 'scale(0.98)';
+            });
+            
+            element.addEventListener('mouseup', function() {
+                this.style.transform = '';
+            });
+            
+            element.addEventListener('mouseleave', function() {
+                this.style.transform = '';
+            });
+        });
+
+        // Add subtle parallax effect to header
+        window.addEventListener('scroll', function() {
+            const scrolled = window.pageYOffset;
+            const header = document.querySelector('.header');
+            const parallax = scrolled * 0.5;
+            
+            if (header) {
+                header.style.transform = `translateY(${parallax}px)`;
+                header.style.backgroundPosition = `center ${parallax}px`;
+            }
+        });
+
+        // Add subtle background animation to header
+        const header = document.querySelector('.header');
+        if (header) {
+            let mouseX = 0;
+            let mouseY = 0;
+            
+            document.addEventListener('mousemove', function(e) {
+                mouseX = (e.clientX / window.innerWidth) * 20 - 10;
+                mouseY = (e.clientY / window.innerHeight) * 20 - 10;
+                
+                header.style.backgroundPosition = `${mouseX}px ${mouseY}px`;
+            });
+        }
+
+        // Add floating animation to FAB
+        function animateFab() {
+            const fab = document.querySelector('.fab');
+            if (fab) {
+                fab.style.transform = 'translateY(0)';
+                
+                setTimeout(() => {
+                    fab.style.transform = 'translateY(-5px)';
+                }, 1000);
+                
+                setTimeout(() => {
+                    fab.style.transform = 'translateY(0)';
+                }, 1200);
+            }
+        }
+
+        // Start FAB animation interval
+        setInterval(animateFab, 5000);
+
+        console.log('🚀 Allergy Clinic Interactive Pathway loaded successfully!');
+        console.log('💡 Tips: Use the progress sidebar to navigate, check items as you complete them, and hover over cards for more options.');
+    </script>
+</body>
+</html>

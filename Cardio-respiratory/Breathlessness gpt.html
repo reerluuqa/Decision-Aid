@@ -1,0 +1,1412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Breathlessness (Adults) — Clinical Decision Support</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --ink:#0b1220;
+      --muted:#51607a;
+      --card:#f7f9fc;
+      --line:#e6ebf3;
+
+      --brand:#2563eb;
+      --brand-2:#7c3aed;
+
+      --urgent:#b91c1c;
+      --urgent-bg:#fff1f2;
+
+      --warn:#b45309;
+      --warn-bg:#fffbeb;
+
+      --ok:#047857;
+      --ok-bg:#ecfdf5;
+
+      --info:#0e7490;
+      --info-bg:#ecfeff;
+
+      --shadow: 0 10px 30px rgba(16,24,40,.08);
+      --shadow2: 0 3px 12px rgba(16,24,40,.10);
+
+      --radius:16px;
+      --radius2:22px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--ink);
+      font-family:var(--sans);
+      line-height:1.45;
+    }
+    a{ color:inherit; }
+    .skip{ position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
+    .skip:focus{ left:16px; top:16px; width:auto; height:auto; padding:10px 12px; background:#111827; color:#fff; border-radius:10px; z-index:1000; }
+    .shell{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap:22px;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 18px 16px 28px;
+    }
+    @media (max-width: 980px){
+      .shell{ grid-template-columns:1fr; }
+      .nav{ position:relative !important; top:auto !important; }
+    }
+
+    /* Header */
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index: 50;
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--line);
+    }
+    .topbar-inner{
+      max-width:1280px;
+      margin:0 auto;
+      padding:14px 16px;
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      min-width: 260px;
+    }
+    .logo{
+      width:42px; height:42px;
+      border-radius:14px;
+      background: radial-gradient(120% 120% at 20% 20%, #60a5fa 0%, #2563eb 40%, #7c3aed 100%);
+      box-shadow: var(--shadow2);
+      display:grid; place-items:center;
+      color:#fff;
+      font-weight:800;
+      letter-spacing:.3px;
+    }
+    .brand h1{
+      margin:0;
+      font-size: 16px;
+      line-height: 1.15;
+    }
+    .brand p{
+      margin:2px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .toolbar{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .search{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background:#fff;
+      min-width: 320px;
+      box-shadow: 0 1px 0 rgba(16,24,40,.03);
+    }
+    .search input{
+      border:0;
+      outline:none;
+      width:100%;
+      font-size: 14px;
+      color: var(--ink);
+    }
+    .chiprow{ display:flex; gap:8px; flex-wrap:wrap; }
+    .chip{
+      border:1px solid var(--line);
+      background:#fff;
+      color:var(--ink);
+      padding:8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      cursor:pointer;
+      user-select:none;
+      transition: .15s ease;
+    }
+    .chip:hover{ transform: translateY(-1px); box-shadow: 0 6px 14px rgba(16,24,40,.06); }
+    .chip[data-on="true"]{
+      border-color: rgba(37,99,235,.35);
+      background: rgba(37,99,235,.08);
+      color:#0b1b3a;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:#fff;
+      padding:10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      font-size: 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      transition:.15s ease;
+      box-shadow: 0 1px 0 rgba(16,24,40,.03);
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 10px 20px rgba(16,24,40,.08); }
+    .btn.primary{
+      border-color: rgba(37,99,235,.35);
+      background: linear-gradient(180deg, rgba(37,99,235,.14), rgba(124,58,237,.08));
+    }
+
+    /* Sidebar nav */
+    .nav{
+      position:sticky;
+      top: 88px;
+      align-self:start;
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background:#fff;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .nav .navhead{
+      padding:14px 14px 12px;
+      border-bottom:1px solid var(--line);
+      background: linear-gradient(180deg, rgba(14,116,144,.10), rgba(255,255,255,0));
+    }
+    .navhead .title{
+      margin:0;
+      font-size: 13px;
+      letter-spacing:.2px;
+    }
+    .navhead .hint{
+      margin:6px 0 0;
+      font-size: 12px;
+      color:var(--muted);
+    }
+    .navlist{ padding:10px; display:flex; flex-direction:column; gap:8px; }
+    .nav a{
+      text-decoration:none;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:10px 10px;
+      border-radius: 14px;
+      border:1px solid transparent;
+      transition:.12s ease;
+    }
+    .nav a:hover{
+      background: rgba(37,99,235,.06);
+      border-color: rgba(37,99,235,.12);
+    }
+    .nav a[aria-current="true"]{
+      background: rgba(124,58,237,.08);
+      border-color: rgba(124,58,237,.18);
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px; margin-top:4px; flex:0 0 auto;
+      background: var(--line);
+    }
+    .dot.urgent{ background: var(--urgent); }
+    .dot.routine{ background: var(--ok); }
+    .dot.invest{ background: var(--info); }
+    .dot.covid{ background: var(--warn); }
+    .nav .label{ font-weight:650; font-size: 13px; }
+    .nav .sub{ display:block; font-size: 12px; color: var(--muted); margin-top:2px; }
+
+    /* Main content */
+    main{ min-width:0; }
+    .hero{
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background:
+        radial-gradient(900px 240px at 10% 0%, rgba(37,99,235,.14), transparent 55%),
+        radial-gradient(900px 260px at 90% 0%, rgba(124,58,237,.12), transparent 55%),
+        #fff;
+      box-shadow: var(--shadow);
+      padding: 18px 18px 16px;
+      overflow:hidden;
+    }
+    .hero-top{
+      display:flex;
+      gap:14px;
+      justify-content:space-between;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .hero h2{
+      margin:0;
+      font-size: 20px;
+      letter-spacing:.2px;
+    }
+    .hero p{
+      margin:8px 0 0;
+      color: var(--muted);
+      max-width: 78ch;
+      font-size: 13px;
+    }
+    .meta{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size: 12px;
+      padding:8px 10px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.75);
+    }
+    .pill strong{ font-family: var(--mono); font-size: 12px; letter-spacing:.2px; }
+    .grid{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .search{ min-width: 200px; flex: 1 1 auto; }
+    }
+
+    .card{
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background:#fff;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .head{
+      padding: 14px 14px 12px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+    .head h3{ margin:0; font-size: 14px; letter-spacing:.2px; }
+    .head .tag{
+      font-size: 11px;
+      padding:6px 8px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      color: var(--muted);
+      background:#fff;
+      white-space:nowrap;
+    }
+    .content{ padding: 14px; }
+    .content p{ margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+    .kpi{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+    }
+    @media (max-width: 700px){ .kpi{ grid-template-columns: 1fr; } }
+    .kpi .box{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      padding: 12px;
+    }
+    .box .k{ font-size: 11px; color: var(--muted); display:flex; align-items:center; gap:8px; }
+    .box .v{ font-size: 14px; font-weight:750; margin-top:6px; }
+    .icon{
+      width:18px; height:18px; border-radius: 6px;
+      display:grid; place-items:center;
+      font-size: 12px;
+      background: rgba(37,99,235,.10);
+      color: #1d4ed8;
+      border:1px solid rgba(37,99,235,.18);
+      flex:0 0 auto;
+    }
+    .icon.urgent{ background: rgba(185,28,28,.10); color: var(--urgent); border-color: rgba(185,28,28,.22); }
+    .icon.warn{ background: rgba(180,83,9,.10); color: var(--warn); border-color: rgba(180,83,9,.22); }
+    .icon.ok{ background: rgba(4,120,87,.10); color: var(--ok); border-color: rgba(4,120,87,.22); }
+    .icon.info{ background: rgba(14,116,144,.10); color: var(--info); border-color: rgba(14,116,144,.22); }
+
+    /* Section styling with contrasting headings */
+    section{ margin-top: 18px; }
+    .sect{
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      background:#fff;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .sect .secthead{
+      padding: 14px 14px 12px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      align-items:flex-start;
+    }
+    .secthead .left{ display:flex; gap:10px; align-items:flex-start; }
+    .secthead h3{
+      margin:0;
+      font-size: 15px;
+      letter-spacing:.2px;
+    }
+    .secthead .small{
+      margin:4px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .secthead .right{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .secthead.urgent{
+      background: linear-gradient(180deg, var(--urgent-bg), #fff);
+    }
+    .secthead.routine{
+      background: linear-gradient(180deg, var(--ok-bg), #fff);
+    }
+    .secthead.invest{
+      background: linear-gradient(180deg, var(--info-bg), #fff);
+    }
+    .secthead.covid{
+      background: linear-gradient(180deg, var(--warn-bg), #fff);
+    }
+    .sectbody{ padding: 14px; }
+
+    /* Step pathway */
+    .steps{
+      display:grid;
+      gap:10px;
+    }
+    .step{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+      background: #fff;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+    }
+    .num{
+      width:28px; height:28px;
+      border-radius: 10px;
+      display:grid; place-items:center;
+      font-weight:800;
+      font-family: var(--mono);
+      background: rgba(124,58,237,.10);
+      border:1px solid rgba(124,58,237,.20);
+      color: #5b21b6;
+      flex:0 0 auto;
+    }
+    .step h4{ margin:0; font-size: 13px; }
+    .step p{ margin:6px 0 0; font-size: 12px; color: var(--muted); }
+    .bullets{ margin:8px 0 0; padding-left: 18px; color: var(--ink); }
+    .bullets li{ margin:6px 0; font-size: 13px; color: var(--ink); }
+    .bullets li span{ color: var(--muted); }
+
+    /* Action boxes */
+    .action{
+      border-radius: 18px;
+      border:1px solid var(--line);
+      padding: 12px;
+      background: var(--card);
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      margin-top: 10px;
+    }
+    .action.urgent{ background: var(--urgent-bg); border-color: rgba(185,28,28,.20); }
+    .action.routine{ background: var(--ok-bg); border-color: rgba(4,120,87,.18); }
+    .action.invest{ background: var(--info-bg); border-color: rgba(14,116,144,.18); }
+    .action.warn{ background: var(--warn-bg); border-color: rgba(180,83,9,.18); }
+    .action h4{ margin:0; font-size: 13px; }
+    .action p{ margin:6px 0 0; font-size: 12px; color: var(--muted); }
+    .action .mini{ margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; }
+    .mini .miniBtn{
+      font-size: 12px;
+      border:1px solid var(--line);
+      background:#fff;
+      padding:8px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+    }
+
+    /* Accordions */
+    details{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      padding: 10px 12px;
+      background:#fff;
+    }
+    details + details{ margin-top:10px; }
+    summary{
+      cursor:pointer;
+      list-style:none;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .chev{
+      width:26px; height:26px;
+      border-radius: 10px;
+      background: rgba(37,99,235,.08);
+      border:1px solid rgba(37,99,235,.16);
+      display:grid; place-items:center;
+      transition: transform .15s ease;
+      flex:0 0 auto;
+    }
+    details[open] .chev{ transform: rotate(90deg); }
+    .accBody{ margin-top:10px; color: var(--muted); font-size: 13px; }
+    .accBody ul{ margin:8px 0 0; padding-left: 18px; color: var(--ink); }
+    .accBody li{ margin:6px 0; font-size: 13px; }
+    .accBody li span{ color: var(--muted); }
+
+    /* Flags */
+    .flags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+    .flag{
+      font-size:12px;
+      border-radius: 999px;
+      padding:7px 10px;
+      border:1px solid var(--line);
+      background:#fff;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+    }
+    .flag.urgent{ background: var(--urgent-bg); border-color: rgba(185,28,28,.18); color:#7f1d1d; }
+    .flag.routine{ background: var(--ok-bg); border-color: rgba(4,120,87,.18); color:#064e3b; }
+    .flag.invest{ background: var(--info-bg); border-color: rgba(14,116,144,.18); color:#0b4a5a; }
+    .flag.warn{ background: var(--warn-bg); border-color: rgba(180,83,9,.18); color:#7c2d12; }
+
+    /* Quick lists */
+    .cols{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 900px){ .cols{ grid-template-columns: 1fr; } }
+    .listcard{
+      border:1px solid var(--line);
+      border-radius: 18px;
+      background:#fff;
+      padding: 12px;
+    }
+    .listcard h4{ margin:0; font-size: 13px; }
+    .listcard p{ margin:6px 0 0; font-size: 12px; color: var(--muted); }
+    .listcard ul{ margin:8px 0 0; padding-left: 18px; }
+    .listcard li{ margin:6px 0; font-size: 13px; }
+
+    /* Highlight for search */
+    mark{
+      background: rgba(250,204,21,.35);
+      border-radius: 6px;
+      padding: 0 .15em;
+    }
+
+    /* Print */
+    @media print{
+      .topbar, .nav, .btn, .chiprow, .search { display:none !important; }
+      .shell{ grid-template-columns: 1fr; max-width:none; }
+      .card, .sect, .hero{ box-shadow:none !important; }
+      body{ background:#fff; }
+    }
+  </style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar" role="banner">
+  <div class="topbar-inner">
+    <div class="brand" aria-label="Page header">
+      <div class="logo" aria-hidden="true">Dx</div>
+      <div>
+        <h1>Breathlessness (Adults) — Rapid Clinical Pathway</h1>
+        <p>Designed for scanning: urgent separation, step panels, action boxes, and filters.</p>
+      </div>
+    </div>
+
+    <div class="toolbar" role="toolbar" aria-label="Tools">
+      <div class="search" role="search" aria-label="Search this page">
+        <span class="icon info" aria-hidden="true">⌕</span>
+        <input id="q" type="search" placeholder="Search: e.g. ‘SpO₂’, ‘PEFR’, ‘Venturi’, ‘cancer’, ‘COVID’…" autocomplete="off"/>
+      </div>
+
+      <button class="btn primary" id="expandAll" type="button" title="Expand all accordion sections">
+        <span class="icon" aria-hidden="true">▾</span> Expand
+      </button>
+      <button class="btn" id="collapseAll" type="button" title="Collapse all accordion sections">
+        <span class="icon" aria-hidden="true">▸</span> Collapse
+      </button>
+      <button class="btn" id="print" type="button" title="Print-friendly">
+        <span class="icon" aria-hidden="true">⎙</span> Print
+      </button>
+      <button class="btn" id="copySummary" type="button" title="Copy a quick summary to clipboard">
+        <span class="icon" aria-hidden="true">⧉</span> Copy summary
+      </button>
+    </div>
+  </div>
+
+  <div class="topbar-inner" style="padding-top:0; padding-bottom:14px;">
+    <div class="chiprow" aria-label="Filters">
+      <span class="pill" title="Filter visible blocks"><strong>Filters</strong></span>
+      <button class="chip" data-filter="urgent" data-on="true" type="button"><span class="icon urgent" aria-hidden="true">!</span>Urgent</button>
+      <button class="chip" data-filter="routine" data-on="true" type="button"><span class="icon ok" aria-hidden="true">✓</span>Routine</button>
+      <button class="chip" data-filter="invest" data-on="true" type="button"><span class="icon info" aria-hidden="true">↻</span>Investigations</button>
+      <button class="chip" data-filter="covid" data-on="true" type="button"><span class="icon warn" aria-hidden="true">⟡</span>COVID/Remote</button>
+      <button class="chip" data-filter="ddx" data-on="true" type="button"><span class="icon" aria-hidden="true">≋</span>DDx cues</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="nav" aria-label="Sticky navigation">
+    <div class="navhead">
+      <p class="title"><strong>Jump to</strong></p>
+      <p class="hint">Sections auto-highlight as you scroll. Filters apply instantly.</p>
+    </div>
+    <nav class="navlist" id="navlist">
+      <a href="#triage" data-nav="triage"><span class="dot urgent"></span><span><span class="label">Immediate triage</span><span class="sub">ABC + vitals + “admit now?”</span></span></a>
+      <a href="#emergency" data-nav="emergency"><span class="dot urgent"></span><span><span class="label">Emergency admission criteria</span><span class="sub">Red flags / thresholds</span></span></a>
+      <a href="#waiting" data-nav="waiting"><span class="dot urgent"></span><span><span class="label">While awaiting transfer</span><span class="sub">O₂ targets + key temporising actions</span></span></a>
+      <a href="#routine" data-nav="routine"><span class="dot routine"></span><span><span class="label">If admission not required</span><span class="sub">History, exam, next steps</span></span></a>
+      <a href="#investigations" data-nav="investigations"><span class="dot invest"></span><span><span class="label">Investigations</span><span class="sub">CXR + bloods + ECG + spirometry</span></span></a>
+      <a href="#ddx" data-nav="ddx"><span class="dot routine"></span><span><span class="label">Pattern recognition DDx</span><span class="sub">Cardiac / pulmonary / other</span></span></a>
+      <a href="#covid" data-nav="covid"><span class="dot covid"></span><span><span class="label">COVID / remote assessment</span><span class="sub">Severe features + reassessment</span></span></a>
+      <a href="#referral" data-nav="referral"><span class="dot invest"></span><span><span class="label">Referral pathways</span><span class="sub">2-week cancer / specialist routing</span></span></a>
+    </nav>
+  </aside>
+
+  <main id="main" tabindex="-1">
+    <div class="hero">
+      <div class="hero-top">
+        <div>
+          <h2>Breathlessness (≥18y): fast, visual pathway</h2>
+          <p>
+            Structured for rapid decision support: a triage-first workflow with urgent thresholds clearly separated from routine
+            investigation and referral. Use search + filters for immediate access.
+          </p>
+        </div>
+        <div class="meta" aria-label="Quick meta">
+          <span class="pill"><span class="icon info" aria-hidden="true">i</span><span><strong>Scope</strong> Primary care / front door</span></span>
+          <span class="pill"><span class="icon urgent" aria-hidden="true">!</span><span><strong>Priority</strong> identify life-threatening causes even if vitals normal</span></span>
+          <span class="pill"><span class="icon" aria-hidden="true">⌁</span><span><strong>Mode</strong> interactive</span></span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card" data-group="urgent routine">
+          <div class="head">
+            <h3>At-a-glance “first 60 seconds”</h3>
+            <span class="tag">Rapid scan</span>
+          </div>
+          <div class="content">
+            <div class="kpi">
+              <div class="box">
+                <div class="k"><span class="icon urgent" aria-hidden="true">A</span>Immediate priority</div>
+                <div class="v">ABC + need for emergency admission</div>
+              </div>
+              <div class="box">
+                <div class="k"><span class="icon info" aria-hidden="true">V</span>Minimum dataset</div>
+                <div class="v">BP • HR • RR • Temp • Conscious level • SpO₂</div>
+              </div>
+              <div class="box">
+                <div class="k"><span class="icon warn" aria-hidden="true">⚑</span>Do not be reassured</div>
+                <div class="v">Vitals can be normal in life-threatening pathology</div>
+              </div>
+            </div>
+
+            <div class="action urgent" style="margin-top:12px" data-group="urgent">
+              <span class="icon urgent" aria-hidden="true">!</span>
+              <div>
+                <h4>Escalate early if any red flags or unclear cause with concern</h4>
+                <p>Maintain a low threshold for admission when serious causes cannot be excluded.</p>
+              </div>
+            </div>
+
+            <div class="flags" aria-label="Visual flags">
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>SpO₂ &lt; 92%</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>PEFR &lt; 50% predicted</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>Silent chest / poor effort</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>Hypotension / cyanosis / exhaustion</span>
+              <span class="flag invest"><span class="icon info" aria-hidden="true">↻</span>ECG: arrhythmia/MI pattern</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" data-group="invest routine">
+          <div class="head">
+            <h3>Quick routing</h3>
+            <span class="tag">One-click focus</span>
+          </div>
+          <div class="content">
+            <p style="margin-bottom:12px">Use these to jump directly to actions.</p>
+            <div class="steps" aria-label="Quick route actions">
+              <button class="btn primary" type="button" onclick="document.querySelector('#emergency').scrollIntoView({behavior:'smooth',block:'start'})">
+                <span class="icon urgent" aria-hidden="true">!</span> Emergency criteria
+              </button>
+              <button class="btn" type="button" onclick="document.querySelector('#waiting').scrollIntoView({behavior:'smooth',block:'start'})">
+                <span class="icon urgent" aria-hidden="true">⟲</span> While awaiting transfer
+              </button>
+              <button class="btn" type="button" onclick="document.querySelector('#investigations').scrollIntoView({behavior:'smooth',block:'start'})">
+                <span class="icon info" aria-hidden="true">↻</span> Investigations panel
+              </button>
+              <button class="btn" type="button" onclick="document.querySelector('#covid').scrollIntoView({behavior:'smooth',block:'start'})">
+                <span class="icon warn" aria-hidden="true">⟡</span> COVID/remote
+              </button>
+            </div>
+
+            <div class="action invest" data-group="invest" style="margin-top:12px">
+              <span class="icon info" aria-hidden="true">↻</span>
+              <div>
+                <h4>Remember: lung cancer CXR trigger (time-bound)</h4>
+                <p>Urgent CXR within 2 weeks if ≥40y with symptom combinations / smoking history (see Investigations).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRIAGE -->
+    <section id="triage" class="sect" data-group="urgent routine">
+      <div class="secthead urgent">
+        <div class="left">
+          <span class="icon urgent" aria-hidden="true">⟟</span>
+          <div>
+            <h3>Immediate triage</h3>
+            <div class="small">ABC first → record core vitals → decide if emergency admission is required.</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon urgent" aria-hidden="true">!</span><strong>Urgent</strong> first</span>
+          <span class="pill"><span class="icon info" aria-hidden="true">⌁</span><strong>Tip</strong> vitals may be normal</span>
+        </div>
+      </div>
+      <div class="sectbody">
+        <div class="steps" aria-label="Immediate triage steps">
+          <div class="step">
+            <div class="num">1</div>
+            <div>
+              <h4>Airway / Breathing / Circulation (rapid)</h4>
+              <p>Confirm airway patency, work of breathing, and perfusion. Identify imminent deterioration.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num">2</div>
+            <div>
+              <h4>Minimum vital set</h4>
+              <p>BP, HR, RR, temperature, consciousness, SpO₂. Document trend if available.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num">3</div>
+            <div>
+              <h4>Decision: emergency admission now?</h4>
+              <p>Apply red flags/diagnostic triggers (next panel) and escalate early if unclear but concerning.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="action urgent" data-group="urgent">
+          <span class="icon urgent" aria-hidden="true">!</span>
+          <div>
+            <h4>High-risk principle</h4>
+            <p>Do not rely on “reassuring” physiology alone—life-threatening causes can present with initially normal observations.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMERGENCY ADMISSION -->
+    <section id="emergency" class="sect" data-group="urgent">
+      <div class="secthead urgent">
+        <div class="left">
+          <span class="icon urgent" aria-hidden="true">!</span>
+          <div>
+            <h3>Emergency admission criteria</h3>
+            <div class="small">Immediate referral/admission when any of the following are present.</div>
+          </div>
+        </div>
+        <div class="right">
+          <button class="btn" type="button" onclick="toggleDetailsIn('#emergency', true)">
+            <span class="icon" aria-hidden="true">▾</span> Expand
+          </button>
+          <button class="btn" type="button" onclick="toggleDetailsIn('#emergency', false)">
+            <span class="icon" aria-hidden="true">▸</span> Collapse
+          </button>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <div class="cols">
+          <div class="listcard">
+            <h4>Diagnosis-driven triggers (suspected)</h4>
+            <p>Immediate admission if clinical picture or ECG suggests these time-critical entities.</p>
+            <ul>
+              <li>Rapid onset/worsening suspected heart failure</li>
+              <li>Suspected sepsis</li>
+              <li>Anaphylaxis</li>
+              <li>ECG suggesting arrhythmia or myocardial infarction</li>
+              <li>Clinical features of: pulmonary embolism, pneumothorax, cardiac tamponade, pulmonary oedema, superior vena cava syndrome</li>
+              <li>Severe or life-threatening acute asthma features</li>
+            </ul>
+          </div>
+
+          <div class="listcard">
+            <h4>Physiology / severity triggers</h4>
+            <p>Escalate when objective severity markers are present.</p>
+            <ul>
+              <li>Altered consciousness or acute confusion</li>
+              <li>Arrhythmia</li>
+              <li>Cyanosis</li>
+              <li>Elevated respiratory rate / exhaustion</li>
+              <li>Hypotension</li>
+              <li><strong>SpO₂ &lt; 92%</strong></li>
+              <li><strong>PEFR &lt; 50% predicted</strong></li>
+              <li>Poor respiratory effort / silent chest</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="action urgent">
+          <span class="icon urgent" aria-hidden="true">⚠</span>
+          <div>
+            <h4>COPD exacerbation “severe / life-threatening” pattern</h4>
+            <p>Urgent admission if acute confusion/impaired consciousness, long-term oxygen therapy, cyanosis, <strong>SpO₂ &lt; 90%</strong>, poor/deteriorating condition with significant comorbidity, rapid onset, severe breathlessness, or worsening peripheral oedema.</p>
+          </div>
+        </div>
+
+        <div class="action warn" data-group="urgent">
+          <span class="icon warn" aria-hidden="true">CRB65</span>
+          <div>
+            <h4>Community-acquired pneumonia</h4>
+            <p>Urgent admission if CRB65 ≥3; consider admission if 1–2.</p>
+          </div>
+        </div>
+
+        <details>
+          <summary>
+            Visual “red-flag strip” (tap to view)
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="flags">
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>SpO₂ &lt; 92%</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>SpO₂ &lt; 90% with COPD risk</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>PEFR &lt; 50% predicted</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>Silent chest / poor effort</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>Hypotension / cyanosis</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>Acute confusion</span>
+              <span class="flag invest"><span class="icon info" aria-hidden="true">↻</span>ECG: arrhythmia/MI</span>
+              <span class="flag urgent"><span class="icon urgent" aria-hidden="true">!</span>PE / pneumothorax / tamponade / oedema</span>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- WAITING FOR EMERGENCY ADMISSION -->
+    <section id="waiting" class="sect" data-group="urgent">
+      <div class="secthead urgent">
+        <div class="left">
+          <span class="icon urgent" aria-hidden="true">⟲</span>
+          <div>
+            <h3>While awaiting emergency transfer</h3>
+            <div class="small">Positioning, oxygen strategy, and key temporising interventions (pattern-based).</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon urgent" aria-hidden="true">O₂</span><strong>Targets</strong> 88–92% vs 94–98%</span>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <div class="steps">
+          <div class="step">
+            <div class="num">1</div>
+            <div>
+              <h4>Position and monitor</h4>
+              <p>Sit upright. Continuous SpO₂ monitoring during transfer preparation.</p>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="num">2</div>
+            <div>
+              <h4>Oxygen (if SpO₂ ≤94%) — choose pathway</h4>
+              <p>Separate those at risk of hypercapnic respiratory failure from others.</p>
+              <ul class="bullets">
+                <li><strong>Hypercapnia risk group</strong> <span>(suspected COPD, morbid obesity, chest wall deformity, neuromuscular disorder)</span>:
+                  24% Venturi 2–3 L/min (or 28% Venturi 4 L/min / nasal cannulae 1–2 L/min if 24% unavailable). Target <strong>SpO₂ 88–92%</strong>.
+                </li>
+                <li><strong>Others acutely ill</strong>: nasal cannulae 2–6 L/min or simple face mask 5–10 L/min. Target <strong>SpO₂ 94–98%</strong>.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="num">3</div>
+            <div>
+              <h4>If still &lt;88% on 28% Venturi (hypercapnia risk)</h4>
+              <p>Escalate device and alert receiving ED that the patient is high priority.</p>
+              <ul class="bullets">
+                <li>Switch to nasal cannulae 2–6 L/min <em>or</em> simple face mask 5 L/min; aim SpO₂ 88–92%.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="action warn">
+          <span class="icon warn" aria-hidden="true">≥70</span>
+          <div>
+            <h4>Older adults nuance</h4>
+            <p>Some patients &gt;70 years may have baseline SpO₂ &lt;94% when stable; oxygen is indicated if below their known normal level.</p>
+          </div>
+        </div>
+
+        <details>
+          <summary>
+            Pattern-based temporising actions (expand)
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="cols">
+              <div class="listcard">
+                <h4>Airway disease patterns</h4>
+                <ul>
+                  <li><strong>COPD exacerbation</strong>: increase bronchodilator dose/frequency (MDI + spacer or air-driven neb); oral prednisolone 30 mg (if available).</li>
+                  <li><strong>Acute severe asthma (PEFR &lt;50%)</strong>: oxygen-driven wet neb bronchodilator (e.g. salbutamol 5 mg), repeat every 15–30 min if inadequate response; prednisolone 40–50 mg PO or hydrocortisone 100 mg parenteral.</li>
+                </ul>
+              </div>
+              <div class="listcard">
+                <h4>Time-critical differentials</h4>
+                <ul>
+                  <li><strong>Anaphylaxis</strong>: remove trigger; IM adrenaline 1:1000.</li>
+                  <li><strong>Pulmonary oedema</strong>: IV diuretic (e.g. furosemide 20–40 mg).</li>
+                  <li><strong>Suspected MI (including atypical)</strong>: aspirin 300 mg.</li>
+                  <li><strong>SVT</strong>: Valsalva (blow into syringe 15 sec supine) ± carotid sinus massage (avoid in elderly/recent ischaemia/digoxin toxicity; one side only).</li>
+                  <li><strong>Tension pneumothorax (certain + life-threatening)</strong>: consider large-bore cannula 2nd intercostal space mid-clavicular line on affected side.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- ROUTINE PATHWAY -->
+    <section id="routine" class="sect" data-group="routine">
+      <div class="secthead routine">
+        <div class="left">
+          <span class="icon ok" aria-hidden="true">✓</span>
+          <div>
+            <h3>If emergency admission is NOT required</h3>
+            <div class="small">Structured assessment to define likely cause and plan investigations/referral.</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon ok" aria-hidden="true">✓</span><strong>Routine</strong> work-up</span>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <div class="action routine">
+          <span class="icon ok" aria-hidden="true">⟡</span>
+          <div>
+            <h4>Core history framework</h4>
+            <p>Duration/onset, severity, triggers/relievers (positional), orthopnoea/PND, exercise tolerance, ADL impact, temporal patterns and exposures, associated symptoms, comorbids, surgery, drugs (incl. illicit), smoking/alcohol/activity, travel. Then targeted CVS/resp/neuro exam.</p>
+          </div>
+        </div>
+
+        <details open>
+          <summary>
+            “High-yield history prompts” checklist
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <ul>
+              <li><strong>Onset tempo</strong> <span>(minutes vs hours-days vs weeks-months) helps separate acute/subacute/chronic patterns.</span></li>
+              <li><strong>Positional dyspnoea</strong> <span>(orthopnoea suggests left heart dysfunction; PND suggests pulmonary oedema).</span></li>
+              <li><strong>Associated symptoms</strong> <span>(chest pain, palpitations, syncope, fever, wheeze, cough).</span></li>
+              <li><strong>Exposure pattern</strong> <span>(work-week, seasonal, triggers like cold, pets, perfumes; consider occupational causes).</span></li>
+              <li><strong>Risk context</strong> <span>(recent surgery/immobility/travel; meds such as beta-blockers; smoking history).</span></li>
+            </ul>
+          </div>
+        </details>
+
+        <details>
+          <summary>
+            Safety-netting logic for “uncertain cause”
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <p>
+              If the cause remains uncertain, reassess for risk factors and features of serious disease requiring emergency admission.
+              If emergency admission is still not required, arrange routine referral; multifactorial dyspnoea is common and local pathways may vary.
+            </p>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- INVESTIGATIONS -->
+    <section id="investigations" class="sect" data-group="invest">
+      <div class="secthead invest">
+        <div class="left">
+          <span class="icon info" aria-hidden="true">↻</span>
+          <div>
+            <h3>Investigations</h3>
+            <div class="small">Choose tests based on phenotype; include cancer exclusion triggers and cardio-pulmonary screening.</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon info" aria-hidden="true">CXR</span><strong>Time bound</strong> ≤2 weeks</span>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <div class="action invest">
+          <span class="icon info" aria-hidden="true">CXR</span>
+          <div>
+            <h4>Urgent chest X-ray for lung cancer assessment (≤2 weeks)</h4>
+            <p>
+              Trigger in people aged ≥40 years with <strong>two or more</strong> unexplained symptoms (cough, fatigue, shortness of breath,
+              chest pain, weight loss, appetite loss), or <strong>ever-smokers</strong> with <strong>one or more</strong> of these symptoms.
+            </p>
+          </div>
+        </div>
+
+        <details open>
+          <summary>
+            Investigation menu (expandable)
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="cols">
+              <div class="listcard">
+                <h4>Core tests</h4>
+                <ul>
+                  <li><strong>Pulse oximetry</strong> (hypoxaemia across pneumonia, pulmonary oedema, COPD/asthma, ILD)</li>
+                  <li><strong>ECG</strong> (heart failure, pulmonary HTN, arrhythmia, tamponade, PE patterns)</li>
+                  <li><strong>CXR</strong> (HF signs; effusion; collapse; pneumothorax; alternative pathology)</li>
+                </ul>
+              </div>
+              <div class="listcard">
+                <h4>Bloods / focused tests</h4>
+                <ul>
+                  <li><strong>FBC</strong> (anaemia; infection)</li>
+                  <li><strong>CRP</strong> (infection/inflammation context)</li>
+                  <li><strong>BNP / NT-proBNP</strong> (heart failure signal; may rise in sepsis/CAD/PE/COPD)</li>
+                  <li><strong>U&Es</strong> (renal impairment context)</li>
+                  <li><strong>LFTs</strong> (bilirubin/transaminases: liver/HF/CKD/atypical pneumonia/MI contexts)</li>
+                  <li><strong>PEFR + spirometry</strong> (asthma/obstructive airway disease)</li>
+                  <li><strong>TFTs</strong> (thyroid disease)</li>
+                  <li><strong>Abdominal ultrasound</strong> (ascites confirmation; liver cirrhosis/peritoneal cancer context)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="action warn">
+          <span class="icon warn" aria-hidden="true">↯</span>
+          <div>
+            <h4>Interpretation cue</h4>
+            <p>BNP/NT-proBNP elevations are not specific; triangulate with clinical phenotype and ECG/CXR findings.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DDx -->
+    <section id="ddx" class="sect" data-group="ddx routine">
+      <div class="secthead routine">
+        <div class="left">
+          <span class="icon" aria-hidden="true">≋</span>
+          <div>
+            <h3>Pattern recognition DDx (cues)</h3>
+            <div class="small">Fast phenotyping: cardiac/vascular vs pulmonary vs other common causes.</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon" aria-hidden="true">≋</span><strong>Use</strong> symptoms + signs + baseline risk</span>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <details open>
+          <summary>
+            Cardiac / vascular patterns
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="cols">
+              <div class="listcard">
+                <h4>Acute pulmonary oedema</h4>
+                <p>Severe dyspnoea + orthopnoea; crackles; raised JVP; gallop; possible wheeze.</p>
+                <ul>
+                  <li><strong>Risk</strong>: HF, IHD, valvular disease, arrhythmia</li>
+                </ul>
+              </div>
+              <div class="listcard">
+                <h4>Arrhythmia / atypical MI</h4>
+                <p>Sudden onset palpitations/dyspnoea; syncope/near syncope; sweating, hypotension, poor perfusion.</p>
+                <ul>
+                  <li><strong>ECG</strong>: diagnostic if captured during episode; normal ECG does not exclude MI</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>
+            Pulmonary patterns
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="cols">
+              <div class="listcard">
+                <h4>Asthma / COPD / bronchiectasis</h4>
+                <ul>
+                  <li><strong>Asthma</strong>: variable wheeze, tightness, cough; PEFR reduction in attacks; severe/life-threatening features include low PEFR and low SpO₂.</li>
+                  <li><strong>COPD</strong>: age &gt;35, smoking history, slowly progressive exertional dyspnoea; exacerbations often infective.</li>
+                  <li><strong>Bronchiectasis</strong>: chronic productive cough, recurrent infections, haemoptysis; coarse crackles/clubbing in some.</li>
+                </ul>
+              </div>
+              <div class="listcard">
+                <h4>Pneumothorax / PE / pneumonia / effusion</h4>
+                <ul>
+                  <li><strong>Pneumothorax</strong>: sudden pleuritic pain + dyspnoea; unilateral reduced breath sounds; hyperresonance; tension: tracheal deviation + shock physiology.</li>
+                  <li><strong>PE</strong>: acute dyspnoea ± pleuritic pain, syncope, haemoptysis; tachycardia, hypoxaemia; risk factors (immobility/surgery/cancer/travel/DVT history).</li>
+                  <li><strong>Pneumonia</strong>: cough + systemic features; new focal chest signs; elderly can be atypical (e.g. confusion).</li>
+                  <li><strong>Pleural effusion</strong>: stony dullness, reduced breath sounds; consider HF/cancer/PE/infection etc.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details>
+          <summary>
+            Other common causes (don’t miss)
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="cols">
+              <div class="listcard">
+                <h4>Anaemia / metabolic / neuromuscular</h4>
+                <ul>
+                  <li><strong>Anaemia</strong>: fatigue, exertional dyspnoea, palpitations; severe: light-headedness/angina; rapid blood loss: volume depletion signs.</li>
+                  <li><strong>Metabolic</strong>: consider DKA/renal failure/salicylate toxicity in context.</li>
+                  <li><strong>Neuromuscular</strong>: diaphragmatic weakness/hypoventilation patterns, bulbar symptoms, progressive weakness.</li>
+                </ul>
+              </div>
+              <div class="listcard">
+                <h4>Anaphylaxis / anxiety-related dyspnoea / splinting</h4>
+                <ul>
+                  <li><strong>Anaphylaxis</strong>: rapid onset, wheeze/stridor, urticaria/angioedema, hypotension/LOC risk; SpO₂ can fall.</li>
+                  <li><strong>Anxiety/hyperventilation</strong>: paraesthesia, dizziness, fear; exam lacks organic signs; sighing/tachypnoea common.</li>
+                  <li><strong>Splinting</strong>: obesity/pregnancy/ascites → chronic dyspnoea with increasing abdominal size.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- COVID -->
+    <section id="covid" class="sect" data-group="covid">
+      <div class="secthead covid">
+        <div class="left">
+          <span class="icon warn" aria-hidden="true">⟡</span>
+          <div>
+            <h3>COVID / remote assessment</h3>
+            <div class="small">Remote dyspnoea is high-risk: define severity, use oximetry if available, reassess frequently.</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon warn" aria-hidden="true">NEWS2</span><strong>Use</strong> adults + judgment</span>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <div class="action warn">
+          <span class="icon warn" aria-hidden="true">⚑</span>
+          <div>
+            <h4>Severe COVID features (adult threshold)</h4>
+            <p>Severe SOB at rest, reduced SpO₂ on oximetry (adult severe threshold includes <strong>SpO₂ &lt;92% at rest</strong>), haemoptysis, blue lips/face, syncope, new confusion, difficult to rouse, reduced urine output, pale/clammy/mottled.</p>
+          </div>
+        </div>
+
+        <details open>
+          <summary>
+            Remote workflow (practical)
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <ul>
+              <li>Use structured dyspnoea assessment tools (e.g. MRC dyspnoea scale) if needed.</li>
+              <li>NEWS2 can support adult risk assessment alongside clinical judgment (not validated in prehospital settings; avoid face-to-face solely to calculate NEWS2).</li>
+              <li>Be aware anxiety can amplify breathlessness; manage reversible causes (PE, pulmonary oedema, COPD/asthma exacerbation).</li>
+              <li>Supportive measures when appropriate: cool room, positioning, relaxation/breathing techniques, improve ventilation.</li>
+              <li>If hypoxia likely: consider oxygen trial and discuss transfer/evaluation in secondary care.</li>
+              <li>Avoid routine corticosteroids if no supplemental oxygen is needed (unless another indication). Avoid antibiotics solely to prevent secondary bacterial pneumonia.</li>
+              <li>Reassess if not improving as expected or if worsening rapidly/significantly; reconsider escalation route (hospital vs community acute support vs palliative care).</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- REFERRAL -->
+    <section id="referral" class="sect" data-group="routine invest">
+      <div class="secthead invest">
+        <div class="left">
+          <span class="icon info" aria-hidden="true">⇢</span>
+          <div>
+            <h3>Referral pathways</h3>
+            <div class="small">Urgent cancer pathway triggers and specialist routing for specific phenotypes.</div>
+          </div>
+        </div>
+        <div class="right">
+          <span class="pill"><span class="icon info" aria-hidden="true">2WW</span><strong>Suspected cancer</strong> referral</span>
+        </div>
+      </div>
+
+      <div class="sectbody">
+        <div class="action invest">
+          <span class="icon info" aria-hidden="true">2WW</span>
+          <div>
+            <h4>Lung cancer pathway</h4>
+            <p>If chest X-ray suggests lung cancer → urgent suspected cancer pathway referral for appointment within 2 weeks.</p>
+          </div>
+        </div>
+
+        <details open>
+          <summary>
+            Specialist routing examples (expand)
+            <span class="chev" aria-hidden="true">›</span>
+          </summary>
+          <div class="accBody">
+            <div class="cols">
+              <div class="listcard">
+                <h4>Respiratory-directed</h4>
+                <ul>
+                  <li><strong>Interstitial lung disease</strong> → respiratory specialist assessment.</li>
+                  <li><strong>Lung/lobar collapse</strong> → respiratory specialist investigation.</li>
+                  <li><strong>Pleural effusion</strong> → refer/admit for drainage + cause investigation.</li>
+                </ul>
+              </div>
+              <div class="listcard">
+                <h4>Other pathways</h4>
+                <ul>
+                  <li><strong>Ascites</strong> → specialist management of underlying cause; if suspected ascites in women, urgent gynae cancer service assessment (2-week) for possible ovarian cancer.</li>
+                  <li><strong>Uncertain cause</strong> → routine referral if no emergency features; multifactorial dyspnoea common, route depends on local pathways.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <div class="card" style="margin-top:18px" data-group="routine invest urgent covid ddx">
+      <div class="head">
+        <h3>Quick summary (copy-ready)</h3>
+        <span class="tag">Clipboard</span>
+      </div>
+      <div class="content">
+        <p id="summaryText" style="margin-bottom:12px">
+          <strong>Breathlessness (adult) rapid approach:</strong> ABC → record BP/HR/RR/Temp/LOC/SpO₂ (vitals may be normal in life-threatening disease).
+          Admit urgently for sepsis/anaphylaxis/rapid HF; ECG arrhythmia or MI; clinical features of PE/pneumothorax/tamponade/pulmonary oedema/SVC syndrome;
+          severe/life-threatening asthma; or physiology red flags (confusion, cyanosis, hypotension, exhaustion, SpO₂&lt;92%, PEFR&lt;50%, silent chest/poor effort).
+          While awaiting transfer: sit up; if SpO₂≤94% give O₂ and monitor; if hypercapnia risk target 88–92% with Venturi strategy; otherwise target 94–98%.
+          If no admission: structured history/exam; investigate with ECG/CXR/oximetry, FBC/CRP/BNP/U&Es/LFTs/TFTs ± spirometry; urgent CXR ≤2 weeks for lung cancer criteria.
+        </p>
+        <div class="mini">
+          <button class="miniBtn" type="button" onclick="copyText(document.getElementById('summaryText').innerText)">Copy summary</button>
+          <button class="miniBtn" type="button" onclick="window.scrollTo({top:0, behavior:'smooth'})">Back to top</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // ---------- Utilities ----------
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- Copy ----------
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      toast("Copied to clipboard");
+    }catch(e){
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      toast("Copied (fallback)");
+    }
+  }
+
+  // ---------- Toast ----------
+  let toastTimer;
+  function toast(msg){
+    let t = $("#toast");
+    if(!t){
+      t = document.createElement("div");
+      t.id = "toast";
+      t.style.cssText = `
+        position: fixed; right: 16px; bottom: 16px; z-index: 9999;
+        padding: 10px 12px; border-radius: 14px;
+        background: rgba(17,24,39,.92); color: #fff; font-size: 12px;
+        box-shadow: 0 18px 34px rgba(0,0,0,.18);
+        display:flex; align-items:center; gap:10px;
+      `;
+      t.innerHTML = `<span style="width:10px;height:10px;border-radius:999px;background:#22c55e;display:inline-block"></span><span id="toastMsg"></span>`;
+      document.body.appendChild(t);
+    }
+    $("#toastMsg").textContent = msg;
+    t.style.opacity = "1";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>{ t.style.opacity="0"; }, 1700);
+  }
+
+  // ---------- Accordion controls ----------
+  function toggleDetailsIn(scopeSel, open){
+    const scope = $(scopeSel);
+    if(!scope) return;
+    $$("details", scope).forEach(d => d.open = open);
+  }
+
+  $("#expandAll").addEventListener("click", () => $$("details").forEach(d=>d.open=true));
+  $("#collapseAll").addEventListener("click", () => $$("details").forEach(d=>d.open=false));
+  $("#print").addEventListener("click", () => window.print());
+  $("#copySummary").addEventListener("click", () => copyText($("#summaryText").innerText));
+
+  // ---------- Filters ----------
+  const chips = $$(".chip");
+  const sections = $$("[data-group]");
+  function applyFilters(){
+    const on = new Set(chips.filter(c=>c.dataset.on==="true").map(c=>c.dataset.filter));
+    sections.forEach(el=>{
+      const g = (el.dataset.group || "").split(/\s+/).filter(Boolean);
+      // show if any group matches selected filters
+      const show = g.some(x => on.has(x));
+      el.style.display = show ? "" : "none";
+    });
+    // keep nav visible regardless; but visually dim items that point to hidden sections
+    $$("#navlist a").forEach(a=>{
+      const id = a.getAttribute("href");
+      const target = id ? $(id) : null;
+      if(!target){ a.style.opacity="1"; return; }
+      const hidden = target.style.display === "none";
+      a.style.opacity = hidden ? ".38" : "1";
+    });
+  }
+  chips.forEach(ch=>{
+    ch.addEventListener("click", ()=>{
+      ch.dataset.on = (ch.dataset.on === "true") ? "false" : "true";
+      applyFilters();
+    });
+  });
+
+  // ---------- Search + highlight ----------
+  const q = $("#q");
+  let lastQuery = "";
+  function clearMarks(){
+    // remove <mark> while preserving text (simple unmark)
+    $$("mark").forEach(m=>{
+      const txt = document.createTextNode(m.textContent);
+      m.replaceWith(txt);
+    });
+  }
+  function markQuery(query){
+    if(!query) return;
+    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(safe, "gi");
+    // avoid highlighting within inputs/buttons
+    const candidates = $$("main p, main li, main h2, main h3, main h4, main summary, main .v");
+    candidates.forEach(node=>{
+      const text = node.textContent;
+      if(!re.test(text)) return;
+      // rebuild with marks (innerHTML is safe here because we escape first)
+      const html = escapeHtml(text).replace(re, m => `<mark>${m}</mark>`);
+      node.innerHTML = html;
+    });
+  }
+  function runSearch(){
+    const query = q.value.trim();
+    if(query === lastQuery) return;
+    clearMarks();
+    lastQuery = query;
+    if(!query) return;
+
+    markQuery(query);
+
+    // scroll to first match
+    const first = $("mark");
+    if(first){
+      first.scrollIntoView({behavior:"smooth", block:"center"});
+    }
+  }
+  q.addEventListener("input", () => {
+    // small debounce
+    window.clearTimeout(window.__t);
+    window.__t = window.setTimeout(runSearch, 120);
+  });
+
+  // ---------- Scrollspy ----------
+  const navLinks = $$("#navlist a");
+  const targets = navLinks
+    .map(a => $(a.getAttribute("href")))
+    .filter(Boolean);
+
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      const id = "#" + e.target.id;
+      navLinks.forEach(a=>{
+        a.setAttribute("aria-current", a.getAttribute("href") === id ? "true" : "false");
+      });
+    });
+  }, { root: null, threshold: 0.22 });
+
+  targets.forEach(t => io.observe(t));
+
+  // ---------- Initialize ----------
+  applyFilters();
+</script>
+</body>
+</html>

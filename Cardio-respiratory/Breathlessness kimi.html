@@ -1,0 +1,2279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Breathlessness Assessment Algorithm</title>
+    <style>
+        :root {
+            --primary: #005EB8;
+            --primary-dark: #003D82;
+            --secondary: #00A499;
+            --accent: #E87722;
+            --danger: #DA291C;
+            --warning: #FFB81C;
+            --success: #00A499;
+            --info: #41B6E6;
+            --light: #F0F4F8;
+            --dark: #212B32;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --hover-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--light) 0%, #E6F0F7 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            width: 280px;
+            background: var(--dark);
+            color: white;
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            transition: var(--transition);
+            z-index: 100;
+        }
+
+        .progress-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .progress-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-light);
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            opacity: 0.6;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            transform: translateX(8px);
+        }
+
+        .progress-item.completed {
+            opacity: 0.9;
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--dark-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .progress-item.active .progress-icon {
+            background: var(--primary);
+            box-shadow: 0 0 0 4px rgba(0, 94, 184, 0.3);
+        }
+
+        .progress-item.completed .progress-icon {
+            background: var(--success);
+        }
+
+        .progress-item.completed .progress-icon::after {
+            content: '✓';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--success);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            color: white;
+        }
+
+        .progress-line {
+            position: absolute;
+            left: 20px;
+            top: 40px;
+            width: 2px;
+            height: 60px;
+            background: var(--dark-light);
+            z-index: -1;
+        }
+
+        .progress-item:last-child .progress-line {
+            display: none;
+        }
+
+        .progress-item.completed .progress-line {
+            background: var(--success);
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: var(--dark);
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .algorithm-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            overflow: hidden;
+            border-left: 6px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .card.assessment {
+            border-left-color: var(--info);
+        }
+
+        .card.diagnosis {
+            border-left-color: var(--primary);
+        }
+
+        .card.treatment {
+            border-left-color: var(--success);
+        }
+
+        .card.followup {
+            border-left-color: var(--accent);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, rgba(0,0,0,0.02), transparent);
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            transition: var(--transition);
+        }
+
+        .assessment .card-icon {
+            background: var(--info);
+        }
+
+        .diagnosis .card-icon {
+            background: var(--primary);
+        }
+
+        .treatment .card-icon {
+            background: var(--success);
+        }
+
+        .followup .card-icon {
+            background: var(--accent);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            color: var(--dark);
+            margin-top: 0.25rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            color: var(--dark);
+            transition: var(--transition);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        /* Badges */
+        .badges-container {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: var(--transition);
+        }
+
+        .badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, var(--danger), #FF5252);
+            color: white;
+            box-shadow: 0 2px 4px rgba(218, 41, 28, 0.3);
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, var(--warning), #FFD740);
+            color: var(--dark);
+            box-shadow: 0 2px 4px rgba(255, 184, 28, 0.3);
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, var(--success), #00BFA5);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 164, 153, 0.3);
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, var(--info), #29B6F6);
+            color: white;
+            box-shadow: 0 2px 4px rgba(65, 182, 230, 0.3);
+        }
+
+        /* Content Sections */
+        .section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: var(--light);
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .checklist-item:hover {
+            background: #E3F2FD;
+            transform: translateX(4px);
+        }
+
+        .checklist-item input[type="checkbox"] {
+            margin-top: 0.2rem;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .checklist-item label {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .checklist-item.urgent {
+            background: #FFEBEE;
+            border-left: 4px solid var(--danger);
+        }
+
+        .checklist-item.caution {
+            background: #FFF8E1;
+            border-left: 4px solid var(--warning);
+        }
+
+        .checklist-item.stable {
+            background: #E8F5E8;
+            border-left: 4px solid var(--success);
+        }
+
+        /* Diagnostic Grid */
+        .diagnostic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .diagnostic-card {
+            padding: 1rem;
+            border-radius: 8px;
+            background: var(--light);
+            border: 2px solid transparent;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .diagnostic-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .diagnostic-card.selected {
+            border-color: var(--primary);
+            background: #E3F2FD;
+        }
+
+        .diagnostic-card h4 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .diagnostic-card p {
+            font-size: 0.9rem;
+            color: var(--dark);
+        }
+
+        /* Vital Signs */
+        .vitals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .vital-item {
+            background: var(--light);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .vital-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .vital-label {
+            font-size: 0.85rem;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .vital-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .vital-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.1);
+        }
+
+        .vital-input.alert {
+            border-color: var(--danger);
+            background: #FFEBEE;
+        }
+
+        .vital-input.warning {
+            border-color: var(--warning);
+            background: #FFF8E1;
+        }
+
+        .vital-input.normal {
+            border-color: var(--success);
+            background: #E8F5E8;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 94, 184, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #008B7D;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 164, 153, 0.3);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .diagnostic-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .vitals-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--dark);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            z-index: 1000;
+        }
+
+        .tooltip:hover::after {
+            opacity: 1;
+            bottom: 120%;
+        }
+
+        /* Alert Box */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .alert:hover {
+            transform: translateX(4px);
+        }
+
+        .alert-urgent {
+            background: #FFEBEE;
+            border-left: 4px solid var(--danger);
+            color: #B71C1C;
+        }
+
+        .alert-caution {
+            background: #FFF8E1;
+            border-left: 4px solid var(--warning);
+            color: #5D4037;
+        }
+
+        .alert-info {
+            background: #E3F2FD;
+            border-left: 4px solid var(--info);
+            color: #0D47A1;
+        }
+
+        /* Print Styles */
+        @media print {
+            .progress-sidebar {
+                display: none;
+            }
+
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                page-break-inside: avoid;
+            }
+
+            .card-body {
+                max-height: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <div class="progress-header">
+                <h2>Assessment Progress</h2>
+            </div>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon">🩺</div>
+                <div class="progress-line"></div>
+                <div class="progress-text">Initial Assessment</div>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon">🔍</div>
+                <div class="progress-line"></div>
+                <div class="progress-text">Differential Diagnosis</div>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon">💊</div>
+                <div class="progress-line"></div>
+                <div class="progress-text">Management Plan</div>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon">📋</div>
+                <div class="progress-text">Follow-up & Referral</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Breathlessness Assessment Algorithm</h1>
+                <p>Interactive clinical decision support tool based on NICE Clinical Knowledge Summaries (July 2024)</p>
+                <div class="badges-container">
+                    <span class="badge badge-urgent">🚨 Emergency Red Flags</span>
+                    <span class="badge badge-caution">⚠️ Urgent Referral</span>
+                    <span class="badge badge-stable">✅ Primary Care Management</span>
+                </div>
+            </div>
+
+            <div class="algorithm-container">
+                <!-- Assessment Card -->
+                <div class="card assessment fade-in" id="assessment-card">
+                    <div class="card-header" onclick="toggleCard('assessment')">
+                        <div class="card-header-content">
+                            <div class="card-icon">🩺</div>
+                            <div>
+                                <div class="card-title">Initial Assessment</div>
+                                <div class="card-subtitle">Airway, Breathing, Circulation & Vital Signs</div>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <div class="section-title">
+                                    🚨 Emergency Red Flags (Immediate Admission)
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red1" onchange="checkEmergencyFlags()">
+                                        <label for="red1">Oxygen saturation &lt; 92% (or &lt; 90% if known COPD)</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red2" onchange="checkEmergencyFlags()">
+                                        <label for="red2">Severe respiratory distress or exhaustion</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red3" onchange="checkEmergencyFlags()">
+                                        <label for="red3">Altered consciousness or acute confusion</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red4" onchange="checkEmergencyFlags()">
+                                        <label for="red4">Hypotension or arrhythmia</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red5" onchange="checkEmergencyFlags()">
+                                        <label for="red5">Silent chest or poor respiratory effort</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red6" onchange="checkEmergencyFlags()">
+                                        <label for="red6">Peak flow &lt; 50% predicted (asthma/COPD)</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red7" onchange="checkEmergencyFlags()">
+                                        <label for="red7">Suspected pulmonary embolism with hemodynamic instability</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red8" onchange="checkEmergencyFlags()">
+                                        <label for="red8">Suspected tension pneumothorax</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="red9" onchange="checkEmergencyFlags()">
+                                        <label for="red9">Acute pulmonary edema</label>
+                                    </li>
+                                </ul>
+                                <div id="emergency-alert" class="alert alert-urgent" style="display: none;">
+                                    <span>🚨</span>
+                                    <div>
+                                        <strong>EMERGENCY ADMISSION REQUIRED</strong><br>
+                                        Call 999/arrange immediate transfer to Emergency Department
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    📊 Vital Signs Monitoring
+                                </div>
+                                <div class="vitals-grid">
+                                    <div class="vital-item">
+                                        <div class="vital-label">Respiratory Rate (breaths/min)</div>
+                                        <input type="number" class="vital-input" id="resp-rate" 
+                                               placeholder="12-20" min="0" max="60"
+                                               oninput="evaluateVitalSigns()">
+                                        <small class="vital-status" id="rr-status"></small>
+                                    </div>
+                                    <div class="vital-item">
+                                        <div class="vital-label">Heart Rate (bpm)</div>
+                                        <input type="number" class="vital-input" id="heart-rate"
+                                               placeholder="60-100" min="0" max="200"
+                                               oninput="evaluateVitalSigns()">
+                                        <small class="vital-status" id="hr-status"></small>
+                                    </div>
+                                    <div class="vital-item">
+                                        <div class="vital-label">Blood Pressure (mmHg)</div>
+                                        <input type="text" class="vital-input" id="bp"
+                                               placeholder="120/80" oninput="evaluateVitalSigns()">
+                                        <small class="vital-status" id="bp-status"></small>
+                                    </div>
+                                    <div class="vital-item">
+                                        <div class="vital-label">Oxygen Saturation (%)</div>
+                                        <input type="number" class="vital-input" id="oxygen-sat"
+                                               placeholder="94-98" min="0" max="100"
+                                               oninput="evaluateVitalSigns()">
+                                        <small class="vital-status" id="o2-status"></small>
+                                    </div>
+                                    <div class="vital-item">
+                                        <div class="vital-label">Temperature (°C)</div>
+                                        <input type="number" class="vital-input" id="temperature"
+                                               placeholder="36.5-37.5" min="30" max="45" step="0.1"
+                                               oninput="evaluateVitalSigns()">
+                                        <small class="vital-status" id="temp-status"></small>
+                                    </div>
+                                    <div class="vital-item">
+                                        <div class="vital-label">Peak Flow (% predicted)</div>
+                                        <input type="number" class="vital-input" id="peak-flow"
+                                               placeholder="100" min="0" max="150"
+                                               oninput="evaluateVitalSigns()">
+                                        <small class="vital-status" id="pf-status"></small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    📝 Clinical Assessment
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess1">
+                                        <label for="assess1">Document onset and duration of breathlessness</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess2">
+                                        <label for="assess2">Assess severity and impact on daily activities</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess3">
+                                        <label for="assess3">Identify exacerbating/relieving factors</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess4">
+                                        <label for="assess4">Check orthopnoea or paroxysmal nocturnal dyspnoea</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess5">
+                                        <label for="assess5">Assess associated symptoms (chest pain, cough, wheeze)</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess6">
+                                        <label for="assess6">Review comorbidities (cardiac/respiratory disease)</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess7">
+                                        <label for="assess7">Check medication history (β-blockers, inhalers)</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess8">
+                                        <label for="assess8">Assess smoking and occupational exposure</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess9">
+                                        <label for="assess9">Perform focused cardiovascular examination</label>
+                                    </li>
+                                    <li class="checklist-item">
+                                        <input type="checkbox" id="assess10">
+                                        <label for="assess10">Perform focused respiratory examination</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    🔢 Risk Stratification
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card" onclick="toggleCOPDAssessment()">
+                                        <h4>COPD Assessment</h4>
+                                        <p>Check if patient has known COPD or risk factors</p>
+                                        <div id="copd-criteria" style="display: none; margin-top: 1rem;">
+                                            <label><input type="checkbox"> Age > 35 years</label><br>
+                                            <label><input type="checkbox"> Smoking history</label><br>
+                                            <label><input type="checkbox"> Chronic bronchitis symptoms</label><br>
+                                            <label><input type="checkbox"> Progressive exertional dyspnea</label>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="toggleCRB65()">
+                                        <h4>CRB65 Score (Pneumonia)</h4>
+                                        <p>For suspected community-acquired pneumonia</p>
+                                        <div id="crb65-score" style="display: none; margin-top: 1rem;">
+                                            <label><input type="checkbox" onchange="calculateCRB65()"> Confusion</label><br>
+                                            <label><input type="checkbox" onchange="calculateCRB65()"> Respiratory Rate ≥ 30</label><br>
+                                            <label><input type="checkbox" onchange="calculateCRB65()"> BP < 90/60</label><br>
+                                            <label><input type="checkbox" onchange="calculateCRB65()"> Age ≥ 65</label><br>
+                                            <strong>Score: <span id="crb65-result">0</span></strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="assessment-warning" class="alert alert-caution" style="display: none;">
+                                <span>⚠️</span>
+                                <div>
+                                    <strong>Consider Urgent Assessment</strong><br>
+                                    Patient has concerning features requiring same-day evaluation
+                                </div>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="nextStep('diagnosis')">
+                                    Proceed to Diagnosis <span>→</span>
+                                </button>
+                                <button class="btn btn-outline" onclick="printAlgorithm()">
+                                    🖨️ Print Summary
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card diagnosis fade-in" id="diagnosis-card">
+                    <div class="card-header" onclick="toggleCard('diagnosis')">
+                        <div class="card-header-content">
+                            <div class="card-icon">🔍</div>
+                            <div>
+                                <div class="card-title">Differential Diagnosis</div>
+                                <div class="card-subtitle">Identify likely underlying cause</div>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <div class="section-title">
+                                    💓 Cardiac Causes
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('heart-failure')">
+                                        <h4>Acute Heart Failure</h4>
+                                        <p>Ortopnea, PND, elevated JVP, bibasal crackles, gallop rhythm</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">Urgent Admission</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('arrhythmia')">
+                                        <h4>Cardiac Arrhythmia</h4>
+                                        <p>Palpitations, irregular pulse, ECG changes, syncope</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">ECG Required</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('tamponade')">
+                                        <h4>Cardiac Tamponade</h4>
+                                        <p>Hypotension, tachycardia, elevated JVP, muffled heart sounds</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">Emergency</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('mi')">
+                                        <h4>Silent Myocardial Infarction</h4>
+                                        <p>Atypical presentation: isolated dyspnea, fatigue, especially in elderly/diabetics</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">Troponin + ECG</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    🫁 Respiratory Causes
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('asthma')">
+                                        <h4>Acute Asthma Exacerbation</h4>
+                                        <p>Wheeze, cough, chest tightness, variable PEF, triggers</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">PEF < 50%</span>
+                                            <span class="badge badge-caution">Consider Severity</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('copd')">
+                                        <h4>COPD Exacerbation</h4>
+                                        <p>Progressive dyspnea, chronic cough, sputum, smoking history</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">MRC Grade</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('pneumonia')">
+                                        <h4>Community-Acquired Pneumonia</h4>
+                                        <p>Fever, productive cough, pleuritic pain, focal chest signs</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">CRB65 Score</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('pe')">
+                                        <h4>Pulmonary Embolism</h4>
+                                        <p>Acute onset, pleuritic chest pain, risk factors, tachycardia</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">Wells Score</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('pneumothorax')">
+                                        <h4>Pneumothorax</h4>
+                                        <p>Sudden onset pleuritic pain, reduced breath sounds, hyperresonance</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">Immediate CXR</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('pleural-effusion')">
+                                        <h4>Pleural Effusion</h4>
+                                        <p>Progressive dyspnea, stony dull percussion, reduced breath sounds</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">Diagnostic Tap</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('ild')">
+                                        <h4>Interstitial Lung Disease</h4>
+                                        <p>Progressive dyspnea, dry crackles, clubbing, environmental exposure</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">Refer Respiratory</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('bronchiectasis')">
+                                        <h4>Bronchiectasis Exacerbation</h4>
+                                        <p>Chronic productive cough, hemoptysis, recurrent infections</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">Sputum Culture</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    ⚖️ Other Causes
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('anemia')">
+                                        <h4>Anemia</h4>
+                                        <p>Fatigue, pallor, tachycardia, risk factors (bleeding, dietary)</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-stable">FBC Required</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('anxiety')">
+                                        <h4>Hyperventilation Syndrome</h4>
+                                        <p>Tingling, dizziness, chest discomfort, stressful trigger</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-stable">Rebreathing Technique</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('diaphragmatic')">
+                                        <h4>Diaphragmatic Splinting</h4>
+                                        <p>Obesity, ascites, pregnancy causing restrictive pattern</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">Weight Management</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card" onclick="selectDiagnosis('svc')">
+                                        <h4>Superior Vena Cava Syndrome</h4>
+                                        <p>Facial swelling, neck vein distension, chest pain, malignancy</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">Cancer Referral</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    🧪 Recommended Investigations
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="inv1">
+                                        <label for="inv1">Bedside Capillary Blood Glucose (if diabetic)</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="inv2">
+                                        <label for="inv2">Chest X-ray (urgent if red flags)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="inv3">
+                                        <label for="inv3">Pulse Oximetry Monitoring</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="inv4">
+                                        <label for="inv4">ECG (if cardiac cause suspected)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="inv5">
+                                        <label for="inv5">Peak Flow (asthma/COPD)</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="inv6">
+                                        <label for="inv6">Blood Tests: FBC, U&E, CRP</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="inv7">
+                                        <label for="inv7">BNP/NT-proBNP (if heart failure suspected)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="inv8">
+                                        <label for="inv8">Sputum Culture (if productive cough)</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="inv9">
+                                        <label for="inv9">D-dimer (if PE suspected, after risk assessment)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="inv10">
+                                        <label for="inv10">Thyroid Function (if indicated)</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div id="diagnosis-summary" class="alert alert-info" style="display: none; margin-top: 1rem;">
+                                <span>ℹ️</span>
+                                <div id="diagnosis-summary-text"></div>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" onclick="previousStep('assessment')">
+                                    ← Back to Assessment
+                                </button>
+                                <button class="btn btn-primary" onclick="nextStep('treatment')">
+                                    Proceed to Treatment <span>→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card treatment fade-in" id="treatment-card">
+                    <div class="card-header" onclick="toggleCard('treatment')">
+                        <div class="card-header-content">
+                            <div class="card-icon">💊</div>
+                            <div>
+                                <div class="card-title">Management Plan</div>
+                                <div class="card-subtitle">Evidence-based treatment strategies</div>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div id="treatment-content">
+                                <div class="alert alert-info">
+                                    <span>ℹ️</span>
+                                    <div>Select a diagnosis to view specific management recommendations</div>
+                                </div>
+                            </div>
+
+                            <div class="section" id="oxygen-therapy-section" style="display: none;">
+                                <div class="section-title">
+                                    💨 Oxygen Therapy Protocol
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card">
+                                        <h4>Standard Target (Most Patients)</h4>
+                                        <p>SpO₂: 94-98%</p>
+                                        <p>Delivery: Nasal cannula (2-6 L/min) or simple face mask (5-10 L/min)</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-stable">94-98%</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>COPD/Carbon Dioxide Retainers</h4>
+                                        <p>SpO₂: 88-92%</p>
+                                        <p>Delivery: Venturi mask 24% (2-3 L/min) or 28% (4 L/min)</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">88-92%</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>Critically Ill/Unstable</h4>
+                                        <p>SpO₂: 94-98%</p>
+                                        <p>Delivery: Reservoir mask 15 L/min initially, then titrate</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">High Flow</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-caution">
+                                    <span>⚠️</span>
+                                    <div>
+                                        <strong>Monitoring:</strong> Check response within 5-10 minutes. Document target saturation range. Monitor for hypercapnia if at risk.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section" id="medications-section" style="display: none;">
+                                <div class="section-title">
+                                    💊 Pharmacological Management
+                                </div>
+                                <div id="medication-content"></div>
+                            </div>
+
+                            <div class="section" id="non-pharmacological-section" style="display: none;">
+                                <div class="section-title">
+                                    🧘 Non-Pharmacological Interventions
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="nonpharm1">
+                                        <label for="nonpharm1">Positioning: Sit upright (maximizes lung expansion)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="nonpharm2">
+                                        <label for="nonpharm2">Pursed-lip breathing (COPD)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="nonpharm3">
+                                        <label for="nonpharm3">Fan blowing cool air on face</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="nonpharm4">
+                                        <label for="nonpharm4">Anxiety management techniques</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="nonpharm5">
+                                        <label for="nonpharm5">Energy conservation strategies</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="nonpharm6">
+                                        <label for="nonpharm6">Pulmonary rehabilitation referral (stable phase)</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" onclick="previousStep('diagnosis')">
+                                    ← Back to Diagnosis
+                                </button>
+                                <button class="btn btn-primary" onclick="nextStep('followup')">
+                                    Proceed to Follow-up <span>→</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card followup fade-in" id="followup-card">
+                    <div class="card-header" onclick="toggleCard('followup')">
+                        <div class="card-header-content">
+                            <div class="card-icon">📋</div>
+                            <div>
+                                <div class="card-title">Follow-up & Referral</div>
+                                <div class="card-subtitle">Ongoing care and escalation pathways</div>
+                            </div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <div class="section-title">
+                                    🚨 Immediate/ Emergency Referral
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="refer1">
+                                        <label for="refer1">Any red flag features (SpO₂ &lt; 92%, severe distress, etc.)</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="refer2">
+                                        <label for="refer2">Suspected pulmonary embolism with hemodynamic instability</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="refer3">
+                                        <label for="refer3">Tension pneumothorax</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="refer4">
+                                        <label for="refer4">Cardiac tamponade</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="refer5">
+                                        <label for="refer5">Acute pulmonary edema refractory to initial treatment</label>
+                                    </li>
+                                    <li class="checklist-item urgent">
+                                        <input type="checkbox" id="refer6">
+                                        <label for="refer6">Severe asthma/COPD exacerbation (PEF &lt; 33%)</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    ⚡ Urgent Referral 
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent1">
+                                        <label for="urgent1">Suspected lung cancer (CXR findings or persistent symptoms in smoker ≥ 40 years)</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent2">
+                                        <label for="urgent2">Community-acquired pneumonia with CRB65 score ≥ 3</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent3">
+                                        <label for="urgent3">New heart failure diagnosis requiring specialist input</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent4">
+                                        <label for="urgent4">Suspected pulmonary embolism (stable)</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent5">
+                                        <label for="urgent5">Large or symptomatic pleural effusion</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent6">
+                                        <label for="urgent6">Unexplained persistent breathlessness with abnormal investigations</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent7">
+                                        <label for="urgent7">Superior vena cava obstruction</label>
+                                    </li>
+                                    <li class="checklist-item caution">
+                                        <input type="checkbox" id="urgent8">
+                                        <label for="urgent8">Women with ascites (possible ovarian cancer)</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    👨‍⚕️ Routine Referral
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine1">
+                                        <label for="routine1">Stable COPD (to respiratory team)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine2">
+                                        <label for="routine2">Stable asthma (to asthma clinic)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine3">
+                                        <label for="routine3">Interstitial lung disease (to respiratory specialist)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine4">
+                                        <label for="routine4">Bronchiectasis (to respiratory team)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine5">
+                                        <label for="routine5">Cardiac arrhythmia (to cardiology)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine6">
+                                        <label for="routine6">Chronic heart failure (to cardiology/heart failure team)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine7">
+                                        <label for="routine7">Anemia requiring further investigation</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="routine8">
+                                        <label for="routine8">Anxiety-related breathlessness (to mental health services)</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    📅 Follow-up Schedule
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card">
+                                        <h4>24-48 Hours</h4>
+                                        <p>Review response to treatment, check vitals, SpO₂ trends</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-urgent">🕐</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>1 Week</h4>
+                                        <p>Assess symptom improvement, medication adherence, side effects</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-caution">📆</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>4-6 Weeks</h4>
+                                        <p>Comprehensive review, repeat investigations if needed, referral outcomes</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-stable">📊</span>
+                                        </div>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>3 Months</h4>
+                                        <p>Long-term management plan, pulmonary rehabilitation, lifestyle modifications</p>
+                                        <div class="badges-container">
+                                            <span class="badge badge-stable">✅</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    🏠 Self-Management Plan
+                                </div>
+                                <ul class="checklist">
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self1">
+                                        <label for="self1">Provide written action plan (asthma/COPD)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self2">
+                                        <label for="self2">Educate on inhaler technique</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self3">
+                                        <label for="self3">Smoking cessation advice and referral</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self4">
+                                        <label for="self4">Vaccination status (influenza, pneumococcal)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self5">
+                                        <label for="self5">Pulmonary rehabilitation information</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self6">
+                                        <label for="self6">Breathing techniques and energy conservation</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self7">
+                                        <label for="self7">When to seek urgent help (red flags)</label>
+                                    </li>
+                                    <li class="checklist-item stable">
+                                        <input type="checkbox" id="self8">
+                                        <label for="self8">Home pulse oximetry instructions if appropriate</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-title">
+                                    📊 Outcome Measures
+                                </div>
+                                <div class="diagnostic-grid">
+                                    <div class="diagnostic-card">
+                                        <h4>Symptom Scores</h4>
+                                        <p>mMRC Dyspnea Scale, CAT Score (COPD), Asthma Control Test</p>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>Quality of Life</h4>
+                                        <p>EQ-5D, SGRQ, or disease-specific QoL measures</p>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>Functional Status</h4>
+                                        <p>6-Minute Walk Test, exercise tolerance, daily activity levels</p>
+                                    </div>
+                                    <div class="diagnostic-card">
+                                        <h4>Exacerbation Rate</h4>
+                                        <p>Number of exacerbations requiring steroids/antibiotics/hospitalization</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="final-summary" class="alert alert-info" style="margin-top: 2rem;">
+                                <span>✅</span>
+                                <div>
+                                    <strong>Algorithm Complete</strong><br>
+                                    Review all sections and ensure appropriate actions have been taken based on clinical judgment.
+                                </div>
+                            </div>
+
+                            <div class="btn-group">
+                                <button class="btn btn-secondary" onclick="previousStep('treatment')">
+                                    ← Back to Treatment
+                                </button>
+                                <button class="btn btn-primary" onclick="resetAlgorithm()">
+                                    🔄 Start New Assessment
+                                </button>
+                                <button class="btn btn-outline" onclick="exportSummary()">
+                                    📤 Export Summary
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global state
+        let currentStep = 'assessment';
+        let selectedDiagnosis = null;
+        let vitalSigns = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load saved state if exists
+            loadState();
+            
+            // Expand first card
+            document.getElementById('assessment-card').classList.add('expanded');
+            
+            // Add pulse animation to urgent badges
+            document.querySelectorAll('.badge-urgent').forEach(badge => {
+                badge.classList.add('pulse');
+            });
+
+            // Add smooth scrolling
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const step = this.dataset.step;
+                    const card = document.getElementById(step + '-card');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+        });
+
+        // Card toggle functionality
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            card.classList.toggle('expanded');
+            
+            // Update progress indicator
+            updateProgressIndicator(cardId);
+            
+            // Save state
+            saveState();
+        }
+
+        // Progress indicator update
+        function updateProgressIndicator(step) {
+            document.querySelectorAll('.progress-item').forEach(item => {
+                if (item.dataset.step === step) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // Step navigation
+        function nextStep(step) {
+            // Validate current step
+            if (!validateStep(currentStep)) {
+                return;
+            }
+
+            // Update progress
+            const currentItem = document.querySelector(`[data-step="${currentStep}"]`);
+            currentItem.classList.add('completed');
+            currentItem.classList.remove('active');
+
+            // Activate next step
+            const nextItem = document.querySelector(`[data-step="${step}"]`);
+            nextItem.classList.add('active');
+
+            // Expand next card
+            document.getElementById(currentStep + '-card').classList.remove('expanded');
+            const nextCard = document.getElementById(step + '-card');
+            nextCard.classList.add('expanded');
+            nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            currentStep = step;
+            saveState();
+
+            // Trigger step-specific logic
+            if (step === 'treatment') {
+                updateTreatmentContent();
+            }
+        }
+
+        function previousStep(step) {
+            // Update progress
+            const currentItem = document.querySelector(`[data-step="${currentStep}"]`);
+            currentItem.classList.remove('active');
+
+            const prevItem = document.querySelector(`[data-step="${step}"]`);
+            prevItem.classList.add('active');
+            prevItem.classList.remove('completed');
+
+            // Expand previous card
+            document.getElementById(currentStep + '-card').classList.remove('expanded');
+            const prevCard = document.getElementById(step + '-card');
+            prevCard.classList.add('expanded');
+            prevCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            currentStep = step;
+            saveState();
+        }
+
+        // Step validation
+        function validateStep(step) {
+            switch(step) {
+                case 'assessment':
+                    // Check if any red flags are selected
+                    const redFlags = document.querySelectorAll('#assessment-card .checklist-item.urgent input[type="checkbox"]:checked');
+                    if (redFlags.length > 0) {
+                        const proceed = confirm('🚨 RED FLAGS IDENTIFIED\n\nYou have selected emergency features requiring immediate admission.\n\nDo you want to continue to diagnosis (for educational purposes) or focus on emergency management?');
+                        if (!proceed) {
+                            // Scroll to emergency alert
+                            document.getElementById('emergency-alert').scrollIntoView({ behavior: 'smooth' });
+                            return false;
+                        }
+                    }
+                    // Check vital signs are documented
+                    const vitals = ['resp-rate', 'heart-rate', 'bp', 'oxygen-sat', 'temperature'];
+                    const vitalsCompleted = vitals.some(id => document.getElementById(id).value !== '');
+                    if (!vitalsCompleted) {
+                        alert('⚠️ Please document at least one vital sign before proceeding.');
+                        return false;
+                    }
+                    break;
+                case 'diagnosis':
+                    if (!selectedDiagnosis) {
+                        alert('⚠️ Please select a differential diagnosis before proceeding to treatment.');
+                        return false;
+                    }
+                    break;
+            }
+            return true;
+        }
+
+        // Vital signs evaluation
+        function evaluateVitalSigns() {
+            const rr = parseInt(document.getElementById('resp-rate').value);
+            const hr = parseInt(document.getElementById('heart-rate').value);
+            const bp = document.getElementById('bp').value;
+            const o2 = parseInt(document.getElementById('oxygen-sat').value);
+            const temp = parseFloat(document.getElementById('temperature').value);
+            const pf = parseInt(document.getElementById('peak-flow').value);
+
+            // Respiratory Rate
+            if (rr) {
+                const rrInput = document.getElementById('resp-rate');
+                if (rr > 30) {
+                    rrInput.className = 'vital-input alert';
+                    document.getElementById('rr-status').innerHTML = '<span style="color: #DA291C;">⚠️ High</span>';
+                } else if (rr < 12) {
+                    rrInput.className = 'vital-input warning';
+                    document.getElementById('rr-status').innerHTML = '<span style="color: #FFB81C;">⚡ Low</span>';
+                } else {
+                    rrInput.className = 'vital-input normal';
+                    document.getElementById('rr-status').innerHTML = '<span style="color: #00A499;">✓ Normal</span>';
+                }
+            }
+
+            // Heart Rate
+            if (hr) {
+                const hrInput = document.getElementById('heart-rate');
+                if (hr > 120 || hr < 50) {
+                    hrInput.className = 'vital-input alert';
+                    document.getElementById('hr-status').innerHTML = '<span style="color: #DA291C;">⚠️ Abnormal</span>';
+                } else if (hr > 100 || hr < 60) {
+                    hrInput.className = 'vital-input warning';
+                    document.getElementById('hr-status').innerHTML = '<span style="color: #FFB81C;">⚡ Borderline</span>';
+                } else {
+                    hrInput.className = 'vital-input normal';
+                    document.getElementById('hr-status').innerHTML = '<span style="color: #00A499;">✓ Normal</span>';
+                }
+            }
+
+            // Oxygen Saturation
+            if (o2) {
+                const o2Input = document.getElementById('oxygen-sat');
+                if (o2 < 92) {
+                    o2Input.className = 'vital-input alert';
+                    document.getElementById('o2-status').innerHTML = '<span style="color: #DA291C;">🚨 Critical</span>';
+                    checkEmergencyFlags();
+                } else if (o2 < 95) {
+                    o2Input.className = 'vital-input warning';
+                    document.getElementById('o2-status').innerHTML = '<span style="color: #FFB81C;">⚡ Low</span>';
+                } else {
+                    o2Input.className = 'vital-input normal';
+                    document.getElementById('o2-status').innerHTML = '<span style="color: #00A499;">✓ Normal</span>';
+                }
+            }
+
+            // Peak Flow
+            if (pf) {
+                const pfInput = document.getElementById('peak-flow');
+                if (pf < 50) {
+                    pfInput.className = 'vital-input alert';
+                    document.getElementById('pf-status').innerHTML = '<span style="color: #DA291C;">🚨 Severe</span>';
+                } else if (pf < 75) {
+                    pfInput.className = 'vital-input warning';
+                    document.getElementById('pf-status').innerHTML = '<span style="color: #FFB81C;">⚡ Moderate</span>';
+                } else {
+                    pfInput.className = 'vital-input normal';
+                    document.getElementById('pf-status').innerHTML = '<span style="color: #00A499;">✓ Mild</span>';
+                }
+            }
+
+            saveState();
+        }
+
+        // Emergency flags checker
+        function checkEmergencyFlags() {
+            const redFlags = document.querySelectorAll('#assessment-card .checklist-item.urgent input[type="checkbox"]:checked');
+            const emergencyAlert = document.getElementById('emergency-alert');
+            
+            if (redFlags.length > 0) {
+                emergencyAlert.style.display = 'flex';
+                emergencyAlert.scrollIntoView({ behavior: 'smooth' });
+                
+                // Auto-check oxygen saturation if SpO2 < 92
+                const o2 = parseInt(document.getElementById('oxygen-sat').value);
+                if (o2 < 92) {
+                    document.getElementById('red1').checked = true;
+                }
+            } else {
+                emergencyAlert.style.display = 'none';
+            }
+        }
+
+        // CRB65 calculation
+        function calculateCRB65() {
+            const checkboxes = document.querySelectorAll('#crb65-score input[type="checkbox"]:checked');
+            document.getElementById('crb65-result').textContent = checkboxes.length;
+            
+            // Show admission recommendation
+            if (checkboxes.length >= 3) {
+                alert('⚠️ CRB65 Score ≥ 3: Urgent hospital admission recommended');
+            } else if (checkboxes.length >= 1) {
+                document.getElementById('assessment-warning').style.display = 'flex';
+            } else {
+                document.getElementById('assessment-warning').style.display = 'none';
+            }
+        }
+
+        // Diagnosis selection
+        function selectDiagnosis(diagnosis) {
+            // Remove previous selection
+            document.querySelectorAll('.diagnostic-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Add selection to clicked card
+            event.target.closest('.diagnostic-card').classList.add('selected');
+            
+            selectedDiagnosis = diagnosis;
+            
+            // Show diagnosis summary
+            const summaryDiv = document.getElementById('diagnosis-summary');
+            const summaryText = document.getElementById('diagnosis-summary-text');
+            
+            const diagnosisInfo = {
+                'heart-failure': 'Likely acute heart failure. Order BNP/NT-proBNP, ECG, CXR. Consider urgent admission.',
+                'arrhythmia': 'Suspected cardiac arrhythmia. Immediate ECG required. Consider anticoagulation if AF present.',
+                'tamponade': 'Cardiac tamponade is a medical emergency. Immediate pericardiocentesis required.',
+                'mi': 'Silent MI can present as dyspnea. Order troponin, ECG, and refer to cardiology urgently.',
+                'asthma': 'Acute asthma exacerbation. Assess severity using PEF. Consider steroids and bronchodilators.',
+                'copd': 'COPD exacerbation. Increase bronchodilators, consider steroids and antibiotics if infective.',
+                'pneumonia': 'Community-acquired pneumonia. Calculate CRB65 score. Consider antibiotics.',
+                'pe': 'Suspected pulmonary embolism. Use Wells score. Consider D-dimer or CT pulmonary angiogram.',
+                'pneumothorax': 'Pneumothorax requires urgent CXR. Large or symptomatic requires drainage.',
+                'pleural-effusion': 'Pleural effusion needs diagnostic tap. Consider causes: heart failure, malignancy, infection.',
+                'ild': 'Interstitial lung disease. Refer to respiratory specialist. Consider high-resolution CT.',
+                'bronchiectasis': 'Bronchiectasis exacerbation. Sputum culture, increase airway clearance, antibiotics.',
+                'anemia': 'Anemia causing dyspnea. Order FBC, reticulocytes, iron studies. Consider transfusion if severe.',
+                'anxiety': 'Hyperventilation syndrome. Reassurance, breathing techniques, treat underlying anxiety.',
+                'diaphragmatic': 'Diaphragmatic splinting. Weight management, treat ascites, consider diuretics.',
+                'svc': 'Superior vena cava syndrome. Urgent oncology referral. Consider stenting.'
+            };
+            
+            summaryText.innerHTML = `<strong>Selected Diagnosis:</strong> ${diagnosisInfo[diagnosis] || 'Management plan will be displayed in the Treatment section.'}`;
+            summaryDiv.style.display = 'flex';
+            
+            saveState();
+            
+            // Scroll to summary
+            summaryDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // COPD assessment toggle
+        function toggleCOPDAssessment() {
+            const criteria = document.getElementById('copd-criteria');
+            criteria.style.display = criteria.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // CRB65 toggle
+        function toggleCRB65() {
+            const score = document.getElementById('crb65-score');
+            score.style.display = score.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Treatment content updater
+        function updateTreatmentContent() {
+            if (!selectedDiagnosis) return;
+
+            const contentDiv = document.getElementById('treatment-content');
+            const oxygenSection = document.getElementById('oxygen-therapy-section');
+            const medicationSection = document.getElementById('medications-section');
+            const nonPharmSection = document.getElementById('non-pharmacological-section');
+
+            // Show oxygen therapy section for most respiratory/cardiac conditions
+            const conditionsRequiringOxygen = ['heart-failure', 'asthma', 'copd', 'pneumonia', 'pe', 'pneumothorax', 'pleural-effusion', 'ild', 'bronchiectasis'];
+            if (conditionsRequiringOxygen.includes(selectedDiagnosis)) {
+                oxygenSection.style.display = 'block';
+            }
+
+            // Show non-pharmacological section for most conditions
+            nonPharmSection.style.display = 'block';
+
+            // Medication content based on diagnosis
+            medicationSection.style.display = 'block';
+            const medicationContent = document.getElementById('medication-content');
+
+            const treatmentPlans = {
+                'heart-failure': `
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Acute Management</h4>
+                            <ul>
+                                <li>IV Furosemide 20-40 mg</li>
+                                <li>Nitrates if hypertensive</li>
+                                <li>Oxygen if SpO₂ < 94%</li>
+                                <li>CPAP if severe</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Long-term</h4>
+                            <ul>
+                                <li>ACE inhibitor</li>
+                                <li>Beta-blocker</li>
+                                <li>MR antagonist</li>
+                                <li>SGLT2 inhibitor</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                'asthma': `
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Mild-Moderate</h4>
+                            <ul>
+                                <li>Short-acting β2 agonist (SABA)</li>
+                                <li>Consider oral steroids if poor response</li>
+                                <li>Continue preventer if on one</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Severe</h4>
+                            <ul>
+                                <li>Oxygen to maintain 94-98%</li>
+                                <li>SABA via nebulizer</li>
+                                <li>Prednisolone 40-50 mg</li>
+                                <li>Ipratropium bromide</li>
+                                <li>Consider magnesium sulfate</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-caution">
+                        <span>⚠️</span>
+                        <div>
+                            <strong>Discharge Criteria:</strong> PEF > 75% predicted, symptoms resolved, oxygen not required
+                        </div>
+                    </div>
+                `,
+                'copd': `
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Bronchodilators</h4>
+                            <ul>
+                                <li>Increase SABA and SAMA frequency</li>
+                                <li>Consider LAMA/LABA if not already prescribed</li>
+                                <li>Consider nebulizers if severe</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Steroids</h4>
+                            <ul>
+                                <li>Prednisolone 30 mg for 5 days</li>
+                                <li>No taper needed for short course</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Antibiotics</h4>
+                            <ul>
+                                <li>If increased sputum purulence + volume</li>
+                                <li>Amoxicillin or doxycycline</li>
+                                <li>Check local resistance patterns</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Oxygen</h4>
+                            <ul>
+                                <li>Target 88-92% for hypercapnic risk</li>
+                                <li>Venturi mask preferred</li>
+                                <li>Monitor ABG if hypercapnic</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                'pneumonia': `
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Antibiotic Choice</h4>
+                            <ul>
+                                <li>Amoxicillin 500 mg TDS for 5 days</li>
+                                <li>Alternative: Doxycycline 200 mg then 100 mg daily</li>
+                                <li>Macrolide if atypical suspected</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Supportive</h4>
+                            <ul>
+                                <li>Analgesia for pleuritic pain</li>
+                                <li>Antipyretics if febrile</li>
+                                <li>Hydration and rest</li>
+                                <li>Consider oxygen if hypoxic</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                'pe': `
+                    <div class="alert alert-urgent">
+                        <span>🚨</span>
+                        <div>
+                            <strong>Immediate Actions:</strong> Oxygen, analgesia, consider anticoagulation after diagnosis confirmed
+                        </div>
+                    </div>
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Anticoagulation</h4>
+                            <ul>
+                                <li>Apixaban 10 mg BD for 7 days, then 5 mg BD</li>
+                                <li>Or rivaroxaban 15 mg BD for 21 days, then 20 mg OD</li>
+                                <li>LMWH if DOACs contraindicated</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Thrombolysis</h4>
+                            <ul>
+                                <li>Consider if massive PE with hemodynamic instability</li>
+                                <li>Alteplase 50 mg IV over 2 hours</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                'anemia': `
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Iron Deficiency</h4>
+                            <ul>
+                                <li>Ferrous sulfate 200 mg OD or BD</li>
+                                <li>Continue for 3 months after Hb normalizes</li>
+                                <li>Consider IV iron if not tolerated</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Severe Anemia</h4>
+                            <ul>
+                                <li>Consider transfusion if Hb < 70 or symptomatic</li>
+                                <li>Rule out active bleeding</li>
+                                <li>Urgent referral if hemodynamically unstable</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                'anxiety': `
+                    <div class="diagnostic-grid">
+                        <div class="diagnostic-card">
+                            <h4>Immediate Relief</h4>
+                            <ul>
+                                <li>Reassurance and explanation</li>
+                                <li>Paper bag rebreathing (10-15 breaths)</li>
+                                <li>Slow breathing exercises (6-8 breaths/min)</li>
+                            </ul>
+                        </div>
+                        <div class="diagnostic-card">
+                            <h4>Long-term Management</h4>
+                            <ul>
+                                <li>CBT for anxiety/panic disorder</li>
+                                <li>SSRIs if persistent (sertralline 50 mg OD)</li>
+                                <li>Relaxation techniques, mindfulness</li>
+                            </ul>
+                        </div>
+                    </div>
+                `
+            };
+
+            medicationContent.innerHTML = treatmentPlans[selectedDiagnosis] || `
+                <div class="alert alert-info">
+                    <span>ℹ️</span>
+                    <div>Specific treatment plan will be based on confirmed diagnosis and patient factors</div>
+                </div>
+            `;
+        }
+
+        // State management
+        function saveState() {
+            const state = {
+                currentStep: currentStep,
+                selectedDiagnosis: selectedDiagnosis,
+                vitalSigns: {
+                    rr: document.getElementById('resp-rate').value,
+                    hr: document.getElementById('heart-rate').value,
+                    bp: document.getElementById('bp').value,
+                    o2: document.getElementById('oxygen-sat').value,
+                    temp: document.getElementById('temperature').value,
+                    pf: document.getElementById('peak-flow').value
+                },
+                checkboxes: {}
+            };
+
+            // Save all checkbox states
+            document.querySelectorAll('input[type="checkbox"]').forEach((checkbox, index) => {
+                state.checkboxes[index] = checkbox.checked;
+            });
+
+            localStorage.setItem('breathlessnessAlgorithm', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('breathlessnessAlgorithm');
+            if (saved) {
+                const state = JSON.parse(saved);
+                
+                if (state.currentStep) {
+                    // Don't auto-advance to later steps on load
+                    updateProgressIndicator('assessment');
+                }
+                
+                if (state.selectedDiagnosis) {
+                    selectedDiagnosis = state.selectedDiagnosis;
+                }
+                
+                if (state.vitalSigns) {
+                    Object.entries(state.vitalSigns).forEach(([key, value]) => {
+                        const element = document.getElementById(Object.keys(state.vitalSigns).find(k => k === key) === 'rr' ? 'resp-rate' : 
+                                                                  Object.keys(state.vitalSigns).find(k => k === key) === 'hr' ? 'heart-rate' : 
+                                                                  Object.keys(state.vitalSigns).find(k => k === key) === 'bp' ? 'bp' : 
+                                                                  Object.keys(state.vitalSigns).find(k => k === key) === 'o2' ? 'oxygen-sat' : 
+                                                                  Object.keys(state.vitalSigns).find(k => k === key) === 'temp' ? 'temperature' : 'peak-flow');
+                        if (element && value) {
+                            element.value = value;
+                        }
+                    });
+                    evaluateVitalSigns();
+                }
+                
+                if (state.checkboxes) {
+                    document.querySelectorAll('input[type="checkbox"]').forEach((checkbox, index) => {
+                        if (state.checkboxes[index] !== undefined) {
+                            checkbox.checked = state.checkboxes[index];
+                        }
+                    });
+                }
+            }
+        }
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Export summary
+        function exportSummary() {
+            const summary = generateSummary();
+            const blob = new Blob([summary], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'Breathlessness_Assessment_Summary.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function generateSummary() {
+            const date = new Date().toLocaleString();
+            let summary = `Breathlessness Assessment Summary\n`;
+            summary += `Generated: ${date}\n`;
+            summary += `================================\n\n`;
+
+            // Vital Signs
+            summary += `VITAL SIGNS\n`;
+            summary += `Respiratory Rate: ${document.getElementById('resp-rate').value || 'Not recorded'} breaths/min\n`;
+            summary += `Heart Rate: ${document.getElementById('heart-rate').value || 'Not recorded'} bpm\n`;
+            summary += `Blood Pressure: ${document.getElementById('bp').value || 'Not recorded'} mmHg\n`;
+            summary += `Oxygen Saturation: ${document.getElementById('oxygen-sat').value || 'Not recorded'}%\n`;
+            summary += `Temperature: ${document.getElementById('temperature').value || 'Not recorded'}°C\n`;
+            summary += `Peak Flow: ${document.getElementById('peak-flow').value || 'Not recorded'}% predicted\n\n`;
+
+            // Red Flags
+            const redFlags = document.querySelectorAll('#assessment-card .checklist-item.urgent input[type="checkbox"]:checked');
+            if (redFlags.length > 0) {
+                summary += `EMERGENCY RED FLAGS IDENTIFIED: ${redFlags.length}\n`;
+                redFlags.forEach(flag => {
+                    summary += `- ${flag.nextElementSibling.textContent}\n`;
+                });
+                summary += `\nACTION: EMERGENCY ADMISSION REQUIRED\n\n`;
+            }
+
+            // Diagnosis
+            if (selectedDiagnosis) {
+                summary += `SELECTED DIAGNOSIS: ${selectedDiagnosis}\n\n`;
+            }
+
+            // Treatment
+            summary += `TREATMENT PLAN\n`;
+            summary += `Based on selected diagnosis and clinical assessment\n\n`;
+
+            // Follow-up
+            summary += `FOLLOW-UP ARRANGED\n`;
+            const followUps = document.querySelectorAll('#followup-card input[type="checkbox"]:checked');
+            if (followUps.length > 0) {
+                followUps.forEach(fu => {
+                    summary += `- ${fu.nextElementSibling.textContent}\n`;
+                });
+            } else {
+                summary += `No specific follow-up actions recorded\n`;
+            }
+
+            return summary;
+        }
+
+        // Reset algorithm
+        function resetAlgorithm() {
+            if (confirm('Are you sure you want to reset all data and start a new assessment?')) {
+                localStorage.removeItem('breathlessnessAlgorithm');
+                location.reload();
+            }
+        }
+
+        // Tooltip functionality
+        document.addEventListener('mouseover', function(e) {
+            if (e.target.classList.contains('tooltip')) {
+                const tooltip = e.target.getAttribute('data-tooltip');
+                if (tooltip) {
+                    // Additional tooltip styling can be added here
+                }
+            }
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.target.classList.contains('vital-input')) {
+                e.preventDefault();
+                // Move to next input
+                const inputs = Array.from(document.querySelectorAll('.vital-input'));
+                const currentIndex = inputs.indexOf(e.target);
+                if (currentIndex < inputs.length - 1) {
+                    inputs[currentIndex + 1].focus();
+                }
+            }
+        });
+
+        // Auto-save on input changes
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('vital-input') || e.target.type === 'checkbox') {
+                saveState();
+            }
+        });
+
+        // Add smooth transitions for all interactive elements
+        document.querySelectorAll('button, .diagnostic-card, .checklist-item').forEach(element => {
+            element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        });
+
+        // Add focus effects for accessibility
+        document.querySelectorAll('input, button, .card-header').forEach(element => {
+            element.addEventListener('focus', function() {
+                this.style.outline = '3px solid rgba(0, 94, 184, 0.3)';
+                this.style.outlineOffset = '2px';
+            });
+            element.addEventListener('blur', function() {
+                this.style.outline = 'none';
+            });
+        });
+
+        // Add loading animation for treatment section
+        function showTreatmentLoader() {
+            const loader = document.createElement('div');
+            loader.innerHTML = `
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="border: 4px solid #f3f3f3; border-top: 4px solid #005EB8; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                    <p style="margin-top: 1rem; color: #005EB8;">Loading treatment recommendations...</p>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+            document.getElementById('treatment-content').appendChild(loader);
+            
+            setTimeout(() => {
+                loader.remove();
+            }, 1000);
+        }
+
+        // Enhance treatment section updates
+        const originalUpdateTreatmentContent = updateTreatmentContent;
+        updateTreatmentContent = function() {
+            showTreatmentLoader();
+            setTimeout(() => {
+                originalUpdateTreatmentContent();
+            }, 1000);
+        };
+
+        // Add print-specific styles for better printing
+        const printStyles = document.createElement('style');
+        printStyles.innerHTML = `
+            @media print {
+                body { background: white; }
+                .progress-sidebar { display: none; }
+                .card { box-shadow: none; break-inside: avoid; }
+                .card-body { max-height: none !important; }
+                .badges-container { display: none; }
+                .btn-group { display: none; }
+                .expand-icon { display: none; }
+                .alert { border: 2px solid #ccc; }
+            }
+        `;
+        document.head.appendChild(printStyles);
+
+        // Add final completion check
+        function checkAlgorithmCompletion() {
+            const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+            const checkedCheckboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+            const completionRate = (checkedCheckboxes.length / allCheckboxes.length * 100).toFixed(0);
+            
+            if (completionRate > 80) {
+                const completionBadge = document.createElement('div');
+                completionBadge.innerHTML = `
+                    <div class="badge badge-stable" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; padding: 1rem; font-size: 1rem;">
+                        ✅ ${completionRate}% Complete
+                    </div>
+                `;
+                document.body.appendChild(completionBadge);
+                
+                setTimeout(() => {
+                    completionBadge.remove();
+                }, 5000);
+            }
+        }
+
+        // Add event listener for checkbox changes to track completion
+        document.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox') {
+                setTimeout(checkAlgorithmCompletion, 500);
+            }
+        });
+
+        // Initialize completion tracking
+        setTimeout(checkAlgorithmCompletion, 2000);
+    </script>
+</body>
+</html>

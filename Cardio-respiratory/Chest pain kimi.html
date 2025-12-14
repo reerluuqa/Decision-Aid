@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chest Pain Assessment Algorithm</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --assessment-color: #0d6efd;
+            --diagnosis-color: #6f42c1;
+            --treatment-color: #dc3545;
+            --followup-color: #198754;
+            --urgent-red: #dc3545;
+            --caution-amber: #ffc107;
+            --stable-green: #28a745;
+            --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding-bottom: 2rem;
+            color: #495057;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0,0,0,0.05);
+            width: 280px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, var(--assessment-color) 0%, #4dabf7 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+        }
+
+        .progress-item.completed {
+            background: linear-gradient(135deg, var(--stable-green) 0%, #40c057 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            background: rgba(255, 255, 255, 0.8);
+            color: #495057;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon,
+        .progress-item.completed .progress-icon {
+            background: rgba(255, 255, 255, 0.9);
+            color: inherit;
+        }
+
+        .progress-bar {
+            width: 2px;
+            height: 40px;
+            background: #dee2e6;
+            margin-left: 19px;
+            margin-top: -0.5rem;
+            margin-bottom: -0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-bar.filled {
+            background: linear-gradient(to bottom, var(--stable-green), #40c057);
+        }
+
+        /* Main Content */
+        .content-area {
+            flex: 1;
+        }
+
+        .algorithm-header {
+            background: linear-gradient(135deg, var(--assessment-color) 0%, #4dabf7 100%);
+            color: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .algorithm-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(30deg);
+        }
+
+        .algorithm-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+            position: relative;
+        }
+
+        .algorithm-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Stage Cards */
+        .stage-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stage-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            transition: all 0.4s ease;
+        }
+
+        .stage-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+        }
+
+        .stage-card.assessment::before { background: var(--assessment-color); }
+        .stage-card.diagnosis::before { background: var(--diagnosis-color); }
+        .stage-card.treatment::before { background: var(--treatment-color); }
+        .stage-card.followup::before { background: var(--followup-color); }
+
+        .stage-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .stage-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            color: white;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .assessment .stage-icon { background: linear-gradient(135deg, var(--assessment-color) 0%, #4dabf7 100%); }
+        .diagnosis .stage-icon { background: linear-gradient(135deg, var(--diagnosis-color) 0%, #9775fa 100%); }
+        .treatment .stage-icon { background: linear-gradient(135deg, var(--treatment-color) 0%, #ff6b6b 100%); }
+        .followup .stage-icon { background: linear-gradient(135deg, var(--followup-color) 0%, #51cf66 100%); }
+
+        .stage-title {
+            flex: 1;
+        }
+
+        .stage-title h2 {
+            margin: 0;
+            color: #212529;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .stage-title p {
+            margin: 0;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+            color: #495057;
+        }
+
+        .stage-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding-top 0.3s ease;
+            padding-top: 0;
+        }
+
+        .stage-card.expanded .card-details {
+            max-height: 2000px;
+            padding-top: 1.5rem;
+        }
+
+        /* Step Items */
+        .step-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #dee2e6;
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .step-item.urgent { border-left-color: var(--urgent-red); }
+        .step-item.caution { border-left-color: var(--caution-amber); }
+        .step-item.stable { border-left-color: var(--stable-green); }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #212529;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .severity-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+        }
+
+        .severity-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-urgent { background: linear-gradient(135deg, var(--urgent-red) 0%, #fa5252 100%); color: white; }
+        .badge-caution { background: linear-gradient(135deg, var(--caution-amber) 0%, #ffd43b 100%); color: #212529; }
+        .badge-stable { background: linear-gradient(135deg, var(--stable-green) 0%, #40c057 100%); color: white; }
+
+        .step-description {
+            color: #495057;
+            margin-bottom: 0.75rem;
+            line-height: 1.6;
+        }
+
+        .step-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, var(--assessment-color) 0%, #4dabf7 100%);
+            color: white;
+            border: none;
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            box-shadow: 0 2px 5px rgba(13, 110, 253, 0.2);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+        }
+
+        .action-btn.secondary {
+            background: linear-gradient(135deg, #6c757d 0%, #adb5bd 100%);
+            box-shadow: 0 2px 5px rgba(108, 117, 125, 0.2);
+        }
+
+        .action-btn.secondary:hover {
+            box-shadow: 0 4px 10px rgba(108, 117, 125, 0.3);
+        }
+
+        /* Interactive Elements */
+        .decision-tree {
+            background: rgba(233, 236, 239, 0.5);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .decision-node {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+            font-weight: 500;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .decision-node:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .decision-node.selected {
+            background: linear-gradient(135deg, var(--assessment-color) 0%, #4dabf7 100%);
+            color: white;
+            box-shadow: 0 4px 10px rgba(13, 110, 253, 0.3);
+        }
+
+        .decision-branch {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .branch-arrow {
+            font-size: 1.5rem;
+            color: #adb5bd;
+            margin: 0 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                top: 0;
+                width: 100%;
+                display: flex;
+                overflow-x: auto;
+                padding: 1rem;
+            }
+            
+            .progress-item {
+                min-width: 120px;
+                flex-direction: column;
+                text-align: center;
+                margin-right: 0.5rem;
+                margin-bottom: 0;
+            }
+            
+            .progress-icon {
+                margin-right: 0;
+                margin-bottom: 0.25rem;
+            }
+            
+            .progress-bar {
+                display: none;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .stage-card {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .stage-card:nth-child(2) { animation-delay: 0.1s; }
+        .stage-card:nth-child(3) { animation-delay: 0.2s; }
+        .stage-card:nth-child(4) { animation-delay: 0.3s; }
+        .stage-card:nth-child(5) { animation-delay: 0.4s; }
+
+        /* Floating action button */
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--followup-color) 0%, #51cf66 100%);
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(25, 135, 84, 0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .fab:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 6px 25px rgba(25, 135, 84, 0.4);
+        }
+
+        /* Modal */
+        .modal-content {
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .modal-footer {
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .btn-close {
+            background: transparent;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .btn-close:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Progress Sidebar -->
+        <div class="progress-sidebar">
+            <h5 class="mb-3"><i class="bi bi-clipboard-pulse me-2"></i>Algorithm Progress</h5>
+            
+            <div class="progress-item active" data-stage="assessment">
+                <div class="progress-icon">
+                    <i class="bi bi-clipboard-check"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold">Assessment</div>
+                    <small class="text-muted">Initial Evaluation</small>
+                </div>
+            </div>
+            
+            <div class="progress-bar"></div>
+            
+            <div class="progress-item" data-stage="diagnosis">
+                <div class="progress-icon">
+                    <i class="bi bi-search"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold">Differential Diagnosis</div>
+                    <small class="text-muted">Identify Cause</small>
+                </div>
+            </div>
+            
+            <div class="progress-bar"></div>
+            
+            <div class="progress-item" data-stage="treatment">
+                <div class="progress-icon">
+                    <i class="bi bi-heart-pulse"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold">Immediate Management</div>
+                    <small class="text-muted">Stabilize Patient</small>
+                </div>
+            </div>
+            
+            <div class="progress-bar"></div>
+            
+            <div class="progress-item" data-stage="followup">
+                <div class="progress-icon">
+                    <i class="bi bi-arrow-repeat"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold">Follow-up</div>
+                    <small class="text-muted">Ongoing Care</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="content-area">
+            <!-- Header -->
+            <div class="algorithm-header">
+                <h1><i class="bi bi-heart-pulse-fill me-3"></i>Chest Pain Assessment Algorithm</h1>
+                <p>Interactive clinical decision support tool for primary care chest pain evaluation</p>
+            </div>
+
+            <!-- Assessment Stage -->
+            <div class="stage-card assessment" data-stage="assessment" id="assessment-card">
+                <div class="stage-header">
+                    <div class="stage-icon">
+                        <i class="bi bi-clipboard-check"></i>
+                    </div>
+                    <div class="stage-title">
+                        <h2>Initial Assessment</h2>
+                        <p>Rapid evaluation of chest pain presentation</p>
+                    </div>
+                    <i class="bi bi-chevron-down expand-icon"></i>
+                </div>
+                
+                <div class="card-details">
+                    <div class="step-item urgent">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+                                Emergency Red Flags
+                            </div>
+                            <span class="severity-badge badge-urgent">Urgent Referral</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Check for immediate life-threatening signs:</strong> Cardiogenic shock, severe respiratory distress, altered consciousness, SBP < 90 mmHg, SpO2 < 92%
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="handleEmergency()">Call 999</button>
+                            <button class="action-btn secondary" onclick="showProtocol('ALS')">View ALS Protocol</button>
+                        </div>
+                    </div>
+
+                    <div class="decision-tree">
+                        <h6 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Initial Triage Decision</h6>
+                        <div class="decision-branch">
+                            <div class="decision-node" onclick="selectTriage('emergency')">
+                                <i class="bi bi-ambulance"></i><br>Emergency
+                            </div>
+                            <span class="branch-arrow">→</span>
+                            <div class="decision-node" onclick="selectTriage('urgent')">
+                                <i class="bi bi-speedometer2"></i><br>Urgent
+                            </div>
+                            <span class="branch-arrow">→</span>
+                            <div class="decision-node" onclick="selectTriage("routine')">
+                                <i class="bi bi-calendar-event"></i><br>Routine
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-item caution">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-question-circle-fill text-warning"></i>
+                                Pain Characteristics
+                            </div>
+                            <span class="severity-badge badge-caution">Caution</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Assess pain quality:</strong> Onset, duration, radiation, character (sharp/pressure/tearing), aggravating/relieving factors, associated symptoms
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="showPainScale()">Pain Assessment Tool</button>
+                            <button class="action-btn secondary" onclick="showCardiacSymptoms()">Cardiac Symptoms Guide</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item stable">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-person-check-fill text-success"></i>
+                                Cardiovascular Risk
+                            </div>
+                            <span class="severity-badge badge-stable">Risk Stratification</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Calculate pre-test probability:</strong> Age, sex, diabetes, smoking, hypertension, hyperlipidemia, family history
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="calculateRisk()">Calculate Risk Score</button>
+                            <button class="action-btn secondary" onclick="showRiskFactors()">Risk Factor Guide</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Stage -->
+            <div class="stage-card diagnosis" data-stage="diagnosis" id="diagnosis-card">
+                <div class="stage-header">
+                    <div class="stage-icon">
+                        <i class="bi bi-search"></i>
+                    </div>
+                    <div class="stage-title">
+                        <h2>Differential Diagnosis</h2>
+                        <p>Systematic approach to identify chest pain etiology</p>
+                    </div>
+                    <i class="bi bi-chevron-down expand-icon"></i>
+                </div>
+                
+                <div class="card-details">
+                    <div class="step-item urgent">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-heart-fill text-danger"></i>
+                                Acute Coronary Syndrome
+                            </div>
+                            <span class="severity-badge badge-urgent">Immediate Action</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Consider ACS if:</strong> Pressure-like chest pain >15 min, radiation to arm/jaw, diaphoresis, nausea, dyspnea
+                        </div>
+                        <div class="decision-tree">
+                            <div class="decision-branch">
+                                <div class="decision-node" onclick="handleACS('STEMI')">
+                                    <i class="bi bi-activity"></i><br>STEMI
+                                </div>
+                                <div class="decision-node" onclick="handleACS('NSTEMI')">
+                                    <i class="bi bi-graph-down"></i><br>NSTEMI
+                                </div>
+                                <div class="decision-node" onclick="handleACS('UA')">
+                                    <i class="bi bi-exclamation-circle"></i><br>Unstable Angina
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="orderECG()">ECG</button>
+                            <button class="action-btn" onclick="orderTroponin()">Troponin</button>
+                            <button class="action-btn secondary" onclick="showACSGuidelines()">AHA Guidelines</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item caution">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-lungs-fill text-warning"></i>
+                                Pulmonary Causes
+                            </div>
+                            <span class="severity-badge badge-caution">Consider</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Pulmonary embolism:</strong> Pleuritic pain, dyspnea, tachycardia, risk factors<br>
+                            <strong>Pneumothorax:</strong> Sudden sharp pain, unilateral, hyperresonance<br>
+                            <strong>Pneumonia:</strong> Fever, cough, consolidation
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="orderCTPA()">CTPA</button>
+                            <button class="action-btn" onclick="orderCXR()">Chest X-ray</button>
+                            <button class="action-btn secondary" onclick="showPERC()">PERC Rule</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item stable">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-bone text-success"></i>
+                                Musculoskeletal & Other
+                            </div>
+                            <span class="severity-badge badge-stable">Lower Risk</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Costochondritis:</strong> Reproducible chest wall tenderness<br>
+                            <strong>Gastroesophageal:</strong> Burning pain, relation to meals<br>
+                            <strong>Anxiety:</strong> Hyperventilation, atypical pain
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="performExam()">Physical Exam</button>
+                            <button class="action-btn secondary" onclick="showHeston()">HEART Score</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Stage -->
+            <div class="stage-card treatment" data-stage="treatment" id="treatment-card">
+                <div class="stage-header">
+                    <div class="stage-icon">
+                        <i class="bi bi-heart-pulse"></i>
+                    </div>
+                    <div class="stage-title">
+                        <h2>Immediate Management</h2>
+                        <p>Evidence-based treatment protocols</p>
+                    </div>
+                    <i class="bi bi-chevron-down expand-icon"></i>
+                </div>
+                
+                <div class="card-details">
+                    <div class="step-item urgent">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-lightning-fill text-danger"></i>
+                                Emergency Treatment
+                            </div>
+                            <span class="severity-badge badge-urgent">Immediate</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>For suspected ACS:</strong> Aspirin 300mg, GTN sublingual, oxygen if SpO2 < 94%, morphine for pain
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="giveAspirin()">Give Aspirin</button>
+                            <button class="action-btn" onclick="giveGTN()">Give GTN</button>
+                            <button class="action-btn secondary" onclick="showMAD()">MAD Protocol</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item caution">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-shield-fill text-warning"></i>
+                                Antithrombotic Therapy
+                            </div>
+                            <span class="severity-badge badge-caution">Consider</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Dual antiplatelet therapy:</strong> Aspirin + P2Y12 inhibitor for ACS<br>
+                            <strong>Anticoagulation:</strong> Consider in PE, AF, DVT
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="startDAPT()">Start DAPT</button>
+                            <button class="action-btn secondary" onclick="checkContraindications()">Check Contra</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item stable">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-capsule-pill text-success"></i>
+                                Symptom Relief
+                            </div>
+                            <span class="severity-badge badge-stable">Supportive</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Analgesia:</strong> NSAIDs for musculoskeletal pain<br>
+                            <strong>Antacids:</strong> For reflux symptoms<br>
+                            <strong>Anxiolytics:</strong> If anxiety-related pain
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="prescribeAnalgesia()">Prescribe Analgesia</button>
+                            <button class="action-btn secondary" onclick="showPainLadder()">WHO Pain Ladder</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Stage -->
+            <div class="stage-card followup" data-stage="followup" id="followup-card">
+                <div class="stage-header">
+                    <div class="stage-icon">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                    <div class="stage-title">
+                        <h2>Follow-up & Referral</h2>
+                        <p>Ongoing management and specialist referral</p>
+                    </div>
+                    <i class="bi bi-chevron-down expand-icon"></i>
+                </div>
+                
+                <div class="card-details">
+                    <div class="step-item urgent">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-hospital-fill text-danger"></i>
+                                Emergency Referral
+                            </div>
+                            <span class="severity-badge badge-urgent">Immediate</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Call 999 for:</strong> STEMI, hemodynamic instability, severe PE, tension pneumothorax
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="call999()">Call 999</button>
+                            <button class="action-btn secondary" onclick="prepareHandover()">Prepare Handover</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item caution">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-calendar-plus-fill text-warning"></i>
+                                Urgent Outpatient
+                            </div>
+                            <span class="severity-badge badge-caution">Within 2 Weeks</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Refer to cardiology:</strong> Unstable angina, high-risk NSTEMI, new heart failure<br>
+                            <strong>Refer to respiratory:</strong> Suspected PE with intermediate risk
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="referCardiology()">Cardiology Referral</button>
+                            <button class="action-btn secondary" onclick="bookECG()">Book ECG</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item stable">
+                        <div class="step-header">
+                            <div class="step-title">
+                                <i class="bi bi-house-heart-fill text-success"></i>
+                                Primary Care Follow-up
+                            </div>
+                            <span class="severity-badge badge-stable">Routine</span>
+                        </div>
+                        <div class="step-description">
+                            <strong>Low-risk patients:</strong> Musculoskeletal pain, GERD, anxiety<br>
+                            <strong>Follow-up:</strong> Review symptoms, risk factors, lifestyle modifications
+                        </div>
+                        <div class="step-actions">
+                            <button class="action-btn" onclick="scheduleFollowUp()">Schedule Follow-up</button>
+                            <button class="action-btn secondary" onclick="provideAdvice()">Lifestyle Advice</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button class="fab" onclick="resetAlgorithm()">
+        <i class="bi bi-arrow-clockwise"></i>
+    </button>
+
+    <!-- Decision Modal -->
+    <div class="modal fade" id="decisionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Clinical Decision</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <!-- Dynamic content -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmDecision()">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global state
+        let currentStage = 'assessment';
+        let completedStages = new Set();
+        let patientData = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeProgressTracking();
+            initializeCardInteractions();
+            initializeScrollSpy();
+        });
+
+        // Progress tracking
+        function initializeProgressTracking() {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const stage = item.dataset.stage;
+                    scrollToStage(stage);
+                });
+            });
+        }
+
+        // Card interactions
+        function initializeCardInteractions() {
+            const stageCards = document.querySelectorAll('.stage-card');
+            stageCards.forEach(card => {
+                const header = card.querySelector('.stage-header');
+                header.addEventListener('click', () => {
+                    card.classList.toggle('expanded');
+                    updateProgress(card.dataset.stage);
+                });
+            });
+        }
+
+        // Scroll spy
+        function initializeScrollSpy() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const stage = entry.target.dataset.stage;
+                        updateActiveProgress(stage);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            document.querySelectorAll('.stage-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
+
+        // Update progress
+        function updateProgress(stage) {
+            completedStages.add(stage);
+            const progressItem = document.querySelector(`[data-stage="${stage}"]`);
+            progressItem.classList.add('completed');
+            
+            // Update progress bars
+            const progressBars = document.querySelectorAll('.progress-bar');
+            progressBars.forEach((bar, index) => {
+                if (index < completedStages.size - 1) {
+                    bar.classList.add('filled');
+                }
+            });
+        }
+
+        // Update active progress item
+        function updateActiveProgress(stage) {
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const activeItem = document.querySelector(`[data-stage="${stage}"]`);
+            if (activeItem) {
+                activeItem.classList.add('active');
+            }
+        }
+
+        // Scroll to stage
+        function scrollToStage(stage) {
+            const card = document.getElementById(`${stage}-card`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                card.classList.add('expanded');
+            }
+        }
+
+        // Emergency handling
+        function handleEmergency() {
+            showModal('Emergency Protocol', `
+                <div class="alert alert-danger">
+                    <h5><i class="bi bi-telephone-fill"></i> Call 999 Immediately</h5>
+                    <p>Activate emergency services for any life-threatening presentation</p>
+                </div>
+                <div class="mt-3">
+                    <h6>While waiting for ambulance:</h6>
+                    <ul>
+                        <li>Keep patient seated/lying down</li>
+                        <li>Monitor vitals every 5 minutes</li>
+                        <li>Prepare for CPR if needed</li>
+                        <li>Have AED ready</li>
+                    </ul>
+                </div>
+            `);
+        }
+
+        // Triage selection
+        function selectTriage(level) {
+            const nodes = document.querySelectorAll('.decision-node');
+            nodes.forEach(node => node.classList.remove('selected'));
+            event.target.closest('.decision-node').classList.add('selected');
+            
+            patientData.triageLevel = level;
+            updateRecommendation(level);
+        }
+
+        // Update recommendation based on triage
+        function updateRecommendation(level) {
+            const recommendations = {
+                emergency: 'Immediate 999 call required',
+                urgent: 'Same-day urgent assessment needed',
+                routine: 'Routine outpatient follow-up appropriate'
+            };
+            
+            showNotification(`Triage Level: ${level.toUpperCase()} - ${recommendations[level]}`, 
+                           level === 'emergency' ? 'danger' : level === 'urgent' ? 'warning' : 'success');
+        }
+
+        // ACS handling
+        function handleACS(type) {
+            patientData.acsType = type;
+            const actions = {
+                'STEMI': 'Activate PPCI pathway immediately',
+                'NSTEMI': 'Start antithrombotic therapy, consider angiography',
+                'UA': 'Risk stratify, consider stress testing'
+            };
+            
+            showModal('ACS Management', `
+                <div class="alert alert-danger">
+                    <h5>Acute Coronary Syndrome: ${type}</h5>
+                    <p><strong>Action:</strong> ${actions[type]}</p>
+                </div>
+                <div class="mt-3">
+                    <button class="btn btn-danger w-100 mb-2" onclick="callCardiology()">
+                        <i class="bi bi-telephone"></i> Call Cardiology
+                    </button>
+                    <button class="btn btn-outline-primary w-100" onclick="showACSProtocol('${type}')">
+                        <i class="bi bi-file-text"></i> View Protocol
+                    </button>
+                </div>
+            `);
+        }
+
+        // Utility functions
+        function showModal(title, content) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('decisionModal')).show();
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} position-fixed top-0 end-0 m-3`;
+            notification.style.zIndex = '1050';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 5000);
+        }
+
+        function resetAlgorithm() {
+            if (confirm('Reset all progress and start over?')) {
+                completedStages.clear();
+                patientData = {};
+                document.querySelectorAll('.progress-item').forEach(item => {
+                    item.classList.remove('completed', 'active');
+                });
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    bar.classList.remove('filled');
+                });
+                document.querySelector('[data-stage="assessment"]').classList.add('active');
+                document.querySelectorAll('.stage-card').forEach(card => {
+                    card.classList.remove('expanded');
+                });
+                document.querySelectorAll('.decision-node').forEach(node => {
+                    node.classList.remove('selected');
+                });
+                scrollToStage('assessment');
+            }
+        }
+
+        // Action button handlers
+        function orderECG() { showNotification('12-lead ECG ordered', 'info'); }
+        function orderTroponin() { showNotification('High-sensitivity troponin ordered', 'info'); }
+        function orderCTPA() { showNotification('CT Pulmonary Angiography ordered', 'info'); }
+        function orderCXR() { showNotification('Chest X-ray ordered', 'info'); }
+        function giveAspirin() { showNotification('Aspirin 300mg chewed (unless contraindicated)', 'warning'); }
+        function giveGTN() { showNotification('GTN sublingual administered', 'warning'); }
+        function call999() { showNotification('999 call initiated', 'danger'); }
+        function callCardiology() { showNotification('Cardiology team contacted', 'info'); }
+        function showProtocol(name) { showModal(`${name} Protocol`, `<p>Protocol details for ${name}...</p>`); }
+        function showPainScale() { showModal('Pain Assessment', '<p>Use 0-10 numeric rating scale...</p>'); }
+        function calculateRisk() { showModal('Risk Calculator', '<p>ESC SCORE2 calculator...</p>'); }
+        function performExam() { showNotification('Physical examination in progress', 'info'); }
+        
+        // Add smooth transitions for all interactive elements
+        document.querySelectorAll('.action-btn, .decision-node').forEach(element => {
+            element.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.stage-card').forEach(card => {
+                    card.classList.remove('expanded');
+                });
+            }
+            if (e.key === 'r' && e.ctrlKey) {
+                e.preventDefault();
+                resetAlgorithm();
+            }
+        });
+    </script>
+</body>
+</html>
