@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICE Sarcoma Recognition & Referral Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="none" width="100" height="100"/><path fill="rgba(255,255,255,0.05)" d="M20,20 Q40,5 60,20 T100,20 Q85,40 100,60 T100,100 Q60,85 20,100 T0,100 Q5,60 0,20 T20,20Z"/></svg>');
+            background-size: 120px;
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            min-width: 280px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            z-index: 10;
+        }
+
+        .progress-sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .progress-item.active .progress-icon {
+            color: white;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            transform: scale(1.15);
+        }
+
+        .progress-line {
+            position: absolute;
+            left: 1.85rem;
+            top: 2.5rem;
+            width: 2px;
+            height: calc(100% - 3rem);
+            background: linear-gradient(to bottom, #3498db, #2c3e50);
+            opacity: 0.2;
+            z-index: -1;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding-bottom: 3rem;
+        }
+
+        .algorithm-card {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(20px);
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .algorithm-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .algorithm-card:hover {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+            transform: translateY(-3px);
+        }
+
+        .card-header {
+            padding: 1.75rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            cursor: pointer;
+            position: relative;
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-dark) 100%);
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.05);
+        }
+
+        .card-header::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 1.75rem;
+            transition: transform 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        .card-header.expanded::after {
+            transform: rotate(180deg);
+        }
+
+        .card-icon {
+            font-size: 2.2rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .card-title h2 {
+            font-size: 1.6rem;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+
+        .card-title p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+            font-weight: 400;
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: white;
+        }
+
+        .card-content.expanded {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        /* Card Colors */
+        .assessment { --card-color: #3498db; --card-color-dark: #2980b9; }
+        .investigation { --card-color: #9b59b6; --card-color-dark: #8e44ad; }
+        .diagnosis { --card-color: #e67e22; --card-color-dark: #d35400; }
+        .followup { --card-color: #1abc9c; --card-color-dark: #16a085; }
+
+        /* Severity Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);
+            color: white;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+        }
+
+        .badge i {
+            font-size: 0.9rem;
+        }
+
+        /* Content Sections */
+        .section {
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .section h3 i {
+            color: var(--card-color);
+            font-size: 1.2rem;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 50%;
+        }
+
+        .symptom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .symptom-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border-left: 4px solid var(--card-color);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .symptom-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .symptom-card h4 {
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .symptom-card p {
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .symptom-card .badge {
+            margin: 0.25rem 0.25rem 0.25rem 0;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid var(--card-color);
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin: 1.25rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .info-box:hover {
+            transform: translateX(5px);
+        }
+
+        .info-box h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .info-box p {
+            font-size: 0.95rem;
+        }
+
+        .info-box i {
+            color: var(--card-color);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 2.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.75rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--card-color), rgba(52, 152, 219, 0.3));
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.75rem;
+            padding: 1.25rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .timeline-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 1.5rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--card-color);
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--card-color);
+        }
+
+        .timeline-item h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .timeline-item p {
+            font-size: 0.95rem;
+        }
+
+        .age-group {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin: 1rem 0;
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: all 0.3s ease;
+        }
+
+        .age-group:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.05);
+        }
+
+        .age-group h4 {
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .age-group ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .age-group li {
+            padding: 0.5rem 0;
+            padding-left: 1.75rem;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .age-group li::before {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: var(--card-color);
+            font-size: 0.9rem;
+        }
+
+        .age-group .badge {
+            margin-left: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                top: 0;
+                min-width: 100%;
+                margin-bottom: 2rem;
+            }
+
+            .progress-line {
+                display: none;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .card-header {
+                padding: 1.25rem;
+            }
+
+            .card-title h2 {
+                font-size: 1.3rem;
+            }
+
+            .card-body {
+                padding: 1.5rem;
+            }
+
+            .symptom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .badge {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        /* Print styles */
+        @media print {
+            .progress-sidebar {
+                display: none;
+            }
+
+            .card-content {
+                max-height: none !important;
+            }
+
+            .algorithm-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><i class="fas fa-stethoscope"></i> Bone & Soft Tissue Sarcoma</h1>
+        <p>NICE Clinical Knowledge Summary - Recognition and Referral Algorithm</p>
+    </header>
+
+    <div class="container">
+        <aside class="progress-sidebar">
+            <h3><i class="fas fa-route"></i> Algorithm Progress</h3>
+            <div class="progress-line"></div>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon"><i class="fas fa-user-md"></i></div>
+                <div>
+                    <strong>Assessment</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">Symptoms & Risk</div>
+                </div>
+            </div>
+            <div class="progress-item" data-step="investigation">
+                <div class="progress-icon"><i class="fas fa-microscope"></i></div>
+                <div>
+                    <strong>Investigation</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">Imaging & Tests</div>
+                </div>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div>
+                    <strong>Diagnosis</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">Results & Referral</div>
+                </div>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon"><i class="fas fa-user-shield"></i></div>
+                <div>
+                    <strong>Follow-up</strong>
+                    <div style="font-size: 0.85rem; opacity: 0.8;">Safety Netting</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Card -->
+            <div class="algorithm-card assessment fade-in" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon"><i class="fas fa-user-md"></i></div>
+                    <div class="card-title">
+                        <h2>Assessment</h2>
+                        <p>Identify symptoms suggestive of bone or soft tissue sarcoma</p>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-search"></i> Key Presenting Features</h3>
+                            <div class="symptom-grid">
+                                <div class="symptom-card">
+                                    <h4><i class="fas fa-bone"></i> Bone Sarcoma</h4>
+                                    <p><strong>Pain</strong> and loss of function of the affected limb are the main presenting symptoms.</p>
+                                    <p><strong>X-ray</strong> may show abnormalities suggestive of sarcoma.</p>
+                                    <span class="badge badge-urgent"><i class="fas fa-clock"></i> Children: Very urgent X-ray</span>
+                                </div>
+                                <div class="symptom-card">
+                                    <h4><i class="fas fa-tissue"></i> Soft Tissue Sarcoma</h4>
+                                    <p>Occurs in connective tissue, can appear in many body parts.</p>
+                                    <p><strong>Mass</strong> that may be painless and become quite large.</p>
+                                    <p><strong>Diagnosis</strong> is by biopsy in secondary care.</p>
+                                    <span class="badge badge-urgent"><i class="fas fa-clock"></i> Children: Very urgent US</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-chart-line"></i> Epidemiology</h3>
+                            <div class="info-box">
+                                <h4><i class="fas fa-bone"></i> Bone Sarcoma</h4>
+                                <p>• ~500 new cases/year in the UK</p>
+                                <p>• A GP may diagnose only 1 case in their career</p>
+                                <p>• Common in children, teenagers, and young adults</p>
+                            </div>
+                            <div class="info-box">
+                                <h4><i class="fas fa-tissue"></i> Soft Tissue Sarcoma</h4>
+                                <p>• ~3,000 new cases/year in the UK</p>
+                                <p>• A GP may diagnose ~1 case in their career</p>
+                                <p>• Can occur at any age</p>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-heart-pulse"></i> Prognosis</h3>
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <h4>Bone Sarcoma</h4>
+                                    <p>>65% survive 5+ years after diagnosis <span class="badge badge-stable"><i class="fas fa-percentage"></i> 5-Year Survival</span></p>
+                                </div>
+                                <div class="timeline-item">
+                                    <h4>Soft Tissue Sarcoma</h4>
+                                    <p>Almost 70% survive 5+ years <span class="badge badge-stable"><i class="fas fa-percentage"></i> 5-Year Survival</span></p>
+                                    <p style="font-size: 0.9rem; margin-top: 0.5rem;">Highly dependent on specific site</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-exclamation-triangle"></i> When to Suspect</h3>
+                            <div class="age-group">
+                                <h4><i class="fas fa-user"></i> Adults</h4>
+                                <ul>
+                                    <li>Unexplained lump increasing in size <span class="badge badge-caution"><i class="fas fa-clock"></i> US within 2 weeks</span></li>
+                                    <li>Persistent bone pain with concerning features</li>
+                                </ul>
+                            </div>
+                            <div class="age-group">
+                                <h4><i class="fas fa-child"></i> Children & Young People</h4>
+                                <ul>
+                                    <li>Unexplained bone pain or swelling <span class="badge badge-urgent"><i class="fas fa-clock"></i> X-ray within 48h</span></li>
+                                    <li>Unexplained lump increasing in size <span class="badge badge-urgent"><i class="fas fa-clock"></i> US within 48h</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investigation Card -->
+            <div class="algorithm-card investigation fade-in" id="investigation">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon"><i class="fas fa-microscope"></i></div>
+                    <div class="card-title">
+                        <h2>Investigation</h2>
+                        <p>Order appropriate imaging based on clinical presentation</p>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-table"></i> Investigation Guidelines</h3>
+                            <p style="margin-bottom: 1.5rem;">Select investigations based on patient age and presenting symptoms:</p>
+                            
+                            <div class="age-group">
+                                <h4><i class="fas fa-user"></i> Adults (≥16 years)</h4>
+                                <ul>
+                                    <li>Unexplained lump → <strong>Urgent direct access ultrasound</strong> <span class="badge badge-caution"><i class="fas fa-calendar"></i> Within 2 weeks</span></li>
+                                    <li>Bone pain/swelling → <strong>Consider X-ray</strong> based on clinical concern</li>
+                                </ul>
+                            </div>
+
+                            <div class="age-group">
+                                <h4><i class="fas fa-child"></i> Children & Young People (&lt;16 years)</h4>
+                                <ul>
+                                    <li>Unexplained bone pain/swelling → <strong>Very urgent X-ray</strong> <span class="badge badge-urgent"><i class="fas fa-clock"></i> Within 48 hours</span></li>
+                                    <li>Unexplained lump → <strong>Very urgent ultrasound</strong> <span class="badge badge-urgent"><i class="fas fa-clock"></i> Within 48 hours</span></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                            <div class="info-box">
+                                <h4><i class="fas fa-info-circle"></i> Separate Pathways</h4>
+                                <p>Different recommendations exist for adults vs children to reflect different referral pathways. Young people (16-24 years) may use either pathway depending on local arrangements.</p>
+                            </div>
+                            <div class="info-box">
+                                <h4><i class="fas fa-comments"></i> Specialist Discussion</h4>
+                                <p>Consider discussing with a specialist (phone/email) if uncertain about interpretation of symptoms or need for referral.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis/Referral Card -->
+            <div class="algorithm-card diagnosis fade-in" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
+                    <div class="card-title">
+                        <h2>Diagnosis & Referral</h2>
+                        <p>Manage investigation results and initiate appropriate referral</p>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-file-medical"></i> Managing Results</h3>
+                            <div class="symptom-grid">
+                                <div class="symptom-card">
+                                    <h4><i class="fas fa-bone"></i> Bone Sarcoma</h4>
+                                    <p><strong>X-ray suggests possibility:</strong></p>
+                                    <p>• Adults: Suspected cancer pathway referral <span class="badge badge-caution"><i class="fas fa-calendar"></i> Within 2 weeks</span></p>
+                                    <p>• Children: Very urgent referral <span class="badge badge-urgent"><i class="fas fa-clock"></i> Within 48 hours</span></p>
+                                </div>
+                                <div class="symptom-card">
+                                    <h4><i class="fas fa-tissue"></i> Soft Tissue Sarcoma</h4>
+                                    <p><strong>Ultrasound suggests sarcoma or uncertain:</strong></p>
+                                    <p>• Adults: Suspected cancer pathway referral <span class="badge badge-caution"><i class="fas fa-calendar"></i> Within 2 weeks</span></p>
+                                    <p>• Children: Very urgent referral <span class="badge badge-urgent"><i class="fas fa-clock"></i> Within 48 hours</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-clock"></i> Referral Timelines</h3>
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <h4>Immediate <span class="badge badge-urgent"><i class="fas fa-ambulance"></i> Emergency</span></h4>
+                                    <p>Acute admission within hours if necessary</p>
+                                </div>
+                                <div class="timeline-item">
+                                    <h4>Very Urgent <span class="badge badge-urgent"><i class="fas fa-clock"></i> 48 Hours</span></h4>
+                                    <p>Specialist assessment within 48 hours for children with concerning imaging</p>
+                                </div>
+                                <div class="timeline-item">
+                                    <h4>Urgent <span class="badge badge-caution"><i class="fas fa-calendar"></i> 2 Weeks</span></h4>
+                                    <p>Direct access imaging within 2 weeks for adults</p>
+                                </div>
+                                <div class="timeline-item">
+                                    <h4>Suspected Cancer Pathway <span class="badge badge-caution"><i class="fas fa-calendar-check"></i> 28 Days</span></h4>
+                                    <p>Diagnosis or ruling out within 28 days of referral</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-cogs"></i> Referral Process</h3>
+                            <div class="info-box">
+                                <h4><i class="fas fa-paper-plane"></i> Making the Referral</h4>
+                                <ul style="list-style: none; padding-left: 0;">
+                                    <li>• Make referral within 1 working day of decision</li>
+                                    <li>• Include all appropriate information and urgency level</li>
+                                    <li>• Use local referral proformas if available</li>
+                                    <li>• Ensure specialist reviews non-urgent letters for potential upgrade</li>
+                                    <li>• Track missed appointments for follow-up</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="algorithm-card followup fade-in" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-title">
+                        <h2>Follow-up & Safety Netting</h2>
+                        <p>Support patients and manage uncertainty</p>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-users"></i> Patient Information & Support</h3>
+                            <div class="info-box">
+                                <h4><i class="fas fa-info-circle"></i> What to Discuss</h4>
+                                <ul style="list-style: none; padding-left: 0;">
+                                    <li>• Explain suspected cancer referral (reassure most won't have cancer)</li>
+                                    <li>• Discuss possible diagnoses (benign and malignant)</li>
+                                    <li>• Provide written information about symptoms to monitor</li>
+                                    <li>• Explain where they're being referred and waiting times</li>
+                                    <li>• Offer information on support services</li>
+                                    <li>• Provide culturally appropriate information</li>
+                                    <li>• Assess need for continuing support while waiting</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-shield-alt"></i> Safety Netting</h3>
+                            <p style="margin-bottom: 1.5rem;">Essential for patients not meeting referral criteria or awaiting appointments:</p>
+                            
+                            <div class="symptom-grid">
+                                <div class="symptom-card">
+                                    <h4><i class="fas fa-eye"></i> Active Monitoring</h4>
+                                    <p>Monitor symptoms in low-risk patients</p>
+                                    <p>Explain which symptoms to watch for</p>
+                                    <p>Provide clear return instructions</p>
+                                </div>
+                                <div class="symptom-card">
+                                    <h4><i class="fas fa-calendar-alt"></i> Planned Review</h4>
+                                    <p>Schedule follow-up within agreed timeframe</p>
+                                    <p>Patient-initiated if symptoms worsen</p>
+                                    <p>Review if symptoms recur or persist</p>
+                                </div>
+                            </div>
+
+                            <div class="info-box">
+                                <h4><i class="fas fa-exclamation-triangle"></i> Important Considerations</h4>
+                                <ul style="list-style: none; padding-left: 0;">
+                                    <li>• Review all investigation results promptly</li>
+                                    <li>• Be aware of false negatives (e.g., chest X-ray)</li>
+                                    <li>• Ensure clear responsibility for result follow-up</li>
+                                    <li>• Invite patients to contact you with concerns</li>
+                                    <li>• Inform specialist of additional support needs (with patient agreement)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-child"></i> Special Populations</h3>
+                            <div class="age-group">
+                                <h4><i class="fas fa-child"></i> Children</h4>
+                                <p>When cancer is suspected in a child, discuss referral and information with parents/carers (and child if appropriate).</p>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-graduation-cap"></i> Quality Improvement</h3>
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <h4>Continuing Education</h4>
+                                    <p>Participate in education to improve early identification and communication skills</p>
+                                </div>
+                                <div class="timeline-item">
+                                    <h4>Peer Review</h4>
+                                    <p>Engage in peer review activities to maintain diagnostic skills</p>
+                                </div>
+                                <div class="timeline-item">
+                                    <h4>Local Arrangements</h4>
+                                    <p>Ensure systems exist for tracking referrals and missed appointments</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const content = header.nextElementSibling;
+            const isExpanded = content.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card-content').forEach(c => {
+                if (c !== content) {
+                    c.classList.remove('expanded');
+                    c.previousElementSibling.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            content.classList.toggle('expanded');
+            header.classList.toggle('expanded');
+            
+            // Smooth scroll to card
+            if (!isExpanded) {
+                setTimeout(() => {
+                    header.parentElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            }
+        }
+
+        // Progress tracking
+        const progressItems = document.querySelectorAll('.progress-item');
+        const cards = document.querySelectorAll('.algorithm-card');
+        
+        // Intersection Observer for scroll progress
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cardId = entry.target.id;
+                    
+                    // Update active progress item
+                    progressItems.forEach(item => {
+                        item.classList.remove('active');
+                        if (item.dataset.step === cardId) {
+                            item.classList.add('active');
+                        }
+                    });
+                    
+                    // Add visible animation
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, {
+            rootMargin: '-20% 0px -60% 0px',
+            threshold: 0.1
+        });
+
+        // Observe all cards
+        cards.forEach(card => observer.observe(card));
+
+        // Progress item click handler
+        progressItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const targetId = item.dataset.step;
+                const targetCard = document.getElementById(targetId);
+                
+                // Expand the target card
+                const header = targetCard.querySelector('.card-header');
+                const content = targetCard.querySelector('.card-content');
+                
+                // Close all cards first
+                document.querySelectorAll('.card-content').forEach(c => {
+                    c.classList.remove('expanded');
+                    c.previousElementSibling.classList.remove('expanded');
+                });
+                
+                // Open target card
+                content.classList.add('expanded');
+                header.classList.add('expanded');
+                
+                // Smooth scroll to card
+                setTimeout(() => {
+                    targetCard.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            });
+        });
+
+        // Initialize first card as expanded
+        window.addEventListener('DOMContentLoaded', () => {
+            const firstCard = document.querySelector('#assessment .card-header');
+            toggleCard(firstCard);
+            
+            // Add visible class to cards in viewport on load
+            setTimeout(() => {
+                cards.forEach(card => {
+                    const rect = card.getBoundingClientRect();
+                    if (rect.top < window.innerHeight && rect.bottom > 0) {
+                        card.classList.add('visible');
+                    }
+                });
+            }, 300);
+        });
+
+        // Smooth scroll for any internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Add hover effect to badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                // Create a temporary pulse effect
+                this.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Add print button if needed
+        const printButton = document.createElement('button');
+        printButton.innerHTML = '<i class="fas fa-print"></i> Print Algorithm';
+        printButton.style.cssText = `
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        `;
+        printButton.onclick = printAlgorithm;
+        
+        // Add hover effect
+        printButton.addEventListener('mouseenter', () => {
+            printButton.style.transform = 'translateY(-3px)';
+            printButton.style.boxShadow = '0 6px 20px rgba(0,0,0,0.2)';
+        });
+        printButton.addEventListener('mouseleave', () => {
+            printButton.style.transform = '';
+            printButton.style.boxShadow = '0 4px 15px rgba(0,0,0,0.15)';
+        });
+
+        document.body.appendChild(printButton);
+    </script>
+</body>
+</html>

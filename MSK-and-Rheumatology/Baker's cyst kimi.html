@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Medical Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --assessment-color: #3498db;
+            --diagnosis-color: #9b59b6;
+            --treatment-color: #27ae60;
+            --followup-color: #e67e22;
+            --urgent-color: #e74c3c;
+            --caution-color: #f39c12;
+            --stable-color: #2ecc71;
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            display: flex;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .progress-item:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+            transform: translateX(4px);
+        }
+
+        .progress-item.active {
+            background-color: rgba(52, 152, 219, 0.15);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .progress-item[data-step="assessment"] .progress-icon {
+            background-color: var(--assessment-color);
+        }
+
+        .progress-item[data-step="diagnosis"] .progress-icon {
+            background-color: var(--diagnosis-color);
+        }
+
+        .progress-item[data-step="treatment"] .progress-icon {
+            background-color: var(--treatment-color);
+        }
+
+        .progress-item[data-step="followup"] .progress-icon {
+            background-color: var(--followup-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .page-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, var(--assessment-color), #2980b9);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, var(--diagnosis-color), #8e44ad);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, var(--treatment-color), #229954);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, var(--followup-color), #d35400);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* Content Sections */
+        .section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section p, .section ul {
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .section ul {
+            padding-left: 1.5rem;
+        }
+
+        .section li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin: 0.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background-color: var(--urgent-color);
+            color: white;
+        }
+
+        .badge-caution {
+            background-color: var(--caution-color);
+            color: white;
+        }
+
+        .badge-stable {
+            background-color: var(--stable-color);
+            color: white;
+        }
+
+        .badge i {
+            font-size: 0.9rem;
+        }
+
+        /* Action Items */
+        .action-item {
+            background: rgba(52, 152, 219, 0.05);
+            border-left: 4px solid var(--assessment-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+            transition: all 0.3s ease;
+        }
+
+        .action-item:hover {
+            background: rgba(52, 152, 219, 0.1);
+            transform: translateX(4px);
+        }
+
+        .action-item.diagnosis {
+            border-left-color: var(--diagnosis-color);
+            background: rgba(155, 89, 182, 0.05);
+        }
+
+        .action-item.treatment {
+            border-left-color: var(--treatment-color);
+            background: rgba(39, 174, 96, 0.05);
+        }
+
+        .action-item.followup {
+            border-left-color: var(--followup-color);
+            background: rgba(230, 126, 34, 0.05);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+
+            .progress-item {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .progress-item span {
+                display: none;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .page-header h1 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                padding: 1rem;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .card-title h2 {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+    </style>
+</head>
+<body>
+    <aside class="progress-sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-route"></i>
+            Algorithm Progress
+        </div>
+        <nav>
+            <a class="progress-item active" data-step="assessment" href="#assessment">
+                <div class="progress-icon"><i class="fas fa-clipboard-check"></i></div>
+                <span>Assessment</span>
+            </a>
+            <a class="progress-item" data-step="diagnosis" href="#diagnosis">
+                <div class="progress-icon"><i class="fas fa-stethoscope"></i></div>
+                <span>Diagnosis</span>
+            </a>
+            <a class="progress-item" data-step="treatment" href="#treatment">
+                <div class="progress-icon"><i class="fas fa-pills"></i></div>
+                <span>Treatment</span>
+            </a>
+            <a class="progress-item" data-step="followup" href="#followup">
+                <div class="progress-icon"><i class="fas fa-calendar-check"></i></div>
+                <span>Follow-up</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="page-header">
+            <h1><i class="fas fa-heartbeat"></i> Baker's Cyst Management Algorithm</h1>
+            <p>Primary Care Management Pathway for Popliteal Cysts</p>
+        </div>
+
+        <div id="assessment" class="card expanded">
+            <div class="card-header assessment" onclick="toggleCard(this)">
+                <div class="card-header-left">
+                    <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
+                    <div class="card-title">
+                        <h2>Assessment</h2>
+                        <div class="card-subtitle">Initial evaluation and history taking</div>
+                    </div>
+                </div>
+                <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="section">
+                        <h3><i class="fas fa-user-md"></i> Clinical History</h3>
+                        <ul>
+                            <li>Ask about swelling and pain characteristics</li>
+                            <li>Identify symptom onset and progression</li>
+                            <li>Assess impact on range of movement</li>
+                            <li>Screen for underlying knee pathology</li>
+                        </ul>
+                    </div>
+
+                    <div class="action-item">
+                        <strong>Red Flag Screening</strong>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="badge badge-urgent"><i class="fas fa-exclamation-triangle"></i> Sudden severe pain</span>
+                            <span class="badge badge-urgent"><i class="fas fa-exclamation-triangle"></i> Neurovascular symptoms</span>
+                            <span class="badge badge-caution"><i class="fas fa-exclamation-circle"></i> Rapid swelling change</span>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-search"></i> Physical Examination</h3>
+                        <p>Inspect and palpate popliteal fossa with knee in full extension and flexion. Look for:</p>
+                        <ul>
+                            <li>Visible bulge in medial popliteal fossa</li>
+                            <li>Fluctuant, smooth, round mass</li>
+                            <li>Foucher's sign (tense in extension, softens in flexion)</li>
+                            <li>Restricted range of movement</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="diagnosis" class="card">
+            <div class="card-header diagnosis" onclick="toggleCard(this)">
+                <div class="card-header-left">
+                    <div class="card-icon"><i class="fas fa-stethoscope"></i></div>
+                    <div class="card-title">
+                        <h2>Diagnosis</h2>
+                        <div class="card-subtitle">Confirm diagnosis and rule out differentials</div>
+                    </div>
+                </div>
+                <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="section">
+                        <h3><i class="fas fa-microscope"></i> Diagnostic Approach</h3>
+                        <div class="action-item diagnosis">
+                            <strong>Children:</strong> Ultrasound scan recommended for all cases to confirm diagnosis and rule out serious conditions.
+                        </div>
+                        <div class="action-item diagnosis">
+                            <strong>Adults:</strong> History and examination may be sufficient; imaging guided by clinical judgement.
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-question-circle"></i> Differential Diagnosis</h3>
+                        <p>Consider and exclude:</p>
+                        <ul>
+                            <li>Deep vein thrombosis <span class="badge badge-urgent"><i class="fas fa-arrow-right"></i> Urgent referral</span></li>
+                            <li>Popliteal artery aneurysm <span class="badge badge-urgent"><i class="fas fa-arrow-right"></i> Urgent referral</span></li>
+                            <li>Soft tissue sarcoma <span class="badge badge-caution"><i class="fas fa-eye"></i> High suspicion</span></li>
+                            <li>Meniscal cyst, ganglion cyst, lipoma <span class="badge badge-stable"><i class="fas fa-check"></i> Routine</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-image"></i> Imaging Strategy</h3>
+                        <ul>
+                            <li><strong>Ultrasound:</strong> Confirms diagnosis, evaluates complications, excludes DVT</li>
+                            <li><strong>MRI:</strong> Identifies underlying conditions (meniscal tear, arthritis)</li>
+                            <li><strong>X-ray:</strong> Limited value; assess underlying joint disease only</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="treatment" class="card">
+            <div class="card-header treatment" onclick="toggleCard(this)">
+                <div class="card-header-left">
+                    <div class="card-icon"><i class="fas fa-pills"></i></div>
+                    <div class="card-title">
+                        <h2>Treatment</h2>
+                        <div class="card-subtitle>Management based on age and severity</div>
+                    </div>
+                </div>
+                <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="section">
+                        <h3><i class="fas fa-child"></i> Management in Children</h3>
+                        <div class="action-item treatment">
+                            <strong>Primary Cysts:</strong> Reassure - usually resolve spontaneously without treatment.
+                        </div>
+                        <div class="action-item treatment">
+                            <strong>Refer if:</strong> Symptomatic, very large, underlying condition suspected, or diagnosis unclear.
+                            <div style="margin-top: 0.5rem;">
+                                <span class="badge badge-caution"><i class="fas fa-user"></i> Paediatric orthopaedics</span>
+                                <span class="badge badge-caution"><i class="fas fa-user"></i> Paediatric rheumatology</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-user"></i> Management in Adults</h3>
+                        <p><strong>Asymptomatic:</strong> No treatment required <span class="badge badge-stable"><i class="fas fa-check-circle"></i> Monitor</span></p>
+                        
+                        <div class="action-item treatment">
+                            <strong>Symptomatic Treatment:</strong>
+                            <ul style="margin-top: 0.5rem;">
+                                <li>Simple analgesia (paracetamol, NSAIDs)</li>
+                                <li>Physiotherapy</li>
+                                <li>Treat underlying condition (osteoarthritis, meniscal tear)</li>
+                            </ul>
+                            <span class="badge badge-stable"><i class="fas fa-info"></i> Aspiration not recommended in primary care</span>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-hospital"></i> Secondary Care Referral</h3>
+                        <span class="badge badge-urgent"><i class="fas fa-ambulance"></i> Same-day assessment</span> if red flags or high suspicion of DVT
+                        <div style="margin-top: 0.5rem;">
+                            <span class="badge badge-caution"><i class="fas fa-clock"></i> Routine referral</span> if:
+                            <ul style="margin-top: 0.5rem;">
+                                <li>Diagnosis unclear</li>
+                                <li>Symptoms persist despite conservative measures</li>
+                                <li>Cyst very large or troublesome</li>
+                                <li>Specialist treatment of underlying disease required</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="followup" class="card">
+            <div class="card-header followup" onclick="toggleCard(this)">
+                <div class="card-header-left">
+                    <div class="card-icon"><i class="fas fa-calendar-check"></i></div>
+                    <div class="card-title">
+                        <h2>Follow-up</h2>
+                        <div class="card-subtitle">Monitoring and prognosis</div>
+                    </div>
+                </div>
+                <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="section">
+                        <h3><i class="fas fa-chart-line"></i> Expected Course</h3>
+                        <div class="action-item followup">
+                            <strong>Children:</strong> Many resolve spontaneously within a few years. Resolution occurs when underlying condition improves.
+                        </div>
+                        <div class="action-item followup">
+                            <strong>Adults:</strong> Spontaneous resolution is common. Treating underlying knee condition often leads to regression.
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-flag"></i> Prognostic Factors</h3>
+                        <ul>
+                            <li>Severity of underlying condition is key <span class="badge badge-caution"><i class="fas fa-info"></i> Severe OA may prevent resolution</span></li>
+                            <li>Surgical excision has high recurrence rate <span class="badge badge-caution"><i class="fas fa-exclamation"></i> Reserve for selected cases</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="section">
+                        <h3><i class="fas fa-user-check"></i> Follow-up Plan</h3>
+                        <p>Arrange review if:</p>
+                        <ul>
+                            <li>Symptoms worsen or persist beyond 3 months</li>
+                            <li>New red flag symptoms develop <span class="badge badge-urgent"><i class="fas fa-phone"></i> Re-assess urgently</span></li>
+                            <li>Functional limitation increases</li>
+                        </ul>
+                        <div style="margin-top: 1rem;">
+                            <span class="badge badge-stable"><i class="fas fa-thumbs-up"></i> No routine follow-up needed if asymptomatic</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        // Smooth scroll to section
+        function scrollToSection(step) {
+            const element = document.getElementById(step);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Update active progress item on scroll
+        function updateActiveProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            const scrollPosition = window.scrollY + 100;
+
+            cards.forEach((card, index) => {
+                const cardTop = card.offsetTop;
+                const cardHeight = card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition < cardTop + cardHeight) {
+                    progressItems.forEach(item => item.classList.remove('active'));
+                    progressItems[index].classList.add('active');
+                }
+            });
+        }
+
+        // Add click handlers to progress items
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const step = item.dataset.step;
+                scrollToSection(step);
+                
+                // Auto-expand the target card
+                const targetCard = document.getElementById(step);
+                if (!targetCard.classList.contains('expanded')) {
+                    targetCard.classList.add('expanded');
+                }
+            });
+        });
+
+        // Scroll event listener
+        window.addEventListener('scroll', updateActiveProgress);
+
+        // Initialize first card as expanded and set active state
+        document.addEventListener('DOMContentLoaded', () => {
+            updateActiveProgress();
+        });
+
+        // Optional: Close other cards when one opens
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const currentCard = header.parentElement;
+                if (!currentCard.classList.contains('expanded')) {
+                    // Close all other cards
+                    document.querySelectorAll('.card').forEach(card => {
+                        if (card !== currentCard) {
+                            card.classList.remove('expanded');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
