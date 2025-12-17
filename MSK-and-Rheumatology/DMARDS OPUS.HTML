@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMARD Monitoring Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            width: 280px;
+            height: fit-content;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h3 {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-item:hover {
+            background: #f1f5f9;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+        .progress-item.completed {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .progress-item .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .step-number {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .progress-item.completed .step-number {
+            background: #059669;
+            color: white;
+        }
+
+        .progress-item.completed .step-number::after {
+            content: '✓';
+        }
+
+        .progress-line {
+            position: absolute;
+            left: 39px;
+            top: 46px;
+            width: 2px;
+            height: 24px;
+            background: #e2e8f0;
+        }
+
+        .progress-item:last-child .progress-line {
+            display: none;
+        }
+
+        .progress-item.completed .progress-line {
+            background: #059669;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            max-width: 900px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #64748b;
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 24px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(0.95);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        .card-title h2 {
+            font-size: 1.4rem;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .card-title p {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            color: white;
+        }
+
+        .expand-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 20px;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Card Colors */
+        .card-assessment .card-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+
+        .card-diagnosis .card-header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+        }
+
+        .card-treatment .card-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .card-followup .card-header {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        /* Card Content */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 28px;
+        }
+
+        /* Subsections */
+        .subsection {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-left: 4px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .subsection:hover {
+            border-left-color: #3b82f6;
+            background: #f1f5f9;
+        }
+
+        .subsection h4 {
+            font-size: 1rem;
+            color: #1e293b;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subsection ul {
+            margin-left: 20px;
+            color: #475569;
+        }
+
+        .subsection li {
+            margin-bottom: 8px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            gap: 6px;
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            color: #d97706;
+            border: 1px solid #fde68a;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+
+        .badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .badge-urgent::before {
+            background: #dc2626;
+            animation: pulse-red 2s infinite;
+        }
+
+        .badge-caution::before {
+            background: #d97706;
+            animation: pulse-amber 2s infinite;
+        }
+
+        .badge-stable::before {
+            background: #059669;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        @keyframes pulse-amber {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* Monitoring Table */
+        .monitoring-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .monitoring-table th,
+        .monitoring-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .monitoring-table th {
+            background: #1e293b;
+            color: white;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .monitoring-table tr:hover td {
+            background: #f1f5f9;
+        }
+
+        .monitoring-table td {
+            color: #475569;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #475569;
+            border: 2px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        /* Alert Box */
+        .alert-box {
+            padding: 20px;
+            border-radius: 12px;
+            margin: 16px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .alert-urgent {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 1px solid #fecaca;
+        }
+
+        .alert-caution {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #fde68a;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1px solid #bfdbfe;
+        }
+
+        .alert-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .alert-content h4 {
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        .alert-content p {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+
+        /* Drug Selector */
+        .drug-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .drug-pill {
+            padding: 10px 20px;
+            border-radius: 25px;
+            background: #f1f5f9;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: #475569;
+        }
+
+        .drug-pill:hover {
+            background: #e2e8f0;
+        }
+
+        .drug-pill.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+
+            .progress-item {
+                display: inline-flex;
+                margin-right: 10px;
+                margin-bottom: 10px;
+            }
+
+            .progress-line {
+                display: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card-header {
+                padding: 18px 20px;
+            }
+
+            .card-icon {
+                width: 44px;
+                height: 44px;
+                font-size: 20px;
+            }
+
+            .card-title h2 {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .drug-content {
+            display: none;
+        }
+
+        .drug-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Checklist */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #e2e8f0;
+        }
+
+        .checklist-item:hover {
+            border-color: #3b82f6;
+        }
+
+        .checklist-item.checked {
+            background: #ecfdf5;
+            border-color: #10b981;
+        }
+
+        .checklist-item .checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 2px solid #cbd5e1;
+            margin-right: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item.checked .checkbox {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Sidebar -->
+        <aside class="sidebar">
+            <h3>📋 Algorithm Progress</h3>
+            <div class="progress-item active" data-step="1" onclick="scrollToCard('assessment')">
+                <span class="step-number">1</span>
+                <span>Assessment</span>
+                <div class="progress-line"></div>
+            </div>
+            <div class="progress-item" data-step="2" onclick="scrollToCard('diagnosis')">
+                <span class="step-number">2</span>
+                <span>Diagnosis</span>
+                <div class="progress-line"></div>
+            </div>
+            <div class="progress-item" data-step="3" onclick="scrollToCard('treatment')">
+                <span class="step-number">3</span>
+                <span>Treatment</span>
+                <div class="progress-line"></div>
+            </div>
+            <div class="progress-item" data-step="4" onclick="scrollToCard('followup')">
+                <span class="step-number">4</span>
+                <span>Follow-up</span>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+                <h3 style="margin-bottom: 15px;">🏷️ Severity Key</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <span class="badge badge-urgent">Urgent Referral</span>
+                    <span class="badge badge-caution">Caution Required</span>
+                    <span class="badge badge-stable">Stable/Continue</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header fade-in">
+                <h1>🏥 DMARD Monitoring Algorithm</h1>
+                <p>Disease-Modifying Anti-Rheumatic Drugs - Primary Care Monitoring Protocol</p>
+            </header>
+
+            <!-- Assessment Card -->
+            <div class="card card-assessment fade-in" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">🔍</div>
+                        <div class="card-title">
+                            <h2>Step 1: Initial Assessment</h2>
+                            <p>Patient evaluation and risk stratification</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="alert-box alert-info">
+                            <span class="alert-icon">ℹ️</span>
+                            <div class="alert-content">
+                                <h4>Before You Begin</h4>
+                                <p>DMARDs should be initiated by a specialist in secondary care. Primary care monitoring begins once the patient is stabilized on treatment.</p>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>📋 Pre-Monitoring Checklist</h4>
+                            <div class="checklist-item" onclick="toggleChecklist(this)">
+                                <div class="checkbox">✓</div>
+                                <span>Shared care agreement in place</span>
+                            </div>
+                            <div class="checklist-item" onclick="toggleChecklist(this)">
+                                <div class="checkbox">✓</div>
+                                <span>Baseline monitoring completed by secondary care</span>
+                            </div>
+                            <div class="checklist-item" onclick="toggleChecklist(this)">
+                                <div class="checkbox">✓</div>
+                                <span>Patient provided with information leaflet</span>
+                            </div>
+                            <div class="checklist-item" onclick="toggleChecklist(this)">
+                                <div class="checkbox">✓</div>
+                                <span>Patient aware of potential adverse effects</span>
+                            </div>
+                            <div class="checklist-item" onclick="toggleChecklist(this)">
+                                <div class="checkbox">✓</div>
+                                <span>Vaccination status reviewed</span>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>💉 Vaccination Requirements</h4>
+                            <ul>
+                                <li><strong>Annual influenza vaccine</strong> - Required for all DMARD patients</li>
+                                <li><strong>Pneumococcal vaccine</strong> - Preferably before starting DMARD</li>
+                                <li><strong>COVID-19 vaccination</strong> - As per national guidelines</li>
+                                <li><span class="badge badge-urgent">Urgent</span> <strong>Live vaccines</strong> - AVOID due to risk of generalized infection</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>⚠️ High-Risk Factors for Toxicity</h4>
+                            <ul>
+                                <li>Elderly patients (>70 years)</li>
+                                <li>Pre-existing renal impairment</li>
+                                <li>Pre-existing hepatic impairment</li>
+                                <li>Concurrent medications with interactions</li>
+                                <li>History of bone marrow suppression</li>
+                            </ul>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="completeStep(1)">
+                                ✓ Complete Assessment
+                            </button>
+                            <button class="btn btn-secondary" onclick="scrollToCard('diagnosis')">
+                                Next: Diagnosis →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card card-diagnosis fade-in" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">🩺</div>
+                        <div class="card-title">
+                            <h2>Step 2: Adverse Effect Recognition</h2>
+                            <p>Identify signs requiring action</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="alert-box alert-urgent">
+                            <span class="alert-icon">🚨</span>
+                            <div class="alert-content">
+                                <h4>Urgent Referral Criteria - Blood Results</h4>
+                                <p>Stop treatment and refer urgently if any of the following are detected:</p>
+                            </div>
+                        </div>
+
+                        <table class="monitoring-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Threshold</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>White Cell Count</td>
+                                    <td>&lt; 3.5 × 10⁹/L</td>
+                                    <td><span class="badge badge-urgent">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Neutrophils</td>
+                                    <td>&lt; 1.6 × 10⁹/L</td>
+                                    <td><span class="badge badge-urgent">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Platelets</td>
+                                    <td>&lt; 140 × 10⁹/L</td>
+                                    <td><span class="badge badge-urgent">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Mean Cell Volume</td>
+                                    <td>&gt; 105 fL</td>
+                                    <td><span class="badge badge-caution">Caution</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Creatinine increase</td>
+                                    <td>&gt; 30% over 12 months</td>
+                                    <td><span class="badge badge-urgent">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>GFR</td>
+                                    <td>&lt; 60 mL/min</td>
+                                    <td><span class="badge badge-urgent">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>ALT/AST</td>
+                                    <td>&gt; 100 U/L</td>
+                                    <td><span class="badge badge-urgent">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Albumin</td>
+                                    <td>&lt; 30 g/L (unexplained)</td>
+                                    <td><span class="badge badge-caution">Caution</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Eosinophils</td>
+                                    <td>&gt; 0.5 × 10⁹/L (unexplained)</td>
+                                    <td><span class="badge badge-caution">Caution</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="subsection" style="margin-top: 24px;">
+                            <h4>🚩 Clinical Signs Requiring Urgent Review</h4>
+                            <ul>
+                                <li><span class="badge badge-urgent">Urgent</span> Skin/mucosal reaction (rash, pruritus, mouth/throat ulceration)</li>
+                                <li><span class="badge badge-urgent">Urgent</span> Unexplained sore throat or fever</li>
+                                <li><span class="badge badge-urgent">Urgent</span> Unexplained bruising or bleeding</li>
+                                <li><span class="badge badge-caution">Caution</span> Nausea, vomiting, diarrhoea, or weight loss</li>
+                                <li><span class="badge badge-caution">Caution</span> Diffuse alopecia</li>
+                                <li><span class="badge badge-urgent">Urgent</span> New breathlessness, infection, or persistent cough</li>
+                                <li><span class="badge badge-caution">Caution</span> Peripheral neuropathy symptoms</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>💊 Additional Criteria for Biologic DMARDs</h4>
+                            <ul>
+                                <li><span class="badge badge-urgent">Urgent</span> Cough, haemoptysis, weight loss (TB symptoms)</li>
+                                <li><span class="badge badge-urgent">Urgent</span> Signs of heart failure or worsening heart failure</li>
+                                <li><span class="badge badge-urgent">Urgent</span> Shortness of breath or dry cough (interstitial lung disease)</li>
+                                <li><span class="badge badge-caution">Caution</span> New skin rashes (lupus-like syndrome, erythema nodosum)</li>
+                                <li><span class="badge badge-caution">Caution</span> New abdominal pain or symptoms</li>
+                            </ul>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="completeStep(2)">
+                                ✓ Complete Diagnosis Review
+                            </button>
+                            <button class="btn btn-secondary" onclick="scrollToCard('treatment')">
+                                Next: Treatment →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card card-treatment fade-in" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">💊</div>
+                        <div class="card-title">
+                            <h2>Step 3: Drug-Specific Monitoring</h2>
+                            <p>Select DMARD for monitoring requirements</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <h4 style="margin-bottom: 16px;">Select DMARD:</h4>
+                        <div class="drug-selector">
+                            <span class="drug-pill active" onclick="selectDrug('methotrexate')">Methotrexate</span>
+                            <span class="drug-pill" onclick="selectDrug('azathioprine')">Azathioprine</span>
+                            <span class="drug-pill" onclick="selectDrug('leflunomide')">Leflunomide</span>
+                            <span class="drug-pill" onclick="selectDrug('sulfasalazine')">Sulfasalazine</span>
+                            <span class="drug-pill" onclick="selectDrug('hydroxychloroquine')">Hydroxychloroquine</span>
+                            <span class="drug-pill" onclick="selectDrug('biologics')">Biologics</span>
+                        </div>
+
+                        <!-- Methotrexate -->
+                        <div id="drug-methotrexate" class="drug-content active">
+                            <div class="alert-box alert-info">
+                                <span class="alert-icon">💊</span>
+                                <div class="alert-content">
+                                    <h4>Methotrexate</h4>
+                                    <p>Once-weekly dosing. Co-prescribe folic acid 5mg weekly (different day to MTX).</p>
+                                </div>
+                            </div>
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>FBC</td>
+                                        <td rowspan="3">
+                                            • Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months<br>
+                                            • Thereafter at least every 12 weeks<br>
+                                            • More frequent if high-risk patient<br>
+                                            <span class="badge badge-caution">Caution</span> If dose increased: restart 2-weekly monitoring
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Renal function (Creatinine/GFR)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>LFTs (ALT/AST, Albumin)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Azathioprine -->
+                        <div id="drug-azathioprine" class="drug-content">
+                            <div class="alert-box alert-info">
+                                <span class="alert-icon">💊</span>
+                                <div class="alert-content">
+                                    <h4>Azathioprine</h4>
+                                    <p>TPMT testing should be performed before starting treatment.</p>
+                                </div>
+                            </div>
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>FBC</td>
+                                        <td rowspan="3">
+                                            • Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months<br>
+                                            • Thereafter at least every 12 weeks<br>
+                                            • Monitor more frequently in patients at higher risk of toxicity
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Renal function (Creatinine/GFR)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>LFTs (ALT/AST, Albumin)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Leflunomide -->
+                        <div id="drug-leflunomide" class="drug-content">
+                            <div class="alert-box alert-caution">
+                                <span class="alert-icon">⚠️</span>
+                                <div class="alert-content">
+                                    <h4>Leflunomide</h4>
+                                    <p>If combined with methotrexate, continue monthly monitoring until stable for 12 months.</p>
+                                </div>
+                            </div>
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>FBC</td>
+                                        <td rowspan="5">
+                                            • Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months<br>
+                                            • Thereafter at least every 12 weeks<br>
+                                            • Monitor more frequently in patients at higher risk of toxicity
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Renal function (Creatinine/GFR)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>LFTs (ALT/AST, Albumin)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Blood Pressure</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Weight</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Sulfasalazine -->
+                        <div id="drug-sulfasalazine" class="drug-content">
+                            <div class="alert-box alert-info">
+                                <span class="alert-icon">💊</span>
+                                <div class="alert-content">
+                                    <h4>Sulfasalazine</h4>
+                                    <p>After 12 months of stable treatment, monitoring may be stopped.</p>
+                                </div>
+                            </div>
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>FBC</td>
+                                        <td rowspan="3">
+                                            • Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months<br>
+                                            • Thereafter at least every 12 weeks<br>
+                                            • <span class="badge badge-stable">Stable</span> After 12 months, monitoring may be stopped
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Renal function (Creatinine/GFR)</td>
+                                    </tr>
+                                    <tr>
+                                        <td>LFTs (ALT/AST, Albumin)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Hydroxychloroquine -->
+                        <div id="drug-hydroxychloroquine" class="drug-content">
+                            <div class="alert-box alert-caution">
+                                <span class="alert-icon">👁️</span>
+                                <div class="alert-content">
+                                    <h4>Hydroxychloroquine</h4>
+                                    <p>Annual eye monitoring is essential after 5 years of treatment due to retinal toxicity risk.</p>
+                                </div>
+                            </div>
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Renal function</td>
+                                        <td>Annually in patients &gt;70 years or with renal impairment, hypertension, diabetes</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Eye assessment (including OCT)</td>
+                                        <td>
+                                            • Annually for all patients on HCQ &gt; 5 years<br>
+                                            • Earlier if risk factors:<br>
+                                            &nbsp;&nbsp;- Concurrent tamoxifen<br>
+                                            &nbsp;&nbsp;- eGFR &lt; 60<br>
+                                            &nbsp;&nbsp;- High-dose therapy (&gt;5mg/kg/day)
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Biologics -->
+                        <div id="drug-biologics" class="drug-content">
+                            <div class="alert-box alert-info">
+                                <span class="alert-icon">🧬</span>
+                                <div class="alert-content">
+                                    <h4>Biologic DMARDs</h4>
+                                    <p>Includes TNF inhibitors, B-cell inhibitors, interleukin inhibitors, and T-cell inhibitors. Clinical review in secondary care at least every 6 months.</p>
+                                </div>
+                            </div>
+                            <table class="monitoring-table">
+                                <thead>
+                                    <tr>
+                                        <th>Test</th>
+                                        <th>Frequency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>FBC, U&E, LFTs</td>
+                                        <td>At 3-4 months, then every 6 months</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Lipid profile</td>
+                                        <td>4-8 weeks after initiation, then periodically</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Signs of infection</td>
+                                        <td>Before each injection/infusion</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Hepatitis B & C, HIV</td>
+                                        <td>If clinically indicated or annually in high-risk patients</td>
+                                    </tr>
+                                    <tr>
+                                        <td>TB screening</td>
+                                        <td>If symptoms, new exposure, or high-incidence setting</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Skin examination (NMSC)</td>
+                                        <td>Patients with psoriasis/PUVA history - as indicated</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="completeStep(3)">
+                                ✓ Complete Treatment Selection
+                            </button>
+                            <button class="btn btn-secondary" onclick="scrollToCard('followup')">
+                                Next: Follow-up →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card card-followup fade-in" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">📅</div>
+                        <div class="card-title">
+                            <h2>Step 4: Follow-up & Management</h2>
+                            <p>Ongoing monitoring and action points</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="subsection">
+                            <h4>📊 Trend Monitoring</h4>
+                            <p style="color: #475569; margin-bottom: 12px;">Whilst absolute values are useful indicators, trends are equally important:</p>
+                            <ul>
+                                <li><span class="badge badge-caution">Caution</span> Rapid fall or rise in any parameter</li>
+                                <li><span class="badge badge-caution">Caution</span> Consistent downward or upward trend</li>
+                                <li>Examples: gradual decreases in WBC or albumin, increasing liver enzymes</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>🤒 Intercurrent Illness Management</h4>
+                            <div class="alert-box alert-urgent" style="margin: 12px 0;">
+                                <span class="alert-icon">⚠️</span>
+                                <div class="alert-content">
+                                    <h4>Major Toxicity Risk</h4>
+                                    <p>Major toxicity can occur during intercurrent illness, particularly with renal impairment or sepsis. Seek specialist advice - treatment may need temporary discontinuation.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>🦠 Infection Prevention</h4>
+                            <ul>
+                                <li>Patients on DMARDs are more prone to infection, especially in first 6 months</li>
+                                <li><span class="badge badge-urgent">Urgent</span> Advise avoidance of contact with shingles/chickenpox</li>
+                                <li>If exposure occurs, advise seeking urgent medical advice</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>📞 When to Contact Specialist</h4>
+                            <ul>
+                                <li>Any adverse effect or complication identified</li>
+                                <li>Monitoring results outside normal range</li>
+                                <li>Intercurrent illness with potential for drug toxicity</li>
+                                <li>Question about drug interactions</li>
+                                <li>Need for live vaccination</li>
+                                <li>Pregnancy planning</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h4>📚 Patient Resources</h4>
+                            <ul>
+                                <li>Arthritis Care patient information leaflets</li>
+                                <li>Versus Arthritis (formerly Arthritis Research UK)</li>
+                                <li>National Rheumatoid Arthritis Society (NRAS)</li>
+                            </ul>
+                        </div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-primary" onclick="completeStep(4)">
+                                ✓ Complete Algorithm
+                            </button>
+                            <button class="btn btn-secondary" onclick="resetAlgorithm()">
+                                ↺ Reset Algorithm
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.closest('.card');
+            card.classList.toggle('expanded');
+        }
+
+        // Scroll to specific card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId);
+            const header = card.querySelector('.card-header');
+            
+            // Expand the card if not already expanded
+            if (!card.classList.contains('expanded')) {
+                card.classList.add('expanded');
+            }
+            
+            // Smooth scroll to card
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Update sidebar
+            updateSidebar(cardId);
+        }
+
+        // Update sidebar progress
+        function updateSidebar(activeCardId) {
+            const steps = {
+                'assessment': 1,
+                'diagnosis': 2,
+                'treatment': 3,
+                'followup': 4
+            };
+            
+            const activeStep = steps[activeCardId];
+            
+            document.querySelectorAll('.progress-item').forEach(item => {
+                const itemStep = parseInt(item.dataset.step);
+                item.classList.remove('active');
+                
+                if (itemStep === activeStep) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Complete step
+        function completeStep(stepNumber) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems[stepNumber - 1].classList.add('completed');
+            progressItems[stepNumber - 1].classList.remove('active');
+            
+            if (stepNumber < 4) {
+                progressItems[stepNumber].classList.add('active');
+                
+                // Scroll to next card
+                const cards = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                scrollToCard(cards[stepNumber]);
+            } else {
+                // Algorithm complete
+                showCompletionMessage();
+            }
+        }
+
+        // Show completion message
+        function showCompletionMessage() {
+            const header = document.querySelector('.header');
+            header.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">🎉</div>
+                    <h1>Algorithm Complete!</h1>
+                    <p style="margin-top: 10px;">All steps have been reviewed. Patient monitoring protocol established.</p>
+                    <button class="btn btn-primary" style="margin-top: 20px;" onclick="resetAlgorithm()">
+                        ↺ Start New Review
+                    </button>
+                </div>
+            `;
+            header.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Reset algorithm
+        function resetAlgorithm() {
+            document.querySelectorAll('.progress-item').forEach((item, index) => {
+                item.classList.remove('completed', 'active');
+                if (index === 0) item.classList.add('active');
+            });
+            
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('expanded');
+            });
+            
+            document.querySelectorAll('.checklist-item').forEach(item => {
+                item.classList.remove('checked');
+            });
+            
+            // Reset header
+            const header = document.querySelector('.header');
+            header.innerHTML = `
+                <h1>🏥 DMARD Monitoring Algorithm</h1>
+                <p>Disease-Modifying Anti-Rheumatic Drugs - Primary Care Monitoring Protocol</p>
+            `;
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Toggle checklist items
+        function toggleChecklist(item) {
+            item.classList.toggle('checked');
+        }
+
+        // Drug selector
+        function selectDrug(drugName) {
+            // Update pills
+            document.querySelectorAll('.drug-pill').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.drug-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById('drug-' + drugName).classList.add('active');
+        }
+
+        // Intersection Observer for sidebar updates
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                    updateSidebar(entry.target.id);
+                }
+            });
+        }, {
+            threshold: 0.3
+        });
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Expand first card on load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.card-assessment').classList.add('expanded');
+        });
+    </script>
+</body>
+</html>

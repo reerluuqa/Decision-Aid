@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pediatric MSK Assessment Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .progress-sidebar {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 1000;
+            min-width: 200px;
+        }
+
+        .progress-sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item:hover {
+            background: #f8f9fa;
+            transform: translateX(-5px);
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .main-content {
+            padding-right: 240px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            padding: 25px;
+            background: linear-gradient(135deg, var(--card-color), var(--card-color-light));
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .card-icon {
+            font-size: 2em;
+            margin-right: 15px;
+        }
+
+        .card-toggle {
+            font-size: 1.5em;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .card-toggle {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .sub-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid var(--sub-card-color);
+            transition: all 0.3s ease;
+        }
+
+        .sub-card:hover {
+            background: #e3f2fd;
+            transform: translateY(-3px);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 5px;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #ffd166, #ff9e6d);
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #06d6a0, #118ab2);
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #9b5de5, #7209b7);
+        }
+
+        .condition-item {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--condition-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .criteria-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .criteria-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .criteria-list li:before {
+            content: "•";
+            position: absolute;
+            left: 10px;
+            color: var(--list-color);
+            font-weight: bold;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2196f3, #1976d2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #78909c, #546e7a);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .age-indicator {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                padding-right: 0;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                right: auto;
+                transform: none;
+                margin-bottom: 30px;
+                width: 100%;
+            }
+            
+            .section-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header fade-in">
+            <h1>🏥 Pediatric Musculoskeletal Assessment</h1>
+            <p>Interactive algorithm based on NICE Clinical Knowledge Summaries for children (0-16 years)</p>
+        </div>
+
+        <div class="progress-sidebar fade-in pulse">
+            <h3>📊 Progress</h3>
+            <div class="progress-item active" data-section="emergency">
+                <div class="progress-icon" style="background: linear-gradient(135deg, #ff6b6b, #ee5a52);">🚨</div>
+                <span>Emergency</span>
+            </div>
+            <div class="progress-item" data-section="assessment">
+                <div class="progress-icon" style="background: linear-gradient(135deg, #4ecdc4, #44a08d);">🔍</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon" style="background: linear-gradient(135deg, #a8edea, #fed6e3);">🩺</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon" style="background: linear-gradient(135deg, #ff9a9e, #fecfef);">💊</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">📈</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Emergency Section -->
+            <div class="card fade-in" id="emergency-card" style="--card-color: #ff6b6b; --card-color-light: #ee5a52;">
+                <div class="card-header" onclick="toggleCard('emergency')">
+                    <div class="card-title">
+                        <span class="card-icon">🚨</span>
+                        Emergency Assessment
+                    </div>
+                    <span class="card-toggle">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section-grid">
+                            <div class="sub-card" style="--sub-card-color: #ff6b6b;">
+                                <h3>🚑 Immediate Emergency Referral</h3>
+                                <p style="color: #666; margin-bottom: 15px;"><strong>Admit to Emergency Department</strong></p>
+                                <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                    <span class="badge badge-urgent">EMERGENCY</span>
+                                    <strong>Suspected septic arthritis</strong>
+                                </div>
+                                <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                    <span class="badge badge-urgent">EMERGENCY</span>
+                                    <strong>Suspected osteomyelitis</strong>
+                                </div>
+                                <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                    <span class="badge badge-urgent">EMERGENCY</span>
+                                    <strong>Suspected fracture</strong>
+                                </div>
+                                <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                    <span class="badge badge-urgent">EMERGENCY</span>
+                                    <strong>Suspected slipped upper femoral epiphysis (SUFE)</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Hip, groin, distal thigh pain (age 10-16)</li>
+                                        <li>Leg pain on weight bearing</li>
+                                        <li>Pain on passive hip movements</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="sub-card" style="--sub-card-color: #ffd166;">
+                                <h3⚠️ Urgent Specialist Referral</h3>
+                                <p style="color: #666; margin-bottom: 15px;"><strong>Seek specialist advice within 24 hours</strong></p>
+                                <div class="condition-item" style="--condition-color: #ffd166;">
+                                    <span class="badge badge-caution">URGENT</span>
+                                    <strong>Suspected inflammatory arthritis</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Joint swelling</li>
+                                        <li>Morning stiffness >30 minutes</li>
+                                        <li>Systemic symptoms</li>
+                                        <li>Motor milestone regression</li>
+                                    </ul>
+                                </div>
+                                <div class="condition-item" style="--condition-color: #ffd166;">
+                                    <span class="badge badge-caution">URGENT</span>
+                                    <strong>Back pain with red flags</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Systemic symptoms (fever, weight loss)</li>
+                                        <li>Neurological features</li>
+                                        <li>Bowel/bladder dysfunction</li>
+                                        <li>Vertebral tenderness/deformity</li>
+                                    </ul>
+                                </div>
+                                <div class="condition-item" style="--condition-color: #ffd166;">
+                                    <span class="badge badge-caution">URGENT</span>
+                                    <strong>Possible malignancy</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Bruising, pallor</li>
+                                        <li>Weight loss, night sweats</li>
+                                        <li>Bone pain</li>
+                                        <li>Hepatosplenomegaly</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assessment Section -->
+            <div class="card fade-in" id="assessment-card" style="--card-color: #4ecdc4; --card-color-light: #44a08d;">
+                <div class="card-header" onclick="toggleCard('assessment')">
+                    <div class="card-title">
+                        <span class="card-icon">🔍</span>
+                        Initial Assessment
+                    </div>
+                    <span class="card-toggle">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section-grid">
+                            <div class="sub-card" style="--sub-card-color: #4ecdc4;">
+                                <h3>📋 Key History Points</h3>
+                                <ul class="criteria-list" style="--list-color: #4ecdc4;">
+                                    <li><strong>Parental concerns:</strong> Pain, gait, function, duration</li>
+                                    <li><strong>Pain characteristics:</strong> Site, timing, radiation, severity</li>
+                                    <li><strong>Systemic symptoms:</strong> Fever, weight loss, night sweats</li>
+                                    <li><strong>Development:</strong> Motor milestones, regression</li>
+                                    <li><strong>Family history:</strong> Arthritis, musculoskeletal conditions</li>
+                                    <li><strong>Trauma history:</strong> Recent injuries, sports activities</li>
+                                </ul>
+                            </div>
+
+                            <div class="sub-card" style="--sub-card-color: #4ecdc4;">
+                                <h3>🩺 Examination Framework</h3>
+                                <p style="color: #666; margin-bottom: 10px;"><strong>Use pGALS assessment:</strong></p>
+                                <ul class="criteria-list" style="--list-color: #4ecdc4;">
+                                    <li>Gait observation (walking, running)</li>
+                                    <li>Spine examination (curvature, tenderness)</li>
+                                    <li>Joint assessment (swelling, warmth, ROM)</li>
+                                    <li>Postural assessment (standing, sitting)</li>
+                                    <li>Neurological screen (tone, reflexes, power)</li>
+                                    <li>Growth parameters (height, weight)</li>
+                                </ul>
+                                <span class="badge badge-info">INFO</span>
+                                <small>PMM (Paediatric Musculoskeletal Matters) provides detailed guidance</small>
+                            </div>
+
+                            <div class="sub-card" style="--sub-card-color: #4ecdc4;">
+                                <h3>👶 Normal Developmental Milestones</h3>
+                                <div style="margin-bottom: 15px;">
+                                    <span class="age-indicator">6-8 months</span>
+                                    <p>Sits without support</p>
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <span class="age-indicator">12-14 months</span>
+                                    <p>Walks independently</p>
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <span class="age-indicator">15 months</span>
+                                    <p>Climbs stairs on hands/knees</p>
+                                </div>
+                                <div style="margin-bottom: 15px;">
+                                    <span class="age-indicator">2-3 years</span>
+                                    <p>Runs, walks up steps</p>
+                                </div>
+                                <div>
+                                    <span class="age-indicator">4-7 years</span>
+                                    <p>Hops, balances on one foot</p>
+                                </div>
+                            </div>
+
+                            <div class="sub-card" style="--sub-card-color: #ff6b6b;">
+                                <h3>🔴 Red Flag Screening</h3>
+                                <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                    <span class="badge badge-urgent">RED FLAG</span>
+                                    <strong>Systemic Features</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Prolonged morning stiffness (>30 min)</li>
+                                        <li>Night pain (not growing pains)</li>
+                                        <li>Fever, weight loss, night sweats</li>
+                                        <li>Lymphadenopathy, hepatosplenomegaly</li>
+                                    </ul>
+                                </div>
+                                <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                    <strong>Local Features</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Joint swelling, warmth, erythema</li>
+                                        <li>Limp or refusal to bear weight</li>
+                                        <li>Single joint involvement</li>
+                                        <li>Neurological deficit</li>
+                                        <li>Bowel/bladder dysfunction</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Section -->
+            <div class="card fade-in" id="diagnosis-card" style="--card-color: #a8edea; --card-color-light: #fed6e3;">
+                <div class="card-header" onclick="toggleCard('diagnosis')">
+                    <div class="card-title">
+                        <span class="card-icon">🩺</span>
+                        Differential Diagnosis
+                    </div>
+                    <span class="card-toggle">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section-grid">
+                            <!-- Back Pain -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>🦴 Back Pain</h3>
+                                <span class="badge badge-stable">Common</span>
+                                <p style="color: #666; margin: 10px 0;">Usually non-specific and self-limiting</p>
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Common Causes:</strong>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Muscular strain (poor posture)</li>
+                                        <li>Overuse injuries (sports)</li>
+                                        <li>Scheuermann's disease</li>
+                                        <li>Spondylolysis/spondylolisthesis</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <strong>Serious Causes:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Discitis, osteomyelitis</li>
+                                        <li>Spinal tumors</li>
+                                        <li>Juvenile idiopathic arthritis</li>
+                                        <li>Ankylosing spondylitis</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Lower Limb Variants -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>🦵 Lower Limb Variants</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Bow Legs (Genu Varum):</strong>
+                                    <span class="badge badge-stable">Normal <3 years</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Physiological: bilateral, symmetrical, painless</li>
+                                        <li>Resolves by 18 months-2 years</li>
+                                        <li>Pathological: rickets, Blount's disease, dysplasia</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Knock Knees (Genu Valgum):</strong>
+                                    <span class="badge badge-stable">Normal 3-6 years</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Physiological: bilateral, symmetrical</li>
+                                        <li>Resolves by 7 years</li>
+                                        <li>Exacerbated by obesity, ligamentous laxity</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Flat Feet (Pes Planus):</strong>
+                                    <span class="badge badge-stable">Normal in toddlers</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Flexible: arch present on tiptoe, normal variant</li>
+                                        <li>Resolves by 6 years</li>
+                                        <li>Rigid: suggests pathology</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Toe Walking:</strong>
+                                    <span class="badge badge-stable">Normal <3 years</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Idiopathic: diagnosis of exclusion</li>
+                                        <li>80% resolve by 10 years</li>
+                                        <li>Rule out: CP, muscular dystrophy, ASD</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- In-toeing/Out-toeing -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>🔄 Rotational Variants</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>In-toeing:</strong>
+                                    <span class="badge badge-stable">Common <6 years</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Metatarsus adductus (most common 0-1 year)</li>
+                                        <li>Internal tibial torsion (1-3 years)</li>
+                                        <li>Femoral anteversion (3-8 years, W-sitting)</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Out-toeing:</strong>
+                                    <span class="badge badge-stable">Normal early infancy</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>External tibial torsion</li>
+                                        <li>Femoral retroversion</li>
+                                        <li>Usually resolves by 18-24 months</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Growing Pains -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>😴 Growing Pains</h3>
+                                <span class="badge badge-stable">Benign</span>
+                                <span class="badge badge-info">3-12 years</span>
+                                <p style="color: #666; margin: 10px 0;"><strong>Diagnosis of exclusion</strong></p>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Typical Features:</strong>
+                                    <ul class="criteria-list" style="--list-color: #06d6a0;">
+                                        <li>Symmetrical lower limb pain</li>
+                                        <li>Evening/night pain, morning-free</li>
+                                        <li>Normal examination</li>
+                                        <li>No limp, normal activity</li>
+                                        <li>Systemically well</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Atypical Features → Refer:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Unilateral or asymmetric pain</li>
+                                        <li>Persistent/increasing severity</li>
+                                        <li>Morning pain</li>
+                                        <li>Joint swelling/stiffness</li>
+                                        <li>Systemic symptoms</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Hypermobility -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>🤸 Hypermobility</h3>
+                                <span class="badge badge-stable">Common variant</span>
+                                <span class="badge badge-info">34% prevalence</span>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Benign Hypermobility:</strong>
+                                    <ul class="criteria-list" style="--list-color: #06d6a0;">
+                                        <li>Asymptomatic, no functional impairment</li>
+                                        <li>Common in children, decreases with age</li>
+                                        <li>May be associated with flat feet</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Pathological Hypermobility:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Ehlers-Danlos syndrome</li>
+                                        <li>Marfan syndrome</li>
+                                        <li>Joint hypermobility spectrum disorder</li>
+                                        <li>Associated pain, fatigue, dysautonomia</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Clumsy Child -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>🤹 Clumsy Child</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Developmental Coordination Disorder (DCD):</strong>
+                                    <span class="badge badge-info">5-6% prevalence</span>
+                                    <ul class="criteria-list" style="--list-color: #a8edea;">
+                                        <li>Motor skills below expected level</li>
+                                        <li>Interferes with daily activities</li>
+                                        <li>Co-occurs with ADHD, autism, dyslexia</li>
+                                        <li>Male predominance</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Other Causes:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Visual impairment</li>
+                                        <li>Orthopaedic disorders</li>
+                                        <li>Mild cerebral palsy</li>
+                                        <li>Hereditary ataxia</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Late Walking -->
+                            <div class="sub-card" style="--sub-card-color: #a8edea;">
+                                <h3>👶 Delayed Walking</h3>
+                                <span class="badge badge-stable">Normal range</span>
+                                <p style="color: #666; margin: 10px 0;">
+                                    Girls: by 15 months | Boys: by 18 months
+                                </p>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Physiological Delay:</strong>
+                                    <ul class="criteria-list" style="--list-color: #06d6a0;">
+                                        <li>Bottom shuffling (common)</li>
+                                        <li>Family history of late walking</li>
+                                        <li>Otherwise normal development</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Pathological Causes:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Cerebral palsy</li>
+                                        <li>Muscular dystrophy</li>
+                                        <li>Spina bifida</li>
+                                        <li>Rickets</li>
+                                        <li>Developmental hip dysplasia</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Section -->
+            <div class="card fade-in" id="treatment-card" style="--card-color: #ff9a9e; --card-color-light: #fecfef;">
+                <div class="card-header" onclick="toggleCard('treatment')">
+                    <div class="card-title">
+                        <span class="card-icon">💊</span>
+                        Management & Referral
+                    </div>
+                    <span class="card-toggle">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section-grid">
+                            <!-- Community Management -->
+                            <div class="sub-card" style="--sub-card-color: #06d6a0;">
+                                <h3>🏡 Community Management</h3>
+                                <span class="badge badge-stable">PRIMARY CARE</span>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Reassurance & Advice:</strong>
+                                    <ul class="criteria-list" style="--list-color: #06d6a0;">
+                                        <li>Physiological variants (bow legs, knock knees, flat feet)</li>
+                                        <li>Growing pains with typical features</li>
+                                        <li>Mild hypermobility without symptoms</li>
+                                        <li>Idiopathic toe walking <3 years</li>
+                                        <li>Simple back pain without red flags</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Community Physiotherapy:</strong>
+                                    <ul class="criteria-list" style="--list-color: #06d6a0;">
+                                        <li>Back pain with normal examination</li>
+                                        <li>Hypermobility with mild symptoms</li>
+                                        <li>Flexibility exercises for toe walking</li>
+                                        <li>Postural advice for growing pains</li>
+                                        <li>Sever's disease (heel pain)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-success">📞 Contact Community Physio</a>
+                                    <a href="#" class="action-btn btn-secondary">📄 Parent Information</a>
+                                </div>
+                            </div>
+
+                            <!-- Specialist Referral -->
+                            <div class="sub-card" style="--sub-card-color: #ffd166;">
+                                <h3>🏥 Specialist Referral Criteria</h3>
+                                <span class="badge badge-caution">SECONDARY CARE</span>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Orthopaedics:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Bow legs >3 years or severe deformity</li>
+                                        <li>Knock knees <2 or >5-6 years</li>
+                                        <li>Rigid flat feet/asymmetry</li>
+                                        <li>Persistent rotational deformities</li>
+                                        <li>Fixed metatarsus adductus</li>
+                                        <li>Sever's disease unresponsive to conservative treatment</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Rheumatology:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Inflammatory arthritis features</li>
+                                        <li>Hypermobility with significant symptoms</li>
+                                        <li>Suspected connective tissue disorders</li>
+                                        <li>Joint pain with swelling/stiffness</li>
+                                        <li>Complex regional pain syndrome</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Paediatrics:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>Delayed walking with other concerns</li>
+                                        <li>Suspected neurological disorders</li>
+                                        <li>Systemic symptoms</li>
+                                        <li>Developmental regression</li>
+                                        <li>Failure to thrive</li>
+                                    </ul>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-primary">📋 Referral Form</a>
+                                    <a href="#" class="action-btn btn-secondary">📞 Advice Line</a>
+                                </div>
+                            </div>
+
+                            <!-- Specific Conditions -->
+                            <div class="sub-card" style="--sub-card-color: #667eea;">
+                                <h3>🎯 Condition-Specific Management</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <h4 style="color: #667eea; margin-bottom: 10px;">Sever's Disease (Heel Pain)</h4>
+                                    <ul class="criteria-list" style="--list-color: #667eea;">
+                                        <li>Avoid aggravating activities</li>
+                                        <li>Ice, NSAIDs for pain relief</li>
+                                        <li>Heel cups/orthoses</li>
+                                        <li>Achilles stretching exercises</li>
+                                        <li>Self-limiting, resolves with growth</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <h4 style="color: #667eea; margin-bottom: 10px;">Growing Pains</h4>
+                                    <ul class="criteria-list" style="--list-color: #667eea;">
+                                        <li>Parental reassurance</li>
+                                        <li>Massage and heat application</li>
+                                        <li>Simple analgesia (paracetamol/ibuprofen)</li>
+                                        <li>Consistency in bedtime routine</li>
+                                        <li>Monitor for atypical features</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <h4 style="color: #667eea; margin-bottom: 10px;">Hypermobility Spectrum Disorder</h4>
+                                    <ul class="criteria-list" style="--list-color: #667eea;">
+                                        <li>Strengthening exercises</li>
+                                        <li>Proprioceptive training</li>
+                                        <li>Activity modification</li>
+                                        <li>Pain management strategies</li>
+                                        <li>Multidisciplinary approach</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Parent Support -->
+                            <div class="sub-card" style="--sub-card-color: #9b5de5;">
+                                <h3>👨‍👩‍👧‍👦 Parent Support & Information</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Key Messages for Parents:</strong>
+                                    <ul class="criteria-list" style="--list-color: #9b5de5;">
+                                        <li>Most musculoskeletal presentations are benign</li>
+                                        <li>Many conditions are self-limiting developmental variants</li>
+                                        <li>Reassurance appropriate for physiological conditions</li>
+                                        <li>Early intervention improves outcomes when needed</li>
+                                        <li>Monitoring for red flag symptoms is crucial</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Resources:</strong>
+                                    <ul class="criteria-list" style="--list-color: #9b5de5;">
+                                        <li>Paediatric Musculoskeletal Matters (PMM)</li>
+                                        <li>Versus Arthritis: MSK Clinical Assessment</li>
+                                        <li>Association of Paediatric Chartered Physiotherapists</li>
+                                        <li>NHS: Growing Pains Information</li>
+                                    </ul>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-primary">📖 Parent Leaflet</a>
+                                    <a href="#" class="action-btn btn-secondary">🔗 Useful Links</a>
+                                </div>
+                            </div>
+                        </div>
+
+                    <div class="section-grid" style="margin-top: 30px;">
+                            <!-- Referral Pathways -->
+                            <div class="sub-card" style="--sub-card-color: #764ba2;">
+                                <h3>🗺️ Referral Pathways</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>GP → Community Physiotherapy:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>Simple mechanical problems</li>
+                                        <li>Postural education needs</li>
+                                        <li>Exercise prescription</li>
+                                        <li>Parental reassurance</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>GP → Orthopaedics:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>Structural deformities</li>
+                                        <li>Rigid foot/ankle problems</li>
+                                        <li>Persistent gait abnormalities</li>
+                                        <li>Need for surgical opinion</li>
+                                    </ul>
+                                </div>
+
+                                    <div style="margin-bottom: 15px;">
+                                        <strong>GP → Rheumatology:</strong>
+                                        <ul class="criteria-list" style="--list-color: #764ba2;">
+                                            <li>Inflammatory features</li>
+                                            <li>Connective tissue disorders</li>
+                                            <li>Complex hypermobility</li>
+                                            <li>Chronic pain syndromes</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <strong>GP → Paediatrics:</strong>
+                                        <ul class="criteria-list" style="--list-color: #764ba2;">
+                                            <li>Developmental concerns</li>
+                                            <li>Systemic symptoms</li>
+                                            <li>Neurological issues</li>
+                                            <li>Multisystem involvement</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="sub-card" style="--sub-card-color: #667eea;">
+                                    <h3>⚡ Emergency Pathways</h3>
+                                    <span class="badge badge-urgent">EMERGENCY</span>
+                                    <p style="color: #666; margin: 10px 0;">
+                                        <strong>Direct to Emergency Department:</strong>
+                                    </p>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Suspected septic arthritis/osteomyelitis</li>
+                                        <li>Acute fractures</li>
+                                        <li>SUFE with severe pain/inability to bear weight</li>
+                                        <li>Acute neurological deficit</li>
+                                        <li>Severe systemic illness</li>
+                                    </ul>
+                                    
+                                    <div class="action-buttons">
+                                        <a href="#" class="action-btn btn-urgent">🚑 Emergency Referral</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Section -->
+            <div class="card fade-in" id="followup-card" style="--card-color: #667eea; --card-color-light: #764ba2;">
+                <div class="card-header" onclick="toggleCard('followup')">
+                    <div class="card-title">
+                        <span class="card-icon">📈</span>
+                        Follow-up & Monitoring
+                    </div>
+                    <span class="card-toggle">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section-grid">
+                            <!-- Follow-up Guidelines -->
+                            <div class="sub-card" style="--sub-card-color: #667eea;">
+                                <h3>📅 Monitoring Schedule</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Physiological Variants:</strong>
+                                    <ul class="criteria-list" style="--list-color: #667eea;">
+                                        <li>Review in 6-12 months</li>
+                                        <li>Photo documentation of progression</li>
+                                        <li>Measure intercondylar/intermalleolar distances</li>
+                                        <li>Document gait patterns</li>
+                                        <li>Parental reassurance at each visit</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Pathological Conditions:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ffd166;">
+                                        <li>More frequent monitoring (1-3 months)</li>
+                                        <li>Specialist follow-up as advised</li>
+                                        <li>Multidisciplinary team involvement</li>
+                                        <li>Parental education and support</li>
+                                        <li>School liaison when needed</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Red Flag Monitoring:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Immediate action if red flags develop</li>
+                                        <li>Parental awareness of warning signs</li>
+                                        <li>24-hour contact advice</li>
+                                        <li>Timely specialist referral</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Outcome Measures -->
+                            <div class="sub-card" style="--sub-card-color: #764ba2;">
+                                <h3>🎯 Outcome Assessment</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Functional Outcomes:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>Pain scores (Faces Pain Scale-Revised)</li>
+                                        <li>Activity levels and participation</li>
+                                        <li>School attendance and performance</li>
+                                        <li>Sleep quality</li>
+                                        <li>Quality of life measures</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Physical Measures:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>Range of motion</li>
+                                        <li>Muscle strength</li>
+                                        <li>Gait analysis</li>
+                                        <li>Joint swelling/tenderness</li>
+                                        <li>Postural alignment</li>
+                                    </ul>
+                                </div>
+
+                                <div>
+                                    <strong>Developmental Progress:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>Motor milestone achievement</li>
+                                        <li>Regression monitoring</li>
+                                        <li>Coordination skills</li>
+                                        <li>Participation in activities</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Parent Education -->
+                            <div class="sub-card" style="--sub-card-color: #9b5de5;">
+                                <h3>📚 Parent Education Points</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Key Messages:</strong>
+                                    <ul class="criteria-list" style="--list-color: #9b5de5;">
+                                        <li>Most conditions are self-limiting</li>
+                                        <li>Normal variants resolve with growth</li>
+                                        <li>Importance of physical activity</li>
+                                        <li>Avoid unnecessary investigations</li>
+                                        <li>When to seek medical attention</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Home Management:</strong>
+                                    <ul class="criteria-list" style="--list-color: #9b5de5;">
+                                        <li>Simple analgesia advice</li>
+                                        <li>Heat/massage for growing pains</li>
+                                        <li>Footwear guidance</li>
+                                        <li>Exercise and stretching programs</li>
+                                        <li>Postural advice</li>
+                                    </ul>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-secondary">📄 Info Sheet</a>
+                                    <a href="#" class="action-btn btn-secondary">🎥 Video Resources</a>
+                                </div>
+                            </div>
+
+                            <!-- Safety Netting -->
+                            <div class="sub-card" style="--sub-card-color: #ff6b6b;">
+                                <h3>⚠️ Safety Netting</h3>
+                                <span class="badge badge-urgent">IMPORTANT</span>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Red Flag Symptoms:</strong>
+                                    <ul class="criteria-list" style="--list-color: #ff6b6b;">
+                                        <li>Worsening pain or new night pain</li>
+                                        <li>Development of joint swelling</li>
+                                        <li>Limp or refusal to bear weight</li>
+                                        <li>Fever or systemic symptoms</li>
+                                        <li>Neurological symptoms</li>
+                                        <li>Rapid progression of deformity</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>When to Seek Urgent Care:</strong>
+                                    <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                        <span class="badge badge-urgent">URGENT</span>
+                                        <p>Develops red flag symptoms</p>
+                                    </div>
+                                    <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                        <span class="badge badge-urgent">URGENT</span>
+                                        <p>Sudden deterioration in function</p>
+                                    </div>
+                                    <div class="condition-item" style="--condition-color: #ff6b6b;">
+                                        <span class="badge badge-urgent">URGENT</span>
+                                        <p>Severe pain unresponsive to analgesia</p>
+                                    </div>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-urgent">🚨 Emergency Contact</a>
+                                    <a href="#" class="action-btn btn-secondary">📞 Advice Line</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-grid" style="margin-top: 30px;">
+                            <!-- Quality Assurance -->
+                            <div class="sub-card" style="--sub-card-color: #667eea;">
+                                <h3>🔍 Quality Assurance</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Documentation Standards:</strong>
+                                    <ul class="criteria-list" style="--list-color: #667eea;">
+                                        <li>Complete history and examination</li>
+                                        <li>Red flag assessment documented</li>
+                                        <li>Parental education provided</li>
+                                        <li>Follow-up plans clear</li>
+                                        <li>Referral criteria met</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Audit Criteria:</strong>
+                                    <ul class="criteria-list" style="--list-color: #667eea;">
+                                        <li>Appropriate referral rates</li>
+                                        <li>Red flag identification</li>
+                                        <li>Parent satisfaction scores</li>
+                                        <li>Time to specialist appointment</li>
+                                        <li>Clinical outcome measures</li>
+                                    </ul>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-primary">📊 Audit Tool</a>
+                                    <a href="#" class="action-btn btn-secondary">📝 Documentation Template</a>
+                                </div>
+                            </div>
+
+                            <!-- Resources -->
+                            <div class="sub-card" style="--sub-card-color: #764ba2;">
+                                <h3>🔗 Key Resources</h3>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Guidelines & Pathways:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>NICE CKS: Common MSK Presentations in Children</li>
+                                        <li>Paediatric Musculoskeletal Matters (PMM)</li>
+                                        <li>Versus Arthritis: MSK Clinical Assessment</li>
+                                        <li>APCP Paediatric MSK Guidelines</li>
+                                        <li>RightPath MSK Triage Guidance</li>
+                                    </ul>
+                                </div>
+
+                                <div style="margin-bottom: 15px;">
+                                    <strong>Clinical Tools:</strong>
+                                    <ul class="criteria-list" style="--list-color: #764ba2;">
+                                        <li>pGALS examination format</li>
+                                        <li>Beighton Score for hypermobility</li>
+                                        <li>Faces Pain Scale-Revised</li>
+                                        <li>Developmental milestone checklists</li>
+                                        <li>Red flag screening tools</li>
+                                    </ul>
+                                </div>
+
+                                <div class="action-buttons">
+                                    <a href="#" class="action-btn btn-primary">🌐 Visit PMM Website</a>
+                                    <a href="#" class="action-btn btn-secondary">📱 Download Tools</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            card.classList.toggle('expanded');
+        }
+
+        // Initialize first card as expanded
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('emergency-card').classList.add('expanded');
+            
+            // Add smooth scrolling and intersection observer
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            // Intersection Observer for progress tracking
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const cardId = entry.target.id.replace('-card', '');
+                        updateProgressBar(cardId);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            cards.forEach(card => observer.observe(card));
+            
+            // Progress item click handlers
+            progressItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const section = this.dataset.section;
+                    const targetCard = document.getElementById(section + '-card');
+                    
+                    // Expand the target card
+                    targetCard.classList.add('expanded');
+                    
+                    // Scroll to the target card
+                    targetCard.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Update progress bar
+                    updateProgressBar(section);
+                });
+            });
+        });
+
+        // Update progress bar active state
+        function updateProgressBar(activeSection) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === activeSection) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Add scroll trigger for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const scrollObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            scrollObserver.observe(card);
+        });
+
+            // Add search functionality
+        function searchAlgorithm() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+            
+            cards.forEach(card => {
+                const content = card.textContent.toLowerCase();
+                if (content.includes(searchTerm) || searchTerm === '') {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Add filter by severity
+        function filterBySeverity(severity) {
+            const badges = document.querySelectorAll('.badge');
+            
+            badges.forEach(badge => {
+                const badgeClass = badge.className;
+                if (severity === 'all' || badgeClass.includes(severity)) {
+                    badge.closest('.condition-item').style.display = 'block';
+                } else {
+                    badge.closest('.condition-item').style.display = 'none';
+                }
+            });
+        }
+
+        // Add print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown') {
+                const currentCard = document.querySelector('.card.expanded');
+                const nextCard = currentCard.nextElementSibling;
+                if (nextCard && nextCard.classList.contains('card')) {
+                    currentCard.classList.remove('expanded');
+                    nextCard.classList.add('expanded');
+                    nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else if (e.key === 'ArrowUp') {
+                const currentCard = document.querySelector('.card.expanded');
+                const prevCard = currentCard.previousElementSibling;
+                if (prevCard && prevCard.classList.contains('card')) {
+                    currentCard.classList.remove('expanded');
+                    prevCard.classList.add('expanded');
+                    prevCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        });
+
+        // Add touch support for mobile
+        let touchStartY = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.changedTouches[0].screenY;
+        });
+
+        document.addEventListener('touchend', function(e) {
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            if (touchEndY < touchStartY - 50) { // Swipe up
+                const currentCard = document.querySelector('.card.expanded');
+                const nextCard = currentCard.nextElementSibling;
+                if (nextCard && nextCard.classList.contains('card')) {
+                    currentCard.classList.remove('expanded');
+                    nextCard.classList.add('expanded');
+                }
+            }
+            if (touchEndY > touchStartY + 50) { // Swipe down
+                const currentCard = document.querySelector('.card.expanded');
+                const prevCard = currentCard.previousElementSibling;
+                if (prevCard && prevCard.classList.contains('card')) {
+                    currentCard.classList.remove('expanded');
+                    prevCard.classList.add('expanded');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMARD Monitoring Algorithm | NICE CKS Interactive Guide</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 1rem 2rem;
+        }
+
+        .header h1 {
+            color: #005eb8;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 80px;
+            width: 250px;
+            height: calc(100vh - 80px);
+            background: #fff;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 2rem 1.5rem;
+            z-index: 999;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .progress-sidebar h3 {
+            color: #005eb8;
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-item:hover {
+            background: #f0f4f8;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: #e8f0fe;
+            border-left: 4px solid #005eb8;
+        }
+
+        .progress-item.completed {
+            opacity: 0.7;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 0.9rem;
+            color: #fff;
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            padding: 100px 2rem 2rem;
+            flex: 1;
+        }
+
+        /* Cards */
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(0.95);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #fff;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1);
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            color: #fff;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        /* Card Colors */
+        .assessment .card-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .assessment .progress-icon { background: #667eea; }
+        
+        .diagnosis .card-header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .diagnosis .progress-icon { background: #f5576c; }
+        
+        .treatment .card-header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .treatment .progress-icon { background: #4facfe; }
+        
+        .followup .card-header { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .followup .progress-icon { background: #43e97b; }
+
+        /* Badges */
+        .badges-container {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .badge-urgent {
+            background: #fee;
+            color: #c92a2a;
+            border: 1px solid #ffa8a8;
+        }
+
+        .badge-caution {
+            background: #fff3bf;
+            color: #e67700;
+            border: 1px solid #ffd43b;
+        }
+
+        .badge-stable {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            border: 1px solid #96f2d7;
+        }
+
+        /* Content Styling */
+        .section-title {
+            color: #005eb8;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 1.5rem 0 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .drug-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .drug-button {
+            padding: 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .drug-button:hover {
+            border-color: #005eb8;
+            background: #f0f7ff;
+            transform: translateY(-2px);
+        }
+
+        .drug-button.active {
+            border-color: #005eb8;
+            background: #005eb8;
+            color: #fff;
+        }
+
+        .monitoring-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .monitoring-table th,
+        .monitoring-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .monitoring-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #005eb8;
+        }
+
+        .monitoring-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #005eb8;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fff3bf;
+            border-left: 4px solid #ffd43b;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .urgent-box {
+            background: #fee;
+            border-left: 4px solid #ff6b6b;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+                width: 100%;
+            }
+            
+            .progress-sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 100px 1rem 2rem;
+            }
+            
+            .menu-toggle {
+                display: block;
+                position: fixed;
+                top: 90px;
+                left: 1rem;
+                z-index: 998;
+                background: #005eb8;
+                color: #fff;
+                border: none;
+                padding: 0.5rem;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+        }
+
+        .menu-toggle {
+            display: none;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        /* Scrollbar Styling */
+        .progress-sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .progress-sidebar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .progress-sidebar::-webkit-scrollbar-thumb {
+            background: #005eb8;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><i class="fas fa-stethoscope"></i> DMARD Monitoring Algorithm</h1>
+    </header>
+
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i> Menu
+    </button>
+
+    <div class="container">
+        <aside class="progress-sidebar" id="progressSidebar">
+            <h3><i class="fas fa-route"></i> Progress</h3>
+            <div class="progress-item active" onclick="scrollToSection('assessment')" data-section="assessment">
+                <div class="progress-icon" style="background: #667eea;">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <span class="progress-text">Assessment</span>
+            </div>
+            <div class="progress-item" onclick="scrollToSection('diagnosis')" data-section="diagnosis">
+                <div class="progress-icon" style="background: #f5576c;">
+                    <i class="fas fa-search"></i>
+                </div>
+                <span class="progress-text">Diagnosis & Drug Classification</span>
+            </div>
+            <div class="progress-item" onclick="scrollToSection('treatment')" data-section="treatment">
+                <div class="progress-icon" style="background: #4facfe;">
+                    <i class="fas fa-pills"></i>
+                </div>
+                <span class="progress-text">Monitoring Protocol</span>
+            </div>
+            <div class="progress-item" onclick="scrollToSection('followup')" data-section="followup">
+                <div class="progress-icon" style="background: #43e97b;">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <span class="progress-text">Follow-up & Referral</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Card -->
+            <div class="card assessment" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h2 class="card-title">Assessment</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <h3 class="section-title"><i class="fas fa-user"></i> Patient Eligibility</h3>
+                        <p><strong>Age:</strong> Adults aged 18 years and onwards</p>
+                        <p><strong>Scope:</strong> Ongoing monitoring of adults on DMARDs in primary care</p>
+                        
+                        <div class="info-box">
+                            <strong>Exclusions:</strong> Children/young people, pre-treatment testing (secondary care), pharmacological actions, drug interactions
+                        </div>
+
+                        <h3 class="section-title"><i class="fas fa-exclamation-triangle"></i> Key Risks</h3>
+                        <div class="badges-container">
+                            <span class="badge badge-urgent"><i class="fas fa-radiation"></i> Myelosuppression</span>
+                            <span class="badge badge-urgent"><i class="fas fa-biohazard"></i> Infection Risk</span>
+                            <span class="badge badge-caution"><i class="fas fa-liver"></i> Hepatotoxicity</span>
+                            <span class="badge badge-caution"><i class="fas fa-kidneys"></i> Renal Toxicity</span>
+                            <span class="badge badge-caution"><i class="fas fa-lungs"></i> Pulmonary Toxicity</span>
+                            <span class="badge badge-caution"><i class="fas fa-eye"></i> Retinal Damage</span>
+                        </div>
+
+                        <h3 class="section-title"><i class="fas fa-info-circle"></i> General Principles</h3>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>DMARD initiation and initial monitoring by specialist</li>
+                            <li>GPs may monitor stable patients under shared care protocol</li>
+                            <li>Follow local guidelines where they differ</li>
+                            <li>Trends are as important as absolute values</li>
+                            <li>Monitor based on DMARD requiring most frequent monitoring</li>
+                            <li>Ensure patient awareness of adverse effects</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h2 class="card-title">Diagnosis & Drug Classification</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <h3 class="section-title"><i class="fas fa-layer-group"></i> DMARD Categories</h3>
+                        
+                        <div class="drug-selector">
+                            <div class="drug-button" onclick="showDrugInfo('conventional')">
+                                <i class="fas fa-pills"></i><br>
+                                Conventional Synthetic
+                            </div>
+                            <div class="drug-button" onclick="showDrugInfo('biologic')">
+                                <i class="fas fa-dna"></i><br>
+                                Biologic
+                            </div>
+                            <div class="drug-button" onclick="showDrugInfo('targeted')">
+                                <i class="fas fa-bullseye"></i><br>
+                                Targeted Synthetic
+                            </div>
+                        </div>
+
+                        <div id="drug-info-display" style="display: none;">
+                            <div class="info-box" id="conventional-info">
+                                <strong>Conventional DMARDs:</strong> Methotrexate, Leflunomide, Sulfasalazine, Hydroxychloroquine, Azathioprine, Ciclosporin, Cyclophosphamide, Penicillamine, Tacrolimus
+                                <br><br><span class="badge badge-caution">Oral/Injection | Broad immunosuppression</span>
+                            </div>
+                            <div class="info-box" id="biologic-info" style="display: none;">
+                                <strong>Biologic DMARDs:</strong> TNF inhibitors (Adalimumab, Etanercept, Infliximab), B-cell inhibitors, Interleukin inhibitors, T-cell inhibitors
+                                <br><br><span class="badge badge-urgent">Self-injection/Infusion | Requires specialist review every 6 months</span>
+                            </div>
+                            <div class="info-box" id="targeted-info" style="display: none;">
+                                <strong>Targeted Synthetic DMARDs:</strong> Tofacitinib, Baricitinib, Apremilast
+                                <br><br><span class="badge badge-stable">Oral | Specific immune targets | Rapid onset (2-6 weeks)</span>
+                            </div>
+                        </div>
+
+                        <h3 class="section-title"><i class="fas fa-clipboard-list"></i> Baseline Requirements</h3>
+                        <ul style="margin-left: 1.5rem;">
+                            <li>Full Blood Count (FBC)</li>
+                            <li>Renal Function (Creatinine/eGFR)</li>
+                            <li>Liver Function Tests (ALT/AST, Albumin)</li>
+                            <li>Blood Pressure</li>
+                            <li>Weight (for Leflunomide)</li>
+                            <li>Eye Assessment (for Hydroxychloroquine >5 years)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <h2 class="card-title">Monitoring Protocol</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <h3 class="section-title"><i class="fas fa-search-plus"></i> Select DMARD for Monitoring Schedule</h3>
+                        
+                        <div class="drug-selector">
+                            <div class="drug-button" onclick="showMonitoringTable('methotrexate')">Methotrexate</div>
+                            <div class="drug-button" onclick="showMonitoringTable('leflunomide')">Leflunomide</div>
+                            <div class="drug-button" onclick="showMonitoringTable('sulfasalazine')">Sulfasalazine</div>
+                            <div class="drug-button" onclick="showMonitoringTable('hydroxychloroquine')">Hydroxychloroquine</div>
+                            <div class="drug-button" onclick="showMonitoringTable('azathioprine')">Azathioprine</div>
+                            <div class="drug-button" onclick="showMonitoringTable('biologics')">Biologics</div>
+                        </div>
+
+                        <div id="monitoring-display">
+                            <p style="color: #6c757d; text-align: center; padding: 2rem;">
+                                Select a DMARD above to view specific monitoring requirements
+                            </p>
+                        </div>
+
+                        <div class="warning-box" style="margin-top: 2rem;">
+                            <strong><i class="fas fa-exclamation-triangle"></i> Frequency Notes:</strong><br>
+                            • Every 2 weeks until dose stable for 6 weeks<br>
+                            • Then monthly for 3 months<br>
+                            • Then at least every 12 weeks<br>
+                            • Monitor more frequently in high-risk patients
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <h2 class="card-title">Follow-up & Referral</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <h3 class="section-title"><i class="fas fa-ambulance"></i> Urgent Referral Criteria <span class="badge badge-urgent">RED FLAGS</span></h3>
+                        
+                        <div class="urgent-box">
+                            <strong><i class="fas fa-exclamation-circle"></i> STOP Treatment & Urgent Referral if:</strong>
+                            <table class="monitoring-table" style="margin-top: 0.5rem;">
+                                <tr><td>WBC < 3.5 × 10⁹/L</td></tr>
+                                <tr><td>Neutrophils < 1.6 × 10⁹/L</td></tr>
+                                <tr><td>ALT/AST > 100 U/L</td></tr>
+                                <tr><td>Platelets < 140 × 10⁹/L</td></tr>
+                                <tr><td>Albumin < 30 g/L (unexplained)</td></tr>
+                                <tr><td>Creatinine ↑ >30% over 12 months & eGFR <60</td></tr>
+                                <tr><td>Blood pressure >140/90 mmHg (on Ciclosporin)</td></tr>
+                                <tr><td>Urinary protein 2+ or more (persistent)</td></tr>
+                            </table>
+                        </div>
+
+                        <div class="urgent-box">
+                            <strong><i class="fas fa-user-injured"></i> Clinical Symptoms Requiring Urgent Referral:</strong>
+                            <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                                <li>Skin/mucosal reaction (rash, ulceration)</li>
+                                <li>Sore throat, fever, unexplained bruising/bleeding</li>
+                                <li>Nausea, vomiting, diarrhoea, weight loss</li>
+                                <li>Breathlessness, cough, infection</li>
+                                <li>Peripheral neuropathy</li>
+                                <li><strong>Biologics:</strong> TB symptoms, heart failure, interstitial lung disease</li>
+                            </ul>
+                        </div>
+
+                        <h3 class="section-title"><i class="fas fa-shield-alt"></i> Vaccination Schedule</h3>
+                        <div class="badges-container">
+                            <span class="badge badge-stable"><i class="fas fa-syringe"></i> Annual Influenza</span>
+                            <span class="badge badge-stable"><i class="fas fa-syringe"></i> Pneumococcal (once)</span>
+                            <span class="badge badge-stable"><i class="fas fa-syringe"></i> COVID-19 (per guidelines)</span>
+                            <span class="badge badge-urgent"><i class="fas fa-times-circle"></i> Avoid Live Vaccines</span>
+                        </div>
+
+                        <h3 class="section-title"><i class="fas fa-chart-line"></i> Monitoring Trends</h3>
+                        <div class="info-box">
+                            <strong>Action required for:</strong><br>
+                            • Rapid fall/rise in any parameter<br>
+                            • Consistent downward/upward trends<br>
+                            • Gradual decreases in WBC or albumin<br>
+                            • Increasing liver enzymes
+                        </div>
+
+                        <div class="warning-box">
+                            <strong><i class="fas fa-virus"></i> Infection Risk:</strong> Higher in first 6 months. Advise avoidance of contact with chickenpox/shingles and seek urgent advice if exposed.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <p>Based on NICE CKS DMARDs Topic (Last revised December 2023) | For healthcare professionals only</p>
+                <p><i class="fas fa-copyright"></i> Content adapted from Clarity Informatics Limited</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update progress item
+            const sectionId = card.id;
+            updateProgress(sectionId);
+        }
+
+        // Progress sidebar functionality
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            const headerOffset = 100;
+            const elementPosition = element.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+
+            // Expand the target card
+            const card = document.getElementById(sectionId);
+            card.classList.add('expanded');
+            
+            // Update active progress item
+            updateProgress(sectionId);
+        }
+
+        function updateProgress(activeSection) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === activeSection) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Intersection Observer for scroll-based progress tracking
+        const observerOptions = {
+            root: null,
+            rootMargin: '-100px 0px -60% 0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    updateProgress(entry.target.id);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Drug info display
+        function showDrugInfo(category) {
+            const display = document.getElementById('drug-info-display');
+            display.style.display = 'block';
+            
+            // Hide all info boxes
+            document.querySelectorAll('#drug-info-display .info-box').forEach(box => {
+                box.style.display = 'none';
+            });
+            
+            // Show selected category
+            document.getElementById(`${category}-info`).style.display = 'block';
+            
+            // Animate
+            setTimeout(() => {
+                display.classList.add('fade-in');
+            }, 10);
+        }
+
+        // Monitoring table display
+        function showMonitoringTable(drug) {
+            const display = document.getElementById('monitoring-display');
+            
+            const monitoringData = {
+                methotrexate: {
+                    name: 'Methotrexate',
+                    notes: 'Weekly dose with folic acid 5mg weekly on different day',
+                    tests: ['FBC', 'Renal function', 'LFTs (ALT/AST, Albumin)'],
+                    frequency: 'Every 2 weeks → Monthly → 12 weekly'
+                },
+                leflunomide: {
+                    name: 'Leflunomide',
+                    notes: 'Combine with methotrexate: monthly monitoring for 12 months',
+                    tests: ['FBC', 'Renal function', 'LFTs', 'Blood pressure', 'Weight'],
+                    frequency: 'Every 2 weeks → Monthly → 12 weekly'
+                },
+                sulfasalazine: {
+                    name: 'Sulfasalazine',
+                    notes: 'Monitoring may stop after 12 months',
+                    tests: ['FBC', 'Renal function', 'LFTs'],
+                    frequency: 'Every 2 weeks → Monthly → 12 weekly'
+                },
+                hydroxychloroquine: {
+                    name: 'Hydroxychloroquine',
+                    notes: 'Annual eye assessment if >5 years or high risk',
+                    tests: ['Renal function (if >70yo or risk factors)', 'Eye assessment'],
+                    frequency: 'Annually'
+                },
+                azathioprine: {
+                    name: 'Azathioprine',
+                    notes: 'Monitor more frequently in high-risk patients',
+                    tests: ['FBC', 'Renal function', 'LFTs'],
+                    frequency: 'Every 2 weeks → Monthly → 12 weekly'
+                },
+                biologics: {
+                    name: 'Biologic DMARDs',
+                    notes: 'Specialist review every 6 months. Primary care monitoring only if on conventional DMARD combination',
+                    tests: ['FBC', 'U&E', 'LFTs', 'Lipids', 'Infection screening'],
+                    frequency: '3-4 months → Every 6 months'
+                }
+            };
+
+            const data = monitoringData[drug];
+            
+            display.innerHTML = `
+                <div class="info-box fade-in">
+                    <h4 style="color: #005eb8; margin-bottom: 0.5rem;"><i class="fas fa-pills"></i> ${data.name}</h4>
+                    <p style="margin-bottom: 1rem;">${data.notes}</p>
+                    <table class="monitoring-table">
+                        <tr>
+                            <th>Monitoring Tests</th>
+                            <th>Frequency</th>
+                        </tr>
+                        <tr>
+                            <td>${data.tests.join('<br>')}</td>
+                            <td>${data.frequency}</td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            // Expand first card by default
+            document.getElementById('assessment').classList.add('expanded');
+            
+            // Animate cards on load
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('visible');
+                    }, index * 200);
+                });
+            }, 100);
+
+            // Add click handlers to badges
+            document.querySelectorAll('.badge').forEach(badge => {
+                badge.addEventListener('click', () => {
+                    const message = badge.textContent.trim();
+                    showNotification(`Alert: ${message}`);
+                });
+            });
+        });
+
+        // Notification system
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 100px;
+                right: 20px;
+                background: #005eb8;
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                z-index: 10000;
+                transform: translateX(400px);
+                transition: transform 0.3s ease;
+                max-width: 300px;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            setTimeout(() => {
+                notification.style.transform = 'translateX(400px)';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Mobile menu toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('progressSidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('progressSidebar');
+            const toggle = document.querySelector('.menu-toggle');
+            
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(e.target) && 
+                !toggle.contains(e.target) &&
+                sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        // Smooth scroll for all internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Falls Risk Assessment (Community) — Clinical Decision Support</title>
+<meta name="color-scheme" content="light dark" />
+<style>
+  :root{
+    --bg: #0b1220;
+    --panel: rgba(255,255,255,.06);
+    --panel2: rgba(255,255,255,.08);
+    --text: rgba(255,255,255,.92);
+    --muted: rgba(255,255,255,.68);
+    --faint: rgba(255,255,255,.50);
+    --border: rgba(255,255,255,.10);
+
+    --urgent: #ff4d4d;
+    --urgent2:#ff7a7a;
+
+    --routine:#4cd4ff;
+    --routine2:#80e6ff;
+
+    --ok:#4de199;
+    --warn:#ffd166;
+    --info:#7c9cff;
+
+    --chip:#111a2e;
+    --shadow: 0 18px 60px rgba(0,0,0,.45);
+    --shadow2: 0 10px 30px rgba(0,0,0,.35);
+    --radius: 18px;
+    --radius2: 14px;
+
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  }
+
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg: #f6f8ff;
+      --panel: rgba(14,26,51,.05);
+      --panel2: rgba(14,26,51,.08);
+      --text: rgba(10,18,34,.92);
+      --muted: rgba(10,18,34,.68);
+      --faint: rgba(10,18,34,.52);
+      --border: rgba(10,18,34,.12);
+      --chip: #eef2ff;
+      --shadow: 0 18px 60px rgba(10,18,34,.12);
+      --shadow2: 0 10px 30px rgba(10,18,34,.10);
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family: var(--sans);
+    background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(124,156,255,.35), transparent 50%),
+      radial-gradient(900px 500px at 90% 20%, rgba(76,212,255,.28), transparent 52%),
+      radial-gradient(900px 500px at 30% 110%, rgba(77,225,153,.20), transparent 52%),
+      linear-gradient(180deg, var(--bg), var(--bg));
+    color: var(--text);
+  }
+
+  a{ color:inherit; text-decoration:none; }
+  a:hover{ text-decoration: underline; text-underline-offset: 3px; }
+
+  .wrap{ max-width: 1180px; margin:0 auto; padding: 20px 18px 70px; }
+  .topbar{
+    position: sticky; top:0; z-index: 50;
+    backdrop-filter: blur(14px);
+    background: linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,.10));
+    border-bottom: 1px solid var(--border);
+  }
+  @media (prefers-color-scheme: light){
+    .topbar{ background: linear-gradient(180deg, rgba(246,248,255,.92), rgba(246,248,255,.72)); }
+  }
+  .topbar-inner{ max-width: 1180px; margin:0 auto; padding: 12px 18px; display:flex; gap:14px; align-items:center; }
+  .brand{
+    display:flex; align-items:center; gap:10px; min-width: 250px;
+  }
+  .logo{
+    width:38px; height:38px; border-radius: 12px;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.25), rgba(255,255,255,.04)),
+                linear-gradient(135deg, rgba(124,156,255,.95), rgba(76,212,255,.75));
+    box-shadow: var(--shadow2);
+    position:relative; overflow:hidden;
+    border:1px solid rgba(255,255,255,.18);
+  }
+  .logo:after{
+    content:"";
+    position:absolute; inset:-40% -20%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+    transform: rotate(25deg);
+  }
+  .brand h1{ font-size: 14px; letter-spacing:.2px; margin:0; line-height:1.2; }
+  .brand .sub{ font-size: 12px; color: var(--muted); margin-top:2px; }
+
+  .search{
+    flex:1;
+    display:flex; gap:10px; align-items:center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255,255,255,.06);
+  }
+  @media (prefers-color-scheme: light){
+    .search{ background: rgba(255,255,255,.9); }
+  }
+  .search input{
+    width:100%;
+    border:none; outline:none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .search .kbd{
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  .filters{
+    display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--chip);
+    border:1px solid var(--border);
+    cursor:pointer;
+    user-select:none;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .chip:hover{ transform: translateY(-1px); }
+  .chip[aria-pressed="true"]{
+    color: var(--text);
+    border-color: rgba(255,255,255,.26);
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+  }
+  .chip .dot{
+    width:10px; height:10px; border-radius: 999px;
+    background: rgba(255,255,255,.18);
+    border:1px solid rgba(255,255,255,.20);
+  }
+  .chip.urgent .dot{ background: rgba(255,77,77,.95); border-color: rgba(255,77,77,.50); }
+  .chip.routine .dot{ background: rgba(76,212,255,.95); border-color: rgba(76,212,255,.50); }
+  .chip.tools .dot{ background: rgba(124,156,255,.95); border-color: rgba(124,156,255,.50); }
+  .chip.meds .dot{ background: rgba(255,209,102,.95); border-color: rgba(255,209,102,.50); }
+
+  header.hero{
+    margin-top: 14px;
+    padding: 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+    position:relative;
+    overflow:hidden;
+  }
+  header.hero:before{
+    content:"";
+    position:absolute; inset:-2px;
+    background:
+      radial-gradient(800px 180px at 20% 0%, rgba(255,77,77,.18), transparent 60%),
+      radial-gradient(900px 240px at 75% 10%, rgba(76,212,255,.16), transparent 58%),
+      radial-gradient(700px 220px at 45% 110%, rgba(77,225,153,.12), transparent 55%);
+    pointer-events:none;
+  }
+  header.hero > *{ position:relative; }
+  .hero-top{
+    display:flex; gap:14px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+  }
+  .hero h2{ margin:0; font-size: 20px; letter-spacing:.2px; }
+  .hero p{ margin:6px 0 0; color: var(--muted); max-width: 90ch; }
+  .meta{
+    display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end;
+  }
+  .pill{
+    display:inline-flex; gap:8px; align-items:center;
+    padding: 7px 10px; border-radius: 999px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .pill strong{ color: var(--text); font-weight: 600; }
+  .pill .icon{ width:16px; height:16px; opacity:.85; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.05fr .95fr;
+    gap: 14px;
+    margin-top: 14px;
+  }
+  @media (max-width: 980px){
+    .grid{ grid-template-columns: 1fr; }
+    .brand{ min-width: unset; }
+  }
+
+  .card{
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.04));
+    box-shadow: var(--shadow2);
+    overflow:hidden;
+  }
+  .card .head{
+    padding: 14px 14px 10px;
+    display:flex; gap:10px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.03);
+  }
+  .title{
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .badge{
+    display:inline-flex; gap:8px; align-items:center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    border:1px solid var(--border);
+    color: var(--muted);
+    background: rgba(255,255,255,.06);
+    white-space: nowrap;
+  }
+  .badge.urgent{
+    border-color: rgba(255,77,77,.45);
+    color: rgba(255,255,255,.92);
+    background: linear-gradient(180deg, rgba(255,77,77,.26), rgba(255,77,77,.10));
+  }
+  @media (prefers-color-scheme: light){
+    .badge.urgent{ color: rgba(10,18,34,.92); }
+  }
+  .badge.routine{
+    border-color: rgba(76,212,255,.45);
+    color: rgba(255,255,255,.92);
+    background: linear-gradient(180deg, rgba(76,212,255,.22), rgba(76,212,255,.10));
+  }
+  @media (prefers-color-scheme: light){
+    .badge.routine{ color: rgba(10,18,34,.92); }
+  }
+  .badge.tools{
+    border-color: rgba(124,156,255,.45);
+    background: linear-gradient(180deg, rgba(124,156,255,.20), rgba(124,156,255,.08));
+  }
+  .badge.meds{
+    border-color: rgba(255,209,102,.45);
+    background: linear-gradient(180deg, rgba(255,209,102,.20), rgba(255,209,102,.08));
+  }
+
+  .title h3{ margin:0; font-size: 16px; letter-spacing:.2px; }
+  .title .desc{ margin-top:4px; color: var(--muted); font-size: 13px; max-width: 80ch; }
+
+  .card .body{ padding: 14px; }
+  .kpi-row{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 620px){
+    .kpi-row{ grid-template-columns: 1fr; }
+  }
+  .kpi{
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 12px;
+    background: rgba(255,255,255,.05);
+  }
+  .kpi .k{ font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .kpi .v{ margin-top:6px; font-size: 14px; font-weight: 650; }
+  .kpi .s{ margin-top:6px; font-size: 12.5px; color: var(--muted); line-height:1.35; }
+  .kpi .flag{
+    display:inline-flex; align-items:center; gap:8px; margin-top: 10px;
+    padding: 6px 10px; border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.04);
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .flag .mini{
+    width:10px; height:10px; border-radius: 999px; background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.22);
+  }
+  .flag.urgent .mini{ background: rgba(255,77,77,.95); border-color: rgba(255,77,77,.55); }
+  .flag.routine .mini{ background: rgba(76,212,255,.95); border-color: rgba(76,212,255,.55); }
+  .flag.ok .mini{ background: rgba(77,225,153,.95); border-color: rgba(77,225,153,.55); }
+
+  .path{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .step{
+    border-radius: var(--radius2);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.05);
+    padding: 12px;
+    display:flex;
+    gap:12px;
+  }
+  .step .n{
+    width: 34px; height: 34px;
+    border-radius: 12px;
+    display:grid; place-items:center;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 12px;
+    background: rgba(255,255,255,.08);
+    border: 1px solid var(--border);
+    color: var(--text);
+    flex:0 0 auto;
+  }
+  .step .c{ flex:1; min-width:0; }
+  .step .c .t{
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    font-weight: 650; letter-spacing:.2px;
+  }
+  .step .c .p{ margin-top:6px; color: var(--muted); font-size: 13px; line-height:1.45; }
+  .step.urgent{ border-color: rgba(255,77,77,.38); background: linear-gradient(180deg, rgba(255,77,77,.13), rgba(255,255,255,.04)); }
+  .step.routine{ border-color: rgba(76,212,255,.38); background: linear-gradient(180deg, rgba(76,212,255,.11), rgba(255,255,255,.04)); }
+
+  .actions{
+    display:flex; gap:8px; flex-wrap:wrap; margin-top: 10px;
+  }
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    cursor:pointer;
+    user-select:none;
+    font-size: 13px;
+    color: var(--text);
+    transition: transform .12s ease, background .12s ease;
+  }
+  .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.08); }
+  .btn.primary{
+    border-color: rgba(76,212,255,.50);
+    background: linear-gradient(180deg, rgba(76,212,255,.20), rgba(255,255,255,.04));
+  }
+  .btn.danger{
+    border-color: rgba(255,77,77,.55);
+    background: linear-gradient(180deg, rgba(255,77,77,.22), rgba(255,255,255,.04));
+  }
+  .btn .icon{ width:16px; height:16px; opacity:.9; }
+
+  .accordion{ display:grid; gap:10px; }
+  details{
+    border-radius: var(--radius2);
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.05);
+    overflow:hidden;
+  }
+  summary{
+    list-style:none;
+    cursor:pointer;
+    padding: 12px 12px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  summary::-webkit-details-marker{ display:none; }
+  .sum-left{ display:flex; gap:10px; align-items:center; min-width:0; }
+  .chev{
+    width: 26px; height: 26px; border-radius: 10px;
+    border:1px solid var(--border);
+    display:grid; place-items:center;
+    background: rgba(255,255,255,.05);
+    flex:0 0 auto;
+  }
+  details[open] .chev svg{ transform: rotate(180deg); }
+  .chev svg{ transition: transform .14s ease; width: 16px; height: 16px; }
+  .sum-title{ font-weight: 650; letter-spacing:.2px; }
+  .sum-sub{ color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .sum-text{ min-width:0; }
+  .sum-tags{
+    display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; align-items:center;
+  }
+  .tag{
+    font-size: 11.5px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: rgba(255,255,255,.04);
+    white-space: nowrap;
+  }
+  .tag.urgent{ border-color: rgba(255,77,77,.45); color: rgba(255,255,255,.90); background: rgba(255,77,77,.12); }
+  .tag.routine{ border-color: rgba(76,212,255,.45); color: rgba(255,255,255,.90); background: rgba(76,212,255,.10); }
+  @media (prefers-color-scheme: light){
+    .tag.urgent,.tag.routine{ color: rgba(10,18,34,.92); }
+  }
+
+  .detail-body{
+    padding: 0 12px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .detail-body .cols{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:10px;
+    margin-top: 12px;
+  }
+  @media (max-width: 760px){
+    .detail-body .cols{ grid-template-columns: 1fr; }
+  }
+  .box{
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.04);
+    border-radius: 14px;
+    padding: 12px;
+  }
+  .box h4{
+    margin:0; font-size: 13px; letter-spacing:.2px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .box p, .box li{ color: var(--muted); font-size: 13px; line-height:1.45; }
+  .box ul{ margin:8px 0 0 18px; padding:0; }
+  .box .mono{ font-family: var(--mono); font-size: 12.5px; color: var(--text); }
+
+  .callout{
+    margin-top: 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    padding: 12px;
+    display:flex; gap:12px; align-items:flex-start;
+  }
+  .callout .ic{
+    width: 36px; height: 36px;
+    border-radius: 14px;
+    display:grid; place-items:center;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    flex:0 0 auto;
+  }
+  .callout .ic.urgent{ border-color: rgba(255,77,77,.50); background: rgba(255,77,77,.12); }
+  .callout .ic.routine{ border-color: rgba(76,212,255,.50); background: rgba(76,212,255,.10); }
+  .callout h4{ margin:0; font-size: 13.5px; }
+  .callout p{ margin:6px 0 0; color: var(--muted); font-size: 13px; line-height:1.45; }
+
+  .navcard{
+    position: sticky;
+    top: 74px;
+    align-self:start;
+  }
+  @media (max-width: 980px){
+    .navcard{ position: static; }
+  }
+  .navlist{
+    display:grid; gap:8px;
+    padding: 12px;
+  }
+  .navitem{
+    display:flex; gap:10px; align-items:center;
+    padding: 10px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.04);
+    cursor:pointer;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+  }
+  .navitem:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06); }
+  .navitem[aria-current="true"]{
+    border-color: rgba(76,212,255,.55);
+    background: linear-gradient(180deg, rgba(76,212,255,.18), rgba(255,255,255,.03));
+  }
+  .navitem .mini{
+    width: 32px; height: 32px;
+    border-radius: 13px;
+    display:grid; place-items:center;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.05);
+    flex:0 0 auto;
+  }
+  .navitem .lbl{ min-width:0; }
+  .navitem .lbl .t{ font-weight: 650; font-size: 13px; letter-spacing:.2px; }
+  .navitem .lbl .s{ color: var(--muted); font-size: 12px; margin-top:2px; }
+  .navitem .pill2{
+    margin-left:auto;
+    font-size: 11px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border:1px solid var(--border);
+    color: var(--muted);
+    background: rgba(255,255,255,.03);
+    white-space: nowrap;
+  }
+  .pill2.urgent{ border-color: rgba(255,77,77,.55); color: rgba(255,255,255,.92); background: rgba(255,77,77,.12); }
+  .pill2.routine{ border-color: rgba(76,212,255,.55); color: rgba(255,255,255,.92); background: rgba(76,212,255,.10); }
+  @media (prefers-color-scheme: light){
+    .pill2.urgent,.pill2.routine{ color: rgba(10,18,34,.92); }
+  }
+
+  .section{ scroll-margin-top: 110px; }
+  .footer{
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height:1.45;
+    padding: 14px;
+    border:1px solid var(--border);
+    border-radius: var(--radius);
+    background: rgba(255,255,255,.04);
+  }
+  .small{ font-size: 12px; color: var(--muted); }
+  .divider{ height:1px; background: var(--border); margin: 12px 0; }
+  .toast{
+    position: fixed;
+    right: 14px; bottom: 14px;
+    z-index: 1000;
+    width: min(520px, calc(100vw - 28px));
+    padding: 12px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+    box-shadow: var(--shadow);
+    display:none;
+    gap:12px;
+    align-items:flex-start;
+  }
+  .toast.show{ display:flex; }
+  .toast .t-ic{
+    width:36px; height:36px;
+    border-radius: 14px;
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    display:grid; place-items:center;
+    flex:0 0 auto;
+  }
+  .toast .t-body{ flex:1; }
+  .toast .t-title{ font-weight: 700; font-size: 13.5px; }
+  .toast .t-msg{ margin-top:4px; color: var(--muted); font-size: 13px; line-height:1.35; }
+  .toast .t-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 10px; }
+  .toast button{
+    border:1px solid var(--border);
+    background: rgba(255,255,255,.06);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 12px;
+    cursor:pointer;
+  }
+  .toast button:hover{ background: rgba(255,255,255,.08); }
+  .hidden{ display:none !important; }
+</style>
+</head>
+
+<body>
+  <!-- Sticky top bar -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Falls Risk Assessment (Community)</h1>
+          <div class="sub">Rapid triage → targeted assessment → referral / intervention</div>
+        </div>
+      </div>
+
+      <div class="search" role="search" aria-label="Search content">
+        <svg class="icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2"/>
+          <path d="M16.5 16.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="q" type="text" placeholder="Search: e.g. 'loss of consciousness', 'TUG', 'polypharmacy', 'home hazards'…" autocomplete="off" />
+        <span class="kbd" title="Tip: press / to focus">/</span>
+      </div>
+
+      <div class="filters" aria-label="Filters">
+        <button class="chip urgent" id="fUrgent" aria-pressed="false" type="button" title="Show urgent content">
+          <span class="dot" aria-hidden="true"></span>Urgent
+        </button>
+        <button class="chip routine" id="fRoutine" aria-pressed="false" type="button" title="Show routine pathway content">
+          <span class="dot" aria-hidden="true"></span>Routine
+        </button>
+        <button class="chip tools" id="fTools" aria-pressed="false" type="button" title="Show bedside tests">
+          <span class="dot" aria-hidden="true"></span>Tools
+        </button>
+        <button class="chip meds" id="fMeds" aria-pressed="false" type="button" title="Show medication / FRIDs content">
+          <span class="dot" aria-hidden="true"></span>Meds/FRIDs
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- Hero -->
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <h2>Clinical pathway: identify fall risk, distinguish “simple fall” vs collapse, and trigger appropriate referral.</h2>
+          <p>
+            For community assessment in adults <strong>≥65</strong>, and adults <strong>≥50</strong> with risk factors. Designed for fast scanning:
+            <strong>urgent flags</strong> are red; routine optimisation is blue/green. Use filters or search to jump instantly.
+          </p>
+        </div>
+        <div class="meta">
+          <span class="pill">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 3v3M17 3v3M4 8h16M6 21h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <strong>CKS basis:</strong> June 2025
+          </span>
+          <span class="pill">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 7v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <strong>Focus:</strong> assessment & referral triggers
+          </span>
+          <span class="pill">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 4v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <strong>Hotkeys:</strong> “/” search • “g” jump
+          </span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="kpi-row" aria-label="Quick triggers">
+        <div class="kpi" data-tags="routine">
+          <div class="k">Screen</div>
+          <div class="v">Ask about falls in past 12 months</div>
+          <div class="s">Frequency, context, preceding symptoms, consequences; witness account if available.</div>
+          <div class="flag routine"><span class="mini" aria-hidden="true"></span>Routine baseline</div>
+        </div>
+        <div class="kpi" data-tags="tools">
+          <div class="k">Gait/Bal</div>
+          <div class="v">Timed Up &amp; Go (TUG) / Turn 180°</div>
+          <div class="s">Use for gait/balance impairment; don’t rely on generic “falls risk tools”.</div>
+          <div class="flag routine"><span class="mini" aria-hidden="true"></span>Objective function</div>
+        </div>
+        <div class="kpi" data-tags="urgent">
+          <div class="k">Escalate</div>
+          <div class="v">Loss of consciousness / injury / unable to get up / recurrent falls</div>
+          <div class="s">Triggers comprehensive falls assessment &amp; management pathway.</div>
+          <div class="flag urgent"><span class="mini" aria-hidden="true"></span>Urgent referral trigger</div>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Main content -->
+      <main>
+        <!-- SECTION: Rapid triage -->
+        <section class="card section" id="triage" data-tags="urgent routine">
+          <div class="head">
+            <div class="title">
+              <span class="badge urgent">Urgent first</span>
+              <div>
+                <h3>Rapid triage: separate “simple fall” vs collapse and identify immediate escalation</h3>
+                <div class="desc">Use this as a high-yield front door: symptom-led + consequence-led triage.</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn danger" type="button" data-jump="#urgentFlags">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 2 2 22h20L12 2Z" stroke="currentColor" stroke-width="2" />
+                  <path d="M12 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 17h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                Jump to urgent flags
+              </button>
+              <button class="btn primary" type="button" data-jump="#routineAssess">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                Routine assessment steps
+              </button>
+            </div>
+          </div>
+
+          <div class="body">
+            <div class="path">
+              <div class="step urgent" data-tags="urgent" id="urgentFlags">
+                <div class="n">1</div>
+                <div class="c">
+                  <div class="t">
+                    <span>Urgent escalation triggers</span>
+                    <span class="tag urgent">Escalate</span>
+                  </div>
+                  <div class="p">
+                    Treat as high-priority for comprehensive assessment / appropriate acute evaluation if features suggest
+                    <strong>collapse</strong> or significant harm.
+                  </div>
+                  <div class="detail-body" style="padding: 10px 0 0; border-top: none;">
+                    <div class="cols">
+                      <div class="box">
+                        <h4>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 2 2 22h20L12 2Z" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M12 17h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                          </svg>
+                          Immediate risk signals
+                        </h4>
+                        <ul>
+                          <li><strong>Loss of consciousness</strong> related to fall / suspected syncope.</li>
+                          <li><strong>Injury needing medical/surgical treatment</strong>.</li>
+                          <li><strong>Unable to get up independently</strong> after fall.</li>
+                          <li><strong>≥2 falls in last 12 months</strong> (recurrent falls).</li>
+                        </ul>
+                      </div>
+                      <div class="box">
+                        <h4>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 22a10 10 0 1 0-10-10" stroke="currentColor" stroke-width="2"/>
+                          </svg>
+                          “Collapse” clues (history)
+                        </h4>
+                        <ul>
+                          <li>Preceding <strong>light-headedness</strong>, palpitations, chest pain, focal neurological symptoms.</li>
+                          <li>Witnessed <strong>loss of consciousness</strong> or abnormal movements (consider seizure vs syncope).</li>
+                          <li>Vertigo-like syndrome (consider vestibular causes).</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="callout">
+                    <div class="ic urgent" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2 2 22h20L12 2Z" stroke="currentColor" stroke-width="2"/>
+                        <path d="M12 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M12 17h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Operational tip</h4>
+                      <p>
+                        When documentation is sparse, anchor to: <strong>preceding symptoms</strong> + <strong>witness account</strong> +
+                        <strong>post-event function</strong> (able to rise? injuries? fear/activity restriction?). These elements stratify urgency rapidly.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step routine" data-tags="routine" id="routineAssess">
+                <div class="n">2</div>
+                <div class="c">
+                  <div class="t">
+                    <span>Routine assessment: minimum dataset</span>
+                    <span class="tag routine">Baseline</span>
+                  </div>
+                  <div class="p">
+                    Establish falls phenotype and modifiable risk factors. If possible, obtain an eye-witness account.
+                  </div>
+
+                  <div class="detail-body" style="padding: 10px 0 0; border-top:none;">
+                    <div class="cols">
+                      <div class="box">
+                        <h4>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                          </svg>
+                          Falls history (high yield)
+                        </h4>
+                        <ul>
+                          <li>How often; where; when; what activity.</li>
+                          <li>Preceding symptoms: light-headedness, LOC, vertigo, weakness.</li>
+                          <li>Consequences: injury, fear of falling, reduced ADLs, activity restriction, pain.</li>
+                        </ul>
+                      </div>
+                      <div class="box">
+                        <h4>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 21s7-4.5 7-10V6l-7-3-7 3v5c0 5.5 7 10 7 10Z" stroke="currentColor" stroke-width="2"/>
+                          </svg>
+                          Key risk domains
+                        </h4>
+                        <ul>
+                          <li>Mobility/balance conditions (e.g. arthritis, Parkinsonism, stroke sequelae, incontinence).</li>
+                          <li>Vision impairment; cognitive impairment; depression; alcohol misuse.</li>
+                          <li>Polypharmacy and FRIDs; postural hypotension risk.</li>
+                          <li>Environmental hazards (loose rugs, poor lighting, wet bathroom surfaces, footwear).</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="actions">
+                    <button class="btn primary" type="button" data-jump="#tools">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14" stroke="currentColor" stroke-width="2"/>
+                        <path d="M8 7h8M8 11h8M8 15h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      </svg>
+                      Do TUG / Turn 180°
+                    </button>
+                    <button class="btn" type="button" data-jump="#criteria">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 22a10 10 0 1 0-10-10" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                      Check referral criteria
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step routine" data-tags="routine meds">
+                <div class="n">3</div>
+                <div class="c">
+                  <div class="t">
+                    <span>Medication signal: polypharmacy &amp; FRIDs</span>
+                    <span class="tag">Optimise</span>
+                    <span class="tag">Adverse effects</span>
+                    <span class="tag">Postural hypotension</span>
+                  </div>
+                  <div class="p">
+                    Review medicines with focus on drug classes commonly associated with falls risk and orthostatic symptoms.
+                  </div>
+                  <div class="detail-body" style="padding: 10px 0 0; border-top:none;">
+                    <div class="box">
+                      <h4>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M10 2h4v4h-4V2Z" stroke="currentColor" stroke-width="2"/>
+                          <path d="M6 6h12v16H6V6Z" stroke="currentColor" stroke-width="2"/>
+                          <path d="M9 10h6M9 14h6M9 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        FRID examples (pattern recognition list)
+                      </h4>
+                      <p>
+                        Antihypertensives; antihistamines; sedative-hypnotics; antipsychotics; antidepressants; opioids; NSAIDs
+                        (plus any agent driving hypotension, sedation, anticholinergic burden, or impaired balance).
+                      </p>
+                      <p class="small">Use a structured review: indication, dose, timing, interactions, orthostatic symptoms, sedation/cognition, withdrawal risk.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION: Tools -->
+        <section class="card section" id="tools" data-tags="tools routine">
+          <div class="head">
+            <div class="title">
+              <span class="badge tools">Tools</span>
+              <div>
+                <h3>Bedside functional tests</h3>
+                <div class="desc">Quick objective assessment of gait/balance impairment and movement strategy.</div>
+              </div>
+            </div>
+          </div>
+          <div class="body">
+            <div class="accordion">
+              <details data-tags="tools routine">
+                <summary>
+                  <div class="sum-left">
+                    <div class="chev" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <div class="sum-text">
+                      <div class="sum-title">Timed Up &amp; Go (TUG)</div>
+                      <div class="sum-sub">Chair rise → 3 m walk → turn → return → sit; observe quality + time.</div>
+                    </div>
+                  </div>
+                  <div class="sum-tags">
+                    <span class="tag routine">Gait</span>
+                    <span class="tag">Balance</span>
+                    <span class="tag">Mobility</span>
+                  </div>
+                </summary>
+                <div class="detail-body">
+                  <div class="cols">
+                    <div class="box">
+                      <h4>How to perform</h4>
+                      <ul>
+                        <li>Time the person standing from chair (no arms), walking <span class="mono">3 metres</span>, turning, returning, and sitting.</li>
+                        <li>Walking aid may be used if normally required.</li>
+                        <li>Observe postural stability, stride length, sway, turning strategy.</li>
+                      </ul>
+                    </div>
+                    <div class="box">
+                      <h4>Interpretation (clinical judgement)</h4>
+                      <ul>
+                        <li>Typical range ~ <span class="mono">8–11 s</span> (65–99y); &gt;<span class="mono">12 s</span> suggests impaired mobility.</li>
+                        <li>Context matters: footwear, aid, frailty phenotype, symptom provocation (dizziness/orthostasis).</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+              <details data-tags="tools routine">
+                <summary>
+                  <div class="sum-left">
+                    <div class="chev" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <div class="sum-text">
+                      <div class="sum-title">Turn 180° test</div>
+                      <div class="sum-sub">Steps required to turn and face the opposite direction.</div>
+                    </div>
+                  </div>
+                  <div class="sum-tags">
+                    <span class="tag routine">Screen</span>
+                    <span class="tag">Turning</span>
+                  </div>
+                </summary>
+                <div class="detail-body">
+                  <div class="box">
+                    <h4>Interpretation</h4>
+                    <ul>
+                      <li>Ask the person to stand and step around until facing the opposite direction.</li>
+                      <li><strong>≥5 steps</strong> suggests need for further assessment.</li>
+                    </ul>
+                  </div>
+                </div>
+              </details>
+
+              <details data-tags="tools routine">
+                <summary>
+                  <div class="sum-left">
+                    <div class="chev" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </div>
+                    <div class="sum-text">
+                      <div class="sum-title">What not to do: generic “falls risk assessment tools”</div>
+                      <div class="sum-sub">Avoid over-reliance on non-specific scoring tools for community falls risk.</div>
+                    </div>
+                  </div>
+                  <div class="sum-tags">
+                    <span class="tag">Pitfall</span>
+                    <span class="tag routine">Workflow</span>
+                  </div>
+                </summary>
+                <div class="detail-body">
+                  <div class="callout">
+                    <div class="ic routine" aria-hidden="true">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 21s7-4.5 7-10V6l-7-3-7 3v5c0 5.5 7 10 7 10Z" stroke="currentColor" stroke-width="2"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <h4>Preferred approach</h4>
+                      <p>
+                        A structured history + targeted exam + objective gait/balance test + criterion-based referral triggers
+                        is more operationally useful than non-specific risk scores.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </details>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION: Criteria & pathway -->
+        <section class="card section" id="criteria" data-tags="urgent routine">
+          <div class="head">
+            <div class="title">
+              <span class="badge routine">Pathway</span>
+              <div>
+                <h3>Referral and management triggers</h3>
+                <div class="desc">Criterion-based route: comprehensive assessment vs targeted prevention advice.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="body">
+            <div class="callout">
+              <div class="ic urgent" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2 2 22h20L12 2Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 17h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <h4>Offer comprehensive falls assessment &amp; management if (in last year):</h4>
+                <p>
+                  Living with frailty; injured and needed medical/surgical treatment; loss of consciousness related to fall;
+                  unable to get up independently; or ≥2 falls.
+                </p>
+              </div>
+            </div>
+
+            <div class="detail-body" style="padding:12px 0 0; border-top:none;">
+              <div class="cols">
+                <div class="box" data-tags="urgent routine">
+                  <h4>Comprehensive assessment content (domain checklist)</h4>
+                  <ul>
+                    <li>Falls history; gait/balance/dizziness; mobility; muscle weakness.</li>
+                    <li>Osteoporosis risk; footwear/foot condition.</li>
+                    <li>Perceived function + fear of falling; vision/hearing.</li>
+                    <li>Cognitive, neurological, cardiovascular problems; urinary incontinence.</li>
+                    <li>Home hazards; diet/fluid intake; weight loss; alcohol misuse.</li>
+                    <li>Medication review: polypharmacy; hypotensive and psychoactive drugs.</li>
+                  </ul>
+                </div>
+
+                <div class="box" data-tags="routine">
+                  <h4>If fell but does NOT meet comprehensive criteria</h4>
+                  <ul>
+                    <li>Assess gait/balance (same service or refer appropriately).</li>
+                    <li>If impairment: offer falls prevention exercise programme; consider home hazard assessment.</li>
+                    <li>If no impairment (or no fall): provide health &amp; wellbeing advice to reduce falls risk.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="box" data-tags="routine">
+                <h4>Interventions commonly offered by specialist falls services (high-yield summary)</h4>
+                <ul>
+                  <li><strong>Strength + balance training</strong>: progressive, tailored, function-focused; regular review to drive behaviour change.</li>
+                  <li><strong>Home hazard assessment/intervention</strong>: particularly after hospital treatment for a fall.</li>
+                  <li><strong>Vision assessment</strong> and referral if indicated.</li>
+                  <li><strong>Medication review</strong>: reduce/stop psychotropics where feasible; manage hypotension risk with specialist input when needed.</li>
+                </ul>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- SECTION: Practical templates -->
+        <section class="card section" id="templates" data-tags="routine tools meds">
+          <div class="head">
+            <div class="title">
+              <span class="badge">Toolkit</span>
+              <div>
+                <h3>Copy-ready documentation templates</h3>
+                <div class="desc">Designed to reduce cognitive load and standardise your minimum dataset.</div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn primary" type="button" id="copyNote">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M8 7h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M6 17H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Copy note template
+              </button>
+              <button class="btn" type="button" id="copyPlan">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Copy plan checklist
+              </button>
+            </div>
+          </div>
+
+          <div class="body">
+            <div class="cols">
+              <div class="box">
+                <h4>History prompt (fast)</h4>
+                <p class="mono" id="tplNote" style="white-space: pre-wrap; margin:8px 0 0;">
+Falls assessment (community)
+• Falls in last 12 months: [0/1/2+]  Date(s): [...]
+• Circumstances: place/time/activity: [...]
+• Preceding symptoms: light-headedness / LOC / palpitations / chest pain / focal neuro / vertigo: [...]
+• Witness account available: [Y/N]  Description: [...]
+• Injuries / required medical/surgical treatment: [...]
+• Post-fall function: able to get up independently? [Y/N]
+• Consequences: fear of falling / activity restriction / pain / ADL impact: [...]
+• Risk domains: vision / cognition / mood / alcohol / mobility-balance conditions / incontinence: [...]
+• Medications: polypharmacy / FRIDs / hypotension risk: [...]
+• Environment: footwear, lighting, rugs, bathroom hazards, uneven/wet surfaces: [...]
+• Objective tests: TUG: [...] s (quality notes: [...]); Turn 180°: [...] steps
+                </p>
+              </div>
+              <div class="box">
+                <h4>Plan prompt (criteria-based)</h4>
+                <p class="mono" id="tplPlan" style="white-space: pre-wrap; margin:8px 0 0;">
+Criteria check for comprehensive falls assessment:
+□ Frailty
+□ Injury requiring medical/surgical treatment
+□ Loss of consciousness related to fall
+□ Unable to get up independently
+□ ≥2 falls in last 12 months
+If any → refer for comprehensive multifactorial assessment + intervention.
+
+If no criteria:
+□ Gait/balance impairment? (TUG/Turn 180°/clinical observation)
+  - If yes: offer falls prevention exercise programme; consider home hazard assessment.
+  - If no: provide health & wellbeing advice to reduce risk; reassess periodically.
+Medication optimisation:
+□ Review FRIDs / hypotension / sedatives / anticholinergic burden; deprescribe where feasible.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <div class="footer" id="about" data-tags="routine">
+          <div><strong>Scope:</strong> Community assessment of falls risk in older adults; distinguishes simple fall vs collapse and highlights referral triggers.</div>
+          <div class="divider"></div>
+          <div class="small">
+            Source basis: NICE CKS “Falls – assessment” (revised June 2025) for assessment elements, gait/balance tests, and criteria for comprehensive falls assessment &amp; management. :contentReference[oaicite:1]{index=1}
+          </div>
+        </div>
+      </main>
+
+      <!-- Sticky navigation -->
+      <aside class="card navcard" aria-label="Quick navigation">
+        <div class="head">
+          <div class="title">
+            <span class="badge">Navigate</span>
+            <div>
+              <h3>Jump list</h3>
+              <div class="desc">Sticky navigation + section highlighting.</div>
+            </div>
+          </div>
+        </div>
+        <div class="navlist" id="nav">
+          <div class="navitem" role="button" tabindex="0" data-target="#triage" aria-current="true" data-tags="urgent routine">
+            <div class="mini" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2 2 22h20L12 2Z" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="lbl">
+              <div class="t">Rapid triage</div>
+              <div class="s">Urgent flags + baseline dataset</div>
+            </div>
+            <div class="pill2 urgent">Urgent</div>
+          </div>
+
+          <div class="navitem" role="button" tabindex="0" data-target="#tools" data-tags="tools routine">
+            <div class="mini" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M4 19V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14" stroke="currentColor" stroke-width="2"/>
+                <path d="M8 7h8M8 11h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="lbl">
+              <div class="t">Tools</div>
+              <div class="s">TUG + Turn 180°</div>
+            </div>
+            <div class="pill2 routine">Routine</div>
+          </div>
+
+          <div class="navitem" role="button" tabindex="0" data-target="#criteria" data-tags="urgent routine">
+            <div class="mini" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="lbl">
+              <div class="t">Criteria</div>
+              <div class="s">Who gets comprehensive assessment</div>
+            </div>
+            <div class="pill2 urgent">Escalate</div>
+          </div>
+
+          <div class="navitem" role="button" tabindex="0" data-target="#templates" data-tags="routine tools meds">
+            <div class="mini" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M8 7h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="lbl">
+              <div class="t">Templates</div>
+              <div class="s">Copy-ready note + plan</div>
+            </div>
+            <div class="pill2 routine">Toolkit</div>
+          </div>
+
+          <div class="navitem" role="button" tabindex="0" data-target="#about" data-tags="routine">
+            <div class="mini" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 12v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 8h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="lbl">
+              <div class="t">About</div>
+              <div class="s">Scope + provenance</div>
+            </div>
+            <div class="pill2">Info</div>
+          </div>
+
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+    <div class="t-ic" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" stroke="currentColor" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="t-body">
+      <div class="t-title" id="toastTitle">Copied</div>
+      <div class="t-msg" id="toastMsg">Content copied to clipboard.</div>
+      <div class="t-actions">
+        <button type="button" id="toastClose">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  // ---- Hotkeys ----
+  const q = $("#q");
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== q) {
+      e.preventDefault(); q.focus(); q.select();
+    }
+    if (e.key.toLowerCase() === "g" && !e.metaKey && !e.ctrlKey && document.activeElement !== q) {
+      // quick jump palette (simple)
+      showToast("Jump", "Press 1=triage, 2=tools, 3=criteria, 4=templates", 2400);
+    }
+    if (["1","2","3","4"].includes(e.key) && !e.metaKey && !e.ctrlKey && document.activeElement !== q) {
+      const map = { "1":"#triage", "2":"#tools", "3":"#criteria", "4":"#templates" };
+      const t = map[e.key];
+      if (t) smoothScrollTo(t);
+    }
+  });
+
+  // ---- Smooth scroll helper ----
+  function smoothScrollTo(selector){
+    const el = document.querySelector(selector);
+    if (!el) return;
+    el.scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  $$("[data-jump]").forEach(b => b.addEventListener("click", () => smoothScrollTo(b.dataset.jump)));
+
+  // ---- Sticky nav click ----
+  const navItems = $$("#nav .navitem");
+  navItems.forEach(item => {
+    const go = () => smoothScrollTo(item.dataset.target);
+    item.addEventListener("click", go);
+    item.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); go(); } });
+  });
+
+  // ---- Section highlighting (IntersectionObserver) ----
+  const sections = $$(".section, #about").map(el => el.id ? el : el);
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        const id = "#" + entry.target.id;
+        navItems.forEach(n => n.setAttribute("aria-current", (n.dataset.target===id) ? "true" : "false"));
+      }
+    });
+  }, { root: null, threshold: 0.25 });
+  $$(".section[id], #about").forEach(el => io.observe(el));
+
+  // ---- Filters + search ----
+  const toggles = [
+    {btn: $("#fUrgent"), tag: "urgent"},
+    {btn: $("#fRoutine"), tag: "routine"},
+    {btn: $("#fTools"), tag: "tools"},
+    {btn: $("#fMeds"), tag: "meds"},
+  ];
+  toggles.forEach(t => t.btn.addEventListener("click", () => {
+    const now = t.btn.getAttribute("aria-pressed") === "true";
+    t.btn.setAttribute("aria-pressed", String(!now));
+    applyFilters();
+  }));
+
+  function activeTags(){
+    return toggles.filter(t => t.btn.getAttribute("aria-pressed")==="true").map(t => t.tag);
+  }
+
+  function hasTag(el, tag){
+    const v = (el.dataset.tags || "").toLowerCase();
+    return v.split(/\s+/).includes(tag);
+  }
+
+  function applyFilters(){
+    const term = q.value.trim().toLowerCase();
+    const tags = activeTags();
+
+    const candidates = $$("[data-tags]");
+    candidates.forEach(el => {
+      // tag filter
+      const tagOk = tags.length===0 ? true : tags.some(t => hasTag(el, t));
+      // search filter: match within textContent + key attributes
+      const hay = (el.textContent || "").toLowerCase();
+      const termOk = term==="" ? true : hay.includes(term);
+
+      // Special case: keep containers visible if any child matches
+      let childOk = false;
+      if (!tagOk || !termOk){
+        const kids = $$("[data-tags]", el).filter(k => k!==el);
+        childOk = kids.some(k => {
+          const kTagOk = tags.length===0 ? true : tags.some(t => hasTag(k,t));
+          const kHay = (k.textContent||"").toLowerCase();
+          const kTermOk = term==="" ? true : kHay.includes(term);
+          return kTagOk && kTermOk;
+        });
+      }
+
+      const show = (tagOk && termOk) || childOk;
+
+      // Do not hide <main> structural elements without data-tags (not candidates)
+      el.classList.toggle("hidden", !show);
+
+      // For <details>: auto-open when searching
+      if (el.tagName === "DETAILS"){
+        if (term !== "" && show) el.open = true;
+        if (term === "") el.open = false;
+      }
+    });
+
+    // Update nav items visibility by tags
+    navItems.forEach(n => {
+      const tags = activeTags();
+      const ok = tags.length===0 ? true : tags.some(t => hasTag(n,t));
+      n.classList.toggle("hidden", !ok);
+    });
+  }
+
+  q.addEventListener("input", applyFilters);
+
+  // ---- Copy templates ----
+  async function copyText(txt){
+    try{
+      await navigator.clipboard.writeText(txt);
+      showToast("Copied", "Template copied to clipboard.", 2200);
+    }catch(e){
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = txt;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      showToast("Copied", "Template copied (fallback).", 2200);
+    }
+  }
+
+  $("#copyNote").addEventListener("click", () => copyText($("#tplNote").innerText.trim()));
+  $("#copyPlan").addEventListener("click", () => copyText($("#tplPlan").innerText.trim()));
+
+  // ---- Toast ----
+  const toast = $("#toast");
+  const toastTitle = $("#toastTitle");
+  const toastMsg = $("#toastMsg");
+  const toastClose = $("#toastClose");
+  let toastTimer = null;
+
+  function showToast(title, msg, ms=2400){
+    toastTitle.textContent = title;
+    toastMsg.textContent = msg;
+    toast.classList.add("show");
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), ms);
+  }
+  toastClose.addEventListener("click", () => toast.classList.remove("show"));
+
+  // ---- Initial render ----
+  applyFilters();
+})();
+</script>
+</body>
+</html>

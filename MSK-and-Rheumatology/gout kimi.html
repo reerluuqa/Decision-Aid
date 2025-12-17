@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gout Management Algorithm - NICE CKS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        /* Sidebar Progress Tracker */
+        .sidebar {
+            width: 280px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            border-bottom: 2px solid #e0e6ed;
+            padding-bottom: 10px;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-step.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .progress-step.completed {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .progress-step:hover:not(.active) {
+            background: #f0f4f8;
+            transform: translateX(3px);
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active .step-icon {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .progress-step.completed .step-icon {
+            background: #4caf50;
+            color: white;
+        }
+
+        .progress-step:not(.active):not(.completed) .step-icon {
+            background: #e0e6ed;
+            color: #7f8c8d;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 20px 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.05);
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Badges */
+        .badges-container {
+            display: flex;
+            gap: 10px;
+            margin-left: 20px;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .badge-urgent {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .badge-caution {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffe0b2;
+        }
+
+        .badge-stable {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        /* Card Content */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 i {
+            color: #667eea;
+        }
+
+        .section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .section li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .section li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .subsection {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .subsection h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .drug-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #90caf9;
+        }
+
+        .drug-box strong {
+            color: #1565c0;
+        }
+
+        .alert-box {
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .alert-box.urgent {
+            background: #ffebee;
+            border: 1px solid #ef9a9a;
+            color: #c62828;
+        }
+
+        .alert-box.caution {
+            background: #fff3e0;
+            border: 1px solid #ffcc80;
+            color: #ef6c00;
+        }
+
+        .alert-box.info {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            color: #1565c0;
+        }
+
+        .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .toggle-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .toggle-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .toggle-button:active {
+            transform: scale(0.98);
+        }
+
+        .hidden-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .hidden-content.show {
+            max-height: 1000px;
+        }
+
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            z-index: 1000;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+                display: flex;
+                overflow-x: auto;
+                padding: 15px;
+            }
+
+            .sidebar h3 {
+                display: none;
+            }
+
+            .progress-step {
+                min-width: 130px;
+                margin-right: 10px;
+                margin-bottom: 0;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+    </div>
+
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="sidebar">
+            <h3><i class="fas fa-route"></i> Algorithm Progress</h3>
+            <div class="progress-step active" data-step="assessment">
+                <div class="step-icon"><i class="fas fa-stethoscope"></i></div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" data-step="diagnosis">
+                <div class="step-icon"><i class="fas fa-microscope"></i></div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" data-step="treatment">
+                <div class="step-icon"><i class="fas fa-pills"></i></div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" data-step="followup">
+                <div class="step-icon"><i class="fas fa-chart-line"></i></div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header fade-in">
+                <h1>Gout Management Algorithm</h1>
+                <p>Based on NICE Clinical Knowledge Summaries (June 2023)</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card fade-in" id="assessment-card">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-stethoscope"></i></div>
+                        <h2>Assessment</h2>
+                    </div>
+                    <div class="badges-container">
+                        <div class="badge badge-urgent">
+                            <i class="fas fa-exclamation-triangle"></i> Septic Arthritis
+                        </div>
+                        <div class="badge badge-caution">
+                            <i class="fas fa-exclamation-circle"></i> CKD/Elderly
+                        </div>
+                    </div>
+                    <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-clipboard-list"></i> History</h3>
+                            <ul>
+                                <li>Rapid onset (<24hrs) severe pain, swelling, redness, warmth</li>
+                                <li>Typical joints: 1st MTP (50% first attack), midfoot, ankle, knee, fingers, wrist, elbow</li>
+                                <li>Frequency and duration of attacks</li>
+                                <li>Dietary habits (alcohol, sugary drinks, meat, seafood)</li>
+                                <li>Family history of gout/hyperuricaemia</li>
+                                <li>Comorbidities: CKD, hypertension, diabetes, hyperlipidaemia</li>
+                                <li>Medications: diuretics, low-dose aspirin</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-hand-holding-medical"></i> Examination</h3>
+                            <ul>
+                                <li>Warm, red, swollen joints (any joint possible)</li>
+                                <li>Tophi: firm white nodules on extensor surfaces, Achilles tendon, ear helix</li>
+                                <li>Tenderness and limited range of movement</li>
+                                <li>Assess for septic arthritis, pseudogout, inflammatory arthritis</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-flask"></i> Investigations</h3>
+                            <div class="subsection">
+                                <h4>Serum Urate Level</h4>
+                                <ul>
+                                    <li>≥360 μmol/L (6 mg/dL) confirms diagnosis</li>
+                                    <li>If <360 μmol/L but suspected, repeat 2-4 weeks after flare settles</li>
+                                    <li>Do not diagnose based on hyperuricaemia alone (95% never develop gout)</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h4>Secondary Care Investigations (if uncertain)</h4>
+                                <ul>
+                                    <li>Joint aspiration and synovial fluid microscopy for crystals</li>
+                                    <li>Imaging: X-ray, ultrasound, or dual-energy CT</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="alert-box urgent">
+                            <div class="alert-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div>
+                                <strong>Immediate Referral:</strong> Suspect septic arthritis if systemically unwell with hot swollen joint. Refer for emergency joint aspiration & IV antibiotics.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card fade-in" id="diagnosis-card">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-microscope"></i></div>
+                        <h2>Diagnosis</h2>
+                    </div>
+                    <div class="badges-container">
+                        <div class="badge badge-stable">
+                            <i class="fas fa-check-circle"></i> Crystal Confirmation
+                        </div>
+                        <div class="badge badge-caution">
+                            <i class="fas fa-question-circle"></i> Uncertain
+                        </div>
+                    </div>
+                    <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-search"></i> When to Suspect</h3>
+                            <ul>
+                                <li>Rapid onset severe pain with redness/swelling in 1st MTP joint</li>
+                                <li>Tophi present (suggests longstanding untreated gout)</li>
+                                <li>Consider other joints: midfoot, ankle, knee, hand, wrist, elbow</li>
+                                <li>Consider chronic gouty arthritis with chronic inflammatory joint pain</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-check-double"></i> ACR Diagnostic Criteria</h3>
+                            <div class="subsection">
+                                <p><strong>Confirmed if:</strong></p>
+                                <ul>
+                                    <li>Monosodium urate crystals in joint fluid, OR</li>
+                                    <li>Monosodium urate crystals in tophus, OR</li>
+                                    <li>≥6 of the following criteria:</li>
+                                </ul>
+                                <button class="toggle-button" onclick="toggleCriteria()">Show/Hide Full Criteria</button>
+                                <div class="hidden-content" id="criteria-list">
+                                    <ul>
+                                        <li>More than one attack of acute arthritis</li>
+                                        <li>Maximum inflammation developed within 1 day</li>
+                                        <li>Monoarthritis attack, redness observed over joints</li>
+                                        <li>1st MTP joint painful or swollen</li>
+                                        <li>Unilateral 1st MTP joint attack</li>
+                                        <li>Unilateral tarsal joint attack</li>
+                                        <li>Tophus (confirmed or suspected)</li>
+                                        <li>Hyperuricaemia</li>
+                                        <li>Asymmetrical swelling within a joint on X-ray</li>
+                                        <li>Subcortical cyst without erosions on X-ray</li>
+                                        <li>Joint culture negative for organism during attack</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-question-circle"></i> Differential Diagnosis</h3>
+                            <ul>
+                                <li>Septic arthritis (must be excluded)</li>
+                                <li>Psoriatic arthritis</li>
+                                <li>Reactive arthritis</li>
+                                <li>Rheumatoid arthritis</li>
+                                <li>Pseudogout (calcium pyrophosphate deposition)</li>
+                                <li>Osteoarthritis</li>
+                                <li>Bursitis/tenosynovitis/cellulitis</li>
+                                <li>Haemochromatosis</li>
+                                <li>Trauma</li>
+                            </ul>
+                        </div>
+
+                        <div class="alert-box caution">
+                            <div class="alert-icon"><i class="fas fa-exclamation-circle"></i></div>
+                            <div>
+                                <strong>Refer if:</strong> Diagnosis uncertain, young patient (<30), pregnancy, or suspected systemic illness.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card fade-in" id="treatment-card">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-pills"></i></div>
+                        <h2>Treatment</h2>
+                    </div>
+                    <div class="badges-container">
+                        <div class="badge badge-stable">
+                            <i class="fas fa-bolt"></i> Acute
+                        </div>
+                        <div class="badge badge-caution">
+                            <i class="fas fa-shield-alt"></i> Prevention
+                        </div>
+                    </div>
+                    <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-bolt"></i> Acute Gout Flare</h3>
+                            <p><strong>Treat as soon as possible</strong></p>
+                            
+                            <div class="subsection">
+                                <h4>First-line Options (choose based on comorbidities):</h4>
+                                
+                                <div class="drug-box">
+                                    <strong>NSAID:</strong> Naproxen at maximum dose until 1-2 days after resolution
+                                    <ul>
+                                        <li>Consider PPI for gastric protection</li>
+                                        <li>Monitor renal function if heart failure</li>
+                                    </ul>
+                                </div>
+
+                                <div class="drug-box">
+                                    <strong>Colchicine:</strong> 500 micrograms 2-4 times daily
+                                    <ul>
+                                        <li>Max 6 mg per course, don't repeat within 3 days</li>
+                                        <li>Reduce dose in elderly/CKD (eGFR 10-50)</li>
+                                        <li>Contraindicated if eGFR <10</li>
+                                    </ul>
+                                </div>
+
+                                <div class="drug-box">
+                                    <strong>Oral Corticosteroid:</strong> Prednisolone 30-35 mg once daily for 3-5 days
+                                    <ul>
+                                        <li>Off-label use</li>
+                                        <li>Consider if NSAIDs/colchicine contraindicated</li>
+                                    </ul>
+                                </div>
+
+                                <div class="drug-box">
+                                    <strong>Intra-articular/IM Corticosteroid:</strong> If oral therapy ineffective/not tolerated
+                                </div>
+                            </div>
+
+                            <div class="alert-box info">
+                                <div class="alert-icon"><i class="fas fa-info-circle"></i></div>
+                                <div>
+                                    <strong>Adjuncts:</strong> Ice packs, rest and elevate limb, keep joint cool, paracetamol for pain
+                                </div>
+                            </div>
+
+                            <div class="alert-box caution">
+                                <div class="alert-icon"><i class="fas fa-exclamation-circle"></i></div>
+                                <div>
+                                    <strong>Continue ULT:</strong> Do not stop allopurinol or febuxostat during acute flare
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-shield-alt"></i> Prevention (Urate-Lowering Therapy)</h3>
+                            
+                            <div class="subsection">
+                                <h4>Indications for ULT:</h4>
+                                <ul>
+                                    <li>Multiple or troublesome flares</li>
+                                    <li>CKD stages 3-5</li>
+                                    <li>Diuretic therapy</li>
+                                    <li>Tophi or chronic gouty arthritis</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h4>Treat-to-Target Strategy:</h4>
+                                <ul>
+                                    <li>Start 2-4 weeks after flare settles (or during flare if frequent)</li>
+                                    <li>Start low, increase monthly based on serum urate</li>
+                                    <li><strong>Target:</strong> <360 μmol/L (<300 if tophi or frequent flares)</li>
+                                    <li>Lifelong treatment</li>
+                                </ul>
+                            </div>
+
+                            <div class="drug-box">
+                                <strong>Allopurinol:</strong> First-line (especially if cardiovascular disease)
+                                <ul>
+                                    <li>Start 100 mg daily, increase by 100 mg every 4 weeks</li>
+                                    <li>Mild: 100-200 mg, Moderate: 300-600 mg, Severe: 700-900 mg</li>
+                                    <li>Screen for HLA-B*5801 in high-risk ethnicities (Han Chinese, Thai, Korean)</li>
+                                </ul>
+                            </div>
+
+                            <div class="drug-box">
+                                <strong>Febuxostat:</strong> Alternative if allopurinol not tolerated/ineffective
+                                <ul>
+                                    <li>Start 80 mg daily, increase to 120 mg if urate >6 mg/dL</li>
+                                    <li>Caution: increased cardiovascular mortality risk</li>
+                                    <li>Avoid if major cardiovascular disease (MI, stroke, unstable angina)</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h4>Prophylaxis during ULT initiation:</h4>
+                                <ul>
+                                    <li>Colchicine 500 micrograms twice daily for at least 6 months</li>
+                                    <li>If colchicine contraindicated: NSAID or corticosteroid</li>
+                                    <li>Continue prophylaxis for 3 months after reaching target urate</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card fade-in" id="followup-card">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                        <h2>Follow-up & Monitoring</h2>
+                    </div>
+                    <div class="badges-container">
+                        <div class="badge badge-stable">
+                            <i class="fas fa-check-circle"></i> On Target
+                        </div>
+                        <div class="badge badge-caution">
+                            <i class="fas fa-clock"></i> Monitoring
+                        </div>
+                    </div>
+                    <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-calendar-check"></i> Post-Flare Follow-up (4-6 weeks)</h3>
+                            <ul>
+                                <li>Measure serum urate level</li>
+                                <li>Assess lifestyle and comorbidities (CV risk, CKD)</li>
+                                <li>Offer CKD testing: eGFR and urine ACR</li>
+                                <li>Review medications (consider stopping diuretics if hypertension controlled)</li>
+                                <li>Discuss long-term ULT benefits/risks</li>
+                                <li>Provide patient education materials</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-search-plus"></i> Ongoing Monitoring</h3>
+                            <div class="subsection">
+                                <h4>During ULT Titration:</h4>
+                                <ul>
+                                    <li>Check serum urate monthly until target reached</li>
+                                    <li>Monitor kidney function in parallel</li>
+                                    <li>Screen CV risk factors annually</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h4>After Target Reached:</h4>
+                                <ul>
+                                    <li>Annual serum urate monitoring</li>
+                                    <li>Annual kidney function and CV risk assessment</li>
+                                    <li>Liver function if on febuxostat</li>
+                                    <li>Monitor for allopurinol hypersensitivity syndrome (first 3 months)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-exclamation-triangle"></i> When to Refer</h3>
+                            <div class="alert-box urgent">
+                                <div class="alert-icon"><i class="fas fa-ambulance"></i></div>
+                                <div>
+                                    <strong>Immediate:</strong> Suspected septic arthritis
+                                </div>
+                            </div>
+                            
+                            <div class="alert-box caution">
+                                <div class="alert-icon"><i class="fas fa-user-md"></i></div>
+                                <div>
+                                    <strong>Urgent/Routine:</strong>
+                                    <ul>
+                                        <li>Uncertain diagnosis</li>
+                                        <li>Treatment failure or intolerance</li>
+                                        <li>Young patient (<30) or pregnancy</li>
+                                        <li>CKD stages 3b-5 (eGFR <45)</li>
+                                        <li>Organ transplant recipients</li>
+                                        <li>Need intra-articular injection</li>
+                                        <li>Suspected systemic illness (RA, connective tissue disease)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-apple-alt"></i> Lifestyle Advice</h3>
+                            <ul>
+                                <li>Healthy balanced diet (no specific diet proven)</li>
+                                <li>Weight reduction if obese</li>
+                                <li>Limit alcohol (especially beer), sugary drinks</li>
+                                <li>Reduce meat and seafood intake</li>
+                                <li>Ensure adequate hydration</li>
+                                <li>At least 2 alcohol-free days per week</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-book"></i> Patient Education</h3>
+                            <div class="subsection">
+                                <p>Explain to patients:</p>
+                                <ul>
+                                    <li>Gout is a lifelong condition due to urate crystal deposition</li>
+                                    <li>ULT prevents flares, shrinks tophi, prevents joint damage</li>
+                                    <li>Continue ULT during acute flares</li>
+                                    <li>Recurrent flares will decrease with effective ULT</li>
+                                    <li>Provide written information (UK Gout Society: www.ukgoutsociety.org)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update progress step
+            const stepId = card.id.replace('-card', '');
+            updateProgressStep(stepId);
+            
+            // Auto-scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 300);
+        }
+
+        // Toggle ACR criteria
+        function toggleCriteria() {
+            const content = document.getElementById('criteria-list');
+            content.classList.toggle('show');
+        }
+
+        // Progress tracking
+        function updateProgressStep(activeStep) {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach(step => {
+                step.classList.remove('active', 'completed');
+                if (step.dataset.step === activeStep) {
+                    step.classList.add('active');
+                } else if (isStepCompleted(step.dataset.step)) {
+                    step.classList.add('completed');
+                }
+            });
+            
+            updateProgressBar();
+        }
+
+        function isStepCompleted(stepId) {
+            const card = document.getElementById(stepId + '-card');
+            return card && card.classList.contains('expanded');
+        }
+
+        function updateProgressBar() {
+            const steps = document.querySelectorAll('.progress-step');
+            const completedSteps = document.querySelectorAll('.progress-step.completed, .progress-step.active');
+            const progress = (completedSteps.length / steps.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        // Sidebar click navigation
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', function() {
+                const stepId = this.dataset.step;
+                const card = document.getElementById(stepId + '-card');
+                if (card) {
+                    card.classList.add('expanded');
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    updateProgressStep(stepId);
+                }
+            });
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand first card by default
+            document.getElementById('assessment-card').classList.add('expanded');
+            
+            // Add fade-in animation to cards
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.card').forEach(card => {
+                observer.observe(card);
+            });
+
+            // Smooth scroll for internal links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const cards = document.querySelectorAll('.card');
+            const currentIndex = Array.from(cards).findIndex(card => 
+                card === document.querySelector('.card:hover') || 
+                card.classList.contains('expanded')
+            );
+            
+            if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else if (e.key === 'Enter' && currentIndex !== -1) {
+                const header = cards[currentIndex].querySelector('.card-header');
+                toggleCard(header);
+            }
+        });
+
+        // Progress bar scroll update
+        window.addEventListener('scroll', function() {
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight - windowHeight;
+            const scrolled = window.scrollY;
+            const progress = (scrolled / documentHeight) * 100;
+            document.getElementById('progressFill').style.width = Math.min(progress, 100) + '%';
+        });
+    </script>
+</body>
+</html>

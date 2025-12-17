@@ -1,0 +1,1498 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gout Clinical Decision Support — Rapid Pathways</title>
+  <style>
+    :root{
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.09);
+      --stroke: rgba(255,255,255,.12);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.72);
+
+      --good: #2fe3b0;
+      --warn: #ffd166;
+      --urgent: #ff5d6c;
+      --info: #6ae4ff;
+      --accent: #a78bfa;
+
+      --chip: rgba(255,255,255,.08);
+      --shadow: 0 16px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+      --radius2: 14px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1100px 700px at 20% -10%, rgba(106,228,255,.22), transparent 55%),
+        radial-gradient(1000px 600px at 90% 10%, rgba(167,139,250,.20), transparent 52%),
+        radial-gradient(900px 500px at 30% 100%, rgba(47,227,176,.14), transparent 52%),
+        linear-gradient(180deg, #050814 0%, #0b1220 55%, #060815 100%);
+      line-height:1.35;
+    }
+
+    a{ color: var(--info); text-decoration:none; }
+    a:hover{ text-decoration: underline; }
+
+    .app{
+      display:grid;
+      grid-template-columns: 340px minmax(0, 1fr);
+      min-height:100vh;
+    }
+
+    /* Sidebar */
+    .side{
+      position: sticky;
+      top:0;
+      align-self:start;
+      height: 100vh;
+      padding: 18px 16px;
+      border-right: 1px solid var(--stroke);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      backdrop-filter: blur(10px);
+      overflow:auto;
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      padding: 12px 12px 10px;
+      border: 1px solid var(--stroke);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+    }
+    .brand .logo{
+      width:42px; height:42px;
+      border-radius: 14px;
+      display:grid; place-items:center;
+      background: radial-gradient(circle at 20% 20%, rgba(106,228,255,.45), rgba(167,139,250,.22) 45%, rgba(255,93,108,.18) 75%, rgba(255,255,255,.06) 100%);
+      border:1px solid rgba(255,255,255,.18);
+    }
+    .brand h1{
+      font-size: 14px;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .brand p{
+      margin:2px 0 0;
+      font-size:12px;
+      color: var(--muted);
+    }
+
+    .search{
+      margin-top:12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    .search input{
+      width:100%;
+      background: transparent;
+      border:0;
+      outline:none;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .search .kbd{
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(255,255,255,.6);
+      padding: 2px 6px;
+      border-radius: 8px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+      white-space:nowrap;
+    }
+
+    .filters{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: var(--radius);
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+    }
+    .filters h2{
+      margin:0 0 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      letter-spacing:.25px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .chips{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: var(--chip);
+      color: rgba(255,255,255,.85);
+      font-size: 12px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .chip:hover{ transform: translateY(-1px); }
+    .chip[data-on="true"]{
+      background: rgba(106,228,255,.14);
+      border-color: rgba(106,228,255,.35);
+      color: rgba(255,255,255,.93);
+    }
+    .chip .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: rgba(255,255,255,.25);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.04);
+    }
+    .chip[data-on="true"] .dot{ background: var(--info); box-shadow: 0 0 0 3px rgba(106,228,255,.18); }
+
+    .nav{
+      margin-top: 12px;
+      padding: 10px 8px;
+      border-radius: var(--radius);
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+    }
+    .nav h2{
+      margin: 2px 6px 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      letter-spacing:.25px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .nav a{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 9px 10px;
+      border-radius: 12px;
+      color: rgba(255,255,255,.82);
+      font-size: 13px;
+      text-decoration:none;
+      border:1px solid transparent;
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .nav a:hover{
+      background: rgba(255,255,255,.04);
+      border-color: rgba(255,255,255,.08);
+      text-decoration:none;
+    }
+    .nav a[data-active="true"]{
+      background: linear-gradient(90deg, rgba(106,228,255,.14), rgba(167,139,250,.10));
+      border-color: rgba(106,228,255,.22);
+      color: rgba(255,255,255,.95);
+    }
+
+    .legend{
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: var(--radius);
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.03);
+    }
+    .legend .row{
+      display:flex; gap:10px; align-items:center;
+      padding: 6px 0;
+      font-size: 12px;
+      color: rgba(255,255,255,.8);
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      font-size: 12px;
+      color: rgba(255,255,255,.85);
+      white-space:nowrap;
+    }
+    .b-urgent{ border-color: rgba(255,93,108,.35); background: rgba(255,93,108,.12); }
+    .b-warn{ border-color: rgba(255,209,102,.35); background: rgba(255,209,102,.12); }
+    .b-info{ border-color: rgba(106,228,255,.35); background: rgba(106,228,255,.11); }
+    .b-good{ border-color: rgba(47,227,176,.35); background: rgba(47,227,176,.10); }
+
+    /* Main */
+    .main{
+      padding: 22px 22px 80px;
+    }
+
+    .topbar{
+      position: sticky;
+      top:0;
+      z-index: 5;
+      padding: 14px 0 12px;
+      margin: -10px 0 18px;
+      background: linear-gradient(180deg, rgba(11,18,32,.92), rgba(11,18,32,.55), transparent);
+      backdrop-filter: blur(8px);
+    }
+    .hero{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap: 14px;
+    }
+    .hero h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing:.2px;
+    }
+    .hero p{
+      margin:6px 0 0;
+      color: var(--muted);
+      max-width: 70ch;
+      font-size: 13px;
+    }
+    .quick{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:flex-end;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.9);
+      font-size: 13px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.07); }
+    .btn.primary{
+      border-color: rgba(106,228,255,.35);
+      background: linear-gradient(90deg, rgba(106,228,255,.16), rgba(167,139,250,.12));
+    }
+    .btn.danger{
+      border-color: rgba(255,93,108,.35);
+      background: rgba(255,93,108,.12);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .85fr;
+      gap: 16px;
+      align-items:start;
+    }
+    @media (max-width: 1060px){
+      .app{ grid-template-columns: 1fr; }
+      .side{ position: relative; height: auto; }
+      .grid{ grid-template-columns: 1fr; }
+      .topbar{ position: relative; }
+    }
+
+    .card{
+      border-radius: var(--radius);
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    .card .hd{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      padding: 14px 14px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    }
+    .card .hd h2{
+      margin:0;
+      font-size: 14px;
+      letter-spacing:.2px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .card .hd p{
+      margin:6px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 72ch;
+    }
+    .card .bd{
+      padding: 14px;
+    }
+
+    .flag{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.85);
+      white-space:nowrap;
+    }
+    .flag.urgent{ border-color: rgba(255,93,108,.35); background: rgba(255,93,108,.12); }
+    .flag.warn{ border-color: rgba(255,209,102,.35); background: rgba(255,209,102,.12); }
+    .flag.info{ border-color: rgba(106,228,255,.35); background: rgba(106,228,255,.11); }
+    .flag.good{ border-color: rgba(47,227,176,.35); background: rgba(47,227,176,.10); }
+
+    .kpi{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .kpi .box{
+      padding: 10px 12px;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+    }
+    .kpi .box .t{ font-size:11px; color: var(--muted); margin-bottom:4px; }
+    .kpi .box .v{ font-size:13px; font-weight:650; letter-spacing:.2px; }
+
+    .path{
+      display:grid;
+      gap: 10px;
+    }
+    .step{
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      padding: 12px;
+      display:grid;
+      gap: 8px;
+    }
+    .step .top{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+    .step .title{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      min-width:0;
+    }
+    .num{
+      width:28px; height:28px;
+      border-radius: 10px;
+      display:grid; place-items:center;
+      background: rgba(106,228,255,.12);
+      border:1px solid rgba(106,228,255,.22);
+      font-size: 13px;
+      font-weight:700;
+      flex: 0 0 auto;
+    }
+    .step h3{
+      margin:0;
+      font-size: 13px;
+      letter-spacing:.15px;
+    }
+    .step p{
+      margin: 0;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .bullets{
+      margin:0;
+      padding-left: 18px;
+      color: rgba(255,255,255,.82);
+      font-size: 12.5px;
+    }
+    .bullets li{ margin: 6px 0; }
+    .mini{
+      font-size: 11.5px;
+      color: rgba(255,255,255,.78);
+      padding: 8px 10px;
+      border-radius: 14px;
+      border:1px dashed rgba(255,255,255,.16);
+      background: rgba(255,255,255,.02);
+    }
+
+    .action{
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.12);
+      background: radial-gradient(800px 350px at 20% 0%, rgba(255,209,102,.12), transparent 55%),
+                  radial-gradient(700px 280px at 95% 10%, rgba(106,228,255,.12), transparent 50%),
+                  rgba(255,255,255,.03);
+      padding: 12px;
+      display:grid;
+      gap: 10px;
+    }
+    .action .row{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .action h3{
+      margin:0;
+      font-size: 13px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .action p{ margin:0; color: var(--muted); font-size: 12.5px; }
+
+    .table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing:0;
+      overflow:hidden;
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.02);
+    }
+    .table th, .table td{
+      padding: 10px 10px;
+      font-size: 12.5px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      vertical-align: top;
+    }
+    .table th{
+      text-align:left;
+      font-size: 11.5px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.78);
+      background: rgba(255,255,255,.04);
+    }
+    .table tr:last-child td{ border-bottom:0; }
+    .mono{ font-family: var(--mono); }
+
+    details{
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      overflow:hidden;
+    }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 12px 12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    summary .left{
+      display:flex; align-items:center; gap:10px;
+      min-width:0;
+    }
+    .chev{
+      width: 22px; height:22px;
+      border-radius: 10px;
+      display:grid; place-items:center;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      flex: 0 0 auto;
+      transition: transform .12s ease;
+    }
+    details[open] .chev{ transform: rotate(90deg); }
+    details .content{
+      padding: 0 12px 12px;
+      color: rgba(255,255,255,.84);
+      font-size: 12.5px;
+    }
+
+    .pillbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .pill{
+      font-size: 12px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: rgba(255,255,255,.86);
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease;
+      user-select:none;
+    }
+    .pill:hover{ transform: translateY(-1px); }
+    .pill[data-on="true"]{
+      background: rgba(47,227,176,.12);
+      border-color: rgba(47,227,176,.28);
+    }
+
+    .muted{ color: var(--muted); }
+
+    .toast{
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(15,22,38,.72);
+      backdrop-filter: blur(10px);
+      color: rgba(255,255,255,.9);
+      font-size: 12.5px;
+      box-shadow: var(--shadow);
+      opacity:0;
+      transform: translateY(8px);
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .toast.show{ opacity:1; transform: translateY(0); }
+
+    /* Filter visibility */
+    .panel[data-hide="true"]{ display:none !important; }
+
+    /* Small helper icons (inline SVG sized consistently) */
+    .ico{ width:18px; height:18px; display:inline-block; vertical-align:-3px; opacity:.95; }
+    .ico.lg{ width:20px; height:20px; vertical-align:-4px; }
+    .ico.sm{ width:16px; height:16px; vertical-align:-2px; opacity:.9; }
+
+  </style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side" aria-label="Clinical navigation">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <!-- crystal icon -->
+        <svg class="ico lg" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2 4.5 9.5 12 22l7.5-12.5L12 2Z" stroke="rgba(255,255,255,.92)" stroke-width="1.6"/>
+          <path d="M12 2v20M4.5 9.5h15" stroke="rgba(255,255,255,.38)" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Gout — Rapid Pathways</h1>
+        <p>High-signal decision support • UK-oriented targets & dosing</p>
+      </div>
+    </div>
+
+    <div class="search" role="search">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="rgba(255,255,255,.85)" stroke-width="1.6"/>
+        <path d="M16.5 16.5 21 21" stroke="rgba(255,255,255,.65)" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <input id="q" placeholder="Search (e.g. “colchicine”, “septic”, “urate < 360”)…" autocomplete="off" />
+      <span class="kbd" title="Keyboard shortcut">/</span>
+    </div>
+
+    <div class="filters" aria-label="Filters">
+      <h2>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 6h16M7 12h10M10 18h4" stroke="rgba(255,255,255,.85)" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        Scenario & risk filters
+      </h2>
+      <div class="chips" id="chips">
+        <div class="chip" data-key="acute" data-on="true" title="Show acute flare pathway">
+          <span class="dot"></span> Acute flare
+        </div>
+        <div class="chip" data-key="prevent" data-on="true" title="Show prevention / ULT pathway">
+          <span class="dot"></span> Prevention / ULT
+        </div>
+        <div class="chip" data-key="ckd" data-on="false" title="Highlight CKD considerations">
+          <span class="dot"></span> CKD
+        </div>
+        <div class="chip" data-key="cvd" data-on="false" title="Highlight major cardiovascular disease considerations">
+          <span class="dot"></span> Major CVD
+        </div>
+        <div class="chip" data-key="diagnosis" data-on="true" title="Show diagnosis section">
+          <span class="dot"></span> Diagnosis
+        </div>
+        <div class="chip" data-key="redflags" data-on="true" title="Show urgent red flags">
+          <span class="dot"></span> Red flags
+        </div>
+      </div>
+      <div class="pillbar" aria-label="Quick toggles">
+        <div class="pill" id="openAll" data-on="false">Expand accordions</div>
+        <div class="pill" id="clear" data-on="false">Clear filters</div>
+      </div>
+    </div>
+
+    <nav class="nav" aria-label="On-page navigation">
+      <h2>
+        <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M8 6h13M8 12h13M8 18h13" stroke="rgba(255,255,255,.85)" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke="rgba(255,255,255,.65)" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        Jump to
+      </h2>
+      <a href="#urgent" data-id="urgent"><span class="badge b-urgent">⚠ Urgent</span> Septic arthritis screen</a>
+      <a href="#diagnosis" data-id="diagnosis"><span class="badge b-info">Dx</span> Diagnosis workflow</a>
+      <a href="#acute" data-id="acute"><span class="badge b-warn">Flare</span> Acute gout pathway</a>
+      <a href="#prevent" data-id="prevent"><span class="badge b-good">ULT</span> Prevention / treat-to-target</a>
+      <a href="#doses" data-id="doses"><span class="badge">Rx</span> Dosing & safety</a>
+      <a href="#followup" data-id="followup"><span class="badge">↻</span> Follow-up & referral</a>
+    </nav>
+
+    <div class="legend" aria-label="Visual legend">
+      <div class="row"><span class="flag urgent">⚠ URGENT</span> time-critical actions / exclusions</div>
+      <div class="row"><span class="flag warn">◼ ROUTINE</span> standard pathway steps</div>
+      <div class="row"><span class="flag info">ⓘ INFO</span> interpretation / criteria</div>
+      <div class="row"><span class="flag good">✓ TARGET</span> treat-to-target / monitoring</div>
+    </div>
+
+    <div class="legend">
+      <div class="row muted">Tip: press <span class="badge">/</span> to search. Click chips to filter sections.</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="main">
+    <div class="topbar">
+      <div class="hero">
+        <div>
+          <h1>Gout (≥16y) — high-yield clinical decision support</h1>
+          <p>
+            Designed for fast scanning: urgent exclusions → diagnosis → acute management → prevention with treat-to-target urate.
+            Content adapted from NICE CKS Gout (June 2023 revision) with UK-style thresholds and dosing patterns.
+          </p>
+          <div class="kpi" aria-label="Key targets">
+            <div class="box">
+              <div class="t">Diagnostic support</div>
+              <div class="v">SUA ≥ <span class="mono">360 µmol/L</span> supports Dx</div>
+            </div>
+            <div class="box">
+              <div class="t">Treat-to-target</div>
+              <div class="v">Aim SUA &lt; <span class="mono">360 µmol/L</span></div>
+            </div>
+            <div class="box">
+              <div class="t">Lower target (selected)</div>
+              <div class="v">Consider &lt; <span class="mono">300 µmol/L</span> (tophi/chronic)</div>
+            </div>
+          </div>
+        </div>
+        <div class="quick" aria-label="Quick actions">
+          <button class="btn danger" data-jump="#urgent" title="Jump to septic arthritis exclusion">
+            <span>⚠</span> Urgent screen
+          </button>
+          <button class="btn primary" data-jump="#acute" title="Jump to acute flare pathway">
+            <span>🔥</span> Treat flare
+          </button>
+          <button class="btn" data-jump="#prevent" title="Jump to ULT pathway">
+            <span>🎯</span> Start/adjust ULT
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <section id="urgent" class="card panel" data-tags="redflags diagnosis acute prevent">
+      <div class="hd">
+        <div>
+          <h2>
+            <span class="flag urgent">⚠ URGENT</span>
+            Septic arthritis exclusion (always screen first)
+          </h2>
+          <p>Septic arthritis can be fatal if missed. Use this as a hard stop before committing to a gout pathway.</p>
+        </div>
+        <span class="flag urgent">Immediate pathway</span>
+      </div>
+      <div class="bd">
+        <div class="path">
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num" style="background: rgba(255,93,108,.14); border-color: rgba(255,93,108,.28);">1</div>
+                <div>
+                  <h3>Look for systemic illness or high-risk features</h3>
+                  <p>Any “hot, swollen joint” + systemic upset requires a septic arthritis differential.</p>
+                </div>
+              </div>
+              <span class="flag urgent">Do not delay</span>
+            </div>
+            <ul class="bullets">
+              <li>Systemically unwell (with or without fever) + acutely painful, hot, swollen joint</li>
+              <li>Marked functional limitation, rapidly progressive swelling, disproportionate pain</li>
+              <li>Immunosuppression, recent joint procedure, prosthetic joint, bacteraemia risk</li>
+            </ul>
+            <div class="mini">
+              <strong>Action:</strong> follow local urgent pathway for aspiration/culture and definitive management (do not anchor on “normal urate” or prior gout history).
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num" style="background: rgba(255,93,108,.14); border-color: rgba(255,93,108,.28);">2</div>
+                <div>
+                  <h3>When in doubt: treat as septic until excluded</h3>
+                  <p>Crystals do not exclude infection; co-existence is possible.</p>
+                </div>
+              </div>
+              <button class="btn" data-copy="urgentPlan">Copy actions</button>
+            </div>
+            <div id="urgentPlan" class="mini">
+              Urgent referral per local care pathway • prompt aspiration for microscopy/culture • avoid delay due to “typical gout pattern”.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section id="diagnosis" class="card panel" data-tags="diagnosis">
+        <div class="hd">
+          <div>
+            <h2>
+              <span class="flag info">ⓘ DIAGNOSIS</span>
+              Rapid diagnosis workflow (primary care pattern)
+            </h2>
+            <p>Typical pattern supports diagnosis; confirm with SUA, and escalate diagnostics if uncertainty persists.</p>
+          </div>
+          <span class="flag info">Dx panel</span>
+        </div>
+        <div class="bd">
+          <div class="path">
+            <div class="step">
+              <div class="top">
+                <div class="title">
+                  <div class="num">1</div>
+                  <div>
+                    <h3>When to suspect gout</h3>
+                    <p>Rapid onset (often overnight) severe pain + erythema/swelling classically at 1st MTP; can be ankle, knee, midfoot, hand, wrist, elbow.</p>
+                  </div>
+                </div>
+                <span class="flag warn">Routine</span>
+              </div>
+              <ul class="bullets">
+                <li>Tophi (firm nodules; Achilles/extensor surfaces/helix of ear) → suggests longstanding disease</li>
+                <li>History of self-limiting attacks (often 7–14 days) supports diagnosis</li>
+              </ul>
+            </div>
+
+            <div class="step">
+              <div class="top">
+                <div class="title">
+                  <div class="num">2</div>
+                  <div>
+                    <h3>Key assessment items</h3>
+                    <p>Pattern recognition plus exclusion of mimics (CPPD, inflammatory arthritis, cellulitis, trauma).</p>
+                  </div>
+                </div>
+              </div>
+              <ul class="bullets">
+                <li>Speed to peak intensity (often within 24h), number of joints (usually mono-/oligoarticular)</li>
+                <li>Comorbidities/risk factors: CKD, HTN, DM, obesity, diuretics, alcohol/sugary drinks, family history</li>
+                <li>Examine all joints; look for tophi and range-of-motion limitation</li>
+              </ul>
+            </div>
+
+            <div class="step">
+              <div class="top">
+                <div class="title">
+                  <div class="num">3</div>
+                  <div>
+                    <h3>Investigations strategy</h3>
+                    <p>SUA can support diagnosis, but hyperuricaemia alone does not equal gout.</p>
+                  </div>
+                </div>
+                <span class="flag info">Interpretation</span>
+              </div>
+              <ul class="bullets">
+                <li>Measure SUA: <span class="mono">≥360 µmol/L</span> supports diagnosis</li>
+                <li>If SUA &lt; <span class="mono">360</span> but strong suspicion → repeat in 2–4 weeks after flare settles</li>
+                <li>If uncertainty persists → secondary care tests: aspiration (MSU crystals) ± imaging (US/DECT/X-ray)</li>
+              </ul>
+            </div>
+
+            <details>
+              <summary>
+                <div class="left">
+                  <div class="chev">›</div>
+                  <strong>ACR-style supportive criteria (rapid checklist)</strong>
+                </div>
+                <span class="flag info">Accordion</span>
+              </summary>
+              <div class="content">
+                <ul class="bullets">
+                  <li>Definitive if MSU crystals in synovial fluid or tophus</li>
+                  <li>Otherwise supportive pattern: recurrent attacks, max inflammation in 1 day, monoarthritis with redness, 1st MTP involvement, suspected tophus, hyperuricaemia, negative culture during attack, etc.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card panel" data-tags="diagnosis acute prevent redflags">
+        <div class="hd">
+          <div>
+            <h2>
+              <svg class="ico lg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22c5.5 0 10-4.5 10-10S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10Z" stroke="rgba(255,255,255,.75)" stroke-width="1.6"/>
+                <path d="M12 7v6l4 2" stroke="rgba(255,255,255,.75)" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+              Quick “do now” box
+            </h2>
+            <p>High-yield actions that prevent common misses and delays.</p>
+          </div>
+          <span class="flag warn">Checklist</span>
+        </div>
+        <div class="bd">
+          <div class="action" role="region" aria-label="Do now actions">
+            <div class="row">
+              <h3><span class="flag urgent">⚠</span> Screen septic arthritis first</h3>
+              <button class="btn" data-jump="#urgent">Jump</button>
+            </div>
+            <p>Any systemic illness + hot swollen joint → urgent referral pathway (do not anchor on gout history).</p>
+
+            <hr style="border:0;border-top:1px solid rgba(255,255,255,.10);width:100%;">
+
+            <div class="row">
+              <h3><span class="flag warn">◼</span> Treat early in flare</h3>
+              <button class="btn" data-jump="#acute">Flare pathway</button>
+            </div>
+            <p>Start anti-inflammatory therapy as soon as possible; continue until 1–2 days after resolution (agent-dependent).</p>
+
+            <hr style="border:0;border-top:1px solid rgba(255,255,255,.10);width:100%;">
+
+            <div class="row">
+              <h3><span class="flag good">✓</span> Treat-to-target urate</h3>
+              <button class="btn" data-jump="#prevent">ULT pathway</button>
+            </div>
+            <p>Start low-dose ULT and titrate monthly SUA to target. Continue ULT during flares if already established.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <section id="acute" class="card panel" data-tags="acute">
+      <div class="hd">
+        <div>
+          <h2>
+            <span class="flag warn">🔥 ACUTE FLARE</span>
+            Step-by-step acute gout management
+          </h2>
+          <p>First-line options: NSAID (max tolerated), colchicine, or short-course oral corticosteroid. Consider combinations if inadequate response.</p>
+        </div>
+        <span class="flag warn">Routine pathway</span>
+      </div>
+      <div class="bd">
+        <div class="path">
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num">1</div>
+                <div>
+                  <h3>Start treatment immediately (same day)</h3>
+                  <p>Select based on comorbidities, concurrent meds, and patient preference.</p>
+                </div>
+              </div>
+              <span class="flag info">Choose 1st-line</span>
+            </div>
+            <ul class="bullets">
+              <li><strong>NSAID</strong> at maximum dose (e.g. naproxen) until 1–2 days after flare resolves; consider PPI gastroprotection</li>
+              <li><strong>Colchicine</strong> (see dosing panel) if appropriate</li>
+              <li><strong>Oral prednisolone</strong> 30–35 mg once daily for 3–5 days (off-label)</li>
+            </ul>
+            <div class="mini" data-hint="ckd cvd">
+              <strong>Comorbidity flags:</strong> CKD/heart failure/CVD may shift choice away from NSAIDs; if NSAID used with HF, monitor renal function closely.
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num">2</div>
+                <div>
+                  <h3>If NSAIDs/colchicine not tolerated or ineffective</h3>
+                  <p>Escalate to steroid injection options (expertise dependent) and/or combine therapies.</p>
+                </div>
+              </div>
+              <span class="flag warn">Escalation</span>
+            </div>
+            <ul class="bullets">
+              <li>Consider intra-articular or intramuscular corticosteroid injection (off-label; depends on local capability)</li>
+              <li>Consider combining treatments if monotherapy response inadequate</li>
+              <li>Adjuncts: ice packs, rest/elevation, keep joint cool/exposed; consider paracetamol adjunct</li>
+            </ul>
+          </div>
+
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num">3</div>
+                <div>
+                  <h3>Important “don’ts”</h3>
+                  <p>Reduce avoidable harm and ineffective escalation.</p>
+                </div>
+              </div>
+              <span class="flag info">Safety</span>
+            </div>
+            <ul class="bullets">
+              <li>Aspirin is not indicated for gout flare treatment</li>
+              <li>Do not offer IL-1 inhibitor unless NSAIDs/colchicine/steroids are contraindicated/not tolerated/ineffective → refer rheumatology before prescribing</li>
+              <li><strong>Continue existing ULT</strong> (allopurinol/febuxostat) during flare if already taking</li>
+            </ul>
+          </div>
+
+          <details>
+            <summary>
+              <div class="left">
+                <div class="chev">›</div>
+                <strong>Patient-directed rapid advice (copy/paste)</strong>
+              </div>
+              <button class="btn" style="padding:8px 10px;" data-copy="ptAdvice">Copy</button>
+            </summary>
+            <div class="content">
+              <div id="ptAdvice" class="mini">
+                Treat the flare as soon as it starts • rest and elevate • keep the joint cool/exposed • use ice packs • take prescribed anti-inflammatory therapy as directed • return if worsening or no improvement after 1–2 days • if on allopurinol/febuxostat, continue it during the flare.
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="prevent" class="card panel" data-tags="prevent">
+      <div class="hd">
+        <div>
+          <h2>
+            <span class="flag good">🎯 PREVENTION / ULT</span>
+            Treat-to-target urate-lowering strategy
+          </h2>
+          <p>Offer ULT to higher-risk gout; discuss with others after first/subsequent flare. Start low, titrate monthly SUA.</p>
+        </div>
+        <span class="flag good">Treat-to-target</span>
+      </div>
+      <div class="bd">
+        <div class="path">
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num" style="background: rgba(47,227,176,.12); border-color: rgba(47,227,176,.25);">1</div>
+                <div>
+                  <h3>Who should be offered ULT</h3>
+                  <p>Offer (treat-to-target) when recurrence risk or burden is high.</p>
+                </div>
+              </div>
+              <span class="flag good">Indications</span>
+            </div>
+            <ul class="bullets">
+              <li>Multiple or troublesome flares</li>
+              <li>CKD stages 3–5 (GFR categories G3–G5)</li>
+              <li>Diuretic therapy</li>
+              <li>Tophi or chronic gouty arthritis</li>
+            </ul>
+            <div class="mini">
+              <strong>Also:</strong> discuss ULT (treat-to-target) with others after a first or subsequent flare—shared decision-making.
+            </div>
+          </div>
+
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num" style="background: rgba(47,227,176,.12); border-color: rgba(47,227,176,.25);">2</div>
+                <div>
+                  <h3>When to start ULT + targets</h3>
+                  <p>Timing and SUA thresholds that drive dose titration.</p>
+                </div>
+              </div>
+              <span class="flag good">Targets</span>
+            </div>
+            <ul class="bullets">
+              <li>Start ULT ≥2–4 weeks after flare settles (can start during flare if flares are frequent)</li>
+              <li>Target SUA: <span class="mono">&lt;360 µmol/L</span></li>
+              <li>Consider lower target <span class="mono">&lt;300 µmol/L</span> if tophi/chronic gouty arthritis or persistent frequent flares despite SUA &lt;360</li>
+              <li>Start low dose; titrate using <strong>monthly SUA</strong> until target achieved</li>
+            </ul>
+          </div>
+
+          <div class="step" data-hint="cvd">
+            <div class="top">
+              <div class="title">
+                <div class="num" style="background: rgba(47,227,176,.12); border-color: rgba(47,227,176,.25);">3</div>
+                <div>
+                  <h3>Choose ULT: allopurinol vs febuxostat</h3>
+                  <p>First-line choice depends on cardiovascular history and tolerability.</p>
+                </div>
+              </div>
+              <span class="flag info">Choice</span>
+            </div>
+            <ul class="bullets">
+              <li>Offer <strong>allopurinol or febuxostat</strong> first-line (preferences/comorbidities)</li>
+              <li><strong>Major CVD:</strong> offer <strong>allopurinol first-line</strong></li>
+              <li>If target not reached or not tolerated: switch between allopurinol ↔ febuxostat</li>
+              <li>Check LFTs before febuxostat; consider HLA-B*5801 screening (high-prevalence groups) before allopurinol</li>
+            </ul>
+          </div>
+
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num" style="background: rgba(47,227,176,.12); border-color: rgba(47,227,176,.25);">4</div>
+                <div>
+                  <h3>Flare prophylaxis when starting/titrating ULT</h3>
+                  <p>Prevent early mobilisation flares; avoid stopping prophylaxis during flares.</p>
+                </div>
+              </div>
+              <span class="flag warn">Prophylaxis</span>
+            </div>
+            <ul class="bullets">
+              <li>Offer <strong>colchicine</strong> prophylaxis to those choosing flare prevention</li>
+              <li>If colchicine contraindicated/not tolerated/ineffective: consider NSAID or corticosteroid (off-label); consider PPI with NSAID</li>
+              <li>Do not offer IL-1 inhibitor prophylaxis unless standard options unsuitable → refer rheumatology before prescribing</li>
+            </ul>
+          </div>
+
+          <details>
+            <summary>
+              <div class="left">
+                <div class="chev">›</div>
+                <strong>Lifestyle and education “signal” (what actually matters)</strong>
+              </div>
+              <span class="flag info">Accordion</span>
+            </summary>
+            <div class="content">
+              <ul class="bullets">
+                <li>Advise healthy balanced diet; no strong evidence any single diet prevents flares or lowers SUA reliably</li>
+                <li>Excess weight/obesity and excessive alcohol can exacerbate flares</li>
+                <li>Explain ULT is typically long-term/lifelong once target achieved to eliminate crystals and prevent joint damage</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <section id="doses" class="card panel" data-tags="acute prevent">
+      <div class="hd">
+        <div>
+          <h2>
+            <span class="badge">Rx</span>
+            Dosing & high-risk safety notes (fast reference)
+          </h2>
+          <p>High-yield dosing patterns and interaction warnings for rapid scanning. Always integrate renal/hepatic function and interacting drugs.</p>
+        </div>
+        <span class="flag info">Reference</span>
+      </div>
+      <div class="bd">
+        <div class="grid" style="grid-template-columns: 1.1fr .9fr;">
+          <div>
+            <h3 style="margin:0 0 8px;font-size:13px;display:flex;gap:10px;align-items:center;">
+              <span class="flag warn">Colchicine</span> dosing & toxicity pattern
+            </h3>
+            <table class="table" aria-label="Colchicine dosing table">
+              <thead>
+                <tr>
+                  <th>Indication</th>
+                  <th>Dose (typical)</th>
+                  <th>Key limits / renal notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Acute flare</strong></td>
+                  <td>500 micrograms <strong>2–4× daily</strong> until pain relief<br><span class="muted">Manufacturer alternative: 1 mg then 500 micrograms after 1 hour, then 12h gap, then 500 micrograms q8h</span></td>
+                  <td><strong>Max per course:</strong> 6 mg • <strong>Do not repeat</strong> within 3 days<br><strong>eGFR 10–50:</strong> reduce dose or extend interval • <strong>eGFR &lt;10:</strong> contraindicated</td>
+                </tr>
+                <tr>
+                  <td><strong>ULT prophylaxis</strong></td>
+                  <td>500 micrograms <strong>BD</strong></td>
+                  <td>Duration individualised (flare frequency, gout duration, tophi burden)</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <details style="margin-top:10px;">
+              <summary>
+                <div class="left">
+                  <div class="chev">›</div>
+                  <strong>Colchicine: interaction red flags (rapid)</strong>
+                </div>
+                <span class="flag urgent">⚠</span>
+              </summary>
+              <div class="content">
+                <ul class="bullets">
+                  <li><strong>P-gp inhibitors</strong> (e.g. macrolides, ritonavir, verapamil) ↑ exposure → life-threatening toxicity; contraindicated with renal/hepatic impairment</li>
+                  <li><strong>Strong CYP3A4 inhibitors</strong> (e.g. macrolides, azoles, HIV protease inhibitors) ↑ exposure</li>
+                  <li><strong>Ciclosporin</strong> ↑ exposure → muscle toxicity risk; consider holding or dose reduction; contraindicated with renal/hepatic impairment</li>
+                  <li><strong>Toxicity trajectory:</strong> early GI symptoms → multi-organ failure/bone marrow suppression may evolve over days; delays up to hours before symptoms</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+
+          <div>
+            <h3 style="margin:0 0 8px;font-size:13px;display:flex;gap:10px;align-items:center;">
+              <span class="flag good">Allopurinol</span> titration + severe rash rule
+            </h3>
+            <table class="table" aria-label="Allopurinol dosing table">
+              <thead>
+                <tr>
+                  <th>Start / titrate</th>
+                  <th>Common ranges</th>
+                  <th>Safety</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Start ≤ <span class="mono">100 mg OD</span> (after food)<br>Increase by <span class="mono">100 mg</span> increments q4w guided by SUA</td>
+                  <td>Mild: 100–200 mg/day<br>Moderate: 300–600 mg/day<br>Severe: 700–900 mg/day<br><span class="muted">If &gt;300 mg/day, split doses (≤300 mg per dose)</span></td>
+                  <td><strong>Rash:</strong> stop immediately; consider SJS/TEN/hypersensitivity. If cannot rule out serious reaction → never reintroduce.<br><strong>HLA-B*5801:</strong> contraindicated if known positive; consider screening in high-prevalence ancestry groups.</td>
+                </tr>
+                <tr>
+                  <td colspan="3" data-hint="ckd" class="muted">
+                    <strong>Renal impairment:</strong> max initial 100 mg; increase cautiously if inadequate response; severe impairment → reduce daily dose below 100 mg or extend interval.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <details style="margin-top:10px;">
+              <summary>
+                <div class="left">
+                  <div class="chev">›</div>
+                  <strong>Febuxostat: baseline & monitoring highlights</strong>
+                </div>
+                <span class="flag warn">Routine</span>
+              </summary>
+              <div class="content">
+                <ul class="bullets">
+                  <li>Check liver function tests prior to initiation; monitor periodically based on clinical judgement</li>
+                  <li>In major CVD, prefer allopurinol first-line</li>
+                </ul>
+              </div>
+            </details>
+
+            <details style="margin-top:10px;">
+              <summary>
+                <div class="left">
+                  <div class="chev">›</div>
+                  <strong>NSAID + PPI reminder</strong>
+                </div>
+                <span class="flag info">ⓘ</span>
+              </summary>
+              <div class="content">
+                <ul class="bullets">
+                  <li>NSAID at maximum tolerated dose for flare; consider PPI gastroprotection</li>
+                  <li>In heart failure: continue diuretics during flare; if NSAID used, monitor renal function closely</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="followup" class="card panel" data-tags="acute prevent">
+      <div class="hd">
+        <div>
+          <h2>
+            <span class="badge">↻</span>
+            Follow-up, monitoring, and referral triggers
+          </h2>
+          <p>Build a closed loop: post-flare review + SUA monitoring + comorbidity risk management.</p>
+        </div>
+        <span class="flag warn">Routine</span>
+      </div>
+      <div class="bd">
+        <div class="path">
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num">1</div>
+                <div>
+                  <h3>Post-flare review (4–6 weeks after flare settles)</h3>
+                  <p>Re-assess SUA and plan prevention, risk factors, and comorbidity screening.</p>
+                </div>
+              </div>
+            </div>
+            <ul class="bullets">
+              <li>Measure SUA; discuss long-term ULT risks/benefits</li>
+              <li>Assess lifestyle and comorbidities (including cardiovascular risk factors and CKD)</li>
+              <li>Offer CKD testing: eGFR(creatinine) and urine ACR</li>
+              <li>Medication review: consider antihypertensive change if on diuretic and BP controlled (case-by-case)</li>
+            </ul>
+          </div>
+
+          <div class="step">
+            <div class="top">
+              <div class="title">
+                <div class="num">2</div>
+                <div>
+                  <h3>Monitoring on ULT</h3>
+                  <p>Monthly SUA titration until target; then long-term monitoring.</p>
+                </div>
+              </div>
+              <span class="flag good">✓</span>
+            </div>
+            <ul class="bullets">
+              <li>Check SUA monthly and up-titrate ULT as tolerated until target achieved</li>
+              <li>Consider annual SUA monitoring once stable at target and continuing ULT</li>
+              <li>Monitor renal function in parallel; screen for CV risk and comorbidities at least annually</li>
+              <li>If frequent flares persist despite ULT: assess adherence, triggers (diuretics/trauma/diet/weight/alcohol), consider advance flare Rx, consider secondary care referral</li>
+            </ul>
+          </div>
+
+          <details>
+            <summary>
+              <div class="left">
+                <div class="chev">›</div>
+                <strong>Referral triggers (specialist advice or rheumatology)</strong>
+              </div>
+              <span class="flag info">Accordion</span>
+            </summary>
+            <div class="content">
+              <ul class="bullets">
+                <li><strong>Immediate referral</strong> if septic arthritis suspected (per local pathway)</li>
+                <li>Uncertain diagnosis; inadequate response or intolerance; contraindications</li>
+                <li>CKD stages 3b–5; organ transplant; complications; high risk of adverse effects</li>
+                <li>Underlying systemic illness suspected; gout in pregnancy; young onset (&lt;30 years)</li>
+                <li>Intra-articular steroid indicated but expertise/facilities not available</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <footer style="margin-top:18px;color:rgba(255,255,255,.62);font-size:12px;">
+      <div class="card" style="padding:12px 14px;border-radius:18px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);">
+        <strong>Implementation note:</strong> This is a UI-forward, clinician-facing summary. Integrate with local antimicrobial/sepsis, aspiration, and referral SOPs.
+        <span class="muted">Targets/dosing and pathway structure adapted from NICE CKS Gout (June 2023 revision).</span>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = (q, el=document) => el.querySelector(q);
+  const $$ = (q, el=document) => Array.from(el.querySelectorAll(q));
+
+  const chips = $("#chips");
+  const search = $("#q");
+  const toast = $("#toast");
+
+  const state = {
+    acute: true,
+    prevent: true,
+    diagnosis: true,
+    redflags: true,
+    ckd: false,
+    cvd: false,
+    query: ""
+  };
+
+  // Keyboard shortcut: "/" focuses search (like many clinician tools)
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== search) {
+      e.preventDefault();
+      search.focus();
+    }
+    if (e.key === "Escape") {
+      if (document.activeElement === search) search.blur();
+      search.value = "";
+      state.query = "";
+      applyFilters();
+      toastMsg("Search cleared");
+    }
+  });
+
+  // Chip toggles
+  chips.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (!chip) return;
+    const key = chip.dataset.key;
+    const on = chip.dataset.on === "true";
+    chip.dataset.on = String(!on);
+    state[key] = !on;
+    applyFilters();
+    pulse(chip);
+  });
+
+  // Quick controls
+  $("#clear").addEventListener("click", () => {
+    // reset to sensible defaults (show main pathways, hide risk overlays)
+    const defaults = { acute:true, prevent:true, diagnosis:true, redflags:true, ckd:false, cvd:false };
+    Object.assign(state, defaults);
+    $$(".chip").forEach(c => c.dataset.on = String(!!defaults[c.dataset.key]));
+    search.value = "";
+    state.query = "";
+    applyFilters();
+    toastMsg("Filters reset");
+  });
+
+  $("#openAll").addEventListener("click", (e) => {
+    const pill = e.target.closest(".pill");
+    const on = pill.dataset.on === "true";
+    pill.dataset.on = String(!on);
+    $$("details").forEach(d => d.open = !on);
+    toastMsg(!on ? "Accordions expanded" : "Accordions collapsed");
+  });
+
+  // Search filter
+  search.addEventListener("input", () => {
+    state.query = (search.value || "").trim().toLowerCase();
+    applyFilters();
+  });
+
+  // Jump buttons
+  $$("[data-jump]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.jump;
+      const el = $(id);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  // Copy buttons
+  $$("[data-copy]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.copy;
+      const el = $("#" + id);
+      if (!el) return;
+      const text = el.innerText.replace(/\s+/g, " ").trim();
+      try {
+        await navigator.clipboard.writeText(text);
+        toastMsg("Copied to clipboard");
+      } catch {
+        toastMsg("Copy failed (clipboard blocked)");
+      }
+    });
+  });
+
+  // Filter application
+  function applyFilters(){
+    // Show/hide panels by scenario tags
+    $$(".panel").forEach(panel => {
+      const tags = (panel.dataset.tags || "").split(/\s+/).filter(Boolean);
+      let show = true;
+
+      // scenario filters (acute/prevent/diagnosis/redflags)
+      // If a chip is OFF, hide sections that are exclusively that tag OR include that tag as primary.
+      // Practically: require panel tags to intersect with enabled scenario set.
+      const scenarioKeys = ["acute","prevent","diagnosis","redflags"];
+      const enabled = scenarioKeys.filter(k => state[k]);
+      const intersects = tags.some(t => enabled.includes(t));
+
+      // If panel has no scenario tags, keep it.
+      if (tags.length && !intersects) show = false;
+
+      // Text search filter
+      if (show && state.query){
+        const text = panel.innerText.toLowerCase();
+        if (!text.includes(state.query)) show = false;
+      }
+
+      panel.dataset.hide = String(!show);
+    });
+
+    // Risk overlays: highlight blocks with matching hint tags
+    highlightHints();
+
+    // Update nav active state (scrollspy will refine later)
+    updateNavActive();
+  }
+
+  function highlightHints(){
+    // Add visual emphasis to elements with data-hint containing active risk keys
+    const riskKeys = ["ckd","cvd"];
+    const active = riskKeys.filter(k => state[k]);
+    $$("[data-hint]").forEach(el => {
+      const hints = (el.dataset.hint || "").split(/\s+/).filter(Boolean);
+      const match = hints.some(h => active.includes(h));
+      if (match && active.length){
+        el.style.borderColor = "rgba(255,209,102,.32)";
+        el.style.background = "rgba(255,209,102,.08)";
+      } else {
+        el.style.borderColor = "rgba(255,255,255,.16)";
+        el.style.background = "rgba(255,255,255,.02)";
+      }
+    });
+  }
+
+  function toastMsg(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toast.classList.remove("show"), 1600);
+  }
+
+  function pulse(el){
+    el.animate([{transform:"translateY(0)"},{transform:"translateY(-2px)"},{transform:"translateY(0)"}], {duration:220, easing:"ease-out"});
+  }
+
+  // Scrollspy for sidebar nav
+  const navLinks = $$(".nav a");
+  const sections = navLinks
+    .map(a => ({ a, id: a.getAttribute("href"), el: $(a.getAttribute("href")) }))
+    .filter(x => x.el);
+
+  const obs = new IntersectionObserver((entries) => {
+    // choose the most visible intersecting section
+    const vis = entries
+      .filter(e => e.isIntersecting)
+      .sort((a,b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!vis) return;
+    const id = "#" + vis.target.id;
+    navLinks.forEach(l => l.dataset.active = String(l.getAttribute("href") === id));
+  }, { root: null, threshold: [0.2, 0.35, 0.5, 0.65] });
+
+  sections.forEach(s => obs.observe(s.el));
+
+  function updateNavActive(){
+    // If the currently active link points to a hidden panel, clear highlight.
+    navLinks.forEach(l => {
+      const el = $(l.getAttribute("href"));
+      if (!el) return;
+      const hidden = el.dataset.hide === "true";
+      if (hidden) l.dataset.active = "false";
+    });
+  }
+
+  // Smooth nav clicks
+  navLinks.forEach(a => {
+    a.addEventListener("click", (e) => {
+      const target = $(a.getAttribute("href"));
+      if (!target) return;
+      if (target.dataset.hide === "true") {
+        e.preventDefault();
+        toastMsg("Section hidden by filters");
+        return;
+      }
+      e.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
+  // Initial render
+  applyFilters();
+})();
+</script>
+</body>
+</html>

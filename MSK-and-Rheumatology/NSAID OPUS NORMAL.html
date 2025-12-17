@@ -1,0 +1,3151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSAID Prescribing Algorithm - Clinical Decision Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #005eb8;
+            --assessment-color: #1e3a5f;
+            --diagnosis-color: #4a148c;
+            --treatment-color: #1b5e20;
+            --followup-color: #e65100;
+            --urgent-red: #d32f2f;
+            --caution-amber: #f57c00;
+            --stable-green: #388e3c;
+            --bg-light: #f5f5f5;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-light);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary-blue), #003d7a);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .sidebar h3 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-blue);
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f0f4f8;
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            border-left-color: var(--primary-blue);
+        }
+
+        .progress-item.completed {
+            opacity: 0.7;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: var(--stable-green);
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item[data-section="assessment"] .progress-icon { background: var(--assessment-color); }
+        .progress-item[data-section="diagnosis"] .progress-icon { background: var(--diagnosis-color); }
+        .progress-item[data-section="treatment"] .progress-icon { background: var(--treatment-color); }
+        .progress-item[data-section="followup"] .progress-icon { background: var(--followup-color); }
+
+        .progress-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .progress-status {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Cards */
+        .algorithm-card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .algorithm-card:hover {
+            box-shadow: var(--hover-shadow);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.05);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-title h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .card-title p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            color: white;
+        }
+
+        .expand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .algorithm-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Card Colors */
+        .card-assessment .card-header { background: linear-gradient(135deg, var(--assessment-color), #2c5282); }
+        .card-diagnosis .card-header { background: linear-gradient(135deg, var(--diagnosis-color), #6a1b9a); }
+        .card-treatment .card-header { background: linear-gradient(135deg, var(--treatment-color), #2e7d32); }
+        .card-followup .card-header { background: linear-gradient(135deg, var(--followup-color), #ef6c00); }
+
+        /* Card Body */
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.3s ease;
+        }
+
+        .algorithm-card.expanded .card-body {
+            max-height: 3000px;
+            padding: 1.5rem;
+        }
+
+        /* Subsections */
+        .subsection {
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .subsection-header {
+            padding: 1rem 1.25rem;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .subsection-header:hover {
+            background: #e9ecef;
+        }
+
+        .subsection-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .subsection.expanded .subsection-content {
+            max-height: 2000px;
+        }
+
+        .subsection-inner {
+            padding: 1.25rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-urgent {
+            background: #ffebee;
+            color: var(--urgent-red);
+            border: 1px solid var(--urgent-red);
+        }
+
+        .badge-caution {
+            background: #fff3e0;
+            color: var(--caution-amber);
+            border: 1px solid var(--caution-amber);
+        }
+
+        .badge-stable {
+            background: #e8f5e9;
+            color: var(--stable-green);
+            border: 1px solid var(--stable-green);
+        }
+
+        /* Lists */
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .info-list li:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
+        }
+
+        .info-list .list-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .info-list .list-icon.urgent { background: var(--urgent-red); color: white; }
+        .info-list .list-icon.caution { background: var(--caution-amber); color: white; }
+        .info-list .list-icon.stable { background: var(--stable-green); color: white; }
+        .info-list .list-icon.info { background: var(--primary-blue); color: white; }
+
+        /* Alert Boxes */
+        .alert-box {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .alert-box.urgent {
+            background: #ffebee;
+            border-left: 4px solid var(--urgent-red);
+        }
+
+        .alert-box.caution {
+            background: #fff3e0;
+            border-left: 4px solid var(--caution-amber);
+        }
+
+        .alert-box.stable {
+            background: #e8f5e9;
+            border-left: 4px solid var(--stable-green);
+        }
+
+        .alert-box.info {
+            background: #e3f2fd;
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #555;
+        }
+
+        .data-table tr:hover td {
+            background: #f8f9fa;
+        }
+
+        /* Decision Tree */
+        .decision-tree {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .decision-node {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .decision-node:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .decision-node.selected {
+            border-color: var(--stable-green);
+            background: #e8f5e9;
+        }
+
+        .decision-node h4 {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .decision-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .decision-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .decision-btn:hover {
+            border-color: var(--primary-blue);
+            background: #e3f2fd;
+        }
+
+        .decision-btn.selected {
+            border-color: var(--stable-green);
+            background: var(--stable-green);
+            color: white;
+        }
+
+        /* Risk Indicator */
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .risk-bar {
+            flex: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease, background 0.3s ease;
+        }
+
+        .risk-fill.low { width: 25%; background: var(--stable-green); }
+        .risk-fill.moderate { width: 50%; background: var(--caution-amber); }
+        .risk-fill.high { width: 75%; background: var(--caution-amber); }
+        .risk-fill.severe { width: 100%; background: var(--urgent-red); }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .checklist li:hover {
+            background: #f8f9fa;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .checklist li.checked .checkbox {
+            background: var(--stable-green);
+            border-color: var(--stable-green);
+            color: white;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.875rem;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main-container {
+                padding: 1rem;
+            }
+
+            .card-header {
+                padding: 1rem;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+
+            .card-title h2 {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .algorithm-card {
+            animation: slideIn 0.5s ease forwards;
+        }
+
+        .algorithm-card:nth-child(2) { animation-delay: 0.1s; }
+        .algorithm-card:nth-child(3) { animation-delay: 0.2s; }
+        .algorithm-card:nth-child(4) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🏥 NSAID Prescribing Algorithm</h1>
+        <p>Based on NICE Clinical Knowledge Summaries (CKS) Guidelines • Last revised February 2024</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar Progress -->
+        <aside class="sidebar">
+            <h3>📍 Algorithm Progress</h3>
+            
+            <div class="progress-item active" data-section="assessment" onclick="scrollToSection('assessment')">
+                <div class="progress-icon">1</div>
+                <div>
+                    <div class="progress-text">Assessment</div>
+                    <div class="progress-status">Risk Evaluation</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" data-section="diagnosis" onclick="scrollToSection('diagnosis')">
+                <div class="progress-icon">2</div>
+                <div>
+                    <div class="progress-text">Diagnosis</div>
+                    <div class="progress-status">Contraindications</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" data-section="treatment" onclick="scrollToSection('treatment')">
+                <div class="progress-icon">3</div>
+                <div>
+                    <div class="progress-text">Treatment</div>
+                    <div class="progress-status">Drug Selection</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" data-section="followup" onclick="scrollToSection('followup')">
+                <div class="progress-icon">4</div>
+                <div>
+                    <div class="progress-text">Follow-up</div>
+                    <div class="progress-status">Monitoring</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                <h4 style="font-size: 0.75rem; color: #888; margin-bottom: 0.75rem;">SEVERITY LEGEND</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <span class="badge badge-urgent">🔴 Urgent Referral</span>
+                    <span class="badge badge-caution">🟠 Caution Required</span>
+                    <span class="badge badge-stable">🟢 Stable / Safe</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Assessment Card -->
+            <div class="algorithm-card card-assessment expanded" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">
+                            <h2>Step 1: Initial Assessment</h2>
+                            <p>Evaluate patient risk factors and indications</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="alert-box info">
+                        <span class="alert-icon"ℹ️</span>
+                        <div>
+                            <strong>Key Principle:</strong> Prescribe NSAIDs at the lowest effective dose for the shortest possible duration.
+                        </div>
+                    </div>
+
+                    <!-- Pre-assessment Subsection -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🔍 Pre-Assessment Checklist</h3>
+                            <span>▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <ul class="checklist">
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Check if alternative to oral NSAID may be suitable (topical NSAID, physiotherapy, paracetamol)</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Review current medications for existing NSAID/aspirin use (including OTC)</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Assess for contraindications to oral NSAIDs</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Check for potentially hazardous drug interactions</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Evaluate need for gastroprotection</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Consider baseline FBC and renal function if indicated</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GI Risk Assessment -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🔴 GI Risk Factor Assessment</h3>
+                            <span class="badge badge-caution">Important</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Age over 65 years</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>High dose NSAID use</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>History of gastroduodenal ulcer, GI bleeding, or perforation</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Concomitant medications (antiplatelets, anticoagulants, corticosteroids, SSRIs)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Serious comorbidities (CVD, hepatic/renal impairment, diabetes, hypertension)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Heavy smoking or excessive alcohol consumption</span>
+                                    </li>
+                                </ul>
+
+                                <div class="decision-tree">
+                                    <h4 style="margin-bottom: 1rem; font-weight: 600;">GI Risk Stratification</h4>
+                                    <div class="decision-node">
+                                        <h4>Select GI Risk Level</h4>
+                                        <p>Based on risk factors identified above</p>
+                                        <div class="decision-options">
+                                            <button class="decision-btn" onclick="selectRisk(this, 'gi', 'high')">
+                                                🔴 High Risk (Previous complicated ulcer OR >2 risk factors)
+                                            </button>
+                                            <button class="decision-btn" onclick="selectRisk(this, 'gi', 'moderate')">
+                                                🟠 Moderate Risk (1-2 risk factors)
+                                            </button>
+                                            <button class="decision-btn" onclick="selectRisk(this, 'gi', 'low')">
+                                                🟢 Low Risk (No risk factors)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CV Risk Assessment -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>❤️ Cardiovascular & Renal Risk Assessment</h3>
+                            <span class="badge badge-urgent">Critical</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>Warning:</strong> All NSAID use is associated with a small increased risk of thrombotic events independent of baseline CV risk factors.
+                                    </div>
+                                </div>
+
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Cerebrovascular disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Heart failure (any severity)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Ischaemic heart disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Peripheral arterial disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Renal impairment (especially eGFR < 30)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Hepatic disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>CV risk factors: hypertension, hyperlipidaemia, diabetes, smoking</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Age ≥65 years</span>
+                                    </li>
+                                </ul>
+
+                                <div class="risk-indicator">
+                                    <span style="font-weight: 600;">CV Risk Level:</span>
+                                    <div class="risk-bar">
+                                        <div class="risk-fill low" id="cvRiskBar"></div>
+                                    </div>
+                                    <span id="cvRiskLabel">Low</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="algorithm-card card-diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">🚫</div>
+                        <div class="card-title">
+                            <h2>Step 2: Contraindications & Cautions</h2>
+                            <p>Identify absolute and relative contraindications</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <!-- Absolute Contraindications -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🔴 Absolute Contraindications (Do NOT Prescribe)</h3>
+                            <span class="badge badge-urgent">Stop</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Active GI bleeding or active GI ulcer</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>History of GI bleeding/perforation related to previous NSAID therapy</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>History of recurrent GI haemorrhage (≥2 episodes) or ulceration (≥2 episodes)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>History of severe allergic reaction to any NSAID (asthma, angioedema, urticaria)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Severe heart failure</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Severe hepatic impairment (albumin <25 g/L or Child-Pugh ≥10)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Severe renal impairment (eGFR <30 mL/min/1.73m²)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Third trimester of pregnancy</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Active varicella infection</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Specific Contraindications -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>⚠️ Drug-Specific Contraindications</h3>
+                            <span class="badge badge-caution">Review</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">🚫</span>
+                                    <div>
+                                        <strong>COX-2 Inhibitors, Diclofenac, Aceclofenac, or High-dose Ibuprofen (>2400mg/day)</strong><br>
+                                        Contraindicated in: Ischaemic heart disease, Peripheral arterial disease, Cerebrovascular disease, CHF (NYHA II-IV)
+                                    </div>
+                                </div>
+
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>Etoricoxib or High-dose Ibuprofen</strong><br>
+                                        Contraindicated in uncontrolled hypertension (persistently >140/90 mmHg)
+                                    </div>
+                                </div>
+
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>COX-2 Inhibitors</strong><br>
+                                        Contraindicated in Inflammatory Bowel Disease
+                                    </div>
+                                </div>
+
+                                <div class="alert-box info">
+                                    <span class="alert-icon">💊</span>
+                                    <div>
+                                        <strong>Tiaprofenic Acid</strong><br>
+                                        Should not be prescribed in active bladder disease or urinary tract disorders
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cautions -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🟠 Prescribe with Caution</h3>
+                            <span class="badge badge-caution">Caution</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Condition</th>
+                                            <th>Risk</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>History of peptic ulceration</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Consider COX-2 + PPI</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Allergic disorders / Nasal polyps</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Monitor for bronchospasm</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Cardiac impairment / Heart failure</td>
+                                            <td><span class="badge badge-urgent">High</span></td>
+                                            <td>May impair renal function</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Connective tissue disorders / SLE</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Risk of aseptic meningitis</td>
+                                        </tr>
+                                        <tr>
+                                            <td>IBD (Crohn's / UC)</td>
+                                            <td><span class="badge badge-urgent">High</span></td>
+                                            <td>Risk of exacerbation</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Hepatic impairment</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Dose reduction may be needed</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Women trying to conceive</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>May impair fertility</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Elderly patients</td>
+                                            <td><span class="badge badge-urgent">High</span></td>
+                                            <td>Increased risk of all AEs</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="algorithm-card card-treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">💊</div>
+                        <div class="card-title">
+                            <h2>Step 3: Treatment Selection</h2>
+                            <p>Choose appropriate NSAID and gastroprotection</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <!-- NSAID Selection -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>💊 First-Line NSAID Selection</h3>
+                            <span class="badge badge-stable">Recommended</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box stable">
+                                    <span class="alert-icon">✓</span>
+                                    <div>
+                                        <strong>Preferred Options:</strong><br>
+                                        • <strong>Ibuprofen</strong> up to 1200 mg/day<br>
+                                        • <strong>Naproxen</strong> up to 1000 mg/day
+                                    </div>
+                                </div>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">GI Risk-Based Selection</h4>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>GI Risk Level</th>
+                                            <th>NSAID Choice</th>
+                                            <th>Gastroprotection</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge badge-stable">Low Risk</span></td>
+                                            <td>Non-selective NSAID (ibuprofen/naproxen)</td>
+                                            <td>Not routinely required</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-caution">Moderate Risk</span></td>
+                                            <td>COX-2 inhibitor alone OR NSAID + PPI</td>
+                                            <td>Consider PPI</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-urgent">High Risk</span></td>
+                                            <td>COX-2 inhibitor (celecoxib/etoricoxib)</td>
+                                            <td>Co-prescribe PPI</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">CV Risk-Based Selection</h4>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>CV Condition</th>
+                                            <th>Recommended</th>
+                                            <th>Avoid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Severe heart failure</td>
+                                            <td colspan="2" style="color: var(--urgent-red); font-weight: 600;">DO NOT PRESCRIBE ANY NSAID</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Mild-moderate heart failure</td>
+                                            <td>Low-dose ibuprofen or naproxen (with close monitoring)</td>
+                                            <td>COX-2, diclofenac, aceclofenac, high-dose ibuprofen</td>
+                                        </tr>
+                                        <tr>
+                                            <td>IHD/CVD/PAD</td>
+                                            <td>Low-dose ibuprofen (≤1200mg) or naproxen (≤1000mg)</td>
+                                            <td>COX-2, diclofenac, aceclofenac, high-dose ibuprofen</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CV risk factors / Elderly</td>
+                                            <td>Low-dose ibuprofen or naproxen; if COX-2 required: celecoxib 100mg BD</td>
+                                            <td>Diclofenac (initiate with caution only)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PPI Doses -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🛡️ Gastroprotection - PPI Dosing</h3>
+                            <span class="badge badge-stable">Reference</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box info">
+                                    <span class="alert-icon">ℹ️</span>
+                                    <div>
+                                        <strong>When to co-prescribe PPI:</strong> Osteoarthritis, Rheumatoid arthritis, Elderly, Low back pain, Axial spondyloarthritis, Psoriatic arthritis, Moderate-high GI risk
+                                    </div>
+                                </div>
+
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>PPI</th>
+                                            <th>Dose for NSAID Prophylaxis</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Lansoprazole</td>
+                                            <td>15-30 mg once daily</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Omeprazole</td>
+                                            <td>20 mg once daily</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Esomeprazole</td>
+                                            <td>20 mg once daily</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pantoprazole</td>
+                                            <td>20 mg once daily</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special Populations -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>👶 Special Populations</h3>
+                            <span class="badge badge-caution">Important</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <h4 style="margin-bottom: 1rem; font-weight: 600;">🤰 Pregnancy</h4>
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">🚫</span>
+                                    <div><strong>Third trimester (≥28 weeks):</strong> NSAIDs CONTRAINDICATED - risk of premature DA closure, oligohydramnios, PPHN</div>
+                                </div>
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div><strong>From 20 weeks:</strong> Avoid unless essential; use lowest dose, shortest duration; consider antenatal monitoring</div>
+                                </div>
+                                <div class="alert-box stable">
+                                    <span class="alert-icon">✓</span>
+                                    <div><strong>Before 20 weeks:</strong> If paracetamol ineffective, ibuprofen is preferred. COX-2 inhibitors contraindicated throughout.</div>
+                                </div>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">🍼 Breastfeeding</h4>
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon stable">✓</div>
+                                        <span><strong>Preferred:</strong> Paracetamol is first choice</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon stable">✓</div>
+                                        <span><strong>If NSAID needed:</strong> Ibuprofen preferred; use lowest dose, shortest duration</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon info">ℹ</div>
+                                        <span><strong>If COX-2 needed:</strong> Celecoxib preferred</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Avoid long half-life drugs (e.g., naproxen) with repeated use - risk of accumulation</span>
+                                    </li>
+                                </ul>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">🔬 Conception</h4>
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>Avoid NSAIDs during conception. Long-term use may reduce female fertility and possibly increase miscarriage risk. Paracetamol is preferred.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drug Interactions -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>⚡ Key Drug Interactions</h3>
+                            <span class="badge badge-urgent">Critical</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>"Triple Whammy" - HIGH RISK OF AKI</strong><br>
+                                        NSAID + ACE inhibitor/ARB + Diuretic = AVOID if possible
+                                    </div>
+                                </div>
+
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Drug Class</th>
+                                            <th>Risk</th>
+                                            <th>Management</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Anticoagulants (warfarin, DOACs)</td>
+                                            <td><span class="badge badge-urgent">Bleeding</span></td>
+                                            <td>Avoid if possible; consider PPI</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Antiplatelets (aspirin, clopidogrel)</td>
+                                            <td><span class="badge badge-urgent">GI bleed</span></td>
+                                            <td>Co-prescribe PPI if unavoidable</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ACE-I / ARBs</td>
+                                            <td><span class="badge badge-caution">↑BP, AKI</span></td>
+                                            <td>Monitor BP, U&Es</td>
+                                        </tr>
+                                        <tr>
+                                            <td>SSRIs / SNRIs</td>
+                                            <td><span class="badge badge-caution">GI bleed</span></td>
+                                            <td>Consider gastroprotection</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Lithium</td>
+                                            <td><span class="badge badge-urgent">Toxicity</span></td>
+                                            <td>Avoid or monitor lithium levels closely</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Methotrexate</td>
+                                            <td><span class="badge badge-urgent">Toxicity</span></td>
+                                            <td>Monitor MTX levels if high-dose</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Corticosteroids</td>
+                                            <td><span class="badge badge-caution">GI ulcer</span></td>
+                                            <td>Consider gastroprotection</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Diuretics</td>
+                                            <td><span class="badge badge-caution">↓Effect, AKI</span></td>
+                                            <td>Monitor; avoid K+-sparing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Ciclosporin</td>
+                                            <td><span class="badge badge-caution">Nephrotoxicity</span></td>
+                                            <td>Monitor renal function</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Quinolones</td>
+                                            <td><span class="badge badge-caution">Seizures</span></td>
+                                            <td>Avoid in epilepsy/seizure risk</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="algorithm-card card-followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">
+                            <h2>Step 4: Follow-up & Monitoring</h2>
+                            <p>Ongoing assessment and patient advice</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <!-- Monitoring -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>📈 Monitoring Requirements</h3>
+                            <span class="badge badge-caution">Essential</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Parameter</th>
+                                            <th>Who to Monitor</th>
+                                            <th>Frequency</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Blood Pressure</strong></td>
+                                            <td>Elderly, COX-2 users, hypertension</td>
+                                            <td>Before starting, 2 weeks (etoricoxib), periodically during treatment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Renal Function</strong></td>
+                                            <td>All patients on long-term NSAIDs</td>
+                                            <td>At least annually; 1-2 weeks after starting if renal impairment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>LFTs</strong></td>
+                                            <td>Hepatic impairment, long-term therapy</td>
+                                            <td>Periodically during treatment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Haemoglobin</strong></td>
+                                            <td>High GI risk patients</td>
+                                            <td>1-4 weeks after starting</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Heart failure features</strong></td>
+                                            <td>Elderly, IHD, CVD, PAD, HF, CV risk factors</td>
+                                            <td>1-2 weeks after starting/increasing dose, then regularly</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="alert-box info" style="margin-top: 1rem;">
+                                    <span class="alert-icon">📋</span>
+                                    <div>
+                                        <strong>Regular Review:</strong> Review appropriateness of NSAID prescribing routinely, especially in elderly and those at higher risk of GI, renal, and CV morbidity.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Advice -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>📝 Patient Advice & Counselling</h3>
+                            <span class="badge badge-stable">Communicate</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <h4 style="margin-bottom: 1rem; font-weight: 600;">Key Points to Discuss</h4>
+                                <ul class="checklist">
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Explain CV, renal, and GI adverse effects associated with NSAIDs</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Use lowest effective dose for shortest duration necessary</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Take NSAID with or after food</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Take PPI if prescribed for gastroprotection</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Read the patient information leaflet</span>
+                                    </li>
+                                </ul>
+
+                                <div class="alert-box caution" style="margin-top: 1.5rem;">
+                                    <span class="alert-icon">🏥</span>
+                                    <div>
+                                        <strong>Sick Day Rules Card</strong><br>
+                                        Provide patient with a Medicine Sick Day Rules Card. Advise to STOP NSAID when unwell with:
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Vomiting or diarrhoea (unless minor)</li>
+                                            <li>Fever, sweats and shaking (unless minor)</li>
+                                        </ul>
+                                        Restart when well (after 24-48 hours of normal eating and drinking)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warning Signs -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🚨 When to Stop / Refer</h3>
+                            <span class="badge badge-urgent">Urgent</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">🔴</span>
+                                    <div>
+                                        <strong>STOP NSAID immediately if:</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Signs of GI bleeding (haematemesis, melaena)</li>
+                                            <li>Severe skin reactions (Stevens-Johnson, TEN)</li>
+                                            <li>Bronchospasm suspected to be NSAID-induced</li>
+                                            <li>Symptoms of liver damage (jaundice, abdominal pain, persistent nausea)</li>
+                                            <li>Persistently abnormal LFTs</li>
+                                            <li>Signs of heart failure or significant oedema</li>
+                                            <li>Acute kidney injury</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">Adverse Effects to Monitor</h4>
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span><strong>Anastomotic leakage</strong> - risk in post-surgical patients</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span><strong>Kounis syndrome</strong> - allergic acute coronary syndrome (rare)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span><strong>Aseptic meningitis</strong> - especially in SLE/connective tissue disorders</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span><strong>Fluid retention/oedema</strong> - use caution with pre-existing oedema</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span><strong>Eosinophilic pneumonia</strong> - class-related adverse effect</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COVID-19 -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🦠 COVID-19 Considerations</h3>
+                            <span class="badge badge-caution">Guidance</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box info">
+                                    <span class="alert-icon">ℹ️</span>
+                                    <div>
+                                        <strong>For proven or suspected COVID-19:</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Prescribe NSAIDs with caution</li>
+                                            <li>Consider comorbidities, risks, contraindications, interactions</li>
+                                            <li>Use lowest dose, shortest duration</li>
+                                            <li>Naproxen and low-dose ibuprofen (≤1200mg/day) are first-choice</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="alert-box stable">
+                                    <span class="alert-icon">✓</span>
+                                    <div>
+                                        <strong>For patients on long-term NSAIDs for other indications:</strong><br>
+                                        No need to stop treatment during COVID-19 illness
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p><strong>Source:</strong> NICE Clinical Knowledge Summaries (CKS) - NSAIDs Prescribing Issues | Last revised February 2024</p>
+        <p style="margin-top: 0.5rem;">This algorithm is for educational purposes. Always refer to current guidelines and use clinical judgement.</p>
+    </footer>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.closest('.algorithm-card');
+            card.classList.toggle('expanded');
+            updateProgress();
+        }
+
+        // Toggle subsection expansion
+        function toggleSubsection(header) {
+            const subsection = header.closest('.subsection');
+            subsection.classList.toggle('expanded');
+        }
+
+        // Toggle checklist items
+        function toggleCheck(item) {
+            item.classList.toggle('checked');
+            const checkbox = item.querySelector('.checkbox');
+            if (item.classList.contains('checked')) {
+                checkbox.innerHTML = '✓';
+            } else {
+                checkbox.innerHTML = '';
+            }
+        }
+
+        // Handle risk selection
+        function selectRisk(btn, type, level) {
+            const options = btn.parentElement.querySelectorAll('.decision-btn');
+            options.forEach(opt => opt.classList.remove('selected'));
+            btn.classList.add('selected');
+            btn.closest('.decision-node').classList.add('selected');
+
+            // Update risk bar if CV
+            if (type === 'cv') {
+                const riskBar = document.getElementById('cvRiskBar');
+                const riskLabel = document.getElementById('cvRiskLabel');
+                riskBar.className = 'risk-fill ' + level;
+                riskLabel.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+            }
+        }
+
+        // Scroll to section
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Expand the card if not already
+                if (!section.classList.contains('expanded')) {
+                    section.classList.add('expanded');
+                }
+            }
+        }
+
+        // Update progress sidebar based on scroll position
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const scrollPosition = window.scrollY + 150;
+
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                const progressItem = document.querySelector(`.progress-item[data-section="${sectionId}"]`);
+                
+                if (section) {
+                    const sectionTop = section.offsetTop;
+                    const sectionBottom = sectionTop + section.offsetHeight;
+
+                    if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                        document.querySelectorAll('.progress-item').forEach(item => item.classList.remove('active'));
+                        progressItem.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        // Scroll event listener
+        window.addEventListener('scroll', updateProgress);
+
+        // Initialize - expand first card
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProgress();
+        });
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSAID Prescribing Algorithm - Clinical Decision Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #005eb8;
+            --assessment-color: #1e3a5f;
+            --diagnosis-color: #4a148c;
+            --treatment-color: #1b5e20;
+            --followup-color: #e65100;
+            --urgent-red: #d32f2f;
+            --caution-amber: #f57c00;
+            --stable-green: #388e3c;
+            --bg-light: #f5f5f5;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-light);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary-blue), #003d7a);
+            color: white;
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 0.25rem;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 100px;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .sidebar h3 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #666;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-blue);
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f0f4f8;
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            border-left-color: var(--primary-blue);
+        }
+
+        .progress-item.completed {
+            opacity: 0.7;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: var(--stable-green);
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item[data-section="assessment"] .progress-icon { background: var(--assessment-color); }
+        .progress-item[data-section="diagnosis"] .progress-icon { background: var(--diagnosis-color); }
+        .progress-item[data-section="treatment"] .progress-icon { background: var(--treatment-color); }
+        .progress-item[data-section="followup"] .progress-icon { background: var(--followup-color); }
+
+        .progress-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .progress-status {
+            font-size: 0.75rem;
+            color: #888;
+        }
+
+        /* Content Area */
+        .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Cards */
+        .algorithm-card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .algorithm-card:hover {
+            box-shadow: var(--hover-shadow);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.05);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .card-title h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .card-title p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            color: white;
+        }
+
+        .expand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .algorithm-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Card Colors */
+        .card-assessment .card-header { background: linear-gradient(135deg, var(--assessment-color), #2c5282); }
+        .card-diagnosis .card-header { background: linear-gradient(135deg, var(--diagnosis-color), #6a1b9a); }
+        .card-treatment .card-header { background: linear-gradient(135deg, var(--treatment-color), #2e7d32); }
+        .card-followup .card-header { background: linear-gradient(135deg, var(--followup-color), #ef6c00); }
+
+        /* Card Body */
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.3s ease;
+        }
+
+        .algorithm-card.expanded .card-body {
+            max-height: 3000px;
+            padding: 1.5rem;
+        }
+
+        /* Subsections */
+        .subsection {
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .subsection-header {
+            padding: 1rem 1.25rem;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .subsection-header:hover {
+            background: #e9ecef;
+        }
+
+        .subsection-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .subsection.expanded .subsection-content {
+            max-height: 2000px;
+        }
+
+        .subsection-inner {
+            padding: 1.25rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-urgent {
+            background: #ffebee;
+            color: var(--urgent-red);
+            border: 1px solid var(--urgent-red);
+        }
+
+        .badge-caution {
+            background: #fff3e0;
+            color: var(--caution-amber);
+            border: 1px solid var(--caution-amber);
+        }
+
+        .badge-stable {
+            background: #e8f5e9;
+            color: var(--stable-green);
+            border: 1px solid var(--stable-green);
+        }
+
+        /* Lists */
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .info-list li:hover {
+            background: #e9ecef;
+            transform: translateX(4px);
+        }
+
+        .info-list .list-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .info-list .list-icon.urgent { background: var(--urgent-red); color: white; }
+        .info-list .list-icon.caution { background: var(--caution-amber); color: white; }
+        .info-list .list-icon.stable { background: var(--stable-green); color: white; }
+        .info-list .list-icon.info { background: var(--primary-blue); color: white; }
+
+        /* Alert Boxes */
+        .alert-box {
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .alert-box.urgent {
+            background: #ffebee;
+            border-left: 4px solid var(--urgent-red);
+        }
+
+        .alert-box.caution {
+            background: #fff3e0;
+            border-left: 4px solid var(--caution-amber);
+        }
+
+        .alert-box.stable {
+            background: #e8f5e9;
+            border-left: 4px solid var(--stable-green);
+        }
+
+        .alert-box.info {
+            background: #e3f2fd;
+            border-left: 4px solid var(--primary-blue);
+        }
+
+        .alert-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .data-table th {
+            background: #f5f5f5;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #555;
+        }
+
+        .data-table tr:hover td {
+            background: #f8f9fa;
+        }
+
+        /* Decision Tree */
+        .decision-tree {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .decision-node {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+        }
+
+        .decision-node:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .decision-node.selected {
+            border-color: var(--stable-green);
+            background: #e8f5e9;
+        }
+
+        .decision-node h4 {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .decision-options {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.75rem;
+        }
+
+        .decision-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+        }
+
+        .decision-btn:hover {
+            border-color: var(--primary-blue);
+            background: #e3f2fd;
+        }
+
+        .decision-btn.selected {
+            border-color: var(--stable-green);
+            background: var(--stable-green);
+            color: white;
+        }
+
+        /* Risk Indicator */
+        .risk-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .risk-bar {
+            flex: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .risk-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease, background 0.3s ease;
+        }
+
+        .risk-fill.low { width: 25%; background: var(--stable-green); }
+        .risk-fill.moderate { width: 50%; background: var(--caution-amber); }
+        .risk-fill.high { width: 75%; background: var(--caution-amber); }
+        .risk-fill.severe { width: 100%; background: var(--urgent-red); }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .checklist li:hover {
+            background: #f8f9fa;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .checklist li.checked .checkbox {
+            background: var(--stable-green);
+            border-color: var(--stable-green);
+            color: white;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.875rem;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main-container {
+                padding: 1rem;
+            }
+
+            .card-header {
+                padding: 1rem;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+
+            .card-title h2 {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .algorithm-card {
+            animation: slideIn 0.5s ease forwards;
+        }
+
+        .algorithm-card:nth-child(2) { animation-delay: 0.1s; }
+        .algorithm-card:nth-child(3) { animation-delay: 0.2s; }
+        .algorithm-card:nth-child(4) { animation-delay: 0.3s; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🏥 NSAID Prescribing Algorithm</h1>
+        <p>Based on NICE Clinical Knowledge Summaries (CKS) Guidelines • Last revised February 2024</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Sidebar Progress -->
+        <aside class="sidebar">
+            <h3>📍 Algorithm Progress</h3>
+            
+            <div class="progress-item active" data-section="assessment" onclick="scrollToSection('assessment')">
+                <div class="progress-icon">1</div>
+                <div>
+                    <div class="progress-text">Assessment</div>
+                    <div class="progress-status">Risk Evaluation</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" data-section="diagnosis" onclick="scrollToSection('diagnosis')">
+                <div class="progress-icon">2</div>
+                <div>
+                    <div class="progress-text">Diagnosis</div>
+                    <div class="progress-status">Contraindications</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" data-section="treatment" onclick="scrollToSection('treatment')">
+                <div class="progress-icon">3</div>
+                <div>
+                    <div class="progress-text">Treatment</div>
+                    <div class="progress-status">Drug Selection</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" data-section="followup" onclick="scrollToSection('followup')">
+                <div class="progress-icon">4</div>
+                <div>
+                    <div class="progress-text">Follow-up</div>
+                    <div class="progress-status">Monitoring</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                <h4 style="font-size: 0.75rem; color: #888; margin-bottom: 0.75rem;">SEVERITY LEGEND</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <span class="badge badge-urgent">🔴 Urgent Referral</span>
+                    <span class="badge badge-caution">🟠 Caution Required</span>
+                    <span class="badge badge-stable">🟢 Stable / Safe</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="content">
+            <!-- Assessment Card -->
+            <div class="algorithm-card card-assessment expanded" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">
+                            <h2>Step 1: Initial Assessment</h2>
+                            <p>Evaluate patient risk factors and indications</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="alert-box info">
+                        <span class="alert-icon"ℹ️</span>
+                        <div>
+                            <strong>Key Principle:</strong> Prescribe NSAIDs at the lowest effective dose for the shortest possible duration.
+                        </div>
+                    </div>
+
+                    <!-- Pre-assessment Subsection -->
+                    <div class="subsection expanded">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🔍 Pre-Assessment Checklist</h3>
+                            <span>▼</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <ul class="checklist">
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Check if alternative to oral NSAID may be suitable (topical NSAID, physiotherapy, paracetamol)</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Review current medications for existing NSAID/aspirin use (including OTC)</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Assess for contraindications to oral NSAIDs</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Check for potentially hazardous drug interactions</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Evaluate need for gastroprotection</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Consider baseline FBC and renal function if indicated</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GI Risk Assessment -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🔴 GI Risk Factor Assessment</h3>
+                            <span class="badge badge-caution">Important</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Age over 65 years</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>High dose NSAID use</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>History of gastroduodenal ulcer, GI bleeding, or perforation</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Concomitant medications (antiplatelets, anticoagulants, corticosteroids, SSRIs)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Serious comorbidities (CVD, hepatic/renal impairment, diabetes, hypertension)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Heavy smoking or excessive alcohol consumption</span>
+                                    </li>
+                                </ul>
+
+                                <div class="decision-tree">
+                                    <h4 style="margin-bottom: 1rem; font-weight: 600;">GI Risk Stratification</h4>
+                                    <div class="decision-node">
+                                        <h4>Select GI Risk Level</h4>
+                                        <p>Based on risk factors identified above</p>
+                                        <div class="decision-options">
+                                            <button class="decision-btn" onclick="selectRisk(this, 'gi', 'high')">
+                                                🔴 High Risk (Previous complicated ulcer OR >2 risk factors)
+                                            </button>
+                                            <button class="decision-btn" onclick="selectRisk(this, 'gi', 'moderate')">
+                                                🟠 Moderate Risk (1-2 risk factors)
+                                            </button>
+                                            <button class="decision-btn" onclick="selectRisk(this, 'gi', 'low')">
+                                                🟢 Low Risk (No risk factors)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CV Risk Assessment -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>❤️ Cardiovascular & Renal Risk Assessment</h3>
+                            <span class="badge badge-urgent">Critical</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>Warning:</strong> All NSAID use is associated with a small increased risk of thrombotic events independent of baseline CV risk factors.
+                                    </div>
+                                </div>
+
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Cerebrovascular disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Heart failure (any severity)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Ischaemic heart disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span>Peripheral arterial disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Renal impairment (especially eGFR < 30)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Hepatic disease</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>CV risk factors: hypertension, hyperlipidaemia, diabetes, smoking</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Age ≥65 years</span>
+                                    </li>
+                                </ul>
+
+                                <div class="risk-indicator">
+                                    <span style="font-weight: 600;">CV Risk Level:</span>
+                                    <div class="risk-bar">
+                                        <div class="risk-fill low" id="cvRiskBar"></div>
+                                    </div>
+                                    <span id="cvRiskLabel">Low</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="algorithm-card card-diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">🚫</div>
+                        <div class="card-title">
+                            <h2>Step 2: Contraindications & Cautions</h2>
+                            <p>Identify absolute and relative contraindications</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <!-- Absolute Contraindications -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🔴 Absolute Contraindications (Do NOT Prescribe)</h3>
+                            <span class="badge badge-urgent">Stop</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Active GI bleeding or active GI ulcer</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>History of GI bleeding/perforation related to previous NSAID therapy</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>History of recurrent GI haemorrhage (≥2 episodes) or ulceration (≥2 episodes)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>History of severe allergic reaction to any NSAID (asthma, angioedema, urticaria)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Severe heart failure</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Severe hepatic impairment (albumin <25 g/L or Child-Pugh ≥10)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Severe renal impairment (eGFR <30 mL/min/1.73m²)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Third trimester of pregnancy</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">✕</div>
+                                        <span>Active varicella infection</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Specific Contraindications -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>⚠️ Drug-Specific Contraindications</h3>
+                            <span class="badge badge-caution">Review</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">🚫</span>
+                                    <div>
+                                        <strong>COX-2 Inhibitors, Diclofenac, Aceclofenac, or High-dose Ibuprofen (>2400mg/day)</strong><br>
+                                        Contraindicated in: Ischaemic heart disease, Peripheral arterial disease, Cerebrovascular disease, CHF (NYHA II-IV)
+                                    </div>
+                                </div>
+
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>Etoricoxib or High-dose Ibuprofen</strong><br>
+                                        Contraindicated in uncontrolled hypertension (persistently >140/90 mmHg)
+                                    </div>
+                                </div>
+
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>COX-2 Inhibitors</strong><br>
+                                        Contraindicated in Inflammatory Bowel Disease
+                                    </div>
+                                </div>
+
+                                <div class="alert-box info">
+                                    <span class="alert-icon">💊</span>
+                                    <div>
+                                        <strong>Tiaprofenic Acid</strong><br>
+                                        Should not be prescribed in active bladder disease or urinary tract disorders
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cautions -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🟠 Prescribe with Caution</h3>
+                            <span class="badge badge-caution">Caution</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Condition</th>
+                                            <th>Risk</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>History of peptic ulceration</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Consider COX-2 + PPI</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Allergic disorders / Nasal polyps</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Monitor for bronchospasm</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Cardiac impairment / Heart failure</td>
+                                            <td><span class="badge badge-urgent">High</span></td>
+                                            <td>May impair renal function</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Connective tissue disorders / SLE</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Risk of aseptic meningitis</td>
+                                        </tr>
+                                        <tr>
+                                            <td>IBD (Crohn's / UC)</td>
+                                            <td><span class="badge badge-urgent">High</span></td>
+                                            <td>Risk of exacerbation</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Hepatic impairment</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>Dose reduction may be needed</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Women trying to conceive</td>
+                                            <td><span class="badge badge-caution">Caution</span></td>
+                                            <td>May impair fertility</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Elderly patients</td>
+                                            <td><span class="badge badge-urgent">High</span></td>
+                                            <td>Increased risk of all AEs</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="algorithm-card card-treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">💊</div>
+                        <div class="card-title">
+                            <h2>Step 3: Treatment Selection</h2>
+                            <p>Choose appropriate NSAID and gastroprotection</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <!-- NSAID Selection -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>💊 First-Line NSAID Selection</h3>
+                            <span class="badge badge-stable">Recommended</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box stable">
+                                    <span class="alert-icon">✓</span>
+                                    <div>
+                                        <strong>Preferred Options:</strong><br>
+                                        • <strong>Ibuprofen</strong> up to 1200 mg/day<br>
+                                        • <strong>Naproxen</strong> up to 1000 mg/day
+                                    </div>
+                                </div>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">GI Risk-Based Selection</h4>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>GI Risk Level</th>
+                                            <th>NSAID Choice</th>
+                                            <th>Gastroprotection</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge badge-stable">Low Risk</span></td>
+                                            <td>Non-selective NSAID (ibuprofen/naproxen)</td>
+                                            <td>Not routinely required</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-caution">Moderate Risk</span></td>
+                                            <td>COX-2 inhibitor alone OR NSAID + PPI</td>
+                                            <td>Consider PPI</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-urgent">High Risk</span></td>
+                                            <td>COX-2 inhibitor (celecoxib/etoricoxib)</td>
+                                            <td>Co-prescribe PPI</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">CV Risk-Based Selection</h4>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>CV Condition</th>
+                                            <th>Recommended</th>
+                                            <th>Avoid</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Severe heart failure</td>
+                                            <td colspan="2" style="color: var(--urgent-red); font-weight: 600;">DO NOT PRESCRIBE ANY NSAID</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Mild-moderate heart failure</td>
+                                            <td>Low-dose ibuprofen or naproxen (with close monitoring)</td>
+                                            <td>COX-2, diclofenac, aceclofenac, high-dose ibuprofen</td>
+                                        </tr>
+                                        <tr>
+                                            <td>IHD/CVD/PAD</td>
+                                            <td>Low-dose ibuprofen (≤1200mg) or naproxen (≤1000mg)</td>
+                                            <td>COX-2, diclofenac, aceclofenac, high-dose ibuprofen</td>
+                                        </tr>
+                                        <tr>
+                                            <td>CV risk factors / Elderly</td>
+                                            <td>Low-dose ibuprofen or naproxen; if COX-2 required: celecoxib 100mg BD</td>
+                                            <td>Diclofenac (initiate with caution only)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PPI Doses -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🛡️ Gastroprotection - PPI Dosing</h3>
+                            <span class="badge badge-stable">Reference</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box info">
+                                    <span class="alert-icon">ℹ️</span>
+                                    <div>
+                                        <strong>When to co-prescribe PPI:</strong> Osteoarthritis, Rheumatoid arthritis, Elderly, Low back pain, Axial spondyloarthritis, Psoriatic arthritis, Moderate-high GI risk
+                                    </div>
+                                </div>
+
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>PPI</th>
+                                            <th>Dose for NSAID Prophylaxis</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Lansoprazole</td>
+                                            <td>15-30 mg once daily</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Omeprazole</td>
+                                            <td>20 mg once daily</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Esomeprazole</td>
+                                            <td>20 mg once daily</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pantoprazole</td>
+                                            <td>20 mg once daily</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special Populations -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>👶 Special Populations</h3>
+                            <span class="badge badge-caution">Important</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <h4 style="margin-bottom: 1rem; font-weight: 600;">🤰 Pregnancy</h4>
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">🚫</span>
+                                    <div><strong>Third trimester (≥28 weeks):</strong> NSAIDs CONTRAINDICATED - risk of premature DA closure, oligohydramnios, PPHN</div>
+                                </div>
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div><strong>From 20 weeks:</strong> Avoid unless essential; use lowest dose, shortest duration; consider antenatal monitoring</div>
+                                </div>
+                                <div class="alert-box stable">
+                                    <span class="alert-icon">✓</span>
+                                    <div><strong>Before 20 weeks:</strong> If paracetamol ineffective, ibuprofen is preferred. COX-2 inhibitors contraindicated throughout.</div>
+                                </div>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">🍼 Breastfeeding</h4>
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon stable">✓</div>
+                                        <span><strong>Preferred:</strong> Paracetamol is first choice</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon stable">✓</div>
+                                        <span><strong>If NSAID needed:</strong> Ibuprofen preferred; use lowest dose, shortest duration</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon info">ℹ</div>
+                                        <span><strong>If COX-2 needed:</strong> Celecoxib preferred</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span>Avoid long half-life drugs (e.g., naproxen) with repeated use - risk of accumulation</span>
+                                    </li>
+                                </ul>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">🔬 Conception</h4>
+                                <div class="alert-box caution">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>Avoid NSAIDs during conception. Long-term use may reduce female fertility and possibly increase miscarriage risk. Paracetamol is preferred.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Drug Interactions -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>⚡ Key Drug Interactions</h3>
+                            <span class="badge badge-urgent">Critical</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">⚠️</span>
+                                    <div>
+                                        <strong>"Triple Whammy" - HIGH RISK OF AKI</strong><br>
+                                        NSAID + ACE inhibitor/ARB + Diuretic = AVOID if possible
+                                    </div>
+                                </div>
+
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Drug Class</th>
+                                            <th>Risk</th>
+                                            <th>Management</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Anticoagulants (warfarin, DOACs)</td>
+                                            <td><span class="badge badge-urgent">Bleeding</span></td>
+                                            <td>Avoid if possible; consider PPI</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Antiplatelets (aspirin, clopidogrel)</td>
+                                            <td><span class="badge badge-urgent">GI bleed</span></td>
+                                            <td>Co-prescribe PPI if unavoidable</td>
+                                        </tr>
+                                        <tr>
+                                            <td>ACE-I / ARBs</td>
+                                            <td><span class="badge badge-caution">↑BP, AKI</span></td>
+                                            <td>Monitor BP, U&Es</td>
+                                        </tr>
+                                        <tr>
+                                            <td>SSRIs / SNRIs</td>
+                                            <td><span class="badge badge-caution">GI bleed</span></td>
+                                            <td>Consider gastroprotection</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Lithium</td>
+                                            <td><span class="badge badge-urgent">Toxicity</span></td>
+                                            <td>Avoid or monitor lithium levels closely</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Methotrexate</td>
+                                            <td><span class="badge badge-urgent">Toxicity</span></td>
+                                            <td>Monitor MTX levels if high-dose</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Corticosteroids</td>
+                                            <td><span class="badge badge-caution">GI ulcer</span></td>
+                                            <td>Consider gastroprotection</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Diuretics</td>
+                                            <td><span class="badge badge-caution">↓Effect, AKI</span></td>
+                                            <td>Monitor; avoid K+-sparing</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Ciclosporin</td>
+                                            <td><span class="badge badge-caution">Nephrotoxicity</span></td>
+                                            <td>Monitor renal function</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Quinolones</td>
+                                            <td><span class="badge badge-caution">Seizures</span></td>
+                                            <td>Avoid in epilepsy/seizure risk</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="algorithm-card card-followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">
+                            <h2>Step 4: Follow-up & Monitoring</h2>
+                            <p>Ongoing assessment and patient advice</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <!-- Monitoring -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>📈 Monitoring Requirements</h3>
+                            <span class="badge badge-caution">Essential</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Parameter</th>
+                                            <th>Who to Monitor</th>
+                                            <th>Frequency</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Blood Pressure</strong></td>
+                                            <td>Elderly, COX-2 users, hypertension</td>
+                                            <td>Before starting, 2 weeks (etoricoxib), periodically during treatment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Renal Function</strong></td>
+                                            <td>All patients on long-term NSAIDs</td>
+                                            <td>At least annually; 1-2 weeks after starting if renal impairment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>LFTs</strong></td>
+                                            <td>Hepatic impairment, long-term therapy</td>
+                                            <td>Periodically during treatment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Haemoglobin</strong></td>
+                                            <td>High GI risk patients</td>
+                                            <td>1-4 weeks after starting</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Heart failure features</strong></td>
+                                            <td>Elderly, IHD, CVD, PAD, HF, CV risk factors</td>
+                                            <td>1-2 weeks after starting/increasing dose, then regularly</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="alert-box info" style="margin-top: 1rem;">
+                                    <span class="alert-icon">📋</span>
+                                    <div>
+                                        <strong>Regular Review:</strong> Review appropriateness of NSAID prescribing routinely, especially in elderly and those at higher risk of GI, renal, and CV morbidity.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Patient Advice -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>📝 Patient Advice & Counselling</h3>
+                            <span class="badge badge-stable">Communicate</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <h4 style="margin-bottom: 1rem; font-weight: 600;">Key Points to Discuss</h4>
+                                <ul class="checklist">
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Explain CV, renal, and GI adverse effects associated with NSAIDs</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Use lowest effective dose for shortest duration necessary</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Take NSAID with or after food</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Take PPI if prescribed for gastroprotection</span>
+                                    </li>
+                                    <li onclick="toggleCheck(this)">
+                                        <div class="checkbox"></div>
+                                        <span>Read the patient information leaflet</span>
+                                    </li>
+                                </ul>
+
+                                <div class="alert-box caution" style="margin-top: 1.5rem;">
+                                    <span class="alert-icon">🏥</span>
+                                    <div>
+                                        <strong>Sick Day Rules Card</strong><br>
+                                        Provide patient with a Medicine Sick Day Rules Card. Advise to STOP NSAID when unwell with:
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Vomiting or diarrhoea (unless minor)</li>
+                                            <li>Fever, sweats and shaking (unless minor)</li>
+                                        </ul>
+                                        Restart when well (after 24-48 hours of normal eating and drinking)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warning Signs -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🚨 When to Stop / Refer</h3>
+                            <span class="badge badge-urgent">Urgent</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box urgent">
+                                    <span class="alert-icon">🔴</span>
+                                    <div>
+                                        <strong>STOP NSAID immediately if:</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Signs of GI bleeding (haematemesis, melaena)</li>
+                                            <li>Severe skin reactions (Stevens-Johnson, TEN)</li>
+                                            <li>Bronchospasm suspected to be NSAID-induced</li>
+                                            <li>Symptoms of liver damage (jaundice, abdominal pain, persistent nausea)</li>
+                                            <li>Persistently abnormal LFTs</li>
+                                            <li>Signs of heart failure or significant oedema</li>
+                                            <li>Acute kidney injury</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <h4 style="margin: 1.5rem 0 1rem; font-weight: 600;">Adverse Effects to Monitor</h4>
+                                <ul class="info-list">
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span><strong>Anastomotic leakage</strong> - risk in post-surgical patients</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon urgent">!</div>
+                                        <span><strong>Kounis syndrome</strong> - allergic acute coronary syndrome (rare)</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span><strong>Aseptic meningitis</strong> - especially in SLE/connective tissue disorders</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span><strong>Fluid retention/oedema</strong> - use caution with pre-existing oedema</span>
+                                    </li>
+                                    <li>
+                                        <div class="list-icon caution">⚠</div>
+                                        <span><strong>Eosinophilic pneumonia</strong> - class-related adverse effect</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- COVID-19 -->
+                    <div class="subsection">
+                        <div class="subsection-header" onclick="toggleSubsection(this)">
+                            <h3>🦠 COVID-19 Considerations</h3>
+                            <span class="badge badge-caution">Guidance</span>
+                        </div>
+                        <div class="subsection-content">
+                            <div class="subsection-inner">
+                                <div class="alert-box info">
+                                    <span class="alert-icon">ℹ️</span>
+                                    <div>
+                                        <strong>For proven or suspected COVID-19:</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Prescribe NSAIDs with caution</li>
+                                            <li>Consider comorbidities, risks, contraindications, interactions</li>
+                                            <li>Use lowest dose, shortest duration</li>
+                                            <li>Naproxen and low-dose ibuprofen (≤1200mg/day) are first-choice</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="alert-box stable">
+                                    <span class="alert-icon">✓</span>
+                                    <div>
+                                        <strong>For patients on long-term NSAIDs for other indications:</strong><br>
+                                        No need to stop treatment during COVID-19 illness
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p><strong>Source:</strong> NICE Clinical Knowledge Summaries (CKS) - NSAIDs Prescribing Issues | Last revised February 2024</p>
+        <p style="margin-top: 0.5rem;">This algorithm is for educational purposes. Always refer to current guidelines and use clinical judgement.</p>
+    </footer>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.closest('.algorithm-card');
+            card.classList.toggle('expanded');
+            updateProgress();
+        }
+
+        // Toggle subsection expansion
+        function toggleSubsection(header) {
+            const subsection = header.closest('.subsection');
+            subsection.classList.toggle('expanded');
+        }
+
+        // Toggle checklist items
+        function toggleCheck(item) {
+            item.classList.toggle('checked');
+            const checkbox = item.querySelector('.checkbox');
+            if (item.classList.contains('checked')) {
+                checkbox.innerHTML = '✓';
+            } else {
+                checkbox.innerHTML = '';
+            }
+        }
+
+        // Handle risk selection
+        function selectRisk(btn, type, level) {
+            const options = btn.parentElement.querySelectorAll('.decision-btn');
+            options.forEach(opt => opt.classList.remove('selected'));
+            btn.classList.add('selected');
+            btn.closest('.decision-node').classList.add('selected');
+
+            // Update risk bar if CV
+            if (type === 'cv') {
+                const riskBar = document.getElementById('cvRiskBar');
+                const riskLabel = document.getElementById('cvRiskLabel');
+                riskBar.className = 'risk-fill ' + level;
+                riskLabel.textContent = level.charAt(0).toUpperCase() + level.slice(1);
+            }
+        }
+
+        // Scroll to section
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Expand the card if not already
+                if (!section.classList.contains('expanded')) {
+                    section.classList.add('expanded');
+                }
+            }
+        }
+
+        // Update progress sidebar based on scroll position
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const scrollPosition = window.scrollY + 150;
+
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                const progressItem = document.querySelector(`.progress-item[data-section="${sectionId}"]`);
+                
+                if (section) {
+                    const sectionTop = section.offsetTop;
+                    const sectionBottom = sectionTop + section.offsetHeight;
+
+                    if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                        document.querySelectorAll('.progress-item').forEach(item => item.classList.remove('active'));
+                        progressItem.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        // Scroll event listener
+        window.addEventListener('scroll', updateProgress);
+
+        // Initialize - expand first card
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProgress();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Paediatric MSK Triage — Rapid Decision Support</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{
+      --bg: #0b1220;
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.09);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.72);
+      --faint: rgba(255,255,255,.55);
+      --stroke: rgba(255,255,255,.12);
+
+      --urgent: #ff3b5c;
+      --urgent2:#ff8a00;
+      --safe: #18c37e;
+      --info: #63b3ff;
+      --violet:#a78bfa;
+      --cyan:#22d3ee;
+
+      --shadow: 0 18px 55px rgba(0,0,0,.45);
+      --shadow2: 0 10px 28px rgba(0,0,0,.35);
+
+      --r: 18px;
+      --r2: 12px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    /* Light mode (optional toggle via data-theme) */
+    [data-theme="light"]{
+      --bg: #f7f9ff;
+      --panel: rgba(15,23,42,.05);
+      --panel2: rgba(15,23,42,.08);
+      --text: rgba(10,16,28,.92);
+      --muted: rgba(10,16,28,.72);
+      --faint: rgba(10,16,28,.58);
+      --stroke: rgba(10,16,28,.12);
+      --shadow: 0 18px 55px rgba(2,8,20,.12);
+      --shadow2: 0 10px 28px rgba(2,8,20,.10);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 520px at 18% 6%, rgba(99,179,255,.22), transparent 55%),
+        radial-gradient(900px 520px at 82% 10%, rgba(167,139,250,.20), transparent 55%),
+        radial-gradient(1100px 520px at 60% 92%, rgba(24,195,126,.14), transparent 55%),
+        linear-gradient(180deg, rgba(255,255,255,.02), transparent 18%),
+        var(--bg);
+      letter-spacing: .1px;
+    }
+
+    a{ color: inherit; text-decoration:none; }
+    a:hover{ text-decoration: underline; text-underline-offset: 3px; }
+    .wrap{
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 28px 18px 80px;
+    }
+
+    /* Top masthead */
+    .mast{
+      display:grid;
+      grid-template-columns: 1.35fr .65fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+    @media (max-width: 980px){
+      .mast{ grid-template-columns: 1fr; }
+    }
+    .hero{
+      background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 18px 18px 14px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow:hidden;
+    }
+    .hero:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(480px 220px at 15% 15%, rgba(99,179,255,.32), transparent 60%),
+        radial-gradient(520px 220px at 70% 15%, rgba(167,139,250,.26), transparent 60%),
+        radial-gradient(520px 220px at 55% 90%, rgba(24,195,126,.20), transparent 60%);
+      opacity:.6;
+      filter: blur(0px);
+      pointer-events:none;
+    }
+    .hero > *{ position: relative; }
+    .titleRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    h1{
+      margin:0;
+      font-size: 22px;
+      line-height: 1.2;
+      letter-spacing: .2px;
+    }
+    .subtitle{
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13.5px;
+      line-height: 1.45;
+      max-width: 76ch;
+    }
+    .chips{
+      display:flex; gap: 8px; flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      font-size: 12.5px;
+      color: var(--muted);
+      white-space: nowrap;
+      user-select:none;
+    }
+    .dot{ width:10px; height:10px; border-radius: 999px; display:inline-block; }
+    .dot.urgent{ background: linear-gradient(135deg, var(--urgent), var(--urgent2)); }
+    .dot.safe{ background: linear-gradient(135deg, var(--safe), #34d399); }
+    .dot.info{ background: linear-gradient(135deg, var(--info), var(--cyan)); }
+    .dot.violet{ background: linear-gradient(135deg, var(--violet), #f472b6); }
+
+    .controls{
+      background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border: 1px solid var(--stroke);
+      border-radius: var(--r);
+      padding: 14px;
+      box-shadow: var(--shadow2);
+      display:flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .controlRow{
+      display:flex; gap: 10px; flex-wrap: wrap;
+      align-items: center;
+    }
+    .search{
+      flex: 1 1 240px;
+      position: relative;
+    }
+    .search input{
+      width:100%;
+      padding: 11px 12px 11px 38px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.14);
+      color: var(--text);
+      outline:none;
+    }
+    [data-theme="light"] .search input{ background: rgba(255,255,255,.82); }
+    .search svg{
+      position:absolute; left: 11px; top: 10px;
+      width: 18px; height: 18px;
+      opacity: .72;
+    }
+    .btn{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 11px;
+      border-radius: 14px;
+      font-size: 12.5px;
+      cursor: pointer;
+      user-select:none;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .btn:hover{ background: rgba(255,255,255,.10); }
+    .btn:active{ transform: translateY(1px); }
+    .btn .kbd{ font-family: var(--mono); font-size: 11px; opacity:.78; padding: 2px 6px; border:1px solid var(--stroke); border-radius: 10px; }
+    .seg{
+      display:flex;
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      overflow:hidden;
+      background: rgba(255,255,255,.04);
+    }
+    .seg button{
+      border:0;
+      background: transparent;
+      color: var(--muted);
+      padding: 10px 10px;
+      font-size: 12.5px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .seg button[aria-pressed="true"]{
+      background: rgba(255,255,255,.10);
+      color: var(--text);
+    }
+    .seg .pillDot{
+      width:9px;height:9px;border-radius:999px;
+      background: rgba(255,255,255,.25);
+    }
+    .seg button[aria-pressed="true"] .pillDot{ background: linear-gradient(135deg, var(--info), var(--cyan)); }
+
+    /* Sticky nav */
+    .stickyNav{
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      margin-top: 18px;
+      padding-top: 10px;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.08));
+      border-bottom: 1px solid var(--stroke);
+    }
+    [data-theme="light"] .stickyNav{
+      background: linear-gradient(180deg, rgba(247,249,255,.88), rgba(247,249,255,.65));
+    }
+    .navInner{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      justify-content: space-between;
+      padding: 10px 0 12px;
+    }
+    .navLinks{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items:center;
+    }
+    .navLinks a{
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+    .navLinks a:hover{ background: rgba(255,255,255,.08); text-decoration:none; }
+    .navLinks a.active{
+      color: var(--text);
+      background: rgba(255,255,255,.12);
+      box-shadow: 0 8px 18px rgba(0,0,0,.20);
+    }
+    .mini{
+      display:flex; gap: 8px; align-items:center; flex-wrap: wrap;
+    }
+    .badge{
+      display:inline-flex;
+      gap: 8px;
+      align-items:center;
+      padding: 8px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .badge strong{ color: var(--text); font-weight: 700; }
+
+    /* Layout sections */
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.05);
+      border-radius: var(--r);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .cardHeader{
+      padding: 14px 16px 12px;
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--stroke);
+      background: rgba(255,255,255,.02);
+    }
+    .cardHeader h2{
+      margin: 0;
+      font-size: 15.5px;
+      letter-spacing: .2px;
+    }
+    .cardHeader p{
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12.8px;
+      line-height: 1.45;
+      max-width: 80ch;
+    }
+    .cardBody{ padding: 14px 16px 16px; }
+    .stack{ display:flex; flex-direction: column; gap: 12px; }
+
+    /* Priority blocks */
+    .alert{
+      border-radius: var(--r2);
+      border: 1px solid var(--stroke);
+      padding: 12px 12px;
+      background: rgba(255,255,255,.05);
+      display:flex;
+      gap: 12px;
+      align-items:flex-start;
+    }
+    .alert .icon{
+      width: 36px; height: 36px;
+      border-radius: 12px;
+      display:grid;
+      place-items:center;
+      flex: 0 0 auto;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+    }
+    [data-theme="light"] .alert .icon{ background: rgba(255,255,255,.9); }
+
+    .alert.urgent{
+      border-color: rgba(255,59,92,.35);
+      background: linear-gradient(135deg, rgba(255,59,92,.14), rgba(255,138,0,.10));
+    }
+    .alert.urgent .icon{
+      background: linear-gradient(135deg, rgba(255,59,92,.24), rgba(255,138,0,.14));
+      border-color: rgba(255,59,92,.35);
+    }
+    .alert.routine{
+      border-color: rgba(24,195,126,.26);
+      background: linear-gradient(135deg, rgba(24,195,126,.12), rgba(99,179,255,.08));
+    }
+    .alert.routine .icon{
+      background: linear-gradient(135deg, rgba(24,195,126,.18), rgba(99,179,255,.10));
+      border-color: rgba(24,195,126,.26);
+    }
+    .alert.info{
+      border-color: rgba(99,179,255,.25);
+      background: linear-gradient(135deg, rgba(99,179,255,.12), rgba(167,139,250,.10));
+    }
+    .alert.info .icon{
+      background: linear-gradient(135deg, rgba(99,179,255,.18), rgba(167,139,250,.12));
+      border-color: rgba(99,179,255,.25);
+    }
+
+    .alert h3{
+      margin: 0 0 6px;
+      font-size: 13.5px;
+      line-height: 1.2;
+    }
+    .alert p{ margin: 0; color: var(--muted); font-size: 12.6px; line-height: 1.45; }
+    .alert ul{
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: var(--text);
+      font-size: 12.8px;
+      line-height: 1.45;
+    }
+    .alert li{ margin: 4px 0; color: var(--text); }
+    .muted{ color: var(--muted); }
+
+    /* Pathway cards */
+    .pathGrid{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+    }
+    @media (max-width: 780px){
+      .pathGrid{ grid-template-columns: 1fr; }
+    }
+    .pathCard{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      border-radius: var(--r);
+      overflow:hidden;
+      position: relative;
+    }
+    .pathCard .top{
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--stroke);
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      justify-content: space-between;
+    }
+    .pathCard .name{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+    }
+    .flag{
+      width: 34px; height: 34px;
+      border-radius: 12px;
+      display:grid;
+      place-items:center;
+      border: 1px solid var(--stroke);
+      background: rgba(0,0,0,.18);
+      flex: 0 0 auto;
+    }
+    .flag.safe{ background: linear-gradient(135deg, rgba(24,195,126,.18), rgba(99,179,255,.10)); border-color: rgba(24,195,126,.26); }
+    .flag.warn{ background: linear-gradient(135deg, rgba(255,138,0,.16), rgba(255,59,92,.12)); border-color: rgba(255,138,0,.28); }
+    .flag.info{ background: linear-gradient(135deg, rgba(99,179,255,.18), rgba(167,139,250,.12)); border-color: rgba(99,179,255,.25); }
+
+    .pathCard h3{
+      margin: 0;
+      font-size: 14px;
+      letter-spacing:.2px;
+    }
+    .meta{
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 12.2px;
+      line-height: 1.35;
+    }
+    .tags{
+      display:flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      padding-top: 2px;
+    }
+    .tag{
+      font-size: 11.5px;
+      padding: 5px 8px;
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      user-select:none;
+    }
+
+    /* Accordion */
+    details{
+      border-top: 1px solid var(--stroke);
+      padding: 0;
+    }
+    details:first-of-type{ border-top: 0; }
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding: 10px 12px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .sumLeft{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      min-width: 0;
+    }
+    .pill{
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 7px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      flex: 0 0 auto;
+    }
+    .sumText{
+      display:flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .sumTitle{
+      font-size: 12.8px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .sumHint{
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .chev{
+      width: 28px; height: 28px;
+      display:grid;
+      place-items:center;
+      border-radius: 10px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      flex: 0 0 auto;
+      transition: transform .18s ease;
+    }
+    details[open] .chev{ transform: rotate(180deg); }
+    .detailBody{
+      padding: 0 12px 12px;
+      color: var(--text);
+      font-size: 12.8px;
+      line-height: 1.45;
+    }
+    .detailBody ul{
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--text);
+    }
+    .detailBody li{ margin: 4px 0; }
+    .actions{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .actionBox{
+      border-radius: var(--r2);
+      border: 1px solid var(--stroke);
+      padding: 10px 10px;
+      background: rgba(255,255,255,.04);
+    }
+    .actionBox strong{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12.8px;
+    }
+    .actionBox p{ margin:0; color: var(--muted); font-size: 12.5px; }
+
+    /* Footer */
+    .foot{
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 12.3px;
+      line-height: 1.5;
+      border-top: 1px solid var(--stroke);
+      padding-top: 14px;
+    }
+
+    /* Utility */
+    .sr{ position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+    .kpiRow{ display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .kpi{
+      flex: 1 1 160px;
+      border: 1px solid var(--stroke);
+      border-radius: var(--r2);
+      background: rgba(255,255,255,.04);
+      padding: 10px 10px;
+      min-width: 160px;
+    }
+    .kpi .n{
+      font-family: var(--mono);
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: .3px;
+    }
+    .kpi .l{
+      margin-top: 4px;
+      font-size: 12.3px;
+      color: var(--muted);
+    }
+    .hide{ display:none !important; }
+    .small{ font-size: 12.2px; color: var(--muted); }
+  </style>
+</head>
+
+<body>
+<div class="wrap" id="top">
+  <div class="mast">
+    <section class="hero" aria-label="Header">
+      <div class="titleRow">
+        <div>
+          <h1>Paediatric MSK Presentations (0–16y) — Rapid Triage & Referral Pathways</h1>
+          <p class="subtitle">
+            Fast-scanning clinical decision support for common paediatric musculoskeletal presentations.
+            Focus: differentiating normal variants from time-critical pathology; clear escalation thresholds; high-yield pathways.
+          </p>
+        </div>
+        <div class="chips" aria-label="Legend">
+          <div class="chip"><span class="dot urgent"></span>Urgent / ED</div>
+          <div class="chip"><span class="dot safe"></span>Reassurance / community</div>
+          <div class="chip"><span class="dot info"></span>Consider referral / uncertainty</div>
+          <div class="chip"><span class="dot violet"></span>Work-up prompts</div>
+        </div>
+      </div>
+
+      <div class="kpiRow" aria-label="Quick metrics">
+        <div class="kpi">
+          <div class="n">4</div>
+          <div class="l">Immediate ED triggers (core)</div>
+        </div>
+        <div class="kpi">
+          <div class="n">3</div>
+          <div class="l">Urgent specialty lanes (Rheum/Ortho/Paeds)</div>
+        </div>
+        <div class="kpi">
+          <div class="n">6</div>
+          <div class="l">Embedded pathways (high-frequency)</div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="controls" aria-label="Controls">
+      <div class="search" role="search">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2" opacity=".85"/>
+          <path d="M16.2 16.2 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".85"/>
+        </svg>
+        <label class="sr" for="q">Search conditions, red flags, actions</label>
+        <input id="q" type="search" placeholder="Search: flat feet, SUFE, toe walking, hypermobility…" autocomplete="off" />
+      </div>
+
+      <div class="controlRow" aria-label="Filters">
+        <div class="seg" aria-label="Priority filter">
+          <button type="button" class="segBtn" data-filter="all" aria-pressed="true">
+            <span class="pillDot"></span>All
+          </button>
+          <button type="button" class="segBtn" data-filter="urgent" aria-pressed="false">
+            <span class="pillDot"></span>Urgent
+          </button>
+          <button type="button" class="segBtn" data-filter="routine" aria-pressed="false">
+            <span class="pillDot"></span>Routine
+          </button>
+        </div>
+
+        <button type="button" class="btn" id="themeBtn" title="Toggle theme">
+          <span aria-hidden="true">🌓</span> Theme
+        </button>
+
+        <button type="button" class="btn" id="expandBtn" title="Expand/collapse all accordions">
+          <span aria-hidden="true">🧩</span> Expand
+          <span class="kbd" aria-hidden="true">E</span>
+        </button>
+
+        <button type="button" class="btn" id="resetBtn" title="Reset search and filters">
+          <span aria-hidden="true">↺</span> Reset
+          <span class="kbd" aria-hidden="true">R</span>
+        </button>
+      </div>
+
+      <div class="badge" aria-label="Sticky tips">
+        <strong>Tip</strong> Use <span class="kbd">/</span> to focus search; <span class="kbd">E</span> expand; <span class="kbd">R</span> reset.
+      </div>
+      <div class="small">
+        Designed for rapid clinical scanning: urgent items are visually “hot”, routine items “cool”, with stepwise panels.
+      </div>
+    </aside>
+  </div>
+
+  <!-- Sticky nav -->
+  <div class="stickyNav" role="navigation" aria-label="Quick navigation">
+    <div class="navInner">
+      <div class="navLinks" id="navLinks">
+        <a href="#triage" data-spy>Immediate triage</a>
+        <a href="#redflags" data-spy>Red flags</a>
+        <a href="#pathways" data-spy>Pathways</a>
+        <a href="#exam" data-spy>Assessment prompts</a>
+      </div>
+      <div class="mini">
+        <span class="badge" id="resultsBadge"><strong>0</strong> visible modules</span>
+        <a class="btn" href="#top" title="Back to top">↑ Top</a>
+      </div>
+    </div>
+  </div>
+
+  <main class="grid">
+    <!-- Left column -->
+    <section class="card" id="triage" data-module data-priority="urgent routine" data-keywords="triage emergency admit ED septic arthritis osteomyelitis fracture SUFE">
+      <header class="cardHeader">
+        <div>
+          <h2>Immediate triage (first 30 seconds)</h2>
+          <p>Identify time-critical pathology; then route to the appropriate specialty lane. Built for “eyes-only” speed.</p>
+        </div>
+      </header>
+      <div class="cardBody stack">
+        <div class="alert urgent" data-module data-priority="urgent" data-keywords="admit emergency department septic arthritis osteomyelitis fracture SUFE slipped upper femoral epiphysis">
+          <div class="icon" aria-hidden="true">🚨</div>
+          <div>
+            <h3>Admit to ED now</h3>
+            <p>Non-negotiable triggers:</p>
+            <ul>
+              <li><strong>Suspected septic arthritis</strong></li>
+              <li><strong>Suspected osteomyelitis</strong></li>
+              <li><strong>Suspected fracture</strong></li>
+              <li><strong>Suspected SUFE</strong> (10–16y; hip/groin/distal thigh pain; pain with weight bearing; pain on passive hip movement)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="alert info" data-module data-priority="urgent" data-keywords="urgent refer specialist advice rheumatology orthopaedics paediatrics cancer neurology non accidental injury bladder bowel">
+          <div class="icon" aria-hidden="true">📞</div>
+          <div>
+            <h3>Urgent specialist advice / referral lanes</h3>
+            <p>Escalate based on dominant phenotype:</p>
+            <ul>
+              <li><strong>Rheumatology</strong>: suspected inflammatory arthritis (joint swelling; early morning stiffness/pain; systemic illness; motor milestone regression); back pain with red flags</li>
+              <li><strong>Orthopaedics</strong>: limping child where SUFE not suspected; back pain with red flags; scoliosis/neurological symptoms/systemic illness; bone pain</li>
+              <li><strong>Paediatrics</strong>: suspected neurological disorder (wasting/weakness/sensory change); possible cancer (bruising/weight loss/systemic illness; morning headaches ± vomiting; lymphadenopathy; hepatosplenomegaly); milestone delay/regression; persistent night waking; suspected non-accidental injury; bladder/bowel problems</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="alert routine" data-module data-priority="routine" data-keywords="community management physiotherapy podiatry reassurance normal variant systemically well no red flags">
+          <div class="icon" aria-hidden="true">✅</div>
+          <div>
+            <h3>Community management / reassurance likely appropriate</h3>
+            <p>
+              Typical profile: systemically well, <strong>no red flags</strong>, normal examination (or expected developmental variant), no meaningful functional impairment.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right column: red flags panel -->
+    <aside class="card" id="redflags" data-module data-priority="urgent" data-keywords="red flags unremitting pain night pain thoracic pain gait disturbance asymmetry TB cancer HIV steroids fractures skin changes">
+      <header class="cardHeader">
+        <div>
+          <h2>Red flags (rapid scan list)</h2>
+          <p>Escalate for atypical, worsening, systemic, or function-limiting presentations.</p>
+        </div>
+      </header>
+      <div class="cardBody stack">
+        <div class="alert urgent">
+          <div class="icon" aria-hidden="true"⚠️</div>
+          <div>
+            <h3>Consider further investigation or referral (clinical judgement)</h3>
+            <ul>
+              <li>Atypical symptoms or <strong>worsening trajectory</strong></li>
+              <li><strong>Unremitting pain</strong>, <strong>night pain</strong>, or <strong>thoracic pain</strong></li>
+              <li>Non-mechanical pain</li>
+              <li>Abnormal loss/deterioration of function; significant loss of movement</li>
+              <li>Gait disturbance; significant lower limb asymmetry</li>
+              <li>Risk context: TB, cancer, HIV/AIDS, steroid use, multiple fractures</li>
+              <li>Skin changes (e.g., café-au-lait, psoriasis, bruising)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="alert info" data-module data-priority="routine" data-keywords="safety net return review change symptoms atypical concerning">
+          <div class="icon" aria-hidden="true">🧭</div>
+          <div>
+            <h3>Safety-netting principle</h3>
+            <p>
+              If reassurance pathway selected, explicitly document:
+              symptom evolution triggers; functional decline; new systemic features; new limp; new asymmetry; night waking.
+            </p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Pathways -->
+  <section class="card" id="pathways" style="margin-top:16px" data-module data-priority="urgent routine" data-keywords="pathways flat feet growing pains heel pain hypermobility out-toeing tip toe walking">
+    <header class="cardHeader">
+      <div>
+        <h2>Condition pathways (click-to-expand)</h2>
+        <p>Each module provides: reassurance criteria → community actions → referral triggers. Use search + priority filter to jump fast.</p>
+      </div>
+    </header>
+
+    <div class="cardBody">
+      <div class="pathGrid" id="pathGrid">
+        <!-- Flat feet -->
+        <article class="pathCard" data-module data-priority="routine urgent" data-keywords="flat feet pes planus arch tiptoe rigid tarsal coalition asymmetry falls limp hypermobility">
+          <div class="top">
+            <div class="name">
+              <div class="flag safe" aria-hidden="true">🦶</div>
+              <div>
+                <h3>Flat feet (pes planus)</h3>
+                <div class="meta">Normal variant common &lt;6y if painless + flexible.</div>
+              </div>
+            </div>
+            <div class="tags" aria-label="Tags">
+              <span class="tag">Routine</span>
+              <span class="tag">Escalate if rigid/asym</span>
+            </div>
+          </div>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 1</span>
+                <div class="sumText">
+                  <span class="sumTitle">Reassurance criteria</span>
+                  <span class="sumHint">Painless + flexible; arch corrects on tip-toe; no limp</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>&lt;6y, well, no red flags</li>
+                <li>Painless, flexible; <strong>medial arches correct on tip-toe</strong></li>
+                <li>No limp/interference with daily activities; normal milestones</li>
+                <li>No pressure signs (blisters/callosities); symmetrical</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>✅ Action (routine)</strong>
+                  <p>Reassure: common developmental stage; no treatment needed if asymptomatic (even if persists beyond 6y). Safety-net for symptom onset.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 2</span>
+                <div class="sumText">
+                  <span class="sumTitle">Refer / investigate triggers</span>
+                  <span class="sumHint">Painful; rigid; absent arch on tip-toe; asymmetry; functional limitation</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Any red flag features</li>
+                <li>Becoming symptomatic; painful flat feet</li>
+                <li><strong>Absent arch on tip-toe</strong> or when hallux extended</li>
+                <li>Rigid flat feet (esp adolescents: consider tarsal coalition)</li>
+                <li>Asymmetry; tripping/falls; limp; functional limitation</li>
+                <li>Pressure signs/callosities; recurrent ankle sprains; marked hypermobility</li>
+                <li>Morning stiffness; joint swelling/abnormal joint exam; milestone regression/delay</li>
+                <li>Features suggesting underlying neuro/muscular/syndromic/connective tissue disorder</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>📌 Destination options</strong>
+                  <p>Referral may be to paediatric physiotherapy, podiatry, orthopaedics, rheumatology, or paediatrics depending on phenotype/local pathways.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+        </article>
+
+        <!-- Growing pains -->
+        <article class="pathCard" data-module data-priority="routine urgent" data-keywords="growing pains symmetrical night evening no morning pain limp exclusion systemic symptoms joint swelling">
+          <div class="top">
+            <div class="name">
+              <div class="flag safe" aria-hidden="true">🌙</div>
+              <div>
+                <h3>Growing pains</h3>
+                <div class="meta">Diagnosis of exclusion: typical history + normal exam + no red flags.</div>
+              </div>
+            </div>
+            <div class="tags">
+              <span class="tag">Routine</span>
+              <span class="tag">Escalate if atypical</span>
+            </div>
+          </div>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 1</span>
+                <div class="sumText">
+                  <span class="sumTitle">Typical pattern → reassurance</span>
+                  <span class="sumHint">3–12y; symmetrical lower limb pain; no morning pain; normal exam</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Well; no red flags; age 3–12y</li>
+                <li>Symmetrical lower limb pain (muscular/joint/non-localised)</li>
+                <li>Not constant; <strong>no pain on waking</strong></li>
+                <li>No limp; no activity limitation; normal exam (± hypermobility)</li>
+                <li>Major motor milestones achieved</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>✅ Action (routine)</strong>
+                  <p>OTC analgesia and massage if helpful; safety-net for change in symptom pattern or development of atypical features.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 2</span>
+                <div class="sumText">
+                  <span class="sumTitle">Atypical → refer/consider investigation</span>
+                  <span class="sumHint">Unilateral; persistent; morning/activity pain; joint-localised; systemic or abnormal exam</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Any red flag features</li>
+                <li>Pain unilateral/asymmetric; persistent/increasing severity</li>
+                <li>Widespread (upper limbs/back), morning or activity-related, joint-localised</li>
+                <li>Atypical history; systemic symptoms (fatigue/malaise/decreased appetite)</li>
+                <li>Abnormal exam: refusal to bear weight, limp/gait change, weakness, swelling/stiffness, ↓ROM, palpable mass, focal tenderness</li>
+                <li>Impaired function (school/sports/play); developmental delay/regression; school absences</li>
+              </ul>
+            </div>
+          </details>
+        </article>
+
+        <!-- Heel pain -->
+        <article class="pathCard" data-module data-priority="routine urgent" data-keywords="heel pain sever's disease calcaneal apophysitis swelling night pain fracture hindfoot stiffness limp">
+          <div class="top">
+            <div class="name">
+              <div class="flag info" aria-hidden="true">🏃</div>
+              <div>
+                <h3>Heel pain</h3>
+                <div class="meta">Often benign; can be managed in community if stable and typical.</div>
+              </div>
+            </div>
+            <div class="tags">
+              <span class="tag">Routine</span>
+              <span class="tag">Escalate if unilateral/night</span>
+            </div>
+          </div>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 1</span>
+                <div class="sumText">
+                  <span class="sumTitle">Community management profile</span>
+                  <span class="sumHint">Well; no red flags; normal milestones; no limp; no ADL interference</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Well; no red flags</li>
+                <li>Normal milestones; no delay/regression</li>
+                <li>No limp; no daily activity interference</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>✅ Action (routine)</strong>
+                  <p>Avoid aggravating activity; ice; OTC analgesia. If confident Sever’s disease: consider GP management with exercises/heel pads/activity modification; refer if diagnostic doubt.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 2</span>
+                <div class="sumText">
+                  <span class="sumTitle">Refer triggers</span>
+                  <span class="sumHint">Swelling/skin change; unilateral/night pain; hindfoot stiffness; suspected fracture; persistent functional limitation</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Any red flag features</li>
+                <li>Visible swelling/abnormality (incl. skin changes)</li>
+                <li>Unilateral symptoms; night pain; localised swelling; no precipitating activity</li>
+                <li>Asymmetry or significant hindfoot stiffness</li>
+                <li>Suspected calcaneal fracture</li>
+                <li>Cannot let heel contact bed even during sleep</li>
+                <li>Persistent pain limiting function (walking/play/sport)</li>
+                <li>Features suggestive of inflammatory arthropathy</li>
+              </ul>
+            </div>
+          </details>
+        </article>
+
+        <!-- Hypermobility -->
+        <article class="pathCard" data-module data-priority="routine urgent" data-keywords="hypermobility joint laxity subluxation dislocation fatigue handwriting marfan ehlers danlos translucent skin bruising aortic dissection gelling stiffness">
+          <div class="top">
+            <div class="name">
+              <div class="flag safe" aria-hidden="true">🤸</div>
+              <div>
+                <h3>Hypermobility</h3>
+                <div class="meta">Asymptomatic hypermobility ≠ referral indication.</div>
+              </div>
+            </div>
+            <div class="tags">
+              <span class="tag">Routine</span>
+              <span class="tag">Escalate if CTD features</span>
+            </div>
+          </div>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 1</span>
+                <div class="sumText">
+                  <span class="sumTitle">No symptoms → advice only</span>
+                  <span class="sumHint">Normal activity; info provision; review if symptoms develop</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <p>Children with hypermobile joints but no symptoms do not require referral.</p>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>✅ Action (routine)</strong>
+                  <p>Encourage normal healthy physical activity; provide information; safety-net for onset of pain, fatigue, functional issues, or associated features.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 2</span>
+                <div class="sumText">
+                  <span class="sumTitle">Community management profile</span>
+                  <span class="sumHint">Well; no red flags; no severe pain; minimal functional impairment</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Well; no red flags</li>
+                <li>No severe pain</li>
+                <li>No significant functional impairment</li>
+                <li>No suggestion of underlying associated conditions</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>🧩 Community supports</strong>
+                  <p>Paediatric physiotherapy/podiatry/OT (as available) for strengthening, pacing, proprioception, function-specific adaptations.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 3</span>
+                <div class="sumText">
+                  <span class="sumTitle">Refer triggers (often paediatric rheumatology)</span>
+                  <span class="sumHint">Diagnostic uncertainty; subluxation/dislocation; fine motor issues; CTD/vascular phenotype; inflammatory “gelling”</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Any red flags; diagnostic uncertainty</li>
+                <li>Severe hypermobility affecting activities/mobility (e.g., subluxation/dislocation)</li>
+                <li>Symmetrical joint involvement; repetitive strain soft-tissue injury</li>
+                <li>Fine motor difficulties; fatigue/hand pain with tasks (e.g., handwriting/instruments)</li>
+                <li>CTD features (cardiovascular/respiratory/ocular) suggesting Marfan/EDS/OI</li>
+                <li>Thin translucent skin, reduced subcutaneous fat, easy bruising (vascular fragility phenotype)</li>
+                <li>Family history: sudden early death from aortic dissection/rupture; spontaneous arterial/uterine rupture</li>
+                <li>Symptoms not improving with rest + “gelling”/stiffness → consider inflammatory condition</li>
+              </ul>
+            </div>
+          </details>
+        </article>
+
+        <!-- Out-toeing -->
+        <article class="pathCard" data-module data-priority="routine urgent" data-keywords="out-toeing torsion femoral retroversion perthes SUFE overweight adolescent asymmetry hip pain thigh pain">
+          <div class="top">
+            <div class="name">
+              <div class="flag info" aria-hidden="true">🧭</div>
+              <div>
+                <h3>Out-toeing</h3>
+                <div class="meta">Often resolves &lt;4y; unilateral/asymmetric or painful patterns require escalation.</div>
+              </div>
+            </div>
+            <div class="tags">
+              <span class="tag">Routine</span>
+              <span class="tag">Escalate if unilateral/pain</span>
+            </div>
+          </div>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 1</span>
+                <div class="sumText">
+                  <span class="sumTitle">No referral usually required</span>
+                  <span class="sumHint">&lt;4y; well; no red flags; no pain/limp/functional impairment</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>&lt;4y; well; no red flags</li>
+                <li>No pain; no limp; no functional impairment</li>
+                <li>Safety-net: review if symptoms/functional impairment develop or progressive worsening</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>🦶 If symptomatic flat feet coexist</strong>
+                  <p>Consider podiatry with paediatric expertise.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 2</span>
+                <div class="sumText">
+                  <span class="sumTitle">Refer triggers</span>
+                  <span class="sumHint">&gt;8y significant deformity; red flags; recent change/limp/asymmetry; hip disease suspicion; overweight adolescent progression</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>&gt;8y with significant deformity affecting gait function</li>
+                <li>Any red flags</li>
+                <li>Recent onset change, limp, or asymmetry (consider SUFE → urgent ED if suspected)</li>
+                <li>Knee/hip/thigh pain; unilateral out-toeing</li>
+                <li>Progressive out-toeing in an overweight/obese adolescent</li>
+                <li>Reduced expected internal hip rotation + increased external rotation</li>
+                <li>Severe external tibial torsion; functional mobility problems; suspected hip disease; diagnostic uncertainty; need for additional reassurance</li>
+              </ul>
+            </div>
+          </details>
+        </article>
+
+        <!-- Tip-toe walking -->
+        <article class="pathCard" data-module data-priority="routine urgent" data-keywords="toe walking tip toe walking idiopathic heel strike squat jump symmetrical intermittent neurological risk factors">
+          <div class="top">
+            <div class="name">
+              <div class="flag warn" aria-hidden="true">👣</div>
+              <div>
+                <h3>Tip-toe walking</h3>
+                <div class="meta">Idiopathic toe walking is common; exclude neurological/structural causes.</div>
+              </div>
+            </div>
+            <div class="tags">
+              <span class="tag">Routine</span>
+              <span class="tag">Escalate if risk factors</span>
+            </div>
+          </div>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 1</span>
+                <div class="sumText">
+                  <span class="sumTitle">Community management profile</span>
+                  <span class="sumHint">&lt;3y; can heel-strike; can squat heels down; intermittent symmetrical; no limp/pain</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <ul>
+                <li>Well; no red flags; &lt;3y</li>
+                <li>Can walk with heel strike; can squat with heels on floor</li>
+                <li>Well-coordinated when toe-walking; no limp</li>
+                <li>Able to jump (school-age); intermittent and symmetrical toe walking</li>
+                <li>No leg/joint pain; no risk factors</li>
+              </ul>
+              <div class="actions">
+                <div class="actionBox">
+                  <strong>✅ Action (routine)</strong>
+                  <p>Community physiotherapy/podiatry with paediatric expertise as needed; monitor trajectory; safety-net for emerging neuro signs, pain, asymmetry, fixed equinus, or functional decline.</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details>
+            <summary>
+              <div class="sumLeft">
+                <span class="pill">STEP 2</span>
+                <div class="sumText">
+                  <span class="sumTitle">Escalate / refer triggers</span>
+                  <span class="sumHint">Not a diagnosis of exclusion anymore: fixed limitation, asymmetry, neuro features, pain, regression</span>
+                </div>
+              </div>
+              <span class="chev" aria-hidden="true">⌄</span>
+            </summary>
+            <div class="detailBody">
+              <p class="muted">
+                Tip-toe walking can be idiopathic, but toe walking is also associated with neurological/spinal/muscular/developmental causes.
+                Escalate if any abnormal history/exam features emerge.
+              </p>
+              <ul>
+                <li>Any red flags; developmental delay/regression; persistent night waking</li>
+                <li>Asymmetry, limp, progressive worsening</li>
+                <li>Weakness/wasting/sensory change; abnormal tone/reflexes; back signs</li>
+                <li>Fixed equinus/limited dorsiflexion; functional limitation or pain</li>
+              </ul>
+            </div>
+          </details>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Assessment prompts -->
+  <section class="card" id="exam" style="margin-top:16px" data-module data-priority="routine" data-keywords="assessment history examination pGALS milestones gait arms legs spine fever rash weight loss night sweats lymphadenopathy hepatosplenomegaly">
+    <header class="cardHeader">
+      <div>
+        <h2>Assessment prompts (high-yield structure)</h2>
+        <p>History + examination elements that efficiently separate normal variants from systemic or local pathology.</p>
+      </div>
+    </header>
+    <div class="cardBody">
+      <div class="stack">
+        <div class="alert info">
+          <div class="icon" aria-hidden="true">🗂️</div>
+          <div>
+            <h3>History: cluster the data</h3>
+            <ul>
+              <li><strong>Pain phenotype</strong>: site, timing, duration, symmetry, night waking, morning stiffness, activity relation</li>
+              <li><strong>Function</strong>: limp, gait change, play/sport limitation, school absence</li>
+              <li><strong>Systemic</strong>: fever, weight loss, night sweats, lethargy, rashes; neuro symptoms</li>
+              <li><strong>Context</strong>: trauma, recent infection, travel/TB risk, immunocompromise/steroids, family history (rheum/ortho/neuro)</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="alert routine">
+          <div class="icon" aria-hidden="true">👁️</div>
+          <div>
+            <h3>Examination: “look–move–function”</h3>
+            <ul>
+              <li>Observe entry, stance, and gait; look for asymmetry, swelling, wasting, deformity</li>
+              <li>Vitals/system exam if indicated; plot height/weight</li>
+              <li>Use structured MSK screen (e.g., pGALS) when feasible</li>
+              <li>For rotational/angular issues: measure intermalleolar/intercondylar distance; inspect foot borders; consider tibial torsion/femoral version assessment</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="alert urgent">
+          <div class="icon" aria-hidden="true">🧨</div>
+          <div>
+            <h3>“Stop signs” during assessment</h3>
+            <p class="muted">If encountered, exit the benign pathway and escalate appropriately.</p>
+            <ul>
+              <li>Refusal to bear weight; progressive focal bone pain; systemic illness</li>
+              <li>New neuro deficits; bladder/bowel dysfunction</li>
+              <li>Persistent night waking; bruising/lymphadenopathy/hepatosplenomegaly</li>
+              <li>Suspicion of septic joint/osteomyelitis/fracture/SUFE</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <div><strong>Implementation notes</strong>: This is a self-contained HTML/CSS/JS page designed for local intranet / offline use. All filtering is client-side; no PHI storage.</div>
+    <div>Content basis: NICE CKS “Common musculoskeletal presentations in children” (Sept 2024 revision). :contentReference[oaicite:1]{index=1}</div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const root = document.documentElement;
+    const q = document.getElementById('q');
+    const resetBtn = document.getElementById('resetBtn');
+    const expandBtn = document.getElementById('expandBtn');
+    const themeBtn = document.getElementById('themeBtn');
+    const resultsBadge = document.getElementById('resultsBadge');
+    const segBtns = Array.from(document.querySelectorAll('.segBtn'));
+    const modules = Array.from(document.querySelectorAll('[data-module]'));
+    const spyLinks = Array.from(document.querySelectorAll('[data-spy]'));
+
+    // State
+    let filterPriority = "all";
+    let allExpanded = false;
+
+    // Theme: default respects system, but user can toggle and persist
+    const savedTheme = localStorage.getItem('msk_theme');
+    if(savedTheme){ document.body.setAttribute('data-theme', savedTheme); }
+
+    function setTheme(next){
+      if(next === "light") document.body.setAttribute('data-theme','light');
+      else document.body.removeAttribute('data-theme');
+      localStorage.setItem('msk_theme', next);
+    }
+
+    function normalize(s){
+      return (s || "").toLowerCase().trim();
+    }
+
+    function matchesPriority(el){
+      if(filterPriority === "all") return true;
+      const p = (el.getAttribute('data-priority') || "");
+      return p.split(/\s+/).includes(filterPriority);
+    }
+
+    function matchesQuery(el){
+      const term = normalize(q.value);
+      if(!term) return true;
+
+      const kw = normalize(el.getAttribute('data-keywords'));
+      const text = normalize(el.innerText);
+      return kw.includes(term) || text.includes(term);
+    }
+
+    function apply(){
+      let visibleCount = 0;
+
+      modules.forEach(el => {
+        const ok = matchesPriority(el) && matchesQuery(el);
+        el.classList.toggle('hide', !ok);
+        if(ok) visibleCount++;
+      });
+
+      resultsBadge.innerHTML = `<strong>${visibleCount}</strong> visible modules`;
+    }
+
+    // Priority segment controls
+    segBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        segBtns.forEach(b => b.setAttribute('aria-pressed','false'));
+        btn.setAttribute('aria-pressed','true');
+        filterPriority = btn.dataset.filter;
+        apply();
+      });
+    });
+
+    // Search
+    q.addEventListener('input', apply);
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+      const k = e.key.toLowerCase();
+      if(k === '/' && document.activeElement !== q){
+        e.preventDefault();
+        q.focus();
+      }
+      if(k === 'r' && !e.metaKey && !e.ctrlKey && document.activeElement !== q){
+        e.preventDefault();
+        doReset();
+      }
+      if(k === 'e' && !e.metaKey && !e.ctrlKey && document.activeElement !== q){
+        e.preventDefault();
+        toggleExpandAll();
+      }
+    });
+
+    function doReset(){
+      q.value = "";
+      filterPriority = "all";
+      segBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === "all")));
+      // Collapse details
+      document.querySelectorAll('details[open]').forEach(d => d.open = false);
+      allExpanded = false;
+      expandBtn.innerHTML = `<span aria-hidden="true">🧩</span> Expand <span class="kbd" aria-hidden="true">E</span>`;
+      apply();
+      q.focus();
+    }
+
+    resetBtn.addEventListener('click', doReset);
+
+    function toggleExpandAll(){
+      const details = Array.from(document.querySelectorAll('article.pathCard details'))
+        .filter(d => !d.closest('.hide')); // only currently visible cards
+      allExpanded = !allExpanded;
+      details.forEach(d => d.open = allExpanded);
+      expandBtn.innerHTML = allExpanded
+        ? `<span aria-hidden="true">🧩</span> Collapse <span class="kbd" aria-hidden="true">E</span>`
+        : `<span aria-hidden="true">🧩</span> Expand <span class="kbd" aria-hidden="true">E</span>`;
+    }
+    expandBtn.addEventListener('click', toggleExpandAll);
+
+    themeBtn.addEventListener('click', () => {
+      const isLight = document.body.getAttribute('data-theme') === 'light';
+      setTheme(isLight ? 'dark' : 'light');
+    });
+
+    // Scroll spy
+    const sections = [
+      document.getElementById('triage'),
+      document.getElementById('redflags'),
+      document.getElementById('pathways'),
+      document.getElementById('exam')
+    ].filter(Boolean);
+
+    const obs = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting){
+          const id = entry.target.id;
+          spyLinks.forEach(a=>{
+            a.classList.toggle('active', a.getAttribute('href') === `#${id}`);
+          });
+        }
+      });
+    }, { rootMargin: "-45% 0px -50% 0px", threshold: 0.01 });
+
+    sections.forEach(s => obs.observe(s));
+
+    // Initial apply
+    apply();
+  })();
+</script>
+</body>
+</html>
