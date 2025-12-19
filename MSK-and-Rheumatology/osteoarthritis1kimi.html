@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Osteoarthritis Management Algorithm | NICE CKS</title>
+<style>
+:root {
+  --assessment: #3498db;
+  --diagnosis: #9b59b6;
+  --treatment: #27ae60;
+  --followup: #e67e22;
+  --urgent: #e74c3c;
+  --caution: #f39c12;
+  --stable: #2ecc71;
+  --bg: #f5f7fa;
+  --card: #ffffff;
+  --text: #2c3e50;
+  --border: #e0e6ed;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.header {
+  background: linear-gradient(135deg, #2c3e50, #4a6491);
+  color: white;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.container {
+  display: flex;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 80px;
+  background: white;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem 0;
+  z-index: 100;
+}
+
+.progress-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border);
+  margin: 1rem 0;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.progress-dot.active {
+  background: var(--text);
+  transform: scale(1.5);
+}
+
+.progress-dot::after {
+  content: attr(data-step);
+  position: absolute;
+  left: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: var(--text);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.progress-dot:hover::after {
+  opacity: 1;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  margin-bottom: 2rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border-left: 6px solid;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.card.assessment { border-left-color: var(--assessment); }
+.card.diagnosis { border-left-color: var(--diagnosis); }
+.card.treatment { border-left-color: var(--treatment); }
+.card.followup { border-left-color: var(--followup); }
+
+.card-header {
+  padding: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to right, rgba(0,0,0,0.02), transparent);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: white;
+}
+
+.assessment .card-icon { background: var(--assessment); }
+.diagnosis .card-icon { background: var(--diagnosis); }
+.treatment .card-icon { background: var(--treatment); }
+.followup .card-icon { background: var(--followup); }
+
+.expand-icon {
+  font-size: 1.25rem;
+  transition: transform 0.3s ease;
+  color: var(--text);
+}
+
+.card.expanded .expand-icon {
+  transform: rotate(180deg);
+}
+
+.card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.5s ease;
+}
+
+.card.expanded .card-body {
+  max-height: 2000px;
+}
+
+.card-content {
+  padding: 0 1.5rem 1.5rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0.25rem;
+}
+
+.badge-urgent { background: var(--urgent); color: white; }
+.badge-caution { background: var(--caution); color: white; }
+.badge-stable { background: var(--stable); color: white; }
+
+.criteria-list {
+  list-style: none;
+  margin: 1rem 0;
+}
+
+.criteria-list li {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background: #f8f9fc;
+  border-radius: 8px;
+  border-left: 4px solid var(--assessment);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.red-flag-alert {
+  background: linear-gradient(135deg, #fee, #fff);
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: none;
+}
+
+.red-flag-alert.show {
+  display: block;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.referral-button {
+  background: var(--urgent);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 1rem;
+}
+
+.referral-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}
+
+.treatment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.treatment-item {
+  padding: 1rem;
+  background: #f8f9fc;
+  border-radius: 8px;
+  border-left: 4px solid var(--treatment);
+}
+
+.flow-arrow {
+  text-align: center;
+  font-size: 2rem;
+  color: var(--border);
+  margin: 1rem 0;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 60px;
+  }
+  
+  .main-content {
+    padding: 1rem;
+  }
+  
+  .card-header {
+    padding: 1rem;
+  }
+  
+  .card-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+  
+  .treatment-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Osteoarthritis Management Algorithm</h1>
+  <p>Based on NICE Clinical Knowledge Summaries (Dec 2023)</p>
+</div>
+
+<div class="container">
+  <div class="sidebar">
+    <div class="progress-dot active" data-step="Assessment" data-target="#assessment"></div>
+    <div class="progress-dot" data-step="Diagnosis" data-target="#diagnosis"></div>
+    <div class="progress-dot" data-step="Treatment" data-target="#treatment"></div>
+    <div class="progress-dot" data-step="Follow-up" data-target="#followup"></div>
+  </div>
+
+  <div class="main-content">
+    <!-- Assessment Card -->
+    <div class="card assessment" id="assessment">
+      <div class="card-header" onclick="toggleCard(this)">
+        <div class="card-title">
+          <div class="card-icon">📋</div>
+          <div>
+            <h2>Assessment</h2>
+            <p style="font-size: 0.9rem; opacity: 0.8;">Clinical evaluation and red flag screening</p>
+          </div>
+        </div>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="card-content">
+          <h3>Key Assessment Points <span class="badge badge-caution">Core</span></h3>
+          <div class="criteria-list">
+            <li>✓ Age ≥45 years</li>
+            <li>✓ Activity-related joint pain</li>
+            <li>✓ Morning stiffness ≤30 minutes</li>
+            <li>✓ Functional limitation present</li>
+          </div>
+
+          <h3>Detailed History</h3>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="pain-pattern" onchange="updateProgress()">
+            <label for="pain-pattern">Pain pattern (activity-related, gradual onset)</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="stiffness-duration" onchange="updateProgress()">
+            <label for="stiffness-duration">Morning stiffness duration confirmed</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="risk-factors" onchange="updateProgress()">
+            <label for="risk-factors">Risk factors assessed (obesity, injury, occupation)</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="comorbidities" onchange="updateProgress()">
+            <label for="comorbidities">Comorbidities reviewed</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="impact-life" onchange="updateProgress()">
+            <label for="impact-life">Impact on daily life assessed</label>
+          </div>
+
+          <h3>Examination Focus <span class="badge badge-stable">Routine</span></h3>
+          <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+            <li>Affected joint(s) - look for swelling, deformity, crepitus</li>
+            <li>Range of movement - painful restriction typical</li>
+            <li>Muscle wasting/weakness</li>
+            <li>Joint alignment and stability</li>
+            <li>Gait assessment if lower limb involved</li>
+          </ul>
+
+          <h3>Red Flags <span class="badge badge-urgent">Mandatory Check</span></h3>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="red-flag-hot-swollen" onchange="checkRedFlags()">
+            <label for="red-flag-hot-swollen">Hot, swollen joint with systemic symptoms</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="red-flag-trauma" onchange="checkRedFlags()">
+            <label for="red-flag-trauma">Recent significant trauma</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="red-flag-progressive" onchange="checkRedFlags()">
+            <label for="red-flag-progressive">Rapidly progressive symptoms</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="red-flag-night-pain" onchange="checkRedFlags()">
+            <label for="red-flag-night-pain">Persistent night pain/rest pain</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="red-flag-stiffness" onchange="checkRedFlags()">
+            <label for="red-flag-stiffness">Morning stiffness >30 minutes</label>
+          </div>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="red-flag-systemic" onchange="checkRedFlags()">
+            <label for="red-flag-systemic">Systemic symptoms (fever, malaise)</label>
+          </div>
+
+          <div id="red-flag-alert" class="red-flag-alert">
+            <h4 style="color: var(--urgent);">🚨 Urgent Referral Recommended</h4>
+            <p>Consider alternative diagnoses: septic arthritis, inflammatory arthropathy, malignancy, fracture. Arrange same-day assessment or emergency referral.</p>
+            <button class="referral-button" onclick="showReferralPathway()">View Urgent Referral Pathway</button>
+          </div>
+
+          <div class="flow-arrow">⬇</div>
+
+          <h3>Imaging <span class="badge badge-stable">Not Routine</span></h3>
+          <p>Do NOT routinely arrange X-ray. Consider imaging if:</p>
+          <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+            <li>Diagnostic uncertainty</li>
+            <li>Atypical features present</li>
+            <li>Sudden/unexpected symptom worsening</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagnosis Card -->
+    <div class="card diagnosis" id="diagnosis">
+      <div class="card-header" onclick="toggleCard(this)">
+        <div class="card-title">
+          <div class="card-icon">🔍</div>
+          <div>
+            <h2>Diagnosis</h2>
+            <p style="font-size: 0.9rem; opacity: 0.8;">Clinical diagnosis based on features</p>
+          </div>
+        </div>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="card-content">
+          <h3>Clinical Diagnosis Criteria <span class="badge badge-stable">No Imaging Required</span></h3>
+          <p>Diagnose OA if <strong>ALL</strong> of the following are present:</p>
+          <div class="criteria-list">
+            <li>✓ Age ≥45 years</li>
+            <li>✓ Activity-related joint pain</li>
+            <li>✓ Either no morning stiffness OR morning stiffness ≤30 minutes</li>
+          </div>
+
+          <h3>Joint-Specific Features <span class="badge badge-caution">Pattern Recognition</span></h3>
+          
+          <div class="treatment-grid">
+            <div class="treatment-item">
+              <h4>👋 Hand OA</h4>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>First CMC joint (base of thumb)</li>
+                <li>DIP & PIP joints</li>
+                <li>Heberden's/Bouchard's nodes</li>
+                <li>Squaring of CMC joint</li>
+              </ul>
+            </div>
+            <div class="treatment-item">
+              <h4>🦵 Hip OA</h4>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Groin pain (anterior)</li>
+                <li>Pain on walking/stairs</li>
+                <li>Restricted internal rotation</li>
+                <li>Trendelenburg gait (advanced)</li>
+              </ul>
+            </div>
+            <div class="treatment-item">
+              <h4>🦵 Knee OA</h4>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Medial/lateral/patellofemoral</li>
+                <li>Localized compartment pain</li>
+                <li>Crepitus on movement</li>
+                <li>Varus/valgus deformity (advanced)</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3>Differential Diagnosis <span class="badge badge-caution">Exclusions</span></h3>
+          <div class="criteria-list">
+            <li>🚫 Inflammatory arthropathy (stiffness >30 min, systemic symptoms)</li>
+            <li>🚫 Septic arthritis (hot, swollen, systemic)</li>
+            <li>🚫 Fracture (trauma history)</li>
+            <li>🚫 Malignancy (night pain, progressive)</li>
+            <li>🚫 Meniscal tear (locking, joint line tenderness)</li>
+            <li>🚫 Gout (acute hot swollen joint)</li>
+          </div>
+
+          <div class="flow-arrow">⬇</div>
+          <p style="text-align: center; font-weight: 600;">If criteria met → Proceed to Management</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Treatment Card -->
+    <div class="card treatment" id="treatment">
+      <div class="card-header" onclick="toggleCard(this)">
+        <div class="card-title">
+          <div class="card-icon">💊</div>
+          <div>
+            <h2>Management</h2>
+            <p style="font-size: 0.9rem; opacity: 0.8;">Evidence-based treatment approach</p>
+          </div>
+        </div>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="card-content">
+          <h3>Core Treatments <span class="badge badge-stable">First Line</span></h3>
+          
+          <div class="treatment-grid">
+            <div class="treatment-item">
+              <h4>🏃‍♂️ Exercise <span class="badge badge-stable">Essential</span></h4>
+              <p>Individualized therapeutic exercise program</p>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Local muscle strengthening</li>
+                <li>General aerobic fitness</li>
+                <li>Pacing activities</li>
+                <li>May cause initial pain increase</li>
+              </ul>
+            </div>
+            <div class="treatment-item">
+              <h4>⚖️ Weight Management <span class="badge badge-stable">If BMI ≥25</span></h4>
+              <p>Support for weight loss if overweight/obese</p>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Dietary advice</li>
+                <li>Exercise program</li>
+                <li>Reduces joint loading</li>
+              </ul>
+            </div>
+            <div class="treatment-item">
+              <h4>🥾 Footwear & Devices</h4>
+              <p>Appropriate footwear and assistive devices</p>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Cushioned supportive shoes</li>
+                <li>Walking aids (stick/frame)</li>
+                <li>Joint supports/braces</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3>Pharmacological Options <span class="badge badge-caution">Stepwise</span></h3>
+          
+          <div class="treatment-grid">
+            <div class="treatment-item" style="border-left-color: var(--stable);">
+              <h4>📍 Topical NSAIDs <span class="badge badge-stable">First Choice</span></h4>
+              <p>For knee OA, consider for hand/hip</p>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Ibuprofen 5% gel (3x/day)</li>
+                <li>Short-term use</li>
+                <li>Fewer systemic effects</li>
+              </ul>
+            </div>
+            <div class="treatment-item" style="border-left-color: var(--caution);">
+              <h4>💊 Oral NSAIDs <span class="badge badge-caution">If Topicals Ineffective</span></h4>
+              <p>Consider if topical NSAIDs unsuitable/ineffective</p>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Ibuprofen (lowest effective dose)</li>
+                <li>Shortest possible duration</li>
+                <li>Co-prescribe PPI for gastroprotection</li>
+              </ul>
+            </div>
+            <div class="treatment-item" style="border-left-color: var(--caution);">
+              <h4>💉 Intra-articular Steroids <span class="badge badge-caution">Short-term Relief</span></h4>
+              <p>If other drugs ineffective/unsuitable</p>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Provides 2-10 weeks relief</li>
+                <li>Support therapeutic exercise</li>
+                <li>Requires trained practitioner</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3>What NOT to Use <span class="badge badge-urgent">Avoid</span></h3>
+          <div class="criteria-list">
+            <li>❌ Glucosamine or chondroitin</li>
+            <li>❌ Topical rubefacients or local anaesthetics</li>
+            <li>❌ Acupuncture or dry needling</li>
+            <li>❌ Strong opioids (morphine, oxycodone)</li>
+            <li>❌ Routine imaging for diagnosis</li>
+          </div>
+
+          <h3>Psychosocial Support <span class="badge badge-stable">Holistic</span></h3>
+          <ul style="padding-left: 1.5rem;">
+            <li>Provide condition information</li>
+            <li>Screen for anxiety/depression</li>
+            <li>Occupational health assessment</li>
+            <li>Social prescribing/link worker</li>
+            <li>Versus Arthritis resources</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Follow-up Card -->
+    <div class="card followup" id="followup">
+      <div class="card-header" onclick="toggleCard(this)">
+        <div class="card-title">
+          <div class="card-icon">🔄</div>
+          <div>
+            <h2>Follow-up & Referral</h2>
+            <p style="font-size: 0.9rem; opacity: 0.8;">Ongoing management and escalation</p>
+          </div>
+        </div>
+        <span class="expand-icon">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="card-content">
+          <h3>When to Refer to MSK Team <span class="badge badge-caution">If Symptoms Persist</span></h3>
+          <div class="criteria-list">
+            <li>⚠️ After optimal core management (≥3 months)</li>
+            <li>⚠️ Symptoms substantially impact quality of life</li>
+            <li>⚠️ Need for specialist interventions</li>
+          </div>
+
+          <div class="treatment-grid">
+            <div class="treatment-item" style="border-left-color: var(--diagnosis);">
+              <h4>👨‍⚕️ Physiotherapy</h4>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Exercise reinforcement</li>
+                <li>Manual therapy (hip/knee)</li>
+                <li>Activity pacing</li>
+                <li>Pain education</li>
+              </ul>
+            </div>
+            <div class="treatment-item" style="border-left-color: var(--diagnosis);">
+              <h4>🛠️ Occupational Therapy</h4>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Assistive devices</li>
+                <li>Joint protection</li>
+                <li>Home adaptations</li>
+                <li>Falls assessment</li>
+              </ul>
+            </div>
+            <div class="treatment-item" style="border-left-color: var(--diagnosis);">
+              <h4>🦶 Podiatry</h4>
+              <ul style="padding-left: 1rem; margin-top: 0.5rem;">
+                <li>Footwear advice</li>
+                <li>Orthotics/insoles</li>
+                <li>Biomechanical assessment</li>
+              </ul>
+            </div>
+          </div>
+
+          <h3>Orthopaedic Surgery Referral <span class="badge badge-urgent">Consider if:</span></h3>
+          <div class="criteria-list">
+            <li>🚨 Non-surgical management ineffective after 3 months</li>
+            <li>🚨 Pain/stiffness/deformity substantially impacts QoL</li>
+            <li>🚨 Diagnostic uncertainty or atypical features</li>
+            <li>🚨 Sudden worsening of symptoms</li>
+          </div>
+
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="surgery-criteria" onchange="updateSurgeryReferral()">
+            <label for="surgery-criteria">Patient meets surgical referral criteria</label>
+          </div>
+
+          <div id="surgery-referral" class="red-flag-alert">
+            <h4 style="color: var(--urgent);">🏥 Refer to Orthopaedic Surgery</h4>
+            <p>Decision should NOT be based on: age, sex, BMI, smoking status, or comorbidities. Scoring tools NOT recommended. Discuss patient preferences and expectations.</p>
+          </div>
+
+          <h3>Other Referral Pathways <span class="badge badge-caution">Consider</span></h3>
+          <div class="treatment-grid">
+            <div class="treatment-item" style="border-left-color: var(--urgent);">
+              <h4>🧠 Pain Management Service</h4>
+              <p>For uncontrolled pain or suspected chronic pain syndrome</p>
+            </div>
+            <div class="treatment-item" style="border-left-color: var(--urgent);">
+              <h4>🧘 Mental Health Services</h4>
+              <p>If anxiety/depression not responding to primary care management</p>
+            </div>
+          </div>
+
+          <h3>Follow-up Schedule <span class="badge badge-stable">Individualized</span></h3>
+          <ul style="padding-left: 1.5rem;">
+            <li>Review within 2-4 weeks after initiating treatment</li>
+            <li>Regular monitoring of symptom control</li>
+            <li>Reassess medication side effects</li>
+            <li>Evaluate exercise adherence</li>
+            <li>Annual review or sooner if symptoms change</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Card toggle functionality
+function toggleCard(header) {
+  const card = header.parentElement;
+  card.classList.toggle('expanded');
+}
+
+// Red flag checker
+function checkRedFlags() {
+  const redFlags = [
+    'red-flag-hot-swollen',
+    'red-flag-trauma',
+    'red-flag-progressive',
+    'red-flag-night-pain',
+    'red-flag-stiffness',
+    'red-flag-systemic'
+  ];
+  
+  const alertBox = document.getElementById('red-flag-alert');
+  const anyChecked = redFlags.some(id => document.getElementById(id).checked);
+  
+  if (anyChecked) {
+    alertBox.classList.add('show');
+  } else {
+    alertBox.classList.remove('show');
+  }
+}
+
+// Surgery referral update
+function updateSurgeryReferral() {
+  const checkbox = document.getElementById('surgery-criteria');
+  const referralBox = document.getElementById('surgery-referral');
+  
+  if (checkbox.checked) {
+    referralBox.classList.add('show');
+  } else {
+    referralBox.classList.remove('show');
+  }
+}
+
+// Progress tracking
+function updateProgress() {
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]:not([id^="red-flag"])');
+  const checked = document.querySelectorAll('input[type="checkbox"]:not([id^="red-flag"]):checked');
+  const progress = (checked.length / checkboxes.length) * 100;
+  
+  // Update progress dots based on scroll position
+  const cards = document.querySelectorAll('.card');
+  const scrollPosition = window.scrollY + 100;
+  
+  cards.forEach((card, index) => {
+    const cardTop = card.offsetTop;
+    const cardHeight = card.offsetHeight;
+    const dots = document.querySelectorAll('.progress-dot');
+    
+    if (scrollPosition >= cardTop && scrollPosition < cardTop + cardHeight) {
+      dots.forEach(dot => dot.classList.remove('active'));
+      if (dots[index]) {
+        dots[index].classList.add('active');
+      }
+    }
+  });
+}
+
+// Smooth scroll for sidebar navigation
+document.querySelectorAll('.progress-dot').forEach(dot => {
+  dot.addEventListener('click', () => {
+    const target = document.querySelector(dot.dataset.target);
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // Auto-expand the target card
+    const header = target.querySelector('.card-header');
+    if (!target.classList.contains('expanded')) {
+      toggleCard(header);
+    }
+  });
+});
+
+// Auto-expand first card on load
+window.addEventListener('load', () => {
+  const firstCard = document.querySelector('.card');
+  const firstHeader = firstCard.querySelector('.card-header');
+  toggleCard(firstHeader);
+  
+  // Initialize all cards as expanded for better UX
+  document.querySelectorAll('.card').forEach(card => {
+    card.classList.add('expanded');
+  });
+});
+
+// Scroll event listener for progress tracking
+window.addEventListener('scroll', updateProgress);
+
+// Show referral pathway function
+function showReferralPathway() {
+  alert('Urgent Referral Pathway:\n\n1. Same-day telephone referral to Rheumatology/Orthopaedics\n2. Consider emergency department if septic arthritis suspected\n3. Document red flags and clinical findings\n4. Arrange immediate investigations (FBC, CRP, joint aspiration if indicated)');
+}
+
+// Initialize tooltips or additional info
+document.querySelectorAll('.badge').forEach(badge => {
+  badge.title = badge.textContent === 'Urgent' ? 'Requires immediate action' :
+               badge.textContent === 'Caution' ? 'Requires careful consideration' :
+               badge.textContent === 'Stable' ? 'Routine management appropriate' : '';
+});
+</script>
+</body>
+</html>

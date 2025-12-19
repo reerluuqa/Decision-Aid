@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raynaud's Phenomenon: Interactive Clinical Algorithm</title>
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --text-color: #333;
+            --sidebar-width: 260px;
+            
+            /* Section Colors */
+            --assess-color: #2196F3; /* Blue */
+            --diag-color: #9C27B0;   /* Purple */
+            --treat-color: #009688;  /* Teal */
+            --follow-color: #FF9800; /* Orange */
+
+            /* Severity Colors */
+            --badge-green-bg: #e8f5e9;
+            --badge-green-text: #2e7d32;
+            --badge-amber-bg: #fff8e1;
+            --badge-amber-text: #f57f17;
+            --badge-red-bg: #ffebee;
+            --badge-red-text: #c62828;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+            z-index: 10;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #444;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            background-color: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background-color: #e3f2fd;
+            color: var(--assess-color);
+            font-weight: 700;
+        }
+
+        .nav-link.active[href="#diagnosis"] { color: var(--diag-color); background-color: #f3e5f5; }
+        .nav-link.active[href="#treatment"] { color: var(--treat-color); background-color: #e0f2f1; }
+        .nav-link.active[href="#followup"] { color: var(--follow-color); background-color: #fff3e0; }
+
+        .nav-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding-bottom: 50px;
+        }
+
+        h1 { margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; font-size: 0.9rem; }
+
+        /* Section Cards */
+        .section-block {
+            margin-bottom: 40px;
+            scroll-margin-top: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .section-icon-lg {
+            font-size: 2rem;
+            margin-right: 15px;
+            padding: 10px;
+            border-radius: 50%;
+            color: white;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 15px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 5px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+
+        .card-header::after {
+            content: '+';
+            font-size: 1.5rem;
+            color: #999;
+            transition: transform 0.3s;
+        }
+
+        .card.expanded .card-header::after {
+            transform: rotate(45deg);
+        }
+
+        .card-body {
+            padding: 0 20px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out, padding 0.4s ease;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .card.expanded .card-body {
+            padding: 15px 20px 25px 20px;
+            max-height: 1000px; /* Arbitrary large height for transition */
+        }
+
+        /* Contextual Colors */
+        #assessment .section-icon-lg { background-color: var(--assess-color); }
+        #assessment .card { border-left-color: var(--assess-color); }
+        
+        #diagnosis .section-icon-lg { background-color: var(--diag-color); }
+        #diagnosis .card { border-left-color: var(--diag-color); }
+
+        #treatment .section-icon-lg { background-color: var(--treat-color); }
+        #treatment .card { border-left-color: var(--treat-color); }
+
+        #followup .section-icon-lg { background-color: var(--follow-color); }
+        #followup .card { border-left-color: var(--follow-color); }
+
+        /* Badges */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 10px;
+            display: inline-block;
+        }
+
+        .badge-green { background-color: var(--badge-green-bg); color: var(--badge-green-text); border: 1px solid var(--badge-green-text); }
+        .badge-amber { background-color: var(--badge-amber-bg); color: var(--badge-amber-text); border: 1px solid var(--badge-amber-text); }
+        .badge-red { background-color: var(--badge-red-bg); color: var(--badge-red-text); border: 1px solid var(--badge-red-text); }
+
+        /* Tables & Lists */
+        ul { padding-left: 20px; }
+        li { margin-bottom: 8px; }
+        
+        .citation {
+            font-size: 0.7rem;
+            color: #888;
+            vertical-align: super;
+            text-decoration: none;
+        }
+
+        .warning-box {
+            background-color: #ffebee;
+            border-left: 4px solid #c62828;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            .sidebar { width: 100%; height: auto; position: sticky; top: 0; flex-direction: row; overflow-x: auto; padding: 10px; box-sizing: border-box; }
+            .nav-link { margin-right: 10px; margin-bottom: 0; white-space: nowrap; }
+            .main-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2>Raynaud's Pathway</h2>
+        <a href="#assessment" class="nav-link active">
+            <span class="nav-icon">🔍</span> Assessment
+        </a>
+        <a href="#diagnosis" class="nav-link">
+            <span class="nav-icon">🩺</span> Diagnosis
+        </a>
+        <a href="#treatment" class="nav-link">
+            <span class="nav-icon">💊</span> Treatment
+        </a>
+        <a href="#followup" class="nav-link">
+            <span class="nav-icon">📅</span> Follow-up
+        </a>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <h1>Raynaud's Phenomenon (RP)</h1>
+            <p class="subtitle">Based on BMJ Best Practice (Updated Oct 2024). Use the cards below to navigate the clinical algorithm.</p>
+
+            <section id="assessment" class="section-block">
+                <div class="section-header">
+                    <div class="section-icon-lg">🔍</div>
+                    <div>
+                        <h2 style="margin:0; color: var(--assess-color);">Assessment & Definition</h2>
+                        <small>Initial presentation and history taking</small>
+                    </div>
+                </div>
+
+                <div class="card expanded">
+                    <div class="card-header">
+                        Definition & Epidemiology
+                        <span class="badge badge-green">General Info</span>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Definition:</strong> Vasospasm causing digits to change color to white (pallor) from lack of blood flow, usually triggered by cold temperatures <a href="#" class="citation">[cite: 23]</a>. The pallor must be well-demarcated <a href="#" class="citation">[cite: 13]</a>.</p>
+                        <ul>
+                            <li><strong>Triphasic Response:</strong> White (pallor) &rarr; Blue (deoxygenation) &rarr; Red (reperfusion) <a href="#" class="citation">[cite: 12, 24]</a>.</li>
+                            <li><strong>Prevalence:</strong> Affects 3% to 5% of the population <a href="#" class="citation">[cite: 10, 34]</a>.</li>
+                            <li><strong>Risk Factors:</strong> Female sex, cold climates, family history <a href="#" class="citation">[cite: 37, 42]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Key History Questions
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Location:</strong> Fingertips or toe tips are most common. Rarely ears/nose <a href="#" class="citation">[cite: 132, 79]</a>.</li>
+                            <li><strong>Triggers:</strong> Cold exposure, stress, vibration tools, drugs (beta-blockers, migraine therapies, stimulants) <a href="#" class="citation">[cite: 23, 60, 64]</a>.</li>
+                            <li><strong>Systemic Review:</strong> Check for connective tissue disease (CTD) symptoms: inflammatory arthritis, rash, dry eyes/mouth, skin tightness, dysphagia <a href="#" class="citation">[cite: 154]</a>.</li>
+                            <li><strong>Occupational:</strong> Use of vibration tools (e.g., jackhammers) <a href="#" class="citation">[cite: 61]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        Physical Examination
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Pulse:</strong> Check peripheral pulses and blood pressure in both arms (rule out large-vessel narrowing) <a href="#" class="citation">[cite: 170, 171]</a>.</li>
+                            <li><strong>Allen Test:</strong> Check for arterial occlusion <a href="#" class="citation">[cite: 173]</a>.</li>
+                            <li><strong>Skin Exam:</strong> Look for sclerodactyly, telangiectasia, digital ulcers, or pitting scars <a href="#" class="citation">[cite: 179]</a>.</li>
+                            <li><strong>Nailfold Capillaries:</strong> Use ophthalmoscope/dermatoscope. Dilated capillaries (looking like red pen marks) suggest Secondary RP <a href="#" class="citation">[cite: 239]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="diagnosis" class="section-block">
+                <div class="section-header">
+                    <div class="section-icon-lg">🩺</div>
+                    <div>
+                        <h2 style="margin:0; color: var(--diag-color);">Diagnosis & Classification</h2>
+                        <small>Distinguishing Primary vs. Secondary RP</small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Primary (Idiopathic) RP
+                        <span class="badge badge-green">Stable</span>
+                    </div>
+                    <div class="card-body">
+                        <p>Dysregulation of thermoregulation without an underlying cause. Usually benign <a href="#" class="citation">[cite: 82, 85]</a>.</p>
+                        <ul>
+                            <li><strong>Age of Onset:</strong> Usually adolescence; rare after age 40 <a href="#" class="citation">[cite: 165]</a>.</li>
+                            <li><strong>Symmetry:</strong> Attacks are usually symmetric.</li>
+                            <li><strong>Tissue Integrity:</strong> No ulcers, gangrene, or tissue damage <a href="#" class="citation">[cite: 85]</a>.</li>
+                            <li><strong>Labs:</strong> Normal ANA and ESR <a href="#" class="citation">[cite: 273, 276]</a>.</li>
+                        </ul>
+                        <p><em>Diagnosis is clinical if patient is young with no signs of CTD.</em></p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Secondary RP
+                        <span class="badge badge-amber">Referral/Workup Needed</span>
+                    </div>
+                    <div class="card-body">
+                        <p>Associated with underlying conditions (e.g., Systemic Sclerosis, SLE, Sjögren's, Rheumatoid Arthritis) <a href="#" class="citation">[cite: 50, 52]</a>.</p>
+                        <ul>
+                            <li><strong>Age of Onset:</strong> Often >40 years <a href="#" class="citation">[cite: 152]</a>.</li>
+                            <li><strong>Clinical Signs:</strong> Digital ulcers, digital pits, puffy fingers, sclerodactyly, or asymmetric attacks <a href="#" class="citation">[cite: 177, 249]</a>.</li>
+                            <li><strong>Labs:</strong> Positive ANA (esp. centromere/nucleolar patterns), elevated ESR/CRP <a href="#" class="citation">[cite: 274, 275]</a>.</li>
+                            <li><strong>Capillaroscopy:</strong> Abnormal/dilated capillaries at nailbed <a href="#" class="citation">[cite: 221]</a>.</li>
+                        </ul>
+                        <div class="warning-box">
+                            <strong>Caution:</strong> Presence of digital ulceration generally excludes Primary RP diagnosis <a href="#" class="citation">[cite: 227]</a>. Refer to rheumatologist.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Investigation Plan
+                    </div>
+                    <div class="card-body">
+                        <p>If Secondary RP is suspected or age >40:</p>
+                        <ul>
+                            <li><strong>Blood Tests:</strong> FBC, ESR or CRP, Antinuclear Antibody (ANA) with titre/pattern <a href="#" class="citation">[cite: 219]</a>.</li>
+                            <li><strong>Urinalysis:</strong> Check for renal involvement <a href="#" class="citation">[cite: 219]</a>.</li>
+                            <li><strong>Imaging:</strong> Chest X-ray only if cervical rib suspected (rare) <a href="#" class="citation">[cite: 230]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="treatment" class="section-block">
+                <div class="section-header">
+                    <div class="section-icon-lg">💊</div>
+                    <div>
+                        <h2 style="margin:0; color: var(--treat-color);">Management Algorithm</h2>
+                        <small>Stepwise approach from lifestyle to surgery</small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Step 1: Lifestyle Measures (All Patients)
+                        <span class="badge badge-green">First Line</span>
+                    </div>
+                    <div class="card-body">
+                        <p>Many Primary RP cases do not need drugs <a href="#" class="citation">[cite: 14]</a>.</p>
+                        <ul>
+                            <li><strong>Thermoregulation:</strong> Keep warm (body and hands), use hand warmers/gloves <a href="#" class="citation">[cite: 14, 394]</a>.</li>
+                            <li><strong>Habits:</strong> Smoking cessation is crucial <a href="#" class="citation">[cite: 14, 369]</a>. Avoid stress. Regular exercise.</li>
+                            <li><strong>Avoid Triggers:</strong> Avoid caffeine, sympathomimetics (decongestants), and vibration tools <a href="#" class="citation">[cite: 369, 396]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Step 2: Pharmacological (Mild/Primary)
+                        <span class="badge badge-amber">If Lifestyle Fails</span>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Calcium-Channel Blockers (CCBs) - First Line Drug:</strong></p>
+                        <ul>
+                            <li><strong>Nifedipine:</strong> 30-60 mg extended-release once daily (or 10mg IR tid) <a href="#" class="citation">[cite: 409]</a>.</li>
+                            <li><strong>Alternatives:</strong> Amlodipine, Felodipine, or non-dihydropyridine (Diltiazem) if intolerant <a href="#" class="citation">[cite: 411]</a>.</li>
+                            <li><em>Side Effects:</em> Flushing, headache, ankle edema, hypotension <a href="#" class="citation">[cite: 301]</a>.</li>
+                        </ul>
+                        <hr>
+                        <p><strong>Second/Third Line Alternatives:</strong></p>
+                        <ul>
+                            <li>Angiotensin-II receptor antagonists (e.g., Losartan) <a href="#" class="citation">[cite: 306]</a>.</li>
+                            <li>SSRIs (e.g., Fluoxetine) <a href="#" class="citation">[cite: 16]</a>.</li>
+                            <li>Topical Nitrates (e.g., GTN ointment) <a href="#" class="citation">[cite: 464]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Step 3: Severe Secondary / Digital Ulcers
+                        <span class="badge badge-red">Urgent / Specialist</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="warning-box">
+                            <strong>Indication:</strong> Critical ischemia, threatened digit, or active ulcers <a href="#" class="citation">[cite: 311]</a>.
+                        </div>
+                        <ul>
+                            <li><strong>PDE-5 Inhibitors:</strong> Sildenafil, Tadalafil. Reduces frequency/severity of attacks <a href="#" class="citation">[cite: 338, 342]</a>.</li>
+                            <li><strong>Prostacyclins:</strong> IV Iloprost (or Epoprostenol). Highly effective for healing ulcers <a href="#" class="citation">[cite: 311, 314]</a>.</li>
+                            <li><strong>Endothelin Receptor Antagonist:</strong> Bosentan (prevents <em>new</em> ulcers in systemic sclerosis, does not heal existing ones) <a href="#" class="citation">[cite: 362, 363]</a>.</li>
+                            <li><strong>Antibiotics:</strong> If ulcers are infected (Staph aureus/Pseudomonas common) <a href="#" class="citation">[cite: 358]</a>.</li>
+                            <li><strong>Analgesia:</strong> NSAIDs or opioids depending on severity <a href="#" class="citation">[cite: 354, 403]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Step 4: Surgical Intervention
+                        <span class="badge badge-red">Last Resort</span>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Digital Sympathectomy:</strong> Effective for severe RP failing drug therapy. Can improve pain and healing <a href="#" class="citation">[cite: 322]</a>.</li>
+                            <li><strong>Debridement/Amputation:</strong> Required for necrotic tissue/gangrene <a href="#" class="citation">[cite: 320]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section id="followup" class="section-block">
+                <div class="section-header">
+                    <div class="section-icon-lg">📅</div>
+                    <div>
+                        <h2 style="margin:0; color: var(--follow-color);">Follow-up & Prognosis</h2>
+                        <small>Monitoring and complications</small>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Monitoring & Prognosis
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Primary RP:</strong> Symptoms often mild or disappear. Non-progressive <a href="#" class="citation">[cite: 85, 531]</a>.</li>
+                            <li><strong>Secondary Risk:</strong> ~13% of initially "primary" cases develop underlying CTD. Watch for nailfold changes and positive ANA <a href="#" class="citation">[cite: 532, 222]</a>.</li>
+                            <li><strong>Referral:</strong> Refer to rheumatologist if Secondary RP suspected, or complications (ulcers) present <a href="#" class="citation">[cite: 226, 298]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        Complications
+                        <span class="badge badge-amber">Watch List</span>
+                    </div>
+                    <div class="card-body">
+                        <ul>
+                            <li><strong>Digital Ulcers:</strong> Common in Scleroderma. 60% heal by 6 months <a href="#" class="citation">[cite: 518]</a>.</li>
+                            <li><strong>Gangrene/Necrosis:</strong> Result of prolonged ischemia. Requires urgent attention <a href="#" class="citation">[cite: 516]</a>.</li>
+                            <li><strong>Infection:</strong> Cellulitis or Osteomyelitis from infected ulcers <a href="#" class="citation">[cite: 525]</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <div style="margin-top: 50px; font-size: 0.8rem; color: #777; border-top: 1px solid #ddd; padding-top: 20px;">
+                <p><strong>Disclaimer:</strong> This tool is for educational purposes for medical professionals based on BMJ Best Practice data. It does not replace clinical judgement. <a href="#" class="citation">[cite: 666, 667]</a>.</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Accordion Functionality
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.parentElement;
+                card.classList.toggle('expanded');
+            });
+        });
+
+        // Scroll Spy / Sidebar Highlighting
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -70% 0px', // Trigger when section is near top
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    
+                    // Remove active from all
+                    navLinks.forEach(link => link.classList.remove('active'));
+                    
+                    // Add active to current
+                    const activeLink = document.querySelector(`.nav-link[href="#${id}"]`);
+                    if (activeLink) activeLink.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>

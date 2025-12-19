@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osteoporosis Management Algorithm</title>
+    <style>
+        :root {
+            --assessment-color: #3498db;
+            --diagnosis-color: #9b59b6;
+            --treatment-color: #27ae60;
+            --followup-color: #e67e22;
+            --urgent-color: #e74c3c;
+            --caution-color: #f39c12;
+            --stable-color: #2ecc71;
+            --bg-color: #f5f7fa;
+            --text-color: #2c3e50;
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 30px 20px;
+            z-index: 1000;
+            transition: var(--transition);
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-sidebar ul {
+            list-style: none;
+        }
+
+        .progress-sidebar li {
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+        }
+
+        .progress-sidebar li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 2px;
+            background: currentColor;
+            transition: var(--transition);
+        }
+
+        .progress-sidebar li.active {
+            background: rgba(52, 152, 219, 0.1);
+            color: var(--assessment-color);
+            font-weight: 600;
+        }
+
+        .progress-sidebar li.active::before {
+            width: 4px;
+        }
+
+        .progress-sidebar li:nth-child(2).active {
+            color: var(--diagnosis-color);
+        }
+
+        .progress-sidebar li:nth-child(3).active {
+            color: var(--treatment-color);
+        }
+
+        .progress-sidebar li:nth-child(4).active {
+            color: var(--followup-color);
+        }
+
+        .progress-sidebar .icon {
+            font-size: 1.5rem;
+        }
+
+        .progress-indicator {
+            position: absolute;
+            left: 20px;
+            top: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, var(--assessment-color), var(--followup-color));
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        /* Main Content */
+        .container {
+            margin-left: 250px;
+            padding: 40px;
+            max-width: 1200px;
+        }
+
+        @media (max-width: 768px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .container {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header .icon {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .card-header h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .assessment-card .card-header {
+            background: linear-gradient(135deg, var(--assessment-color), #2980b9);
+        }
+
+        .diagnosis-card .card-header {
+            background: linear-gradient(135deg, var(--diagnosis-color), #8e44ad);
+        }
+
+        .treatment-card .card-header {
+            background: linear-gradient(135deg, var(--treatment-color), #219653);
+        }
+
+        .followup-card .card-header {
+            background: linear-gradient(135deg, var(--followup-color), #d35400);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Subsections */
+        .subsection {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid transparent;
+            transition: var(--transition);
+        }
+
+        .subsection:hover {
+            background: #edf2f7;
+        }
+
+        .assessment-card .subsection {
+            border-left-color: var(--assessment-color);
+        }
+
+        .diagnosis-card .subsection {
+            border-left-color: var(--diagnosis-color);
+        }
+
+        .treatment-card .subsection {
+            border-left-color: var(--treatment-color);
+        }
+
+        .followup-card .subsection {
+            border-left-color: var(--followup-color);
+        }
+
+        .subsection h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subsection-content {
+            margin-top: 10px;
+        }
+
+        .risk-group {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 5px;
+            transition: var(--transition);
+        }
+
+        .risk-group:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-urgent {
+            background: var(--urgent-color);
+            color: white;
+        }
+
+        .badge-caution {
+            background: var(--caution-color);
+            color: white;
+        }
+
+        .badge-stable {
+            background: var(--stable-color);
+            color: white;
+        }
+
+        /* Lists */
+        ul.checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul.checklist li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        ul.checklist li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--treatment-color);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        ul.bullet-list {
+            padding-left: 20px;
+        }
+
+        ul.bullet-list li {
+            margin-bottom: 8px;
+        }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Highlight Boxes */
+        .alert-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 5px solid;
+        }
+
+        .alert-urgent {
+            background: rgba(231, 76, 60, 0.1);
+            border-left-color: var(--urgent-color);
+        }
+
+        .alert-caution {
+            background: rgba(243, 156, 18, 0.1);
+            border-left-color: var(--caution-color);
+        }
+
+        .alert-info {
+            background: rgba(52, 152, 219, 0.1);
+            border-left-color: var(--assessment-color);
+        }
+
+        /* Scroll Indicator */
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            z-index: 999;
+        }
+
+        .scroll-progress {
+            height: 100%;
+            background: linear-gradient(to right, var(--assessment-color), var(--diagnosis-color), var(--treatment-color), var(--followup-color));
+            width: 0%;
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+
+    <!-- Progress Sidebar -->
+    <aside class="progress-sidebar">
+        <h3>Algorithm Progress</h3>
+        <div class="progress-indicator"></div>
+        <ul>
+            <li class="active" data-section="assessment">
+                <span class="icon">🔍</span>
+                <span>Assessment</span>
+            </li>
+            <li data-section="diagnosis">
+                <span class="icon">📋</span>
+                <span>Diagnosis</span>
+            </li>
+            <li data-section="treatment">
+                <span class="icon">💊</span>
+                <span>Treatment</span>
+            </li>
+            <li data-section="followup">
+                <span class="icon">📅</span>
+                <span>Follow-up</span>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Assessment Card -->
+        <section class="card assessment-card expanded" id="assessment">
+            <div class="card-header" onclick="toggleCard(this)">
+                <span class="icon">🔍</span>
+                <h2>Assessment</h2>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>Who to Assess</h3>
+                        <div class="subsection-content">
+                            <span class="risk-group badge-urgent">Age ≥65 (women) / ≥75 (men)</span>
+                            <span class="risk-group badge-caution">Age <65 with risk factors</span>
+                            
+                            <p style="margin-top: 15px;"><strong>Major Risk Factors:</strong></p>
+                            <ul class="checklist">
+                                <li>Previous fragility fracture</li>
+                                <li>Current/frequent oral corticosteroids</li>
+                                <li>History of falls</li>
+                                <li>Family history of hip fracture</li>
+                                <li>BMI < 18.5 kg/m²</li>
+                                <li>Smoking / Alcohol >14 units/week</li>
+                            </ul>
+
+                            <div class="alert-box alert-urgent">
+                                <strong>Urgent:</strong> Assess <40 years only if major risk factors present (high-dose steroids >7.5mg prednisolone daily for 3+ months, or previous major osteoporotic fracture)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>How to Assess</h3>
+                        <div class="subsection-content">
+                            <div class="grid-2">
+                                <div>
+                                    <h4>1. Exclude Non-Osteoporotic Causes</h4>
+                                    <ul class="bullet-list">
+                                        <li>Metastatic bone disease</li>
+                                        <li>Multiple myeloma</li>
+                                        <li>Osteomalacia</li>
+                                        <li>Paget's disease</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4>2. Risk Calculation</h4>
+                                    <p>Calculate 10-year fracture risk using:</p>
+                                    <ul class="bullet-list">
+                                        <li><strong>QFracture®</strong> (preferred)</li>
+                                        <li><strong>FRAX®</strong></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert-box alert-info" style="margin-top: 20px;">
+                                <strong>DXA Scan:</strong> Offer immediately to those >50 years with fragility fracture, or <40 years with major risk factors
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Interpret Risk Scores</h3>
+                        <div class="subsection-content">
+                            <div class="grid-2">
+                                <div>
+                                    <span class="risk-group badge-urgent">High Risk: ≥10% (QFracture®) / Red Zone (FRAX®)</span>
+                                    <p style="margin-top: 10px;">→ Arrange DXA scan → Drug treatment if T-score ≤ -2.5</p>
+                                </div>
+                                <div>
+                                    <span class="risk-group badge-caution">Intermediate: Near 10% / Amber Zone</span>
+                                    <p style="margin-top: 10px;">→ Consider DXA if FRAX underestimates risk</p>
+                                </div>
+                            </div>
+                            <span class="risk-group badge-stable">Low Risk: <10% / Green Zone</span>
+                            <p style="margin-top: 10px;">→ Lifestyle advice, review in 5 years</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Diagnosis Card -->
+        <section class="card diagnosis-card" id="diagnosis">
+            <div class="card-header" onclick="toggleCard(this)">
+                <span class="icon">📋</span>
+                <h2>Diagnosis</h2>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>DXA Results</h3>
+                        <div class="subsection-content">
+                            <span class="risk-group badge-urgent">Osteoporosis: T-score ≤ -2.5</span>
+                            <span class="risk-group badge-caution">Osteopenia: T-score -1.0 to -2.5</span>
+                            <span class="risk-group badge-stable">Normal: T-score > -1.0</span>
+                            
+                            <div class="alert-box alert-caution" style="margin-top: 15px;">
+                                <strong>Note:</strong> Most fragility fractures occur in women without osteoporosis (T-score > -2.5). Clinical risk factors are crucial.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Vertebral Fracture Assessment</h3>
+                        <div class="subsection-content">
+                            <ul class="checklist">
+                                <li>50-70% are clinically silent</li>
+                                <li>Consider if height loss >2cm</li>
+                                <li>Can start treatment without DXA if vertebral fracture confirmed</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Specialist Referral Criteria</h3>
+                        <div class="subsection-content">
+                            <span class="risk-group badge-urgent">Very High Risk:</span>
+                            <ul class="bullet-list" style="margin-top: 10px;">
+                                <li>Recent vertebral fracture (<2 years)</li>
+                                <li>Multiple vertebral fractures</li>
+                                <li>T-score ≤ -3.5</li>
+                                <li>High-dose glucocorticoids</li>
+                                <li>Fracture on treatment</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Treatment Card -->
+        <section class="card treatment-card" id="treatment">
+            <div class="card-header" onclick="toggleCard(this)">
+                <span class="icon">💊</span>
+                <h2>Treatment</h2>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>First-Line: Oral Bisphosphonates</h3>
+                        <div class="subsection-content">
+                            <div class="grid-2">
+                                <div>
+                                    <h4>Options</h4>
+                                    <ul class="bullet-list">
+                                        <li><strong>Alendronate 70mg</strong> once weekly</li>
+                                        <li><strong>Risedronate 35mg</strong> once weekly</li>
+                                        <li><strong>Ibandronate 150mg</strong> once monthly (if above unsuitable)</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4>Contraindications</h4>
+                                    <ul class="bullet-list">
+                                        <li>Hypocalcaemia</li>
+                                        <li>Severe CKD (CrCl <30-35ml/min)</li>
+                                        <li>Inability to sit upright 30 mins</li>
+                                        <li>Oesophageal abnormalities</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert-box alert-info" style="margin-top: 15px;">
+                                <strong>Dosing Instructions:</strong> Take on empty stomach with plain water (≥200ml). Remain upright for 30 minutes. No food/drink/meds for 30-60 minutes after.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Calcium & Vitamin D</h3>
+                        <div class="subsection-content">
+                            <p><strong>Calcium intake:</strong> ≥1000mg/day (diet + supplements)</p>
+                            <p><strong>Vitamin D:</strong> 10mcg (400 IU) daily (20mcg if housebound)</p>
+                            
+                            <div class="grid-2" style="margin-top: 15px;">
+                                <div>
+                                    <h4>Assess Deficiency Risk</h4>
+                                    <ul class="checklist">
+                                        <li>Age >65 years</li>
+                                        <li>Limited sunlight exposure</li>
+                                        <li>Housebound/institutionalized</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4>Interactions</h4>
+                                    <ul class="bullet-list">
+                                        <li>Separate from bisphosphonates by ≥30 mins</li>
+                                        <li>Reduced absorption with levothyroxine, iron, zinc</li>
+                                        <li>Monitor if on thiazide diuretics</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Lifestyle Advice</h3>
+                        <div class="subsection-content">
+                            <ul class="checklist">
+                                <li>Regular weight-bearing & resistance exercise</li>
+                                <li>Balanced diet rich in calcium</li>
+                                <li>Stop smoking</li>
+                                <li>Alcohol ≤14 units/week</li>
+                                <li>Falls risk assessment</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Before Starting Treatment</h3>
+                        <div class="subsection-content">
+                            <ul class="checklist">
+                                <li>Dental check-up (especially cancer patients or poor dental status)</li>
+                                <li>Correct hypocalcaemia and vitamin D deficiency</li>
+                                <li>Counsel on adverse effects: GI symptoms, atypical fractures, osteonecrosis of jaw</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Follow-up Card -->
+        <section class="card followup-card" id="followup">
+            <div class="card-header" onclick="toggleCard(this)">
+                <span class="icon">📅</span>
+                <h2>Follow-up</h2>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>Initial Monitoring</h3>
+                        <div class="subsection-content">
+                            <div class="grid-2">
+                                <div>
+                                    <h4><span class="risk-group badge-caution">12-16 weeks</span></h4>
+                                    <ul class="bullet-list">
+                                        <li>Tolerance check</li>
+                                        <li>Upper GI adverse effects</li>
+                                        <li>Symptoms of atypical fracture</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4><span class="risk-group badge-stable">12 months</span></h4>
+                                    <ul class="bullet-list">
+                                        <li>Adherence assessment</li>
+                                        <li>Ongoing tolerance</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Reassessment Timeline</h3>
+                        <div class="subsection-content">
+                            <span class="risk-group badge-stable">5 years:</span> Standard reassessment
+                            <ul class="bullet-list" style="margin: 10px 0 20px 30px;">
+                                <li>If T-score > -2.5: Consider drug holiday (1.5-3 years)</li>
+                                <li>If T-score ≤ -2.5: Continue another 5 years</li>
+                            </ul>
+                            
+                            <span class="risk-group badge-urgent">10 years:</span> Continue if high risk
+                            <ul class="bullet-list" style="margin: 10px 0 20px 30px;">
+                                <li>Age ≥70 at treatment start</li>
+                                <li>Previous hip/vertebral fracture</li>
+                                <li>Fracture during treatment</li>
+                            </ul>
+
+                            <span class="risk-group badge-caution">Corticosteroid therapy:</span>
+                            <ul class="bullet-list" style="margin: 10px 0 20px 30px;">
+                                <li>Reassess 12-18 months if near threshold</li>
+                                <li>Continue treatment until steroids stopped, then reassess</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Management Issues</h3>
+                        <div class="subsection-content">
+                            <div class="alert-box alert-urgent">
+                                <strong>Fracture on treatment:</strong> Check adherence, exclude secondary causes, consider specialist referral
+                            </div>
+                            
+                            <div class="alert-box alert-caution" style="margin-top: 15px;">
+                                <strong>Discontinuation:</strong> Risk persists after stopping. Restart if new fracture occurs.
+                                <ul class="bullet-list" style="margin-top: 10px;">
+                                    <li>Risedronate/ibandronate: reassess at 18 months</li>
+                                    <li>Alendronate: reassess at 2 years</li>
+                                    <li>Zoledronate: reassess at 3 years</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Card Expansion
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            
+            // Toggle current card if it wasn't expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+            }
+        }
+
+        // Progress Sidebar Navigation
+        const sidebarItems = document.querySelectorAll('.progress-sidebar li');
+        const cards = document.querySelectorAll('.card');
+
+        sidebarItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.section;
+                const targetCard = document.getElementById(section);
+                
+                // Update active states
+                sidebarItems.forEach(li => li.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Scroll to card
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Expand the card
+                cards.forEach(c => c.classList.remove('expanded'));
+                targetCard.classList.add('expanded');
+            });
+        });
+
+        // Scroll Progress Indicator
+        function updateScrollProgress() {
+            const scrollTop = window.pageYOffset;
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            
+            document.getElementById('scrollProgress').style.width = scrollPercent + '%';
+            
+            // Update active sidebar item based on scroll position
+            cards.forEach((card, index) => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top <= 200 && rect.bottom >= 200) {
+                    sidebarItems.forEach(li => li.classList.remove('active'));
+                    sidebarItems[index].classList.add('active');
+                    
+                    // Update progress indicator height
+                    const indicator = document.querySelector('.progress-indicator');
+                    indicator.style.height = `${((index + 1) / cards.length) * 100}%`;
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateScrollProgress);
+
+        // Initialize first card expanded
+        document.addEventListener('DOMContentLoaded', () => {
+            updateScrollProgress();
+        });
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            const activeItem = document.querySelector('.progress-sidebar li.active');
+            const currentIndex = Array.from(sidebarItems).indexOf(activeItem);
+            
+            if (e.key === 'ArrowDown' && currentIndex < sidebarItems.length - 1) {
+                sidebarItems[currentIndex + 1].click();
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                sidebarItems[currentIndex - 1].click();
+            }
+        });
+
+        // Touch swipe for mobile
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndY = e.changedTouches[0].clientY;
+            const diff = touchStartY - touchEndY;
+            
+            if (Math.abs(diff) > 50) {
+                const activeItem = document.querySelector('.progress-sidebar li.active');
+                const currentIndex = Array.from(sidebarItems).indexOf(activeItem);
+                
+                if (diff > 0 && currentIndex < sidebarItems.length - 1) {
+                    // Swipe up - next
+                    sidebarItems[currentIndex + 1].click();
+                } else if (diff < 0 && currentIndex > 0) {
+                    // Swipe down - previous
+                    sidebarItems[currentIndex - 1].click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

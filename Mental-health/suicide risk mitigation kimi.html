@@ -1,0 +1,2079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suicide Risk Mitigation - Interactive Algorithm</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --emergency-red: #dc2626;
+            --warning-amber: #d97706;
+            --success-green: #059669;
+            --dark: #1f2937;
+            --gray: #6b7280;
+            --light-gray: #f9fafb;
+            --border: #e5e7eb;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --shadow-lg: rgba(0, 0, 0, 0.15);
+            --urgent-red: #fef2f2;
+            --caution-amber: #fffbeb;
+            --stable-green: #f0fdf4;
+            --urgent-border: #fecaca;
+            --caution-border: #fde68a;
+            --stable-border: #bbf7d0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background-color: var(--light-gray);
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            grid-column: 1 / -1;
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 6px var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header .icon {
+            font-size: 2rem;
+        }
+
+        /* Sidebar Progress */
+        .progress-sidebar {
+            background: white;
+            padding: 2rem 1.5rem;
+            border-right: 1px solid var(--border);
+            position: sticky;
+            top: 80px;
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray);
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            opacity: 0.6;
+        }
+
+        .progress-item:hover {
+            background: var(--light-gray);
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: var(--primary);
+            color: white;
+        }
+
+        .progress-item.completed {
+            opacity: 0.9;
+            background: var(--stable-green);
+            border: 1px solid var(--stable-border);
+        }
+
+        .progress-icon {
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .progress-text {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .progress-badge {
+            margin-left: auto;
+            font-size: 0.75rem;
+            padding: 0.125rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-urgent {
+            background: var(--urgent-red);
+            color: var(--emergency-red);
+        }
+
+        .badge-caution {
+            background: var(--caution-amber);
+            color: var(--warning-amber);
+        }
+
+        .badge-stable {
+            background: var(--stable-green);
+            color: var(--success-green);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .algorithm-section {
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px var(--shadow-lg);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover .card-header::before {
+            opacity: 1;
+        }
+
+        .card-header.emergency {
+            background: linear-gradient(135deg, var(--emergency-red) 0%, #b91c1c 100%);
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+        }
+
+        .card-header.management {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .card-title-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .card-status {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .severity-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .badge-urgent {
+            background: rgba(220, 38, 38, 0.1);
+            color: var(--emergency-red);
+            border: 1px solid var(--urgent-border);
+        }
+
+        .badge-caution {
+            background: rgba(217, 119, 6, 0.1);
+            color: var(--warning-amber);
+            border: 1px solid var(--caution-border);
+        }
+
+        .badge-stable {
+            background: rgba(5, 150, 105, 0.1);
+            color: var(--success-green);
+            border: 1px solid var(--stable-border);
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+            margin-left: 1rem;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+        }
+
+        .card.expanded .card-body {
+            max-height: 1000px;
+            padding: 1.5rem;
+        }
+
+        .card-content {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease 0.2s, transform 0.3s ease 0.2s;
+        }
+
+        .card.expanded .card-content {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Content Styles */
+        .step-list {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .step-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .step-list li:last-child {
+            border-bottom: none;
+        }
+
+        .step-number {
+            background: var(--primary);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .step-description {
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+
+        .highlight-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .warning-box {
+            background: var(--caution-amber);
+            border: 1px solid var(--warning-amber);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .urgent-box {
+            background: var(--urgent-red);
+            border: 1px solid var(--emergency-red);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .box-title {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .evidence-box {
+            background: #f0fdf4;
+            border: 1px solid var(--stable-border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .risk-factors-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .risk-category {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .risk-category h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .risk-category ul {
+            list-style: none;
+            font-size: 0.875rem;
+        }
+
+        .risk-category li {
+            padding: 0.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .risk-category li::before {
+            content: '•';
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* Interactive Elements */
+        .action-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .action-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .action-button.urgent {
+            background: var(--emergency-red);
+        }
+
+        .action-button.urgent:hover {
+            background: #b91c1c;
+        }
+
+        .toggle-section {
+            margin: 1rem 0;
+        }
+
+        .toggle-header {
+            background: var(--light-gray);
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-header:hover {
+            background: #e5e7eb;
+        }
+
+        .toggle-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+            padding: 0 1rem;
+        }
+
+        .toggle-content.expanded {
+            max-height: 500px;
+            padding: 1rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .progress-sidebar {
+                position: fixed;
+                top: 80px;
+                left: -280px;
+                height: calc(100vh - 80px);
+                z-index: 50;
+                transition: left 0.3s ease;
+            }
+
+            .progress-sidebar.open {
+                left: 0;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .menu-toggle {
+                display: block;
+                position: fixed;
+                top: 100px;
+                left: 1rem;
+                z-index: 60;
+                background: var(--primary);
+                color: white;
+                border: none;
+                padding: 0.75rem;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .menu-toggle {
+                display: none;
+            }
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: slideIn 0.6s ease forwards;
+        }
+
+        /* Print Styles */
+        @media print {
+            .progress-sidebar,
+            .menu-toggle {
+                display: none;
+            }
+
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid var(--border);
+            }
+
+            .card.expanded .card-body {
+                max-height: none;
+                padding: 1rem;
+            }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        :focus {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>
+                <span class="icon">🛡️</span>
+                Suicide Risk Mitigation - Interactive Clinical Algorithm
+            </h1>
+        </header>
+
+        <button class="menu-toggle" aria-label="Toggle navigation menu" onclick="toggleSidebar()">
+            <span>☰</span>
+        </button>
+
+        <aside class="progress-sidebar" id="progressSidebar">
+            <h3>Algorithm Progress</h3>
+            <div class="progress-item active" data-section="emergency">
+                <span class="progress-icon">🚨</span>
+                <span class="progress-text">Emergency Safety</span>
+                <span class="progress-badge badge-urgent">Urgent</span>
+            </div>
+            <div class="progress-item" data-section="assessment">
+                <span class="progress-icon">🔍</span>
+                <span class="progress-text">Assessment</span>
+                <span class="progress-badge badge-caution">Caution</span>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <span class="progress-icon">🩺</span>
+                <span class="progress-text">Diagnosis</span>
+                <span class="progress-badge badge-stable">Standard</span>
+            </div>
+            <div class="progress-item" data-section="management">
+                <span class="progress-icon">💊</span>
+                <span class="progress-text">Management</span>
+                <span class="progress-badge badge-caution">Caution</span>
+            </div>
+            <div class="progress-item" data-section="followup">
+                <span class="progress-icon">📈</span>
+                <span class="progress-text">Follow-up</span>
+                <span class="progress-badge badge-stable">Standard</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Emergency Safety Section -->
+            <section class="algorithm-section fade-in" id="emergency-section">
+                <h2 class="section-title">
+                    <span>🚨</span>
+                    Emergency Safety Protocols
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card" data-category="urgent">
+                        <div class="card-header emergency" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">⚠️</span>
+                                <span class="card-title-text">Immediate Safety Actions</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-urgent">URGENT</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="urgent-box">
+                                    <div class="box-title">
+                                        <span>⚠️</span>
+                                        If patient is in immediate danger:
+                                    </div>
+                                    <p>Do not leave the patient alone. Call emergency services immediately if there's an imminent risk.</p>
+                                </div>
+
+                                <ol class="step-list">
+                                    <li>
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Ensure your own safety first</div>
+                                            <div class="step-description">Assess environment and take necessary precautions</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Remove access to lethal means</div>
+                                            <div class="step-description">Secure firearms, medications, sharp objects, and other potential means</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Stay with the patient</div>
+                                            <div class="step-description">Constant observation until emergency services arrive or risk resolves</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">4</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Contact emergency mental health team</div>
+                                            <div class="step-description">Immediate specialist assessment required</div>
+                                        </div>
+                                    </li>
+                                </ol>
+
+                                <button class="action-button urgent" onclick="showEmergencyContact()">
+                                    <span>📞</span>
+                                    Emergency Contact Numbers
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="caution">
+                        <div class="card-header assessment" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">🏥</span>
+                                <span class="card-title-text">Assessment Environment</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-caution">CAUTION</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="highlight-box">
+                                    <div class="box-title">
+                                        <span>💡</span>
+                                        Key Principles:
+                                    </div>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Ensure privacy but maintain safety</li>
+                                        <li>Use a calm, non-judgmental approach</li>
+                                        <li>Allow adequate time for assessment</li>
+                                        <li>Have security/chaperone available if needed</li>
+                                    </ul>
+                                </div>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Room Setup Requirements</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <ul style="margin-left: 1rem;">
+                                            <li>Clear sight lines to door</li>
+                                            <li>Easy exit route for staff</li>
+                                            <li>Remove potential weapons</li>
+                                            <li>Comfortable seating arrangement</li>
+                                            <li>Call button/security access</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Red Flag Behaviors</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <ul style="margin-left: 1rem;">
+                                            <li>Agitation or extreme restlessness</li>
+                                            <li>Intoxication or drug influence</li>
+                                            <li>History of violence</li>
+                                            <li>Paranoid or suspicious behavior</li>
+                                            <li>Command hallucinations</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Assessment Section -->
+            <section class="algorithm-section fade-in" id="assessment-section">
+                <h2 class="section-title">
+                    <span>🔍</span>
+                    Clinical Assessment
+                </h2>
+
+                <div class="cards-grid">
+                    <div class="card" data-category="urgent">
+                        <div class="card-header assessment" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">💬</span>
+                                <span class="card-title-text">Suicidal Ideation Inquiry</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-urgent">CRITICAL</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="urgent-box">
+                                    <div class="box-title">
+                                        <span>⚠️</span>
+                                        Direct questioning does NOT increase risk
+                                    </div>
+                                    <p>Evidence shows that asking about suicide directly can reduce risk and shows you care.</p>
+                                </div>
+
+                                <h4 style="margin: 1rem 0 0.5rem 0;">Key Questions to Ask:</h4>
+                                <ol class="step-list">
+                                    <li>
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <div class="step-title">"Are you having thoughts of suicide?"</div>
+                                            <div class="step-description">Direct, clear, and compassionate</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <div class="step-title">"Have you thought about how you would do it?"</div>
+                                            <div class="step-description">Assess specificity and lethality of plan</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <div class="step-title">"Do you have access to [method]?"</div>
+                                            <div class="step-description">Determine means availability</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">4</span>
+                                        <div class="step-content">
+                                            <div class="step-title">"When do you plan to do this?"</div>
+                                            <div class="step-description">Assess timeline and immediacy</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">5</span>
+                                        <div class="step-content">
+                                            <div class="step-title">"What has stopped you so far?"</div>
+                                            <div class="step-description">Identify protective factors</div>
+                                        </div>
+                                    </li>
+                                </ol>
+
+                                <div class="evidence-box">
+                                    <div class="box-title">
+                                        <span>📊</span>
+                                        Evidence:
+                                    </div>
+                                    <p style="font-size: 0.875rem;">Patients are often relieved to discuss suicidal thoughts openly. Direct questioning is associated with reduced suicide risk and improved treatment engagement.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="caution">
+                        <div class="card-header assessment" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">⚖️</span>
+                                <span class="card-title-text">Risk Factors Assessment</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-caution">IMPORTANT</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🔴</span>
+                                            Strong Risk Factors
+                                        </h4>
+                                        <ul>
+                                            <li>Current suicidal plan</li>
+                                            <li>Previous suicide attempt</li>
+                                            <li>History of self-harm</li>
+                                            <li>Mental illness (especially depression)</li>
+                                            <li>Access to lethal means</li>
+                                            <li>Childhood abuse/neglect</li>
+                                            <li>Family history of suicide</li>
+                                            <li>Male sex (for completed suicide)</li>
+                                            <li>Prison inmate status</li>
+                                        </ul>
+                                    </div>
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🟡</span>
+                                            Moderate Risk Factors
+                                        </h4>
+                                        <ul>
+                                            <li>Family psychiatric history</li>
+                                            <li>Physical illness</li>
+                                            <li>Marital status (divorced/widowed)</li>
+                                            <li>Occupational stress</li>
+                                            <li>Psychosocial stressors</li>
+                                            <li>Recent bereavement</li>
+                                            <li>Financial/legal problems</li>
+                                            <li>Social isolation</li>
+                                            <li>Substance misuse</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Protective Factors</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <ul style="margin-left: 1rem;">
+                                            <li>Strong social support</li>
+                                            <li>Problem-solving skills</li>
+                                            <li>Sense of purpose/meaning</li>
+                                            <li>Positive coping strategies</li>
+                                            <li>Access to mental health care</li>
+                                            <li>Good physical health</li>
+                                            <li>Resilience and adaptability</li>
+                                            <li>Family/community connections</li>
+                                            <li>Pets or dependent relationships</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="stable">
+                        <div class="card-header diagnosis" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">🧠</span>
+                                <span class="card-title-text">Mental State Examination</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-stable">ROUTINE</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <h4>Key Areas to Assess:</h4>
+                                <ol class="step-list">
+                                    <li>
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Appearance and Behavior</div>
+                                            <div class="step-description">Agitation, restlessness, withdrawal, eye contact</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Mood and Affect</div>
+                                            <div class="step-description">Depressed, hopeless, angry, flat, inappropriate</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Thought Form</div>
+                                            <div class="step-description">Racing, slowed, confused, disorganized</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">4</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Thought Content</div>
+                                            <div class="step-description">Suicidal/homicidal ideation, delusions, obsessions</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">5</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Perception</div>
+                                            <div class="step-description">Hallucinations, illusions, depersonalization</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">6</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Cognition</div>
+                                            <div class="step-description">Orientation, concentration, memory, insight</div>
+                                        </div>
+                                    </li>
+                                </ol>
+
+                                <div class="warning-box">
+                                    <div class="box-title">
+                                        <span>⚠️</span>
+                                        Warning Signs Requiring Immediate Action:
+                                    </div>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Command hallucinations to harm self</li>
+                                        <li>Persistent nihilistic or paranoid delusions</li>
+                                        <li>Severe agitation or psychomotor retardation</li>
+                                        <li>Inability to contract for safety</li>
+                                        <li>Impulsivity with poor judgment</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Management Section -->
+            <section class="algorithm-section fade-in" id="management-section">
+                <h2 class="section-title">
+                    <span>💊</span>
+                    Clinical Management
+                </h2>
+
+                <div class="cards-grid">
+                    <div class="card" data-category="urgent">
+                        <div class="card-header management" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">🛡️</span>
+                                <span class="card-title-text">Safety Planning</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-urgent">ESSENTIAL</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="urgent-box">
+                                    <div class="box-title">
+                                        <span>🛡️</span>
+                                        Safety Plan Components:
+                                    </div>
+                                    <p>Collaborative plan with patient to manage suicidal crises</p>
+                                </div>
+
+                                <ol class="step-list">
+                                    <li>
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Warning Signs</div>
+                                            <div class="step-description">Identify personal triggers and early warning signs</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Internal Coping Strategies</div>
+                                            <div class="step-description">Activities patient can do alone (distraction, relaxation)</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Social Contacts</div>
+                                            <div class="step-description">People and settings for distraction/support</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">4</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Trusted Contacts</div>
+                                            <div class="step-description">Specific people to ask for help (with phone numbers)</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">5</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Professional Contacts</div>
+                                            <div class="step-description">Clinicians, crisis lines, emergency services</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">6</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Means Restriction</div>
+                                            <div class="step-description">Specific steps to remove or restrict access to means</div>
+                                        </div>
+                                    </li>
+                                </ol>
+
+                                <div class="evidence-box">
+                                    <div class="box-title">
+                                        <span>📊</span>
+                                        Effectiveness:
+                                    </div>
+                                    <p style="font-size: 0.875rem;">Safety planning combined with follow-up calls reduces suicidal behavior by ~50% over 6 months. More effective than "no-harm" contracts.</p>
+                                </div>
+
+                                <button class="action-button" onclick="showSafetyPlanTemplate()">
+                                    <span>📋</span>
+                                    View Safety Plan Template
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="caution">
+                        <div class="card-header management" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">🧘</span>
+                                <span class="card-title-text">Psychotherapy Options</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-caution">RECOMMENDED</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="highlight-box">
+                                    <div class="box-title">
+                                        <span>💡</span>
+                                        Evidence-Based Therapies:
+                                    </div>
+                                </div>
+
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🎯</span>
+                                            CBT (Cognitive Behavioral Therapy)
+                                        </h4>
+                                        <ul>
+                                            <li>Reduces suicide attempts (RR 0.47)</li>
+                                            <li>Decreases suicidal ideation</li>
+                                            <li>Improves problem-solving</li>
+                                            <li>Typically 12-16 sessions</li>
+                                            <li>Can be delivered individually or in groups</li>
+                                        </ul>
+                                    </div>
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🔄</span>
+                                            DBT (Dialectical Behavior Therapy)
+                                        </h4>
+                                        <ul>
+                                            <li>Reduces suicidal ideation</li>
+                                            <li>Emotion regulation skills</li>
+                                            <li>Distress tolerance techniques</li>
+                                            <li>Mindfulness practices</li>
+                                            <li>Particularly effective for BPD</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Other Therapeutic Approaches</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <ul style="margin-left: 1rem;">
+                                            <li><strong>Compassion-Focused Therapy:</strong> For self-criticism and shame</li>
+                                            <li><strong>Cognitive Analytic Therapy:</strong> For relationship patterns</li>
+                                            <li><strong>Mentalization-Based Therapy:</strong> For emotional understanding</li>
+                                            <li><strong>Bereavement Counseling:</strong> For grief-related suicidality</li>
+                                            <li><strong>Interpersonal Therapy:</strong> For relationship-focused issues</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <button class="action-button" onclick="showReferralInfo()">
+                                    <span>📞</span>
+                                    Referral Guidelines
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="stable">
+                        <div class="card-header management" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">💊</span>
+                                <span class="card-title-text">Pharmacological Management</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-stable">STANDARD</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="warning-box">
+                                    <div class="box-title">
+                                        <span>⚠️</span>
+                                        Important Considerations:
+                                    </div>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Treat underlying mental illness (depression, psychosis, anxiety)</li>
+                                        <li>Monitor for emergence/worsening of suicidal ideation with antidepressants</li>
+                                        <li>Avoid medications with high overdose potential when possible</li>
+                                        <li>Consider quantity limits for at-risk patients</li>
+                                        <li>Regular medication review and monitoring</li>
+                                    </ul>
+                                </div>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Antidepressant Use</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <p style="margin-bottom: 0.5rem;"><strong>First-line options:</strong> SSRIs (escitalopram, sertraline)</p>
+                                        <p style="margin-bottom: 0.5rem;"><strong>Monitoring:</strong> Weekly for first month, then regularly</p>
+                                        <p style="margin-bottom: 0.5rem;"><strong>Warning:</strong> Risk may increase initially before improvement</p>
+                                        <p><strong>Discontinuation:</strong> Taper slowly to avoid withdrawal</p>
+                                    </div>
+                                </div>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Emerging Treatments</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <ul style="margin-left: 1rem;">
+                                            <li><strong>Esketamine nasal spray:</strong> For treatment-resistant depression (supervised administration)</li>
+                                            <li><strong>Lithium:</strong> Mood stabilizer with anti-suicidal properties</li>
+                                            <li><strong>Clozapine:</strong> For schizophrenia with suicidality</li>
+                                            <li><strong>Ketamine:</strong> Rapid-acting antidepressant effects</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="caution">
+                        <div class="card-header management" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">🏥</span>
+                                <span class="card-title-text">Treatment Setting</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-caution">IMPORTANT</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🏠</span>
+                                            Community Management
+                                        </h4>
+                                        <ul>
+                                            <li>Low immediate risk</li>
+                                            <li>Strong protective factors</li>
+                                            <li>Reliable support system</li>
+                                            <li>Good treatment engagement</li>
+                                            <li>Clear safety plan in place</li>
+                                        </ul>
+                                    </div>
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🏥</span>
+                                            Inpatient Admission
+                                        </h4>
+                                        <ul>
+                                            <li>High immediate risk</li>
+                                            <li>Unable to ensure safety</li>
+                                            <li>Severe mental illness</li>
+                                            <li>Poor social support</li>
+                                            <li>Unable to cooperate with treatment</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="highlight-box">
+                                    <div class="box-title">
+                                        <span>💡</span>
+                                        Key Decision Factors:
+                                    </div>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Can the patient contract for safety?</li>
+                                        <li>Are protective factors available?</li>
+                                        <li>Is there a responsible adult to monitor?</li>
+                                        <li>Can lethal means be removed?</li>
+                                        <li>Is there ability to follow up within 24-72 hours?</li>
+                                    </ul>
+                                </div>
+
+                                <div class="evidence-box">
+                                    <div class="box-title">
+                                        <span>📊</span>
+                                        Evidence:
+                                    </div>
+                                    <p style="font-size: 0.875rem;">Admission may increase risk in first week. Discharge planning critical - highest risk period is first week post-discharge.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="algorithm-section fade-in" id="followup-section">
+                <h2 class="section-title">
+                    <span>📈</span>
+                    Follow-up and Monitoring
+                </h2>
+
+                <div class="cards-grid">
+                    <div class="card" data-category="stable">
+                        <div class="card-header followup" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">📞</span>
+                                <span class="card-title-text">Follow-up Schedule</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-stable">ROUTINE</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <ol class="step-list">
+                                    <li>
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Within 24-48 hours</div>
+                                            <div class="step-description">High-risk patients, post-discharge contact</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Within 1 week</div>
+                                            <div class="step-description">Initial follow-up appointment</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Within 2-4 weeks</div>
+                                            <div class="step-description">Regular monitoring period</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">4</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Ongoing</div>
+                                            <div class="step-description">Monthly then quarterly as stability increases</div>
+                                        </div>
+                                    </li>
+                                </ol>
+
+                                <div class="toggle-section">
+                                    <div class="toggle-header" onclick="toggleSection(this)">
+                                        <span>Follow-up Methods</span>
+                                        <span>▼</span>
+                                    </div>
+                                    <div class="toggle-content">
+                                        <ul style="margin-left: 1rem;">
+                                            <li><strong>Face-to-face:</strong> Gold standard for initial follow-up</li>
+                                            <li><strong>Telephone:</strong> Effective for brief check-ins</li>
+                                            <li><strong>Text message:</strong> Reminders and brief contact</li>
+                                            <li><strong>Home visits:</strong> For high-risk or non-engaging patients</li>
+                                            <li><strong>Peer support:</strong> Complement professional follow-up</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="caution">
+                        <div class="card-header followup" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">📊</span>
+                                <span class="card-title-text">Monitoring Parameters</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-caution">IMPORTANT</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <h4>Key Monitoring Areas:</h4>
+                                <ol class="step-list">
+                                    <li>
+                                        <span class="step-number">1</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Suicidal Ideation</div>
+                                            <div class="step-description">Frequency, intensity, planning, intent</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">2</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Depression Symptoms</div>
+                                            <div class="step-description">Mood, sleep, appetite, energy, concentration</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">3</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Hopelessness</div>
+                                            <div class="step-description">Sense of futility, negative expectations</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">4</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Functioning</div>
+                                            <div class="step-description">Work, relationships, self-care, daily activities</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">5</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Treatment Adherence</div>
+                                            <div class="step-description">Medication compliance, therapy attendance</div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="step-number">6</span>
+                                        <div class="step-content">
+                                            <div class="step-title">Protective Factors</div>
+                                            <div class="step-description">Social support, coping skills, reasons for living</div>
+                                        </div>
+                                    </li>
+                                </ol>
+
+                                <div class="warning-box">
+                                    <div class="box-title">
+                                        <span>⚠️</span>
+                                        Red Flags for Immediate Action:
+                                    </div>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Increase in suicidal thoughts or planning</li>
+                                        <li>Worsening depression or hopelessness</li>
+                                        <li>Disengagement from treatment</li>
+                                        <li>Development of new stressors</li>
+                                        <li>Preparation behaviors (will, giving away items)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" data-category="stable">
+                        <div class="card-header followup" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <span class="card-icon">📱</span>
+                                <span class="card-title-text">Digital Tools & Resources</span>
+                            </div>
+                            <div class="card-status">
+                                <span class="severity-badge badge-stable">SUPPLEMENTARY</span>
+                                <span class="expand-icon">▼</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="highlight-box">
+                                    <div class="box-title">
+                                        <span>📲</span>
+                                        Recommended Digital Resources:
+                                    </div>
+                                </div>
+
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🆘</span>
+                                            Crisis Support Apps
+                                        </h4>
+                                        <ul>
+                                            <li>Stay Alive app (UK)</li>
+                                            <li>Crisis Text Line</li>
+                                            <li>Beyond Now safety planning app</li>
+                                            <li>myCoping app</li>
+                                        </ul>
+                                    </div>
+                                    <div class="risk-category">
+                                        <h4>
+                                            <span>🌐</span>
+                                            Online Resources
+                                        </h4>
+                                        <ul>
+                                            <li>Staying Safe website</li>
+                                            <li>Samaritans</li>
+                                            <li>CALM (Campaign Against Living Miserably)</li>
+                                            <li>Papyrus (young people)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="evidence-box">
+                                    <div class="box-title">
+                                        <span>📊</span>
+                                        Effectiveness:
+                                    </div>
+                                    <p style="font-size: 0.875rem;">Digital tools can complement but not replace face-to-face care. Apps can provide real-time support and reminders, especially between appointments.</p>
+                                </div>
+
+                                <button class="action-button" onclick="showDigitalResources()">
+                                    <span>🔗</span>
+                                    Access Digital Resources
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Disclaimer -->
+            <section style="margin-top: 3rem; padding: 1.5rem; background: white; border-radius: 8px; border-left: 4px solid var(--primary);">
+                <h3 style="margin-bottom: 1rem; color: var(--primary);">Clinical Disclaimer</h3>
+                <p style="font-size: 0.875rem; color: var(--gray); line-height: 1.5;">
+                    This algorithm is for clinical decision support only and should not replace clinical judgment. 
+                    Always follow local protocols and guidelines. Suicide risk assessment is an ongoing process, 
+                    not a one-time event. Seek senior consultation for complex cases. Remember that suicide 
+                    cannot be predicted with certainty in any individual.
+                </p>
+                <p style="font-size: 0.875rem; color: var(--gray); margin-top: 0.5rem;">
+                    Based on BMJ Best Practice guidelines (last updated Nov 2023). Always verify current evidence 
+                    and local policy before implementation.
+                </p>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for additional information -->
+    <div id="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 600px; max-height: 80vh; overflow-y: auto; margin: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="modal-title" style="color: var(--primary);"></h2>
+                <button onclick="closeModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">×</button>
+            </div>
+            <div id="modal-content"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            // Add smooth scrolling
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            // Set up intersection observer for progress tracking
+            setupIntersectionObserver();
+
+            // Set up keyboard navigation
+            setupKeyboardNavigation();
+
+            // Add fade-in animations
+            addFadeInAnimations();
+        }
+
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards in the same section
+            const section = card.closest('.algorithm-section');
+            section.querySelectorAll('.card.expanded').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update progress
+            updateProgress();
+        }
+
+        // Toggle section functionality
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const isExpanded = content.classList.contains('expanded');
+            
+            // Close all other toggle sections in the same card
+            const card = header.closest('.card');
+            card.querySelectorAll('.toggle-content.expanded').forEach(toggle => {
+                if (toggle !== content) {
+                    toggle.classList.remove('expanded');
+                    const toggleHeader = toggle.previousElementSibling;
+                    toggleHeader.querySelector('span:last-child').textContent = '▼';
+                }
+            });
+            
+            // Toggle current section
+            content.classList.toggle('expanded');
+            const arrow = header.querySelector('span:last-child');
+            arrow.textContent = isExpanded ? '▼' : '▲';
+        }
+
+        // Sidebar toggle for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('progressSidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Modal functionality
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Modal content functions
+        function showEmergencyContact() {
+            const content = `
+                <div style="line-height: 1.6;">
+                    <h3 style="color: var(--emergency-red); margin-bottom: 1rem;">Emergency Contacts</h3>
+                    <div style="background: var(--urgent-red); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4>🚨 Immediate Emergency Services</h4>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: var(--emergency-red);">999 or 112</p>
+                    </div>
+                    
+                    <h4 style="margin-top: 1rem;">Mental Health Crisis Lines:</h4>
+                    <ul style="margin-left: 1rem;">
+                        <li><strong>Samaritans:</strong> 116 123 (24/7)</li>
+                        <li><strong>NHS 111:</strong> 111 (24/7)</li>
+                        <li><strong>Crisis Text Line:</strong> Text HOME to 741741</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1rem;">Local Mental Health Teams:</h4>
+                    <p style="margin-left: 1rem;">Check your local area for specific crisis team numbers</p>
+                    
+                    <div class="warning-box" style="margin-top: 1rem;">
+                        <strong>Remember:</strong> If there's immediate danger, call emergency services first.
+                    </div>
+                </div>
+            `;
+            showModal('Emergency Contact Information', content);
+        }
+
+        function showSafetyPlanTemplate() {
+            const content = `
+                <div style="line-height: 1.6;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">Safety Plan Template</h3>
+                    
+                    <h4>1. Warning Signs (thoughts, images, mood, situation, behavior):</h4>
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 4px; margin-bottom: 1rem; min-height: 60px;">
+                        [Patient to identify personal warning signs]
+                    </div>
+                    
+                    <h4>2. Internal Coping Strategies (things I can do on my own):</h4>
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 4px; margin-bottom: 1rem; min-height: 60px;">
+                        • Relaxation techniques<br>
+                        • Physical activity<br>
+                        • Listening to music<br>
+                        • Watching TV/films<br>
+                        • Reading<br>
+                        • Other: __________
+                    </div>
+                    
+                    <h4>3. Social Contacts Who May Distract Me:</h4>
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 4px; margin-bottom: 1rem; min-height: 60px;">
+                        • Person 1: __________ Phone: __________<br>
+                        • Person 2: __________ Phone: __________<br>
+                        • Place I can go: __________
+                    </div>
+                    
+                    <h4>4. Trusted Contacts I Can Ask for Help:</h4>
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 4px; margin-bottom: 1rem; min-height: 60px;">
+                        • Person 1: __________ Phone: __________<br>
+                        • Person 2: __________ Phone: __________<br>
+                        • Person 3: __________ Phone: __________
+                    </div>
+                    
+                    <h4>5. Professional Contacts (including 24-hour):</h4>
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 4px; margin-bottom: 1rem; min-height: 60px;">
+                        • GP: __________<br>
+                        • Mental Health Team: __________<br>
+                        • Crisis Line: __________<br>
+                        • Emergency Services: 999/112
+                    </div>
+                    
+                    <h4>6. Means Restriction (make environment safer):</h4>
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: 4px; margin-bottom: 1rem; min-height: 60px;">
+                        • Remove: __________<br>
+                        • Lock up: __________<br>
+                        • Give to trusted person: __________<br>
+                        • Dispose of: __________
+                    </div>
+                </div>
+            `;
+            showModal('Safety Plan Template', content);
+        }
+
+        function showReferralInfo() {
+            const content = `
+                <div style="line-height: 1.6;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">Referral Guidelines</h3>
+                    
+                    <h4 style="color: var(--emergency-red);">🚨 Urgent Referral (Same Day):</h4>
+                    <ul style="margin-left: 1rem; margin-bottom: 1rem;">
+                        <li>Active suicidal plan with means</li>
+                        <li>Severe depression with hopelessness</li>
+                        <li>Command hallucinations</li>
+                        <li>Unable to ensure safety in community</li>
+                        <li>Recent suicide attempt</li>
+                    </ul>
+                    
+                    <h4 style="color: var(--warning-amber);">⚠️ Priority Referral (Within 1 Week):</h4>
+                    <ul style="margin-left: 1rem; margin-bottom: 1rem;">
+                        <li>Persistent suicidal ideation</li>
+                        <li>Moderate depression</li>
+                        <li>Poor social support</li>
+                        <li>History of self-harm</li>
+                        <li>Substance misuse issues</li>
+                    </ul>
+                    
+                    <h4 style="color: var(--success-green);">📅 Routine Referral (Within 4 Weeks):</h4>
+                    <ul style="margin-left: 1rem; margin-bottom: 1rem;">
+                        <li>Low mood with suicidal thoughts (no plan)</li>
+                        <li>Good protective factors</li>
+                        <li>Engaged with treatment</li>
+                        <li>Stable social situation</li>
+                    </ul>
+                    
+                    <div class="highlight-box" style="margin-top: 1rem;">
+                        <h4>Specialist Services:</h4>
+                        <ul style="margin-left: 1rem;">
+                            <li>Community Mental Health Team</li>
+                            <li>Crisis Resolution Team</li>
+                            <li>Home Treatment Team</li>
+                            <li>Eating Disorders Service</li>
+                            <li>Addiction Services</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            showModal('Referral Guidelines', content);
+        }
+
+        function showDigitalResources() {
+            const content = `
+                <div style="line-height: 1.6;">
+                    <h3 style="color: var(--primary); margin-bottom: 1rem;">Digital Resources & Support Tools</h3>
+                    
+                    <h4>📱 Mobile Apps:</h4>
+                    <ul style="margin-left: 1rem; margin-bottom: 1rem;">
+                        <li><strong>Stay Alive:</strong> Suicide prevention app with safety planning (UK)</li>
+                        <li><strong>Beyond Now:</strong> Safety planning app by Beyond Blue (Australia)</li>
+                        <li><strong>myCoping:</strong> Crisis coping strategies</li>
+                        <li><strong>Calm Harm:</strong> For managing self-harm urges</li>
+                        <li><strong>Headspace:</strong> Mindfulness and meditation</li>
+                    </ul>
+                    
+                    <h4>🌐 Websites:</h4>
+                    <ul style="margin-left: 1rem; margin-bottom: 1rem;">
+                        <li><strong>Staying Safe:</strong> Safety planning website (UK)</li>
+                        <li><strong>Samaritans:</strong> 24/7 emotional support</li>
+                        <li><strong>Mind:</strong> Mental health information and support</li>
+                        <li><strong>Rethink Mental Illness:</strong> Advice and resources</li>
+                        <li><strong>Papyrus:</strong> Young people suicide prevention</li>
+                    </ul>
+                    
+                    <h4>📞 Crisis Lines:</h4>
+                    <ul style="margin-left: 1rem; margin-bottom: 1rem;">
+                        <li><strong>Samaritans:</strong> 116 123 (24/7)</li>
+                        <li><strong>NHS 111:</strong> 111 (24/7)</li>
+                        <li><strong>Crisis Text Line:</strong> Text HOME to 741741 (US/Canada)</li>
+                        <li><strong>Lifeline:</strong> 13 11 14 (Australia)</li>
+                    </ul>
+                    
+                    <div class="warning-box" style="margin-top: 1rem;">
+                        <strong>⚠️ Note:</strong> Digital tools should complement, not replace, professional mental health care.
+                    </div>
+                </div>
+            `;
+            showModal('Digital Resources', content);
+        }
+
+        // Progress tracking
+        function setupIntersectionObserver() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const section = entry.target;
+                        updateProgressForSection(section);
+                    }
+                });
+            }, {
+                threshold: 0.3,
+                rootMargin: '-20% 0px -60% 0px'
+            });
+
+            document.querySelectorAll('.algorithm-section').forEach(section => {
+                observer.observe(section);
+            });
+        }
+
+        function updateProgressForSection(section) {
+            const sectionId = section.id;
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === sectionId.replace('-section', '')) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        function updateProgress() {
+            // Mark sections as completed based on user interaction
+            document.querySelectorAll('.card.expanded').forEach(card => {
+                const section = card.closest('.algorithm-section');
+                const sectionId = section.id.replace('-section', '');
+                const progressItem = document.querySelector(`[data-section="${sectionId}"]`);
+                if (progressItem && !progressItem.classList.contains('completed')) {
+                    progressItem.classList.add('completed');
+                }
+            });
+        }
+
+        // Keyboard navigation
+        function setupKeyboardNavigation() {
+            document.addEventListener('keydown', function(e) {
+                // ESC to close modal
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+                
+                // Arrow keys for navigation
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                    navigateToNextSection();
+                }
+                if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    navigateToPreviousSection();
+                }
+            });
+        }
+
+        function navigateToNextSection() {
+            const currentActive = document.querySelector('.progress-item.active');
+            const nextItem = currentActive.nextElementSibling;
+            if (nextItem && nextItem.classList.contains('progress-item')) {
+                nextItem.click();
+            }
+        }
+
+        function navigateToPreviousSection() {
+            const currentActive = document.querySelector('.progress-item.active');
+            const prevItem = currentActive.previousElementSibling;
+            if (prevItem && prevItem.classList.contains('progress-item')) {
+                prevItem.click();
+            }
+        }
+
+        // Click on progress item to navigate
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const targetSection = this.dataset.section;
+                const sectionElement = document.getElementById(`${targetSection}-section`);
+                if (sectionElement) {
+                    sectionElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+                toggleSidebar(); // Close sidebar on mobile after navigation
+            });
+        });
+
+        // Add fade-in animations
+        function addFadeInAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.fade-in').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+        }
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Save preferences
+        function saveUserPreferences() {
+            const expandedCards = Array.from(document.querySelectorAll('.card.expanded')).map(card => {
+                return card.querySelector('.card-title-text').textContent;
+            });
+            localStorage.setItem('expandedCards', JSON.stringify(expandedCards));
+        }
+
+        function loadUserPreferences() {
+            const saved = localStorage.getItem('expandedCards');
+            if (saved) {
+                const expandedCards = JSON.parse(saved);
+                // Apply saved preferences
+            }
+        }
+
+        // Auto-save preferences on changes
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.card-header')) {
+                setTimeout(saveUserPreferences, 500);
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Add loading states for better UX
+        function showLoading(button) {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<span class="loading"></span> Loading...';
+            button.disabled = true;
+            
+            // Reset after 2 seconds (adjust as needed)
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }, 2000);
+        }
+
+        // Add search functionality
+        function setupSearch() {
+            const searchInput = document.createElement('input');
+            searchInput.type = 'search';
+            searchInput.placeholder = 'Search algorithm...';
+            searchInput.style.cssText = `
+                padding: 0.75rem;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                width: 100%;
+                max-width: 300px;
+                margin-bottom: 1rem;
+                font-size: 1rem;
+            `;
+            
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                highlightMatches(query);
+            });
+            
+            const mainContent = document.querySelector('.main-content');
+            mainContent.insertBefore(searchInput, mainContent.firstChild);
+        }
+
+        function highlightMatches(query) {
+            // Remove previous highlights
+            document.querySelectorAll('.highlight').forEach(el => {
+                el.outerHTML = el.innerHTML;
+            });
+            
+            if (!query) return;
+            
+            // Find and highlight matches
+            const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const textNodes = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.toLowerCase().includes(query)) {
+                    textNodes.push(node);
+                }
+            }
+            
+            textNodes.forEach(textNode => {
+                const span = document.createElement('span');
+                span.className = 'highlight';
+                span.style.backgroundColor = '#ffeb3b';
+                span.style.padding = '2px 0';
+                
+                const regex = new RegExp(`(${query})`, 'gi');
+                const parts = textNode.textContent.split(regex);
+                
+                parts.forEach((part, i) => {
+                    if (i % 2 === 0) {
+                        span.appendChild(document.createTextNode(part));
+                    } else {
+                        const highlight = document.createElement('mark');
+                        highlight.style.backgroundColor = '#ffeb3b';
+                        highlight.style.padding = '2px';
+                        highlight.textContent = part;
+                        span.appendChild(highlight);
+                    }
+                });
+                
+                textNode.parentNode.replaceChild(span, textNode);
+            });
+        }
+
+        // Initialize search
+        setupSearch();
+
+        // Add print button
+        const printButton = document.createElement('button');
+        printButton.innerHTML = '<span>🖨️</span> Print Algorithm';
+        printButton.className = 'action-button';
+        printButton.style.cssText = `
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+            box-shadow: 0 4px 12px var(--shadow-lg);
+        `;
+        printButton.onclick = printAlgorithm;
+        document.body.appendChild(printButton);
+    </script>
+</body>
+</html>

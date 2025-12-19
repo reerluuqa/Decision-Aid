@@ -1,0 +1,1529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morton's Neuroma - Clinical Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --assessment-color: #3498db;
+            --assessment-light: #ebf5fb;
+            --diagnosis-color: #9b59b6;
+            --diagnosis-light: #f5eef8;
+            --treatment-color: #27ae60;
+            --treatment-light: #e9f7ef;
+            --followup-color: #e67e22;
+            --followup-light: #fef5e7;
+            --urgent-red: #e74c3c;
+            --caution-amber: #f39c12;
+            --stable-green: #27ae60;
+            --text-dark: #2c3e50;
+            --text-light: #7f8c8d;
+            --bg-light: #f8f9fa;
+            --white: #ffffff;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            width: 280px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            background: var(--white);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--bg-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar h2::before {
+            content: '📋';
+        }
+
+        .progress-list {
+            list-style: none;
+        }
+
+        .progress-item {
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            position: relative;
+            background: var(--bg-light);
+        }
+
+        .progress-item::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid var(--text-light);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .progress-item.active {
+            background: var(--assessment-light);
+            font-weight: 600;
+        }
+
+        .progress-item.active::before {
+            background: var(--assessment-color);
+            border-color: var(--assessment-color);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+
+        .progress-item.completed::before {
+            background: var(--stable-green);
+            border-color: var(--stable-green);
+        }
+
+        .progress-item[data-section="assessment"].active {
+            background: var(--assessment-light);
+        }
+        .progress-item[data-section="assessment"].active::before {
+            background: var(--assessment-color);
+            border-color: var(--assessment-color);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+        }
+
+        .progress-item[data-section="diagnosis"].active {
+            background: var(--diagnosis-light);
+        }
+        .progress-item[data-section="diagnosis"].active::before {
+            background: var(--diagnosis-color);
+            border-color: var(--diagnosis-color);
+            box-shadow: 0 0 0 4px rgba(155, 89, 182, 0.2);
+        }
+
+        .progress-item[data-section="treatment"].active {
+            background: var(--treatment-light);
+        }
+        .progress-item[data-section="treatment"].active::before {
+            background: var(--treatment-color);
+            border-color: var(--treatment-color);
+            box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.2);
+        }
+
+        .progress-item[data-section="followup"].active {
+            background: var(--followup-light);
+        }
+        .progress-item[data-section="followup"].active::before {
+            background: var(--followup-color);
+            border-color: var(--followup-color);
+            box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.2);
+        }
+
+        .progress-item:hover {
+            transform: translateX(5px);
+        }
+
+        .progress-connector {
+            position: absolute;
+            left: 21px;
+            top: 100%;
+            width: 2px;
+            height: 8px;
+            background: var(--text-light);
+        }
+
+        .progress-item:last-child .progress-connector {
+            display: none;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .header {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        .header .badge-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-urgent {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--urgent-red);
+            border: 1px solid var(--urgent-red);
+        }
+
+        .badge-caution {
+            background: rgba(243, 156, 18, 0.1);
+            color: var(--caution-amber);
+            border: 1px solid var(--caution-amber);
+        }
+
+        .badge-stable {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--stable-green);
+            border: 1px solid var(--stable-green);
+        }
+
+        .badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .badge-urgent::before {
+            background: var(--urgent-red);
+        }
+
+        .badge-caution::before {
+            background: var(--caution-amber);
+        }
+
+        .badge-stable::before {
+            background: var(--stable-green);
+        }
+
+        /* Algorithm Cards */
+        .algorithm-card {
+            background: var(--white);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .algorithm-card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 20px 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .expand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--bg-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+            color: var(--text-light);
+        }
+
+        .algorithm-card.expanded .expand-icon {
+            transform: rotate(180deg);
+            background: var(--text-dark);
+            color: var(--white);
+        }
+
+        /* Card Variants */
+        .card-assessment .card-header {
+            border-left: 4px solid var(--assessment-color);
+        }
+        .card-assessment .card-icon {
+            background: var(--assessment-light);
+            color: var(--assessment-color);
+        }
+        .card-assessment.expanded .card-header {
+            background: var(--assessment-light);
+        }
+
+        .card-diagnosis .card-header {
+            border-left: 4px solid var(--diagnosis-color);
+        }
+        .card-diagnosis .card-icon {
+            background: var(--diagnosis-light);
+            color: var(--diagnosis-color);
+        }
+        .card-diagnosis.expanded .card-header {
+            background: var(--diagnosis-light);
+        }
+
+        .card-treatment .card-header {
+            border-left: 4px solid var(--treatment-color);
+        }
+        .card-treatment .card-icon {
+            background: var(--treatment-light);
+            color: var(--treatment-color);
+        }
+        .card-treatment.expanded .card-header {
+            background: var(--treatment-light);
+        }
+
+        .card-followup .card-header {
+            border-left: 4px solid var(--followup-color);
+        }
+        .card-followup .card-icon {
+            background: var(--followup-light);
+            color: var(--followup-color);
+        }
+        .card-followup.expanded .card-header {
+            background: var(--followup-light);
+        }
+
+        /* Card Content */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.3s ease;
+        }
+
+        .algorithm-card.expanded .card-content {
+            max-height: 3000px;
+            padding: 0 24px 24px;
+        }
+
+        .content-section {
+            margin-bottom: 24px;
+        }
+
+        .content-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            border-radius: 2px;
+        }
+
+        .card-assessment .section-title::before {
+            background: var(--assessment-color);
+        }
+
+        .card-diagnosis .section-title::before {
+            background: var(--diagnosis-color);
+        }
+
+        .card-treatment .section-title::before {
+            background: var(--treatment-color);
+        }
+
+        .card-followup .section-title::before {
+            background: var(--followup-color);
+        }
+
+        .content-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .content-list li {
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            background: var(--bg-light);
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .content-list li:hover {
+            background: #e8ecef;
+            transform: translateX(5px);
+        }
+
+        .content-list li::before {
+            content: '▸';
+            color: var(--text-light);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Nested Lists */
+        .nested-list {
+            margin-top: 10px;
+            margin-left: 20px;
+        }
+
+        .nested-list li {
+            background: var(--white);
+            border: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .nested-list li::before {
+            content: '○';
+        }
+
+        /* Alert Boxes */
+        .alert-box {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin: 16px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .alert-box-icon {
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .alert-urgent {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid var(--urgent-red);
+        }
+
+        .alert-urgent .alert-box-icon {
+            color: var(--urgent-red);
+        }
+
+        .alert-caution {
+            background: rgba(243, 156, 18, 0.1);
+            border: 1px solid var(--caution-amber);
+        }
+
+        .alert-caution .alert-box-icon {
+            color: var(--caution-amber);
+        }
+
+        .alert-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid var(--assessment-color);
+        }
+
+        .alert-info .alert-box-icon {
+            color: var(--assessment-color);
+        }
+
+        .alert-success {
+            background: rgba(39, 174, 96, 0.1);
+            border: 1px solid var(--stable-green);
+        }
+
+        .alert-success .alert-box-icon {
+            color: var(--stable-green);
+        }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .alert-text {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        /* Decision Box */
+        .decision-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .decision-box h4 {
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .decision-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .decision-option {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 14px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .decision-option:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* Examination Grid */
+        .examination-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .exam-item {
+            background: var(--bg-light);
+            padding: 18px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .exam-item:hover {
+            box-shadow: var(--shadow);
+            transform: translateY(-3px);
+        }
+
+        .exam-item h5 {
+            color: var(--text-dark);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .exam-item p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Treatment Steps */
+        .treatment-steps {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .treatment-steps::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--treatment-color), var(--followup-color));
+            border-radius: 3px;
+        }
+
+        .treatment-step {
+            position: relative;
+            margin-bottom: 24px;
+            padding: 18px;
+            background: var(--bg-light);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .treatment-step:hover {
+            box-shadow: var(--shadow);
+            transform: translateX(5px);
+        }
+
+        .treatment-step::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 22px;
+            width: 14px;
+            height: 14px;
+            background: var(--treatment-color);
+            border-radius: 50%;
+            border: 3px solid var(--white);
+            box-shadow: 0 0 0 3px var(--treatment-color);
+        }
+
+        .treatment-step:nth-child(2)::before {
+            background: var(--caution-amber);
+            box-shadow: 0 0 0 3px var(--caution-amber);
+        }
+
+        .treatment-step:nth-child(3)::before {
+            background: var(--followup-color);
+            box-shadow: 0 0 0 3px var(--followup-color);
+        }
+
+        .step-number {
+            position: absolute;
+            top: -10px;
+            right: 10px;
+            background: var(--treatment-color);
+            color: var(--white);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .treatment-step:nth-child(2) .step-number {
+            background: var(--caution-amber);
+        }
+
+        .treatment-step:nth-child(3) .step-number {
+            background: var(--followup-color);
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-dark);
+        }
+
+        .step-content {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Specialist Treatments Table */
+        .treatment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 0.9rem;
+        }
+
+        .treatment-table th,
+        .treatment-table td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .treatment-table th {
+            background: var(--bg-light);
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .treatment-table tr:hover td {
+            background: var(--bg-light);
+        }
+
+        .effectiveness-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .effectiveness-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Quick Reference Box */
+        .quick-reference {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: var(--white);
+            padding: 24px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .quick-reference h4 {
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quick-reference-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .qr-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 14px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .qr-item .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .qr-item .label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-top: 24px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .footer a {
+            color: var(--assessment-color);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+
+            .progress-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .progress-item {
+                flex: 1;
+                min-width: 140px;
+                margin-bottom: 0;
+            }
+
+            .progress-connector {
+                display: none;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .card-header {
+                padding: 16px;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .card-title {
+                font-size: 1.1rem;
+            }
+
+            .examination-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .decision-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation Keyframes */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .algorithm-card {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .algorithm-card:nth-child(1) { animation-delay: 0.1s; }
+        .algorithm-card:nth-child(2) { animation-delay: 0.2s; }
+        .algorithm-card:nth-child(3) { animation-delay: 0.3s; }
+        .algorithm-card:nth-child(4) { animation-delay: 0.4s; }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-light);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bdc3c7;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Sidebar -->
+        <aside class="sidebar">
+            <h2>Algorithm Progress</h2>
+            <ul class="progress-list">
+                <li class="progress-item active" data-section="assessment" onclick="scrollToCard('assessment')">
+                    Assessment
+                    <div class="progress-connector"></div>
+                </li>
+                <li class="progress-item" data-section="diagnosis" onclick="scrollToCard('diagnosis')">
+                    Diagnosis
+                    <div class="progress-connector"></div>
+                </li>
+                <li class="progress-item" data-section="treatment" onclick="scrollToCard('treatment')">
+                    Treatment
+                    <div class="progress-connector"></div>
+                </li>
+                <li class="progress-item" data-section="followup" onclick="scrollToCard('followup')">
+                    Follow-up & Referral
+                    <div class="progress-connector"></div>
+                </li>
+            </ul>
+
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 2px solid var(--bg-light);">
+                <p style="font-size: 0.85rem; color: var(--text-light); margin-bottom: 12px;">Severity Legend:</p>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <span class="badge badge-urgent">Urgent Referral</span>
+                    <span class="badge badge-caution">Caution Required</span>
+                    <span class="badge badge-stable">Stable / Continue</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>🦶 Morton's Neuroma</h1>
+                <p>Clinical Management Algorithm for Primary Care | Adults 16+ years</p>
+                <div class="badge-container">
+                    <span class="badge badge-stable">Last Updated: November 2021</span>
+                    <span class="badge badge-caution">NICE CKS Guidelines</span>
+                </div>
+            </header>
+
+            <!-- Assessment Card -->
+            <div class="algorithm-card card-assessment expanded" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">📋</div>
+                        <div>
+                            <div class="card-title">1. Initial Assessment</div>
+                            <div class="card-subtitle">History taking and symptom evaluation</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3 class="section-title">Key Symptoms to Elicit</h3>
+                        <ul class="content-list">
+                            <li>
+                                <strong>Pain location:</strong> Forefoot pain, most commonly in the third intermetatarsal space (66% of cases), less commonly second space (30%)
+                            </li>
+                            <li>
+                                <strong>Pain character:</strong> Sharp, stabbing, burning, shooting pain; may be associated with cramping or numbness in toes
+                            </li>
+                            <li>
+                                <strong>'Pebble in shoe' sensation:</strong> Reported by >50% of patients — feeling of a lump or foreign body on weight bearing
+                            </li>
+                            <li>
+                                <strong>Pain pattern:</strong> Typically intermittent, episodes lasting minutes to hours with weeks/months between attacks
+                                <ul class="nested-list">
+                                    <li>Chronic cases may have constant pain</li>
+                                    <li>Night/rest pain reported in ~25% of patients</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="alert-box alert-info">
+                        <span class="alert-box-icon">💡</span>
+                        <div>
+                            <div class="alert-title">Clinical Pearl</div>
+                            <div class="alert-text">Symptoms are typically aggravated by activity or particular footwear (narrow, tight, high-heeled shoes) and relieved by removal of footwear and massaging of toes, especially early in the condition.</div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3 class="section-title">Risk Factors to Assess</h3>
+                        <div class="examination-grid">
+                            <div class="exam-item">
+                                <h5>👠 Footwear</h5>
+                                <p>Regularly wearing tight/ill-fitting shoes, high heels, or shoes with constricting toe box</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>🦶 Foot Anatomy</h5>
+                                <p>High-arch feet (pes cavus) predispose to increased forefoot pressure</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>🏃 Activity Level</h5>
+                                <p>Repetitive, heavy impact on feet — running, dancing, athletics</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>👩 Demographics</h5>
+                                <p>More common in women (≥4:1 ratio), ages 40-60 years, mean presentation 50-55 years</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-reference">
+                        <h4>📊 Quick Reference Statistics</h4>
+                        <div class="quick-reference-grid">
+                            <div class="qr-item">
+                                <div class="value">66%</div>
+                                <div class="label">3rd intermetatarsal space</div>
+                            </div>
+                            <div class="qr-item">
+                                <div class="value">30%</div>
+                                <div class="label">2nd intermetatarsal space</div>
+                            </div>
+                            <div class="qr-item">
+                                <div class="value">21%</div>
+                                <div class="label">Bilateral cases</div>
+                            </div>
+                            <div class="qr-item">
+                                <div class="value">4:1</div>
+                                <div class="label">Female to Male ratio</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="algorithm-card card-diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">🔍</div>
+                        <div>
+                            <div class="card-title">2. Diagnosis</div>
+                            <div class="card-subtitle">Physical examination and investigations</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3 class="section-title">Physical Examination Steps</h3>
+                        <ul class="content-list">
+                            <li>
+                                <strong>Inspection:</strong> Hindfoot alignment, medial arch height, forefoot position, toe abnormalities (hallux valgus, hammer toe, claw toe)
+                            </li>
+                            <li>
+                                <strong>Check for:</strong> Swelling, scars, skin conditions, plantar callosities, increased gaping between lesser toes
+                            </li>
+                            <li>
+                                <strong>Gait assessment:</strong> Observe heel strike, mid-stance, and toe off phases
+                            </li>
+                            <li>
+                                <strong>Shoe inspection:</strong> Look for uneven wear patterns on soles
+                            </li>
+                            <li>
+                                <strong>Palpation:</strong> Ask patient to point to area of pain; pain elicited on pressure to involved intermetatarsophalangeal space
+                            </li>
+                            <li>
+                                <strong>Neurovascular status:</strong> Palpate dorsalis pedis and tibial artery pulses; assess sensation
+                            </li>
+                            <li>
+                                <strong>Range of motion:</strong> Assess passive and active joint movements from hindfoot to toes; compare with opposite side
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="alert-box alert-caution">
+                        <span class="alert-box-icon">⚠️</span>
+                        <div>
+                            <div class="alert-title">Mulder's Click Test</div>
+                            <div class="alert-text">
+                                <strong>Technique:</strong> Grip the neuroma between forefinger and thumb (thumb on plantar aspect), then simultaneously squeeze metatarsal heads 1-5 together. A palpable/audible click occurs as the nerve subluxes between compressed metatarsal heads.<br><br>
+                                <strong>Note:</strong> Absence of this sign does NOT rule out neuroma.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3 class="section-title">Investigations (If Diagnosis Uncertain)</h3>
+                        <div class="examination-grid">
+                            <div class="exam-item">
+                                <h5>🦴 X-ray</h5>
+                                <p>To exclude other pathology such as fracture or arthropathy</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>🩸 Blood Tests</h5>
+                                <p>FBC, ESR, uric acid — to exclude osteomyelitis, gout, inflammatory arthritis</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>📡 Ultrasound</h5>
+                                <p>Can confirm diagnosis of Morton's neuroma</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>🧲 MRI</h5>
+                                <p>Can confirm diagnosis but not usually necessary</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3 class="section-title">Differential Diagnoses <span class="badge badge-caution" style="margin-left: 10px;">Consider these</span></h3>
+                        <div class="examination-grid">
+                            <div class="exam-item">
+                                <h5>🦴 Bone & Joint Disease</h5>
+                                <p>Stress fractures, OA, RA, osteonecrosis, osteomyelitis, sesamoid pathology, Freiberg's disease</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>🧠 Neurological</h5>
+                                <p>Tarsal tunnel syndrome, neuritis, alcoholic neuropathy, nerve root pathology</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>🩹 Soft Tissue</h5>
+                                <p>Plantar keratosis, fibromatosis, fat pad atrophy, plantar warts, bursitis, ganglia</p>
+                            </div>
+                            <div class="exam-item">
+                                <h5>⚡ Biomechanical</h5>
+                                <p>Forefoot bone anomalies, instability, hallux valgus with lesser toe deformities</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert-box alert-urgent">
+                        <span class="alert-box-icon">🚨</span>
+                        <div>
+                            <div class="alert-title">Red Flags — Consider Alternative Diagnosis</div>
+                            <div class="alert-text">
+                                If pain/tenderness is localized to the metatarsal heads or metatarsophalangeal joints rather than the intermetatarsal space, consider inflammatory conditions such as rheumatoid arthritis.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="algorithm-card card-treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">💊</div>
+                        <div>
+                            <div class="card-title">3. Treatment</div>
+                            <div class="card-subtitle">Conservative management in primary care</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3 class="section-title">Primary Care Management Pathway</h3>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <span class="step-number">1</span>
+                                <div class="step-title">Initial Conservative Measures <span class="badge badge-stable">First Line</span></div>
+                                <div class="step-content">
+                                    <ul class="content-list" style="margin-top: 12px;">
+                                        <li><strong>Footwear modification:</strong> Avoid high heels and shoes with constricting toe box or thin soles</li>
+                                        <li><strong>Metatarsal pad:</strong> Place OTC pad just proximal to metatarsal heads to reduce pressure on nerve</li>
+                                        <li><strong>Activity modification:</strong> Avoid or reduce impact activities (running, jumping)</li>
+                                        <li><strong>Analgesia:</strong> Consider NSAIDs if necessary</li>
+                                        <li><strong>Patient education:</strong> Provide written information (NHS website)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="treatment-step">
+                                <span class="step-number">2</span>
+                                <div class="step-title">If Symptoms Persist After 3 Months <span class="badge badge-caution">Escalate</span></div>
+                                <div class="step-content">
+                                    <ul class="content-list" style="margin-top: 12px;">
+                                        <li><strong>Orthotist referral:</strong> For metatarsal dome orthotic device</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="treatment-step">
+                                <span class="step-number">3</span>
+                                <div class="step-title">If Orthotic Trial Fails <span class="badge badge-urgent">Refer</span></div>
+                                <div class="step-content">
+                                    <ul class="content-list" style="margin-top: 12px;">
+                                        <li><strong>Specialist referral:</strong> Orthopaedic surgeon (foot specialist), musculoskeletal clinic, or podiatric surgeon</li>
+                                        <li>Depending on local policy and service provision</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="decision-box">
+                        <h4>🎯 Key Decision Point</h4>
+                        <p>After initial conservative management for 3 months, assess response:</p>
+                        <div class="decision-options">
+                            <div class="decision-option" onclick="showAlert('Excellent! Continue current management and monitor.')">
+                                ✅ Symptoms Resolved<br>
+                                <small>Continue supportive care</small>
+                            </div>
+                            <div class="decision-option" onclick="showAlert('Refer to orthotist for metatarsal dome orthotic. If this fails, proceed to specialist referral.')">
+                                ⚠️ Symptoms Persist<br>
+                                <small>Escalate to orthotics/referral</small>
+                            </div>
+                            <div class="decision-option" onclick="showAlert('Re-evaluate diagnosis. Consider differential diagnoses and appropriate investigations.')">
+                                ❌ Symptoms Worsening<br>
+                                <small>Re-evaluate diagnosis</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert-box alert-info">
+                        <span class="alert-box-icon">💊</span>
+                        <div>
+                            <div class="alert-title">NSAID Prescribing Considerations</div>
+                            <div class="alert-text">
+                                Use the lowest effective dose for the shortest duration. Consider Ibuprofen ≤1200mg/day or Naproxen ≤1000mg/day. Co-prescribe PPI for those at higher GI risk. Review appropriateness regularly, especially in older patients or those with cardiovascular/renal/GI risk factors.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up & Referral Card -->
+            <div class="algorithm-card card-followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-header-left">
+                        <div class="card-icon">🏥</div>
+                        <div>
+                            <div class="card-title">4. Follow-up & Specialist Treatments</div>
+                            <div class="card-subtitle">Referral criteria and secondary care options</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3 class="section-title">Specialist Treatment Options</h3>
+                        <table class="treatment-table">
+                            <thead>
+                                <tr>
+                                    <th>Treatment</th>
+                                    <th>Effectiveness</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <strong>Corticosteroid Injection</strong>
+                                        <span class="badge badge-caution" style="display: block; margin-top: 6px; width: fit-content;">Second Line</span>
+                                    </td>
+                                    <td>
+                                        30-50% effectiveness
+                                        <div class="effectiveness-bar">
+                                            <div class="effectiveness-fill" style="width: 40%; background: var(--caution-amber);"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <ul style="font-size: 0.85rem; padding-left: 16px;">
+                                            <li>Effects may last up to 12 months</li>
+                                            <li>50% failure rate in pain relief after 12 months</li>
+                                            <li>~30% require operative treatment</li>
+                                            <li>Optimal for neuromas &lt;6.3mm</li>
+                                            <li>Limited repeats due to fat pad atrophy risk</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Alcohol Injection</strong>
+                                        <span class="badge badge-caution" style="display: block; margin-top: 6px; width: fit-content;">Alternative</span>
+                                    </td>
+                                    <td>
+                                        25-84% beneficial
+                                        <div class="effectiveness-bar">
+                                            <div class="effectiveness-fill" style="width: 55%; background: var(--caution-amber);"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <ul style="font-size: 0.85rem; padding-left: 16px;">
+                                            <li>Long-term results show deterioration</li>
+                                            <li>At 5 years: ~30% surgery, ~30% pain recurrence, 29% pain-free</li>
+                                            <li>Complications (intense pain) in ~26%</li>
+                                            <li>Repeatable but 15% have transitory pain increase</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Operative Treatment</strong>
+                                        <span class="badge badge-urgent" style="display: block; margin-top: 6px; width: fit-content;">Third Line</span>
+                                    </td>
+                                    <td>
+                                        89% success rate
+                                        <div class="effectiveness-bar">
+                                            <div class="effectiveness-fill" style="width: 89%; background: var(--stable-green);"></div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <ul style="font-size: 0.85rem; padding-left: 16px;">
+                                            <li>Neurectomy or decompression (ligament release ± neurolysis)</li>
+                                            <li>21% global complication rate</li>
+                                            <li>Complications: wound infection, hypersensitive scars, CRPS, numbness</li>
+                                            <li>Only 4% recurrence vs 23% (steroid) / 12% (alcohol)</li>
+                                            <li>Recurrence usually stump neuroma — difficult to treat</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert-box alert-success">
+                        <span class="alert-box-icon">📈</span>
+                        <div>
+                            <div class="alert-title">Treatment Outcome Comparison</div>
+                            <div class="alert-text">
+                                Systematic review findings: Operative treatments offer better outcomes than infiltrative and conservative treatments (89%, 85%, and 48% respectively).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3 class="section-title">Prognosis</h3>
+                        <ul class="content-list">
+                            <li>Without intervention, symptoms are unlikely to settle spontaneously</li>
+                            <li>With appropriate intervention, symptom resolution is dependent on the treatment modality used</li>
+                            <li>Conservative measures effective in approximately 48% of cases</li>
+                            <li>Positive outcome at 1 year with corticosteroid is reasonably predictive of prolonged effect</li>
+                        </ul>
+                    </div>
+
+                    <div class="alert-box alert-caution">
+                        <span class="alert-box-icon">⚠️</span>
+                        <div>
+                            <div class="alert-title">Emerging Treatments (Limited Evidence)</div>
+                            <div class="alert-text">
+                                Extracorporeal shockwave therapy, capsaicin injections, botulinum injections, and laser therapy have been mentioned in literature but there is little or no evidence to support their use currently.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-reference">
+                        <h4>📋 Referral Summary</h4>
+                        <div class="quick-reference-grid">
+                            <div class="qr-item">
+                                <div class="value">3</div>
+                                <div class="label">Months conservative Rx before referral</div>
+                            </div>
+                            <div class="qr-item">
+                                <div class="value">48%</div>
+                                <div class="label">Conservative Rx success rate</div>
+                            </div>
+                            <div class="qr-item">
+                                <div class="value">89%</div>
+                                <div class="label">Surgical success rate</div>
+                            </div>
+                            <div class="qr-item">
+                                <div class="value">4%</div>
+                                <div class="label">Post-surgical recurrence</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p><strong>Source:</strong> NICE Clinical Knowledge Summaries (CKS) - Morton's Neuroma | Last revised: November 2021</p>
+                <p style="margin-top: 8px;">This algorithm is for educational purposes. Always use clinical judgement and consider individual patient factors.</p>
+                <p style="margin-top: 8px;"><a href="https://cks.nice.org.uk/topics/mortons-neuroma/" target="_blank">View full NICE CKS topic →</a></p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.closest('.algorithm-card');
+            const wasExpanded = card.classList.contains('expanded');
+            
+            card.classList.toggle('expanded');
+            
+            // Update sidebar progress
+            if (!wasExpanded) {
+                const cardId = card.id;
+                updateProgress(cardId);
+            }
+        }
+
+        // Scroll to card and expand it
+        function scrollToCard(sectionId) {
+            const card = document.getElementById(sectionId);
+            if (card) {
+                // Expand the card if not already expanded
+                if (!card.classList.contains('expanded')) {
+                    card.classList.add('expanded');
+                }
+                
+                // Smooth scroll to card
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Update progress
+                updateProgress(sectionId);
+            }
+        }
+
+        // Update progress sidebar
+        function updateProgress(activeSection) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            let foundActive = false;
+            
+            progressItems.forEach(item => {
+                const section = item.dataset.section;
+                
+                if (section === activeSection) {
+                    item.classList.add('active');
+                    item.classList.remove('completed');
+                    foundActive = true;
+                } else if (!foundActive) {
+                    item.classList.remove('active');
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        // Show alert for decision options
+        function showAlert(message) {
+            // Create custom alert modal
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                padding: 30px;
+                border-radius: 16px;
+                max-width: 400px;
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                animation: fadeIn 0.3s ease;
+            `;
+            
+            modal.innerHTML = `
+                <div style="font-size: 3rem; margin-bottom: 16px;">📋</div>
+                <p style="margin-bottom: 20px; color: #2c3e50; line-height: 1.6;">${message}</p>
+                <button onclick="this.closest('div').parentElement.remove()" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 30px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    transition: transform 0.2s;
+                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    Understood
+                </button>
+            `;
+            
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            // Close on overlay click
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.remove();
+                }
+            });
+        }
+
+        // Intersection Observer for progress tracking
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -60% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    updateProgress(entry.target.id);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all algorithm cards
+        document.querySelectorAll('.algorithm-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Initialize first card as expanded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Animate effectiveness bars
+            setTimeout(() => {
+                document.querySelectorAll('.effectiveness-fill').forEach(bar => {
+                    const width = bar.style.width;
+                    bar.style.width = '0';
+                    setTimeout(() => {
+                        bar.style.width = width;
+                    }, 100);
+                });
+            }, 500);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const cards = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const activeItem = document.querySelector('.progress-item.active');
+            const currentIndex = cards.indexOf(activeItem?.dataset.section);
+            
+            if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                scrollToCard(cards[currentIndex + 1]);
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                scrollToCard(cards[currentIndex - 1]);
+            }
+        });
+    </script>
+</body>
+</html>

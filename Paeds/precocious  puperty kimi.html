@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precocious Puberty - Interactive Clinical Algorithm</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --assessment: #3498db;
+            --diagnosis: #2ecc71;
+            --treatment: #e74c3c;
+            --followup: #9b59b6;
+            --urgent: #e74c3c;
+            --caution: #f39c12;
+            --stable: #27ae60;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, #eef2f7 100%);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            width: 280px;
+            transition: var(--transition);
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--bg);
+        }
+
+        .sidebar-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            opacity: 0.6;
+            position: relative;
+        }
+
+        .progress-item:hover {
+            background: rgba(52, 152, 219, 0.05);
+            opacity: 0.8;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(46, 204, 113, 0.1));
+            box-shadow: inset 3px 0 0 var(--assessment);
+        }
+
+        .progress-item.diagnosis.active {
+            box-shadow: inset 3px 0 0 var(--diagnosis);
+        }
+
+        .progress-item.treatment.active {
+            box-shadow: inset 3px 0 0 var(--treatment);
+        }
+
+        .progress-item.followup.active {
+            box-shadow: inset 3px 0 0 var(--followup);
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: white;
+            transition: var(--transition);
+        }
+
+        .progress-item.assessment .progress-icon {
+            background: var(--assessment);
+        }
+
+        .progress-item.diagnosis .progress-icon {
+            background: var(--diagnosis);
+        }
+
+        .progress-item.treatment .progress-icon {
+            background: var(--treatment);
+        }
+
+        .progress-item.followup .progress-icon {
+            background: var(--followup);
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .progress-indicator {
+            position: absolute;
+            right: 1rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #bdc3c7;
+            transition: var(--transition);
+        }
+
+        .progress-item.active .progress-indicator {
+            background: var(--assessment);
+            transform: scale(1.5);
+        }
+
+        .progress-item.diagnosis.active .progress-indicator {
+            background: var(--diagnosis);
+        }
+
+        .progress-item.treatment.active .progress-indicator {
+            background: var(--treatment);
+        }
+
+        .progress-item.followup.active .progress-indicator {
+            background: var(--followup);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+        }
+
+        .header {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--assessment));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cards-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card.assessment .card-header {
+            background: linear-gradient(135deg, var(--assessment), #5dade2);
+            color: white;
+        }
+
+        .card.diagnosis .card-header {
+            background: linear-gradient(135deg, var(--diagnosis), #58d68d);
+            color: white;
+        }
+
+        .card.treatment .card-header {
+            background: linear-gradient(135deg, var(--treatment), #ec7063);
+            color: white;
+        }
+
+        .card.followup .card-header {
+            background: linear-gradient(135deg, var(--followup), #af7ac5);
+            color: white;
+        }
+
+        .card-icon {
+            font-size: 1.8rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.4rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .severity-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge.urgent {
+            background: var(--urgent);
+        }
+
+        .badge.caution {
+            background: var(--caution);
+        }
+
+        .badge.stable {
+            background: var(--stable);
+        }
+
+        .content-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .content-section h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-section h3 i {
+            color: var(--assessment);
+        }
+
+        .card.diagnosis .content-section h3 i {
+            color: var(--diagnosis);
+        }
+
+        .card.treatment .content-section h3 i {
+            color: var(--treatment);
+        }
+
+        .card.followup .content-section h3 i {
+            color: var(--followup);
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 0.6rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .checklist li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            top: 0.6rem;
+            color: var(--diagnosis);
+            font-weight: bold;
+        }
+
+        .criterion-box {
+            background: rgba(52, 152, 219, 0.05);
+            border-left: 4px solid var(--assessment);
+            padding: 1rem;
+            margin: 0.75rem 0;
+            border-radius: 8px;
+        }
+
+        .criterion-box.central {
+            border-left-color: var(--diagnosis);
+            background: rgba(46, 204, 113, 0.05);
+        }
+
+        .criterion-box.peripheral {
+            border-left-color: var(--treatment);
+            background: rgba(231, 76, 60, 0.05);
+        }
+
+        .algorithm-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .flow-step {
+            background: rgba(236, 240, 241, 0.5);
+            padding: 1rem;
+            border-radius: 12px;
+            border-left: 4px solid var(--assessment);
+            position: relative;
+        }
+
+        .flow-step.decision {
+            border-left-color: var(--caution);
+            background: rgba(243, 156, 18, 0.05);
+        }
+
+        .flow-step.action {
+            border-left-color: var(--stable);
+            background: rgba(39, 174, 96, 0.05);
+        }
+
+        .flow-step h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .flow-step p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .flow-arrow {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 1.2rem;
+            margin: 0.5rem 0;
+        }
+
+        .treatment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .treatment-card {
+            background: rgba(236, 240, 241, 0.5);
+            padding: 1rem;
+            border-radius: 12px;
+            border-top: 3px solid var(--treatment);
+        }
+
+        .treatment-card h4 {
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            color: var(--treatment);
+        }
+
+        .treatment-card ul {
+            list-style: none;
+            font-size: 0.85rem;
+        }
+
+        .treatment-card li {
+            padding: 0.3rem 0;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .treatment-card li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--treatment);
+        }
+
+        .print-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: var(--transition);
+            z-index: 1000;
+        }
+
+        .print-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .sidebar {
+                position: relative;
+                top: 0;
+                width: 100%;
+                margin-bottom: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media print {
+            .sidebar, .print-button {
+                display: none;
+            }
+
+            .card-content {
+                max-height: none !important;
+            }
+
+            .card {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Progress Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-route"></i>
+                <h3>Clinical Algorithm Progress</h3>
+            </div>
+            <nav class="progress-nav">
+                <div class="progress-item assessment active" data-step="assessment">
+                    <div class="progress-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="progress-text">Assessment</div>
+                    <div class="progress-indicator"></div>
+                </div>
+                <div class="progress-item diagnosis" data-step="diagnosis">
+                    <div class="progress-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="progress-text">Diagnosis</div>
+                    <div class="progress-indicator"></div>
+                </div>
+                <div class="progress-item treatment" data-step="treatment">
+                    <div class="progress-icon">
+                        <i class="fas fa-syringe"></i>
+                    </div>
+                    <div class="progress-text">Treatment</div>
+                    <div class="progress-indicator"></div>
+                </div>
+                <div class="progress-item followup" data-step="followup">
+                    <div class="progress-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="progress-text">Follow-up</div>
+                    <div class="progress-indicator"></div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Precocious Puberty</h1>
+                <p>Interactive Clinical Decision Support Algorithm | BMJ Best Practice Guidelines</p>
+            </div>
+
+            <div class="cards-grid">
+                <!-- Assessment Card -->
+                <div class="card assessment" id="assessment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Initial Assessment</h2>
+                            <p>Screening and clinical evaluation of early puberty signs</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="severity-badges">
+                                <div class="badge urgent">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Girls <8 years | Boys <9 years
+                                </div>
+                                <div class="badge caution">
+                                    <i class="fas fa-clock"></i>
+                                    Rapid progression
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-user-md"></i> Key Diagnostic Factors</h3>
+                                <ul class="checklist">
+                                    <li><strong>Girls:</strong> Breast development before age 8</li>
+                                    <li><strong>Boys:</strong> Testicular volume ≥4mL before age 9</li>
+                                    <li><strong>Growth:</strong> Accelerated growth velocity, tall stature</li>
+                                    <li><strong>Pubic/axillary hair:</strong> Premature adrenarche signs</li>
+                                    <li><strong>Menarche:</strong> Early menstruation in girls</li>
+                                </ul>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-history"></i> Directed History</h3>
+                                <div class="criterion-box">
+                                    <strong>Onset & Progression:</strong> Age at first sign, rate of development, menarche timing
+                                </div>
+                                <div class="criterion-box central">
+                                    <strong>Family History:</strong> Parental heights, maternal menarche age, puberty timing
+                                </div>
+                                <div class="criterion-box peripheral">
+                                    <strong>Risk Factors:</strong> Adoption, sexual abuse, CNS infections, head injury, cranial irradiation
+                                </div>
+                                <div class="criterion-box">
+                                    <strong>Medications:</strong> Exogenous hormones (contraceptives, testosterone gels)
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-search"></i> Physical Examination</h3>
+                                <ul class="checklist">
+                                    <li><strong>Height/Weight:</strong> Accurate measurements, growth velocity calculation</li>
+                                    <li><strong>Tanner Staging:</strong> Breast development (girls), testicular volume (boys) using Prader orchidometer</li>
+                                    <li><strong>Skin:</strong> Café au lait spots (NF1 - regular edges; MAS - irregular edges)</li>
+                                    <li><strong>Neurological:</strong> Visual fields, fundoscopy, motor deficits</li>
+                                    <li><strong>Dysmorphic features:</strong> Midline abnormalities (holoprosencephaly, septo-optic dysplasia)</li>
+                                </ul>
+                            </div>
+
+                            <div class="severity-badges">
+                                <div class="badge urgent">
+                                    <i class="fas fa-brain"></i>
+                                    MRI Brain: ALL boys | Girls <6 years
+                                </div>
+                                <div class="badge caution">
+                                    <i class="fas fa-female"></i>
+                                    Girls 6-8 years: Tumor risk <1%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card diagnosis" id="diagnosis">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Diagnostic Investigations</h2>
+                            <p>Differentiate CPP vs GIPP and identify underlying causes</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="severity-badges">
+                                <div class="badge stable">
+                                    <i class="fas fa-check-circle"></i>
+                                    Consonant = CPP
+                                </div>
+                                <div class="badge caution">
+                                    <i class="fas fa-times-circle"></i>
+                                    Disconsonant = GIPP
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-bone"></i> 1st Line Investigations</h3>
+                                <ul class="checklist">
+                                    <li><strong>Bone Age:</strong> Left hand/wrist radiograph (typically advanced 1-3 years)</li>
+                                    <li><strong>Basal LH:</strong> ≥0.3 IU/L suggests CPP (more sensitive in boys)</li>
+                                    <li><strong>GnRH Test:</strong> LH ≥5 IU/L at 20-60 min confirms CPP</li>
+                                    <li><strong>Sex Steroids:</strong> Testosterone (boys), estradiol (girls)</li>
+                                    <li><strong>Pelvic Ultrasound:</strong> Uterine size, endometrial thickness, ovarian cysts/tumors</li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-flow">
+                                <div class="flow-step decision">
+                                    <h4>Is puberty consonant with normal pattern?</h4>
+                                    <p>Consistent progression suggests central cause (CPP)</p>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div class="flow-step action">
+                                    <h4>YES → Central Precocious Puberty (CPP)</h4>
+                                    <p>Premature activation of hypothalamo-pituitary-gonadal axis</p>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div class="flow-step action">
+                                    <h4>NO → Gonadotrophin-Independent Precocious Puberty (GIPP)</h4>
+                                    <p>Autonomous sex steroid production</p>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-search-plus"></i> 2nd Line Investigations</h3>
+                                <div class="treatment-options">
+                                    <div class="treatment-card">
+                                        <h4>CPP Workup</h4>
+                                        <ul>
+                                            <li>MRI brain (tumors, hamartomas, malformations)</li>
+                                            <li>Pituitary hormone evaluation</li>
+                                            <li>Genetic testing (MKRN3, KISS1R, DLK1)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="treatment-card">
+                                        <h4>GIPP Workup</h4>
+                                        <ul>
+                                            <li>17-hydroxyprogesterone (CAH)</li>
+                                            <li>ACTH stimulation test</li>
+                                            <li>CT/MRI adrenals (tumors)</li>
+                                            <li>Genetic testing (MAS, testotoxicosis)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="severity-badges">
+                                <div class="badge urgent">
+                                    <i class="fas fa-brain"></i>
+                                    Brain MRI: Hamartomas, gliomas, craniopharyngiomas
+                                </div>
+                                <div class="badge caution">
+                                    <i class="fas fa-syndrome"></i>
+                                    MAS: Café au lait spots + fibrous dysplasia + GIPP
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card treatment" id="treatment">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-syringe"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Treatment Management</h2>
+                            <p>Tailored approach based on etiology and severity</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="content-section">
+                                <h3><i class="fas fa-bullseye"></i> Treatment Goals</h3>
+                                <ul class="checklist">
+                                    <li><strong>Short-term:</strong> Prevent progression of secondary sexual characteristics and menarche</li>
+                                    <li><strong>Long-term:</strong> Maximize adult height potential and psychosocial wellbeing</li>
+                                    <li><strong>Underlying cause:</strong> Treat identified etiology</li>
+                                    <li><strong>Monitoring:</strong> 6-month observation before treatment decision</li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-flow">
+                                <div class="flow-step decision">
+                                    <h4>CPP vs GIPP?</h4>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div class="flow-step action">
+                                    <h4>Central Precocious Puberty (CPP)</h4>
+                                    <p>GnRH agonists are the only effective treatment</p>
+                                </div>
+                                <div class="flow-arrow">
+                                    <i class="fas fa-arrow-down"></i>
+                                </div>
+                                <div class="flow-step action">
+                                    <h4>Gonadotrophin-Independent Precocious Puberty (GIPP)</h4>
+                                    <p> inhibitors</p>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-pills"></i> CPP Treatment</h3>
+                                <div class="treatment-card">
+                                    <h4>GnRH Agonists (1st line)</h4>
+                                    <ul>
+                                        <li><strong>Leuprorelin:</strong> Depot injection</li>
+                                        <li><strong>Triptorelin:</strong> Depot injection</li>
+                                        <li><strong>Goserelin:</strong> Subcutaneous implant</li>
+                                        <li><strong>Histrelin:</strong> Subdermal implant (≥1 year efficacy)</li>
+                                    </ul>
+                                </div>
+                                <div class="criterion-box central">
+                                    <strong>Benefits:</strong> Halts puberty, improves adult height in children <6 years, reversible
+                                </div>
+                                <div class="criterion-box peripheral">
+                                    <strong>Considerations:</strong> Minimal height benefit if bone age >12.5 years (girls) or >14 years (boys)
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-pills"></i> GIPP Treatment</h3>
+                                <div class="treatment-options">
+                                    <div class="treatment-card">
+                                        <h4>McCune-Albright Syndrome</h4>
+                                        <ul>
+                                            <li><strong>Ketoconazole:</strong> Steroid synthesis inhibitor</li>
+                                            <li><strong>Aromatase inhibitors:</strong> Letrozole, anastrozole</li>
+                                            <li><strong>Anti-androgens:</strong> Spironolactone, bicalutamide</li>
+                                            <li><strong>Adjunct:</strong> GnRH agonist if secondary CPP develops</li>
+                                        </ul>
+                                    </div>
+                                    <div class="treatment-card">
+                                        <h4>Congenital Adrenal Hyperplasia</h4>
+                                        <ul>
+                                            <li><strong>Hydrocortisone:</strong> 10-15 mg/m²/day</li>
+                                            <li><strong>Fludrocortisone:</strong> If salt-wasting</li>
+                                            <li><strong>Adjunct:</strong> GnRH agonist if secondary CPP develops</li>
+                                        </ul>
+                                    </div>
+                                    <div class="treatment-card">
+                                        <h4>Tumors</h4>
+                                        <ul>
+                                            <li><strong>Surgery:</strong> Gonadal/adrenal tumors</li>
+                                            <li><strong>Chemotherapy/Radiation:</strong> hCG-secreting germ cell tumors</li>
+                                        </ul>
+                                    </div>
+                                    <div class="treatment-card">
+                                        <h4>Exogenous Hormones</h4>
+                                        <ul>
+                                            <li><strong>Discontinuation:</strong> Remove source</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="severity-badges">
+                                <div class="badge urgent">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Urgent: Brain tumors, MAS complications
+                                </div>
+                                <div class="badge caution">
+                                    <i class="fas fa-user-clock"></i>
+                                    Caution: Advanced bone age reduces treatment benefit
+                                </div>
+                                <div class="badge stable">
+                                    <i class="fas fa-check-double"></i>
+                                    GnRH agonists reversible with no long-term adverse effects
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card followup" id="followup">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Monitoring & Follow-up</h2>
+                            <p>Long-term surveillance and outcome assessment</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="content-section">
+                                <h3><i class="fas fa-eye"></i> Treatment Monitoring</h3>
+                                <ul class="checklist">
+                                    <li><strong>Clinical:</strong> Tanner staging, growth velocity every 3-6 months</li>
+                                    <li><strong>Biochemical:</strong> LH, FSH, sex steroids (if inadequate suppression)</li>
+                                    <li><strong>Radiological:</strong> Bone age every 6-12 months</li>
+                                    <li><strong>Imaging:</strong> Pelvic ultrasound in girls</li>
+                                    <li><strong>Height:</strong> Plot on growth charts, calculate midparental height</li>
+                                </ul>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-clock"></i> Treatment Duration</h3>
+                                <div class="treatment-card">
+                                    <ul>
+                                        <li>Stop when acceptable pubertal age reached</li>
+                                        <li>Individualize based on chronological age, bone age, growth velocity</li>
+                                        <li>Gonadotrophin secretion resumes ~3-4 months after stopping</li>
+                                        <li>Normal pubertal progression within 6 months-2 years</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Complications</h3>
+                                <div class="treatment-options">
+                                    <div class="treatment-card">
+                                        <h4>Short Stature as Adult</h4>
+                                        <ul>
+                                            <li>Early epiphyseal fusion from sex steroids</li>
+                                            <li>Untreated girls: 151-155 cm mean adult height</li>
+                                        </ul>
+                                    </div>
+                                    <div class="treatment-card">
+                                        <h4>Psychological Problems</h4>
+                                        <ul>
+                                            <li>School difficulties, peer relationships</li>
+                                            <li>Early sexual behavior</li>
+                                            <li>Practical issues with early menarche</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-chart-bar"></i> Prognosis</h3>
+                                <div class="criterion-box central">
+                                    <strong>Height Outcome:</strong> GnRH agonists improve adult height in children <6 years with rapidly progressing puberty
+                                </div>
+                                <div class="criterion-box peripheral">
+                                    <strong>Minimal Benefit:</strong> Bone age >12.5 years (girls) or >14 years (boys) shows limited height improvement
+                                </div>
+                                <div class="criterion-box">
+                                    <strong>Reproductive Function:</strong> No adverse effect on future fertility or bone mineral density
+                                </div>
+                            </div>
+
+                            <div class="severity-badges">
+                                <div class="badge stable">
+                                    <i class="fas fa-user-check"></i>
+                                    Good outcome with timely treatment
+                                </div>
+                                <div class="badge caution">
+                                    <i class="fas fa-heart"></i>
+                                   Psychosocial support often needed
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Floating Print Button -->
+    <button class="print-button" onclick="window.print()" title="Print Algorithm">
+        <i class="fas fa-print"></i>
+    </button>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update progress indicator
+            const stepId = card.id;
+            updateProgress(stepId);
+            
+            // Smooth scroll to card
+            if (!isExpanded) {
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+
+        // Progress tracking
+        function updateProgress(activeStep) {
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.step === activeStep) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Intersection Observer for scroll-based progress
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -70% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const stepId = entry.target.id;
+                    updateProgress(stepId);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Progress item click navigation
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const stepId = item.dataset.step;
+                const targetCard = document.getElementById(stepId);
+                
+                // Expand target card
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+                targetCard.classList.add('expanded');
+                
+                // Update progress
+                updateProgress(stepId);
+                
+                // Smooth scroll
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // Initialize: expand assessment card by default
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('assessment').classList.add('expanded');
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const cards = Array.from(document.querySelectorAll('.card'));
+            const expandedIndex = cards.findIndex(card => card.classList.contains('expanded'));
+            
+            if (e.key === 'ArrowDown' && expandedIndex < cards.length - 1) {
+                e.preventDefault();
+                cards[expandedIndex].classList.remove('expanded');
+                cards[expandedIndex + 1].classList.add('expanded');
+                updateProgress(cards[expandedIndex + 1].id);
+                cards[expandedIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (e.key === 'ArrowUp' && expandedIndex > 0) {
+                e.preventDefault();
+                cards[expandedIndex].classList.remove('expanded');
+                cards[expandedIndex - 1].classList.add('expanded');
+                updateProgress(cards[expandedIndex - 1].id);
+                cards[expandedIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        // Print optimization
+        window.addEventListener('beforeprint', () => {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.add('expanded');
+            });
+        });
+    </script>
+</body>
+</html>

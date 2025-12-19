@@ -1,0 +1,1385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>GTPS Clinical Decision Support</title>
+  <meta name="description" content="Modern clinical decision-support for Greater Trochanteric Pain Syndrome (GTPS)"/>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --card:#0f1a2f;
+      --card2:#0c162a;
+      --text:#e8eefc;
+      --muted:#b7c3e6;
+      --muted2:#90a2d6;
+
+      --accent:#6ee7ff;   /* cyan */
+      --accent2:#a78bfa;  /* violet */
+      --good:#34d399;     /* green */
+      --warn:#fbbf24;     /* amber */
+      --danger:#fb7185;   /* rose */
+      --info:#60a5fa;     /* blue */
+      --ink:#0b1220;
+
+      --shadow: 0 18px 45px rgba(0,0,0,.35);
+      --shadow2: 0 10px 24px rgba(0,0,0,.28);
+      --radius: 18px;
+      --radius2: 14px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(110,231,255,.18), transparent 65%),
+        radial-gradient(900px 600px at 85% 18%, rgba(167,139,250,.18), transparent 60%),
+        radial-gradient(900px 650px at 60% 90%, rgba(52,211,153,.12), transparent 62%),
+        linear-gradient(180deg, #080e1a 0%, #0b1220 55%, #070b14 100%);
+      line-height:1.45;
+      letter-spacing:.2px;
+    }
+
+    a{color:inherit}
+    .container{max-width:1200px;margin:0 auto;padding:22px 18px 56px}
+
+    /* Top bar */
+    .top{
+      position:sticky; top:0; z-index:60;
+      backdrop-filter: blur(12px);
+      background: rgba(9,14,26,.72);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .topInner{
+      max-width:1200px;margin:0 auto;
+      padding:12px 18px;
+      display:flex; gap:12px; align-items:center; justify-content:space-between;
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px; min-width:260px;
+    }
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: conic-gradient(from 210deg, var(--accent), var(--accent2), var(--good));
+      box-shadow: 0 10px 30px rgba(110,231,255,.12);
+    }
+    .brand h1{
+      margin:0; font-size:14px; line-height:1.1; letter-spacing:.4px;
+    }
+    .brand .sub{
+      display:block; font-size:12px; color:var(--muted2); margin-top:2px;
+    }
+
+    /* Search + Filters */
+    .controls{
+      flex:1;
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:flex-end;
+    }
+    .search{
+      position:relative; min-width:min(460px, 100%);
+      flex:1;
+    }
+    .search input{
+      width:100%;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      color:var(--text);
+      padding:11px 38px 11px 38px;
+      border-radius: 14px;
+      outline:none;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .search input:focus{
+      border-color: rgba(110,231,255,.55);
+      box-shadow: 0 0 0 4px rgba(110,231,255,.12), inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .search .icon{
+      position:absolute; left:12px; top:50%; transform:translateY(-50%);
+      opacity:.85; color:var(--muted);
+      font-size:14px;
+    }
+    .search .clearBtn{
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      border:none; background:transparent; color:var(--muted);
+      cursor:pointer; padding:6px; border-radius:10px;
+    }
+    .search .clearBtn:hover{background:rgba(255,255,255,.06); color:var(--text)}
+    .chipRow{display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end}
+    .chip{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      cursor:pointer;
+      user-select:none;
+      font-size:12px;
+      color:var(--muted);
+      transition: .15s ease;
+      white-space:nowrap;
+    }
+    .chip strong{color:var(--text); font-weight:600}
+    .chip[data-active="true"]{
+      border-color: rgba(110,231,255,.55);
+      background: rgba(110,231,255,.10);
+      color: var(--text);
+    }
+    .chip .dot{
+      width:9px;height:9px;border-radius:99px;
+      background: rgba(255,255,255,.24);
+      box-shadow: 0 0 0 3px rgba(255,255,255,.05);
+    }
+    .dot.red{background:var(--danger)}
+    .dot.amber{background:var(--warn)}
+    .dot.green{background:var(--good)}
+    .dot.blue{background:var(--info)}
+    .dot.violet{background:var(--accent2)}
+
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding:9px 12px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-size:12px;
+      transition:.15s ease;
+      white-space:nowrap;
+    }
+    .btn:hover{transform: translateY(-1px); background: rgba(255,255,255,.06)}
+    .btn:active{transform: translateY(0px)}
+    .btn.primary{
+      border-color: rgba(167,139,250,.55);
+      background: rgba(167,139,250,.12);
+    }
+
+    /* Layout */
+    .grid{
+      display:grid; gap:18px;
+      grid-template-columns: 360px 1fr;
+      margin-top:18px;
+    }
+    @media (max-width: 980px){
+      .grid{grid-template-columns:1fr}
+      .brand{min-width:auto}
+      .controls{justify-content:stretch}
+      .chipRow{justify-content:flex-start}
+    }
+
+    /* Sidebar navigation */
+    .side{
+      position:sticky; top:86px;
+      align-self:start;
+    }
+    .navCard{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .navHeader{
+      padding:14px 14px 10px;
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    }
+    .navHeader h2{
+      margin:0;
+      font-size:13px;
+      letter-spacing:.35px;
+    }
+    .navHeader .pill{
+      font-size:11px; color:var(--muted2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      padding:6px 8px;
+      border-radius: 999px;
+      white-space:nowrap;
+    }
+    .navList{padding:10px 10px 14px}
+    .navItem{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      border-radius: 14px;
+      cursor:pointer;
+      border: 1px solid transparent;
+      color: var(--muted);
+      transition: .12s ease;
+    }
+    .navItem:hover{
+      background: rgba(255,255,255,.04);
+      border-color: rgba(255,255,255,.08);
+      color: var(--text);
+    }
+    .navItem .left{
+      display:flex; align-items:center; gap:10px;
+      min-width: 0;
+    }
+    .navItem .ico{
+      width:26px;height:26px;border-radius:10px;
+      display:grid; place-items:center;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.10);
+      color: var(--text);
+      flex: 0 0 auto;
+    }
+    .navItem .label{
+      font-size:12.5px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .tag{
+      font-size:11px;
+      padding:5px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      color: var(--muted2);
+      flex:0 0 auto;
+    }
+    .tag.red{border-color: rgba(251,113,133,.40); background: rgba(251,113,133,.10); color:#ffd7de}
+    .tag.amber{border-color: rgba(251,191,36,.35); background: rgba(251,191,36,.10); color:#ffe7b2}
+    .tag.green{border-color: rgba(52,211,153,.35); background: rgba(52,211,153,.10); color:#c7ffea}
+    .tag.blue{border-color: rgba(96,165,250,.35); background: rgba(96,165,250,.10); color:#d3e7ff}
+    .tag.violet{border-color: rgba(167,139,250,.35); background: rgba(167,139,250,.10); color:#e8dcff}
+
+    /* Main content */
+    .main{
+      display:flex; flex-direction:column; gap:18px;
+    }
+
+    .hero{
+      border-radius: var(--radius);
+      padding:18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background:
+        radial-gradient(700px 260px at 15% 10%, rgba(110,231,255,.18), transparent 70%),
+        radial-gradient(620px 240px at 85% 20%, rgba(167,139,250,.18), transparent 68%),
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .heroTop{
+      display:flex; gap:14px; align-items:flex-start; justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .hero h2{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.3px;
+    }
+    .hero p{
+      margin:8px 0 0;
+      color: var(--muted);
+      max-width: 72ch;
+      font-size:13.5px;
+    }
+    .hero .meta{
+      display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end;
+    }
+    .meta .badge{
+      font-size:11px;
+      padding:6px 9px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--muted2);
+    }
+    .meta .badge strong{color:var(--text); font-weight:700}
+    .heroGrid{
+      display:grid; gap:12px;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      margin-top:14px;
+    }
+    @media (max-width: 980px){
+      .heroGrid{grid-template-columns:1fr}
+    }
+    .kpi{
+      border-radius: 16px;
+      padding:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(12,22,42,.55);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    .kpi .t{font-size:11px; color:var(--muted2); letter-spacing:.35px}
+    .kpi .v{font-size:13.5px; margin-top:6px}
+    .kpi .v code{font-family:var(--mono); font-size:12.5px; color:#d7e3ff}
+
+    /* Panels */
+    .panel{
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+    }
+    .panelHeader{
+      padding:14px 16px;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .panelHeader h3{
+      margin:0; font-size:14px; letter-spacing:.35px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .panelHeader .hint{
+      font-size:11.5px;
+      color: var(--muted2);
+    }
+    .panelBody{padding:14px 16px 18px}
+
+    /* Urgency callouts */
+    .callout{
+      border-radius: 16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(12,22,42,.55);
+      padding:12px;
+      display:flex; gap:12px; align-items:flex-start;
+    }
+    .callout .icon{
+      width:34px;height:34px;border-radius:14px;
+      display:grid; place-items:center;
+      flex:0 0 auto;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      font-size:16px;
+    }
+    .callout .content{min-width:0}
+    .callout .title{
+      font-weight:700; letter-spacing:.25px; font-size:12.5px;
+      display:flex; gap:8px; align-items:center;
+      margin:0;
+    }
+    .callout p{margin:6px 0 0; color:var(--muted); font-size:12.8px}
+    .callout ul{margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:12.8px}
+    .callout.danger{border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08)}
+    .callout.danger .icon{border-color: rgba(251,113,133,.55); background: rgba(251,113,133,.12)}
+    .callout.warn{border-color: rgba(251,191,36,.30); background: rgba(251,191,36,.08)}
+    .callout.warn .icon{border-color: rgba(251,191,36,.55); background: rgba(251,191,36,.12)}
+    .callout.good{border-color: rgba(52,211,153,.28); background: rgba(52,211,153,.06)}
+    .callout.good .icon{border-color: rgba(52,211,153,.55); background: rgba(52,211,153,.10)}
+    .callout.info{border-color: rgba(96,165,250,.28); background: rgba(96,165,250,.08)}
+    .callout.info .icon{border-color: rgba(96,165,250,.55); background: rgba(96,165,250,.12)}
+
+    /* Step pathway */
+    .steps{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0,1fr));
+      gap:12px;
+      margin-top:10px;
+    }
+    .step{
+      grid-column: span 6;
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      background: rgba(12,22,42,.55);
+      padding:12px;
+      position:relative;
+      overflow:hidden;
+    }
+    @media (max-width: 980px){
+      .step{grid-column: span 12}
+    }
+    .step::before{
+      content:"";
+      position:absolute; inset:0;
+      background: radial-gradient(500px 180px at 20% 0%, rgba(110,231,255,.12), transparent 60%);
+      pointer-events:none;
+    }
+    .stepHead{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      position:relative;
+    }
+    .stepNum{
+      font-family: var(--mono);
+      font-size:11px;
+      color: var(--muted2);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      padding:5px 8px;
+      border-radius: 999px;
+    }
+    .stepTitle{
+      margin:0;
+      font-size:13px;
+      letter-spacing:.25px;
+      font-weight:800;
+      display:flex; align-items:center; gap:8px;
+    }
+    .stepBody{
+      margin-top:10px;
+      color: var(--muted);
+      font-size:12.8px;
+      position:relative;
+    }
+    .bullets{margin:8px 0 0; padding-left:18px}
+    .bullets li{margin:6px 0}
+
+    /* Accordion */
+    details{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      background: rgba(12,22,42,.45);
+      overflow:hidden;
+    }
+    details + details{margin-top:10px}
+    summary{
+      list-style:none;
+      cursor:pointer;
+      padding:12px 12px;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{display:none}
+    .sumLeft{
+      display:flex; align-items:center; gap:10px;
+      min-width:0;
+    }
+    .chev{
+      width:26px;height:26px;border-radius:10px;
+      display:grid; place-items:center;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      flex:0 0 auto;
+      transition:.18s ease;
+    }
+    details[open] .chev{transform: rotate(90deg)}
+    .sumTitle{
+      font-weight:800;
+      font-size:13px;
+      letter-spacing:.22px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .sumMeta{
+      display:flex; gap:8px; align-items:center;
+      flex:0 0 auto;
+      color: var(--muted2);
+      font-size:11px;
+    }
+    .detailBody{
+      padding: 0 12px 14px 48px;
+      color: var(--muted);
+      font-size:12.8px;
+    }
+
+    /* Inline tools */
+    .toolRow{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+      margin:10px 0 2px;
+    }
+    .seg{
+      display:inline-flex;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      border-radius: 12px;
+      overflow:hidden;
+    }
+    .seg button{
+      border:none;
+      background: transparent;
+      color: var(--muted);
+      padding:8px 10px;
+      cursor:pointer;
+      font-size:12px;
+      transition:.12s ease;
+      border-right:1px solid rgba(255,255,255,.10);
+    }
+    .seg button:last-child{border-right:none}
+    .seg button[data-on="true"]{
+      background: rgba(110,231,255,.10);
+      color: var(--text);
+    }
+
+    .note{
+      margin-top:10px;
+      font-size:12px;
+      color: var(--muted2);
+      border-left: 3px solid rgba(110,231,255,.55);
+      padding:8px 10px;
+      background: rgba(110,231,255,.06);
+      border-radius: 0 12px 12px 0;
+    }
+
+    /* "Flags" that can be filtered */
+    .flag{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:7px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+      font-size:12px;
+      margin: 6px 8px 0 0;
+    }
+    .flag .f{
+      width:9px;height:9px;border-radius:99px;background:rgba(255,255,255,.25)
+    }
+    .flag.red{border-color: rgba(251,113,133,.35); background: rgba(251,113,133,.08); color:#ffd7de}
+    .flag.red .f{background:var(--danger)}
+    .flag.amber{border-color: rgba(251,191,36,.30); background: rgba(251,191,36,.08); color:#ffe7b2}
+    .flag.amber .f{background:var(--warn)}
+    .flag.green{border-color: rgba(52,211,153,.28); background: rgba(52,211,153,.06); color:#c7ffea}
+    .flag.green .f{background:var(--good)}
+    .flag.blue{border-color: rgba(96,165,250,.28); background: rgba(96,165,250,.08); color:#d3e7ff}
+    .flag.blue .f{background:var(--info)}
+    .flag.violet{border-color: rgba(167,139,250,.28); background: rgba(167,139,250,.08); color:#e8dcff}
+    .flag.violet .f{background:var(--accent2)}
+
+    /* Footer */
+    .footer{
+      margin-top:18px;
+      color: var(--muted2);
+      font-size:12px;
+      display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap;
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding-top:12px;
+    }
+    .kbd{
+      font-family:var(--mono);
+      font-size:11px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      padding:4px 6px;
+      border-radius: 8px;
+      color: var(--text);
+    }
+
+    /* Print */
+    @media print{
+      .top,.side{display:none !important}
+      body{background:white;color:#0b1220}
+      .panel,.hero,.navCard,.step,.callout,details{box-shadow:none !important}
+      .panel,.hero,.step,.callout,details{break-inside: avoid}
+      .panel{border:1px solid #d6d6d6}
+      .hero{border:1px solid #d6d6d6}
+      a{color:inherit; text-decoration:none}
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Sticky top controls -->
+  <div class="top" role="banner">
+    <div class="topInner">
+      <div class="brand" aria-label="App identity">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>GTPS Clinical Decision Support <span class="sub">Greater trochanteric pain syndrome (≥16y)</span></h1>
+        </div>
+      </div>
+
+      <div class="controls" role="search">
+        <div class="search">
+          <div class="icon" aria-hidden="true">⌕</div>
+          <input id="q" type="search" placeholder="Search: red flags, Trendelenburg, FABER/FADER, injection, referral…" autocomplete="off"/>
+          <button class="clearBtn" id="clear" title="Clear search" aria-label="Clear search">✕</button>
+        </div>
+
+        <div class="chipRow" aria-label="Quick filters">
+          <div class="chip" data-filter="urgent" data-active="false" title="Show urgent items only">
+            <span class="dot red" aria-hidden="true"></span> Urgent
+          </div>
+          <div class="chip" data-filter="routine" data-active="false" title="Show routine items only">
+            <span class="dot green" aria-hidden="true"></span> Routine
+          </div>
+          <div class="chip" data-filter="dx" data-active="false" title="Diagnosis-focused content">
+            <span class="dot blue" aria-hidden="true"></span> Dx
+          </div>
+          <div class="chip" data-filter="mx" data-active="false" title="Management-focused content">
+            <span class="dot violet" aria-hidden="true"></span> Mx
+          </div>
+          <button class="btn" id="expandAll" title="Expand all accordion sections">Expand all</button>
+          <button class="btn primary" onclick="window.print()" title="Print friendly view">Print</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="grid">
+      <!-- Sidebar -->
+      <aside class="side" aria-label="Navigation">
+        <div class="navCard">
+          <div class="navHeader">
+            <h2>Fast navigation</h2>
+            <div class="pill"><span class="kbd">/</span> focus search</div>
+          </div>
+          <div class="navList" id="navList">
+            <div class="navItem" data-jump="#triage">
+              <div class="left">
+                <div class="ico" aria-hidden="true">⚡</div>
+                <div class="label">Triage & red flags</div>
+              </div>
+              <span class="tag red">urgent</span>
+            </div>
+            <div class="navItem" data-jump="#dx">
+              <div class="left">
+                <div class="ico" aria-hidden="true">🧭</div>
+                <div class="label">Diagnosis workflow</div>
+              </div>
+              <span class="tag blue">dx</span>
+            </div>
+            <div class="navItem" data-jump="#tests">
+              <div class="left">
+                <div class="ico" aria-hidden="true">🧪</div>
+                <div class="label">Clinical tests</div>
+              </div>
+              <span class="tag blue">dx</span>
+            </div>
+            <div class="navItem" data-jump="#diffs">
+              <div class="left">
+                <div class="ico" aria-hidden="true">🧩</div>
+                <div class="label">Differential diagnosis</div>
+              </div>
+              <span class="tag blue">dx</span>
+            </div>
+            <div class="navItem" data-jump="#mx">
+              <div class="left">
+                <div class="ico" aria-hidden="true">🛠️</div>
+                <div class="label">Management pathway</div>
+              </div>
+              <span class="tag violet">mx</span>
+            </div>
+            <div class="navItem" data-jump="#referral">
+              <div class="left">
+                <div class="ico" aria-hidden="true">📨</div>
+                <div class="label">Referral thresholds</div>
+              </div>
+              <span class="tag amber">escalate</span>
+            </div>
+            <div class="navItem" data-jump="#patient">
+              <div class="left">
+                <div class="ico" aria-hidden="true">🧑‍🤝‍🧑</div>
+                <div class="label">Patient counselling</div>
+              </div>
+              <span class="tag green">routine</span>
+            </div>
+            <div class="navItem" data-jump="#notes">
+              <div class="left">
+                <div class="ico" aria-hidden="true">🗂️</div>
+                <div class="label">Documentation prompts</div>
+              </div>
+              <span class="tag green">routine</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="main" id="main">
+        <!-- Hero -->
+        <section class="hero" id="top">
+          <div class="heroTop">
+            <div>
+              <h2>Greater Trochanteric Pain Syndrome (GTPS)</h2>
+              <p>
+                Regional chronic/intermittent <strong>lateral hip/thigh/buttock pain</strong>, typically aggravated by activity and pressure
+                on the affected side, with <strong>tenderness on palpation</strong> over the greater trochanter region. Emphasize rapid
+                segregation of <strong>urgent alternative diagnoses</strong> and a structured conservative-first management plan.
+              </p>
+            </div>
+            <div class="meta" aria-label="Key metadata">
+              <div class="badge"><strong>Population:</strong> ≥16 years</div>
+              <div class="badge"><strong>Mode:</strong> clinical diagnosis</div>
+              <div class="badge"><strong>Common assoc:</strong> OA hip/knee, lumbar pathology</div>
+            </div>
+          </div>
+
+          <div class="heroGrid" aria-label="At-a-glance highlights">
+            <div class="kpi">
+              <div class="t">Core pattern</div>
+              <div class="v">Lateral hip pain, worse walking/lying on side; focal GT tenderness; pain with resisted abduction/rotation</div>
+            </div>
+            <div class="kpi">
+              <div class="t">Immediate “must-not-miss”</div>
+              <div class="v"><code>infection • malignancy/pathological fracture • acute fracture/dislocation • sudden inability to bear weight</code></div>
+            </div>
+            <div class="kpi">
+              <div class="t">First-line trajectory</div>
+              <div class="v">Load modification + ice + analgesia/NSAID (if appropriate) + targeted physiotherapy; consider peri-trochanteric steroid injection if inadequate response</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TRIAGE -->
+        <section class="panel" id="triage" data-tags="urgent dx">
+          <div class="panelHeader">
+            <h3>⚡ Triage & red flags</h3>
+            <div class="hint">Separate urgent from routine early</div>
+          </div>
+          <div class="panelBody">
+            <div class="callout danger" data-tags="urgent dx">
+              <div class="icon" aria-hidden="true">🚨</div>
+              <div class="content">
+                <p class="title">Emergency referral triggers</p>
+                <ul>
+                  <li>Hip pain with <strong>systemic symptoms</strong> suggestive of infection, malignancy, or autoimmune disease</li>
+                  <li><strong>Signs of infection</strong> (e.g., erythema, warmth, oedema, tender palpable mass over lateral hip)</li>
+                  <li>Known primary malignancy with suspicion of <strong>pathological fracture</strong></li>
+                  <li><strong>Sudden inability to bear weight</strong></li>
+                  <li>History of a <strong>fall</strong> with concerning features</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style="height:10px"></div>
+
+            <div class="callout warn" data-tags="urgent dx">
+              <div class="icon" aria-hidden="true">⚠️</div>
+              <div class="content">
+                <p class="title">Urgent (non-emergency) escalation</p>
+                <ul>
+                  <li><strong>Severe pain</strong> unresponsive to analgesia with persistent functional loss</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="toolRow" aria-label="Triage quick filter">
+              <div class="seg" role="group" aria-label="Show">
+                <button data-mode="all" data-on="true">All</button>
+                <button data-mode="urgent">Urgent only</button>
+                <button data-mode="routine">Routine only</button>
+              </div>
+              <span class="note">Tip: use the global chips or the segmented control above to collapse cognitive load during busy flow.</span>
+            </div>
+
+            <div aria-label="Visual flags">
+              <span class="flag red" data-tags="urgent dx"><span class="f" aria-hidden="true"></span>Systemic features</span>
+              <span class="flag red" data-tags="urgent dx"><span class="f" aria-hidden="true"></span>Suspected infection</span>
+              <span class="flag red" data-tags="urgent dx"><span class="f" aria-hidden="true"></span>Known malignancy + concern fracture</span>
+              <span class="flag red" data-tags="urgent dx"><span class="f" aria-hidden="true"></span>Sudden NWB</span>
+              <span class="flag amber" data-tags="urgent dx"><span class="f" aria-hidden="true"></span>Severe refractory pain</span>
+              <span class="flag blue" data-tags="dx"><span class="f" aria-hidden="true"></span>Consider hip X-ray if fracture/dislocation/stress fracture suspected</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- DIAGNOSIS -->
+        <section class="panel" id="dx" data-tags="dx routine">
+          <div class="panelHeader">
+            <h3>🧭 Diagnosis workflow</h3>
+            <div class="hint">Clinical diagnosis + structured exclusion</div>
+          </div>
+          <div class="panelBody">
+            <div class="steps" role="list">
+              <div class="step" role="listitem" data-tags="dx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">📍 Pattern recognition</div>
+                  <div class="stepNum">Step 1</div>
+                </div>
+                <div class="stepBody">
+                  Typical features:
+                  <ul class="bullets">
+                    <li>Chronic lateral hip/thigh/buttock pain; gradual onset; intermittent or persistent</li>
+                    <li>May radiate down lateral thigh but <strong>rarely below knee</strong></li>
+                    <li>Aggravated by walking/physical activity and pressure (lying on affected side)</li>
+                    <li><strong>Point tenderness</strong> on palpation over greater trochanter region</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="step" role="listitem" data-tags="dx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">🧠 Focused history</div>
+                  <div class="stepNum">Step 2</div>
+                </div>
+                <div class="stepBody">
+                  Capture location/radiation/onset, aggravating/relieving factors; recent activity change; occupation/sport; trauma; prior hip conditions; medication history (including corticosteroids).
+                </div>
+              </div>
+
+              <div class="step" role="listitem" data-tags="dx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">🧍 Examination</div>
+                  <div class="stepNum">Step 3</div>
+                </div>
+                <div class="stepBody">
+                  Complete neuromusculoskeletal exam:
+                  <ul class="bullets">
+                    <li>Palpate greater trochanter (key indicator)</li>
+                    <li>Observe gait: antalgic vs Trendelenburg</li>
+                    <li>Resisted hip abduction and resisted internal/external rotation often painful</li>
+                    <li>Screen for associated conditions: lumbar pathology, hip/knee arthritis</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="step" role="listitem" data-tags="dx urgent">
+                <div class="stepHead">
+                  <div class="stepTitle">🧯 Rule-outs & imaging</div>
+                  <div class="stepNum">Step 4</div>
+                </div>
+                <div class="stepBody">
+                  <ul class="bullets">
+                    <li>Exclude bursae infection if redness/warmth/oedema or tender mass present</li>
+                    <li>Arrange <strong>plain hip radiograph</strong> if suspicion of acute fracture, dislocation, or stress fracture</li>
+                    <li>Proceed to differential pathway if features do not fit GTPS</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="note">
+              No single examination test is diagnostic—use an integrated clinical pattern with targeted tests to increase pre-test probability.
+            </div>
+          </div>
+        </section>
+
+        <!-- TESTS -->
+        <section class="panel" id="tests" data-tags="dx routine">
+          <div class="panelHeader">
+            <h3>🧪 Clinical tests (quick-access)</h3>
+            <div class="hint">Open only what you need</div>
+          </div>
+          <div class="panelBody">
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft">
+                  <div class="chev" aria-hidden="true">›</div>
+                  <div class="sumTitle">Trendelenburg test</div>
+                </div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                Stand and observe pelvis from behind while lifting each foot in turn.
+                <ul class="bullets">
+                  <li><strong>Positive</strong>: pelvis dips on lifting the unaffected leg (rather than staying level/rising slightly).</li>
+                </ul>
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft">
+                  <div class="chev" aria-hidden="true">›</div>
+                  <div class="sumTitle">Single-leg stance (30s)</div>
+                </div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                Stand on the affected leg, contralateral knee flexed ~90°, allow fingertip balance on wall.
+                <ul class="bullets">
+                  <li><strong>Positive</strong>: lateral hip pain within 30 seconds.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft">
+                  <div class="chev" aria-hidden="true">›</div>
+                  <div class="sumTitle">FABER (flexion–abduction–external rotation)</div>
+                </div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                Place lateral malleolus of test leg above contralateral patella; stabilize pelvis (opposite ASIS) and lower knee.
+                <ul class="bullets">
+                  <li><strong>Positive</strong>: lateral hip pain.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft">
+                  <div class="chev" aria-hidden="true">›</div>
+                  <div class="sumTitle">FADER (flexion–adduction–external rotation)</div>
+                </div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                Supine: hip flexed to 90°, adducted, externally rotated to end range.
+                <ul class="bullets">
+                  <li><strong>Positive</strong>: lateral hip pain.</li>
+                </ul>
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft">
+                  <div class="chev" aria-hidden="true">›</div>
+                  <div class="sumTitle">Resisted active abduction / resisted rotation</div>
+                </div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                Supine: assess pain with resisted abduction (e.g., to ~45°) and with resisted internal/external rotation positions.
+                <ul class="bullets">
+                  <li><strong>Positive</strong>: reproduction of lateral hip pain.</li>
+                </ul>
+              </div>
+            </details>
+
+          </div>
+        </section>
+
+        <!-- DIFFERENTIALS -->
+        <section class="panel" id="diffs" data-tags="dx routine">
+          <div class="panelHeader">
+            <h3>🧩 Differential diagnosis (pattern-based)</h3>
+            <div class="hint">High-yield contrasts</div>
+          </div>
+          <div class="panelBody">
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">IT band / snapping hip syndrome</div></div>
+                <div class="sumMeta"><span class="tag blue">dx</span><span class="tag green">routine</span></div>
+              </summary>
+              <div class="detailBody">
+                History: lateral hip pain with walking/running/cycling ± snapping; may include lateral knee pain with repetitive activity.
+                Exam: reproduce symptoms by adducting hip while held in extension and external rotation (Ober’s).
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Meralgia paraesthetica</div></div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                Burning pain/paraesthesia/numbness over anterolateral thigh to just above knee; worsens with walking and hip extension; often weight gain.
+                Exam: symptoms may reproduce with pressure over lateral femoral cutaneous nerve; assess pinprick distribution.
+              </div>
+            </details>
+
+            <details data-tags="dx urgent">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Femoral neck fracture / stress fracture</div></div>
+                <div class="sumMeta"><span class="tag red">urgent</span><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                History: acute trauma or repetitive load; deep referred pain with weight-bearing; worsens with activity.
+                Exam: pain with extremes of motion, straight leg raise, leg roll, hopping; may have GT tenderness.
+                Action: plain radiograph if suspected.
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Hip osteoarthritis / inflammatory arthritis</div></div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                History: gradual hip/groin pain; worse weight bearing; relief with rest; may refer to groin/anterior/lateral hip and knee.
+                Exam: ROM limited by pain (notably internal rotation with hip/knee flexed); antalgic gait.
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Lumbar radiculopathy</div></div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                History: leg numbness/paraesthesia and pain radiating below knee; often low back pain.
+                Exam: reproduce symptoms with straight leg raise (or femoral nerve stretch depending on level).
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Avascular necrosis of femoral head</div></div>
+                <div class="sumMeta"><span class="tag amber">consider</span><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                History: gradual dull ache in groin/thigh/buttock; risk factors may include corticosteroid exposure (but can be absent).
+                Exam: ROM restriction typically late.
+                Imaging: early AVN may appear on MRI when X-ray is normal.
+              </div>
+            </details>
+
+            <details data-tags="dx routine">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Sacroiliac joint dysfunction</div></div>
+                <div class="sumMeta"><span class="tag blue">dx</span></div>
+              </summary>
+              <div class="detailBody">
+                History: posterior buttock pain radiating to groin/posterior proximal thigh.
+                Exam: pain with SI joint stress (e.g., posterior shear).
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <!-- MANAGEMENT -->
+        <section class="panel" id="mx" data-tags="mx routine">
+          <div class="panelHeader">
+            <h3>🛠️ Management pathway</h3>
+            <div class="hint">Conservative first; escalate selectively</div>
+          </div>
+          <div class="panelBody">
+            <div class="callout good" data-tags="mx routine">
+              <div class="icon" aria-hidden="true">✅</div>
+              <div class="content">
+                <p class="title">Core message</p>
+                <p>Usually self-limiting. Persistence in a minority does not imply serious pathology or progressive hip joint damage.</p>
+              </div>
+            </div>
+
+            <div class="steps" role="list" aria-label="Management steps">
+              <div class="step" role="listitem" data-tags="mx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">🧊 Conservative measures</div>
+                  <div class="stepNum">Step A</div>
+                </div>
+                <div class="stepBody">
+                  <ul class="bullets">
+                    <li>Rest/load modification: avoid repetitive aggravating activity; avoid lying on affected hip</li>
+                    <li>Ice: 10 minutes every few hours</li>
+                    <li>Analgesia: paracetamol or NSAID (as appropriate)</li>
+                    <li>Assess for aids/devices; consider OT/physio input if needed</li>
+                    <li>Weight optimisation if overweight; smoking cessation if relevant</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="step" role="listitem" data-tags="mx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">🏋️ Physiotherapy focus</div>
+                  <div class="stepNum">Step B</div>
+                </div>
+                <div class="stepBody">
+                  Physiotherapy may include:
+                  <ul class="bullets">
+                    <li>Hip abductor strengthening (gluteus medius/minimus)</li>
+                    <li>Targeted stretching (e.g., IT band) and quadriceps strengthening</li>
+                    <li>Gait and load management strategies</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="step" role="listitem" data-tags="mx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">💉 Consider peri-trochanteric corticosteroid injection</div>
+                  <div class="stepNum">Step C</div>
+                </div>
+                <div class="stepBody">
+                  If conservative measures fail to provide adequate improvement:
+                  <ul class="bullets">
+                    <li>Consider peri-trochanteric steroid injection + physiotherapy</li>
+                    <li>Injection in primary care only if trained; otherwise musculoskeletal clinic / refer as per local pathway</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="step" role="listitem" data-tags="mx routine">
+                <div class="stepHead">
+                  <div class="stepTitle">📈 Reassess & iterate</div>
+                  <div class="stepNum">Step D</div>
+                </div>
+                <div class="stepBody">
+                  Track function and sleep impact, clarify adherence to load modification and targeted strengthening, and re-check for alternate diagnoses if trajectory is atypical.
+                </div>
+              </div>
+            </div>
+
+            <div class="note">
+              Practical strategy: treat GTPS like a load-management tendon disorder—precision in activity modification + progressive strengthening tends to outperform “rest-only” approaches.
+            </div>
+          </div>
+        </section>
+
+        <!-- REFERRAL -->
+        <section class="panel" id="referral" data-tags="urgent mx dx">
+          <div class="panelHeader">
+            <h3>📨 Referral thresholds</h3>
+            <div class="hint">Escalate based on severity, age, persistence, and uncertainty</div>
+          </div>
+          <div class="panelBody">
+            <div class="callout warn" data-tags="urgent mx">
+              <div class="icon" aria-hidden="true">📍</div>
+              <div class="content">
+                <p class="title">Intermediate / secondary care referral</p>
+                <ul>
+                  <li><strong>&lt;40 years</strong> with persistent hip pain affecting ADLs/work/leisure not responding to a <strong>3-month physiotherapy</strong> course</li>
+                  <li>Painful, irritable, stiff hip interfering with sleep/ADLs/work/leisure not controlled with conservative measures</li>
+                  <li>Symptoms possibly related to prior hip surgery or fractured femur</li>
+                  <li>Diagnosis in doubt</li>
+                  <li>Injection expertise not available in primary care</li>
+                  <li>No response to steroid injection and/or physiotherapy</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style="height:10px"></div>
+
+            <div class="callout info" data-tags="mx dx">
+              <div class="icon" aria-hidden="true">🧾</div>
+              <div class="content">
+                <p class="title">What may happen in secondary care (orientation)</p>
+                <p>Further assessment may include ultrasound/MRI/CT; procedures can include bursectomy/ITB techniques or tendon repair in refractory cases.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PATIENT COUNSELLING -->
+        <section class="panel" id="patient" data-tags="routine mx">
+          <div class="panelHeader">
+            <h3>🧑‍🤝‍🧑 Patient counselling & self-care script</h3>
+            <div class="hint">Designed for rapid, consistent messaging</div>
+          </div>
+          <div class="panelBody">
+            <details open data-tags="routine mx">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Two-sentence explanation</div></div>
+                <div class="sumMeta"><span class="tag green">routine</span></div>
+              </summary>
+              <div class="detailBody">
+                “This is a common lateral-hip pain condition often related to overload or irritation of the tissues that attach around the bony prominence on the outside of the hip.
+                It usually improves with targeted activity modification, pain control, and specific strengthening rather than prolonged rest alone.”
+              </div>
+            </details>
+
+            <details data-tags="routine mx">
+              <summary>
+                <div class="sumLeft"><div class="chev" aria-hidden="true">›</div><div class="sumTitle">Behavioural targets</div></div>
+                <div class="sumMeta"><span class="tag green">routine</span></div>
+              </summary>
+              <div class="detailBody">
+                <ul class="bullets">
+                  <li>Avoid lying on the affected side; consider pillow between knees when side-lying</li>
+                  <li>Reduce painful repetitive loads (stairs/hills/running) temporarily and reintroduce progressively</li>
+                  <li>Use ice bursts for flare control (10 minutes intermittently)</li>
+                  <li>Engage in prescribed abductor strengthening program; expect a graded improvement rather than immediate resolution</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <!-- DOCUMENTATION -->
+        <section class="panel" id="notes" data-tags="routine dx mx">
+          <div class="panelHeader">
+            <h3>🗂️ Documentation prompts (ED/primary care)</h3>
+            <div class="hint">Auto-scannable checklist</div>
+          </div>
+          <div class="panelBody">
+            <div class="callout info" data-tags="routine dx mx">
+              <div class="icon" aria-hidden="true">📝</div>
+              <div class="content">
+                <p class="title">Suggested minimum dataset</p>
+                <ul>
+                  <li>Pain location (lateral hip), radiation (below-knee? yes/no), duration/onset pattern</li>
+                  <li>Provocation: walking, stairs, lying on side; relief factors</li>
+                  <li>GT palpation tenderness (point tenderness) + key provocative tests used (e.g., single-leg stance, Trendelenburg, FABER/FADER, resisted abduction/rotation)</li>
+                  <li>Gait assessment: antalgic vs Trendelenburg</li>
+                  <li>Screen: systemic features, local erythema/warmth/oedema/mass, trauma/fall, malignancy history</li>
+                  <li>Plan: load modification + analgesia/NSAID if appropriate + physio referral; injection consideration; safety-net red flags</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="note">
+              Safety-netting phrase (quick): “Return urgently for fever/systemic illness, new redness/warmth/swelling, sudden inability to bear weight, or rapidly worsening pain/function.”
+            </div>
+          </div>
+        </section>
+
+        <div class="footer" role="contentinfo">
+          <div>
+            <strong>Source alignment:</strong> NICE CKS GTPS (last revised Sept 2023) — content structured for rapid clinical scanning. :contentReference[oaicite:1]{index=1}
+          </div>
+          <div>
+            Keyboard: <span class="kbd">/</span> search · <span class="kbd">Esc</span> clear · <span class="kbd">g</span> then <span class="kbd">t</span> top
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = (sel, el=document) => el.querySelector(sel);
+    const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
+    const state = {
+      query: "",
+      tags: new Set(),   // from chips: urgent/routine/dx/mx
+      mode: "all"        // segmented in triage panel
+    };
+
+    function normalize(s){
+      return (s || "").toLowerCase().trim();
+    }
+
+    function tagsOf(el){
+      const t = (el.getAttribute("data-tags") || "").split(/\s+/).map(normalize).filter(Boolean);
+      return new Set(t);
+    }
+
+    function elementText(el){
+      // searchable text; include summary title + body
+      return normalize(el.innerText || "");
+    }
+
+    function matchesQuery(el){
+      const q = normalize(state.query);
+      if(!q) return true;
+      return elementText(el).includes(q);
+    }
+
+    function matchesTags(el){
+      if(state.tags.size === 0) return true;
+      const t = tagsOf(el);
+
+      // "urgent" filter means must have urgent somewhere in ancestry or itself
+      // We'll evaluate element itself; if it doesn't have tags, inherit from closest section/panel with tags.
+      if(t.size === 0){
+        const parent = el.closest("[data-tags]");
+        if(parent) return matchesTags(parent);
+        return false;
+      }
+
+      // Any chip tag acts as AND for urgency pair? We treat:
+      // - urgent and routine are mutually narrowing (if both selected, treat as no urgency filter)
+      // - dx and mx can be combined (AND)
+      const wantsUrgent = state.tags.has("urgent");
+      const wantsRoutine = state.tags.has("routine");
+      const wantsDx = state.tags.has("dx");
+      const wantsMx = state.tags.has("mx");
+
+      let ok = true;
+
+      if(wantsUrgent && !wantsRoutine){
+        ok = ok && t.has("urgent");
+      } else if(wantsRoutine && !wantsUrgent){
+        ok = ok && t.has("routine");
+      }
+
+      if(wantsDx) ok = ok && t.has("dx");
+      if(wantsMx) ok = ok && t.has("mx");
+
+      return ok;
+    }
+
+    function matchesMode(el){
+      // Mode toggle only affects triage panel items visually; we apply globally for simplicity.
+      if(state.mode === "all") return true;
+      const t = tagsOf(el);
+      if(t.size === 0){
+        const parent = el.closest("[data-tags]");
+        if(parent) return matchesMode(parent);
+        return false;
+      }
+      return t.has(state.mode);
+    }
+
+    function applyFilters(){
+      const allBlocks = $$("section.panel, details, .callout, .step, .flag");
+      allBlocks.forEach(el => {
+        const visible = matchesQuery(el) && matchesTags(el) && matchesMode(el);
+        el.style.display = visible ? "" : "none";
+      });
+
+      // Also hide panels if all children hidden (but keep if panel itself matches)
+      $$("section.panel").forEach(panel => {
+        const own = matchesQuery(panel) && matchesTags(panel) && matchesMode(panel);
+        const anyChildVisible = $$(".callout, details, .step, .flag", panel).some(x => x.style.display !== "none");
+        panel.style.display = (own || anyChildVisible) ? "" : "none";
+      });
+
+      // Update nav count pill
+      const shownPanels = $$("section.panel").filter(p => p.style.display !== "none").length;
+      $(".navHeader .pill").innerHTML = `<span class="kbd">/</span> focus search · ${shownPanels} panels`;
+    }
+
+    // ---------- Search ----------
+    const q = $("#q");
+    const clearBtn = $("#clear");
+    q.addEventListener("input", () => {
+      state.query = q.value;
+      applyFilters();
+    });
+    clearBtn.addEventListener("click", () => {
+      q.value = "";
+      state.query = "";
+      applyFilters();
+      q.focus();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", (e) => {
+      if(e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey){
+        e.preventDefault();
+        q.focus();
+      }
+      if(e.key === "Escape"){
+        if(document.activeElement === q){
+          q.value = "";
+          state.query = "";
+          applyFilters();
+          q.blur();
+        }
+      }
+      // g then t => top
+      if(e.key.toLowerCase() === "g"){
+        window.__gtps_g = true;
+        setTimeout(()=> window.__gtps_g = false, 650);
+      }
+      if(e.key.toLowerCase() === "t" && window.__gtps_g){
+        document.getElementById("top").scrollIntoView({behavior:"smooth", block:"start"});
+        window.__gtps_g = false;
+      }
+    });
+
+    // ---------- Chips ----------
+    $$(".chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const f = chip.getAttribute("data-filter");
+        const active = chip.getAttribute("data-active") === "true";
+
+        // toggle
+        chip.setAttribute("data-active", String(!active));
+        if(active) state.tags.delete(f); else state.tags.add(f);
+
+        // If both urgent and routine active, treat as no urgency restriction (but keep visual state)
+        applyFilters();
+      });
+    });
+
+    // ---------- Segmented control (triage) ----------
+    $$(".seg button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        $$(".seg button").forEach(b => b.dataset.on = "false");
+        btn.dataset.on = "true";
+        state.mode = btn.dataset.mode;
+        applyFilters();
+      });
+    });
+
+    // ---------- Expand all ----------
+    $("#expandAll").addEventListener("click", () => {
+      const anyClosed = $$("details").some(d => !d.open && d.style.display !== "none");
+      $$("details").forEach(d => {
+        if(d.style.display === "none") return;
+        d.open = anyClosed ? true : false;
+      });
+      $("#expandAll").textContent = anyClosed ? "Collapse all" : "Expand all";
+    });
+
+    // ---------- Nav jump ----------
+    $$(".navItem").forEach(item => {
+      item.addEventListener("click", () => {
+        const target = item.getAttribute("data-jump");
+        const el = document.querySelector(target);
+        if(el){
+          el.scrollIntoView({behavior:"smooth", block:"start"});
+        }
+      });
+    });
+
+    // Initial render
+    applyFilters();
+  </script>
+</body>
+</html>

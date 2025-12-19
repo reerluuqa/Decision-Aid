@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knee Pain Assessment Algorithm</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 30px;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            height: fit-content;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-sidebar h3 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .progress-item.completed {
+            opacity: 1;
+            background: rgba(72, 187, 120, 0.1);
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+        }
+
+        .progress-icon.assessment { background: #4299e1; }
+        .progress-icon.diagnosis { background: #9f7aea; }
+        .progress-icon.treatment { background: #48bb78; }
+        .progress-icon.follow-up { background: #ed8936; }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .algorithm-section {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 25px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s;
+        }
+
+        .card-header:hover::before {
+            left: 100%;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #9f7aea, #805ad5);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .card-header.follow-up {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+        }
+
+        .card-header:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: white;
+        }
+
+        .card-title i {
+            font-size: 2em;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .card-title h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            color: white;
+            font-size: 1.5em;
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.rotated {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-content.expanded {
+            max-height: 1500px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .step-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .step-card {
+            background: linear-gradient(145deg, #f7fafc, #edf2f7);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #e2e8f0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-left-color: currentColor;
+        }
+
+        .step-card.assessment:hover { color: #4299e1; }
+        .step-card.diagnosis:hover { color: #9f7aea; }
+        .step-card.treatment:hover { color: #48bb78; }
+        .step-card.follow-up:hover { color: #ed8936; }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .step-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #2d3748;
+        }
+
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #e53e3e, #c53030);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #ecc94b, #d69e2e);
+            color: #744210;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #38a169, #2f855a);
+            color: white;
+        }
+
+        .step-description {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .step-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .step-details.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .detail-item i {
+            margin-top: 3px;
+            font-size: 0.9em;
+        }
+
+        .flowchart-arrow {
+            text-align: center;
+            margin: 20px 0;
+            color: #a0aec0;
+            font-size: 1.5em;
+        }
+
+        .flowchart-arrow i {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .quick-nav {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9em;
+        }
+
+        .nav-button:hover {
+            background: rgba(102, 126, 234, 0.2);
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                top: 0;
+                width: 100%;
+            }
+            
+            .step-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="progress-sidebar">
+            <h3>
+                <i class="fas fa-route"></i>
+                Progress
+            </h3>
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon assessment">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon diagnosis">
+                    <i class="fas fa-search"></i>
+                </div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon treatment">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-section="follow-up">
+                <div class="progress-icon follow-up">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Section -->
+            <section class="algorithm-section fade-in" id="assessment">
+                <div class="card-header assessment" onclick="toggleSection('assessment')">
+                    <div class="card-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        <h2>Initial Assessment</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="assessment-icon"></i>
+                </div>
+                <div class="card-content" id="assessment-content">
+                    <div class="card-body">
+                        <div class="step-container">
+                            <div class="step-card assessment" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">History Taking</span>
+                                    <span class="severity-badge badge-green">Essential</span>
+                                </div>
+                                <p class="step-description">Collect comprehensive history including onset, duration, and characteristics of pain.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-check-circle" style="color: #48bb78;"></i>
+                                        <span>Mechanism of injury</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-check-circle" style="color: #48bb78;"></i>
+                                        <span>Previous knee problems</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-check-circle" style="color: #48bb78;"></i>
+                                        <span>Activity level and occupation</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card assessment" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Physical Examination</span>
+                                    <span class="severity-badge badge-amber">Careful</span>
+                                </div>
+                                <p class="step-description">Perform systematic examination of both knees and surrounding structures.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-stethoscope" style="color: #9f7aea;"></i>
+                                        <span>Inspection for swelling/deformity</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-stethoscope" style="color: #9f7aea;"></i>
+                                        <span>Palpation for tenderness</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-stethoscope" style="color: #9f7aea;"></i>
+                                        <span>Range of motion assessment</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card assessment" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Red Flag Screening</span>
+                                    <span class="severity-badge badge-red">Urgent</span>
+                                </div>
+                                <p class="step-description">Identify signs requiring immediate specialist referral.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>
+                                        <span>Severe trauma with deformity</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>
+                                        <span>Hot, swollen joint with fever</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-exclamation-triangle" style="color: #e53e3e;"></i>
+                                        <span>Inability to weight-bear</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flowchart-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+
+                        <div class="quick-nav">
+                            <button class="nav-button" onclick="expandNext('diagnosis')">
+                                <i class="fas fa-arrow-right"></i> Proceed to Diagnosis
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="algorithm-section fade-in" id="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleSection('diagnosis')">
+                    <div class="card-title">
+                        <i class="fas fa-search"></i>
+                        <h2>Differential Diagnosis</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="diagnosis-icon"></i>
+                </div>
+                <div class="card-content" id="diagnosis-content">
+                    <div class="card-body">
+                        <div class="step-container">
+                            <div class="step-card diagnosis" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Mechanical Disorders</span>
+                                    <span class="severity-badge badge-amber">Common</span>
+                                </div>
+                                <p class="step-description">Evaluate for structural and mechanical problems.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-bone" style="color: #9f7aea;"></i>
+                                        <span>Meniscal tears</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-bone" style="color: #9f7aea;"></i>
+                                        <span>Ligament injuries</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-bone" style="color: #9f7aea;"></i>
+                                        <span>Patellofemoral disorders</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card diagnosis" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Inflammatory Conditions</span>
+                                    <span class="severity-badge badge-amber">Systemic</span>
+                                </div>
+                                <p class="step-description">Consider inflammatory causes of knee pain.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-fire" style="color: #ed8936;"></i>
+                                        <span>Rheumatoid arthritis</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-fire" style="color: #ed8936;"></i>
+                                        <span>Gout or pseudogout</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-fire" style="color: #ed8936;"></i>
+                                        <span>Septic arthritis</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card diagnosis" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Degenerative Changes</span>
+                                    <span class="severity-badge badge-green">Chronic</span>
+                                </div>
+                                <p class="step-description">Assess for age-related changes.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-chart-line" style="color: #48bb78;"></i>
+                                        <span>Osteoarthritis</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-chart-line" style="color: #48bb78;"></i>
+                                        <span>Meniscal degeneration</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flowchart-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+
+                        <div class="quick-nav">
+                            <button class="nav-button" onclick="expandPrev('assessment')">
+                                <i class="fas fa-arrow-left"></i> Back to Assessment
+                            </button>
+                            <button class="nav-button" onclick="expandNext('treatment')">
+                                <i class="fas fa-arrow-right"></i> Proceed to Treatment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="algorithm-section fade-in" id="treatment">
+                <div class="card-header treatment" onclick="toggleSection('treatment')">
+                    <div class="card-title">
+                        <i class="fas fa-user-md"></i>
+                        <h2>Treatment Strategy</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="treatment-icon"></i>
+                </div>
+                <div class="card-content" id="treatment-content">
+                    <div class="card-body">
+                        <div class="step-container">
+                            <div class="step-card treatment" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Conservative Management</span>
+                                    <span class="severity-badge badge-green">First Line</span>
+                                </div>
+                                <p class="step-description">Initial non-surgical approach for most cases.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-pills" style="color: #48bb78;"></i>
+                                        <span>NSAIDs and analgesics</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-running" style="color: #48bb78;"></i>
+                                        <span>Exercise therapy</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-weight" style="color: #48bb78;"></i>
+                                        <span>Weight management</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card treatment" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Interventional Procedures</span>
+                                    <span class="severity-badge badge-amber">Secondary</span>
+                                </div>
+                                <p class="step-description">Consider when conservative measures fail.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-syringe" style="color: #ed8936;"></i>
+                                        <span>Corticosteroid injections</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-tint" style="color: #ed8936;"></i>
+                                        <span>Hyaluronic acid injections</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card treatment" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Surgical Options</span>
+                                    <span class="severity-badge badge-red">Definitive</span>
+                                </div>
+                                <p class="step-description">Reserved for severe or refractory cases.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-cut" style="color: #e53e3e;"></i>
+                                        <span>Arthroscopic procedures</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-cut" style="color: #e53e3e;"></i>
+                                        <span>Joint replacement</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flowchart-arrow">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+
+                        <div class="quick-nav">
+                            <button class="nav-button" onclick="expandPrev('diagnosis')">
+                                <i class="fas fa-arrow-left"></i> Back to Diagnosis
+                            </button>
+                            <button class="nav-button" onclick="expandNext('follow-up')">
+                                <i class="fas fa-arrow-right"></i> Proceed to Follow-up
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="algorithm-section fade-in" id="follow-up">
+                <div class="card-header follow-up" onclick="toggleSection('follow-up')">
+                    <div class="card-title">
+                        <i class="fas fa-calendar-check"></i>
+                        <h2>Follow-up Care</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="follow-up-icon"></i>
+                </div>
+                <div class="card-content" id="follow-up-content">
+                    <div class="card-body">
+                        <div class="step-container">
+                            <div class="step-card follow-up" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Short-term Monitoring</span>
+                                    <span class="severity-badge badge-green">2-4 weeks</span>
+                                </div>
+                                <p class="step-description">Initial response to treatment.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-clock" style="color: #48bb78;"></i>
+                                        <span>Pain assessment</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-clock" style="color: #48bb78;"></i>
+                                        <span>Function evaluation</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-card follow-up" onclick="toggleStepDetails(this)">
+                                <div class="step-header">
+                                    <span class="step-title">Long-term Management</span>
+                                    <span class="severity-badge badge-amber">3-6 months</span>
+                                </div>
+                                <p class="step-description">Sustained care and prevention.</p>
+                                <div class="step-details">
+                                    <div class="detail-item">
+                                        <i class="fas fa-calendar-alt" style="color: #ed8936;"></i>
+                                        <span>Lifestyle modification</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <i class="fas fa-calendar-alt" style="color: #ed8936;"></i>
+                                        <span>Prevention strategies</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="quick-nav">
+                            <button class="nav-button" onclick="expandPrev('treatment')">
+                                <i class="fas fa-arrow-left"></i> Back to Treatment
+                            </button>
+                            <button class="nav-button" onclick="scrollToTop()">
+                                <i class="fas fa-arrow-up"></i> Back to Top
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Memory management functions
+        function savePreference(key, value) {
+            const preferences = JSON.parse(localStorage.getItem('kneeAssessmentPrefs') || '{}');
+            preferences[key] = value;
+            localStorage.setItem('kneeAssessmentPrefs', JSON.stringify(preferences));
+        }
+
+        function getPreference(key) {
+            const preferences = JSON.parse(localStorage.getItem('kneeAssessmentPrefs') || '{}');
+            return preferences[key];
+        }
+
+        // Section toggling
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            const isExpanded = content.classList.contains('expanded');
+            
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                icon.classList.remove('rotated');
+                savePreference(`section-${sectionId}`, 'collapsed');
+            } else {
+                content.classList.add('expanded');
+                icon.classList.add('rotated');
+                savePreference(`section-${sectionId}`, 'expanded');
+            }
+            
+            // Update progress indicator
+            updateProgressIndicator();
+        }
+
+        // Step details toggling
+        function toggleStepDetails(stepCard) {
+            const details = stepCard.querySelector('.step-details');
+            const isShowing = details.classList.contains('show');
+            
+            if (isShowing) {
+                details.classList.remove('show');
+                savePreference(`step-${stepCard.id || stepCard.innerText}`, 'collapsed');
+            } else {
+                details.classList.add('show');
+                savePreference(`step-${stepCard.id || stepCard.innerText}`, 'expanded');
+            }
+        }
+
+        // Navigation functions
+        function expandNext(nextSectionId) {
+            const currentSection = document.querySelector('.card-content.expanded');
+            if (currentSection) {
+                currentSection.classList.remove('expanded');
+                const currentIcon = currentSection.parentElement.querySelector('.expand-icon');
+                if (currentIcon) currentIcon.classList.remove('rotated');
+            }
+            
+            const nextSection = document.getElementById(`${nextSectionId}-content`);
+            const nextIcon = document.getElementById(`${nextSectionId}-icon`);
+            if (nextSection) {
+                nextSection.classList.add('expanded');
+                if (nextIcon) nextIcon.classList.add('rotated');
+            }
+            
+            // Scroll to next section
+            document.getElementById(nextSectionId).scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+            
+            updateProgressIndicator();
+        }
+
+        function expandPrev(prevSectionId) {
+            expandNext(prevSectionId);
+        }
+
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Progress indicator updates
+        function updateProgressIndicator() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'follow-up'];
+            const scrollPosition = window.scrollY + 100;
+            
+            sections.forEach((section, index) => {
+                const element = document.getElementById(section);
+                const progressItem = document.querySelector(`[data-section="${section}"]`);
+                
+                if (element && progressItem) {
+                    const rect = element.getBoundingClientRect();
+                    const absoluteTop = rect.top + window.pageYOffset;
+                    const absoluteBottom = absoluteTop + rect.height;
+                    
+                    progressItem.classList.remove('active', 'completed');
+                    
+                    if (scrollPosition >= absoluteTop && scrollPosition < absoluteBottom) {
+                        progressItem.classList.add('active');
+                    } else if (scrollPosition > absoluteBottom) {
+                        progressItem.classList.add('completed');
+                    }
+                }
+            });
+        }
+
+        // Progress sidebar click handlers
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const sectionId = item.dataset.section;
+                const section = document.getElementById(sectionId);
+                
+                // Expand the section
+                const content = document.getElementById(`${sectionId}-content`);
+                const icon = document.getElementById(`${sectionId}-icon`);
+                
+                if (content && !content.classList.contains('expanded')) {
+                    content.classList.add('expanded');
+                    if (icon) icon.classList.add('rotated');
+                    savePreference(`section-${sectionId}`, 'expanded');
+                }
+                
+                // Scroll to section
+                section.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
+        });
+
+        // Restore saved preferences on page load
+        function restorePreferences() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'follow-up'];
+            
+            sections.forEach(section => {
+                const state = getPreference(`section-${section}`);
+                if (state === 'expanded') {
+                    const content = document.getElementById(`${section}-content`);
+                    const icon = document.getElementById(`${section}-icon`);
+                    if (content) content.classList.add('expanded');
+                    if (icon) icon.classList.add('rotated');
+                }
+            });
+        }
+
+        // Scroll event listener
+        window.addEventListener('scroll', updateProgressIndicator);
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            restorePreferences();
+            updateProgressIndicator();
+            
+            // Add visual feedback for saved preferences
+            const userPrefs = JSON.parse(localStorage.getItem('kneeAssessmentPrefs') || '{}');
+            const hasSavedPrefs = Object.keys(userPrefs).length > 0;
+            if (hasSavedPrefs) {
+                console.log('User preferences restored successfully');
+            }
+        });
+
+        // Add smooth transitions for preference changes
+        function observePreferences() {
+            const originalSave = savePreference;
+            savePreference = function(key, value) {
+                originalSave(key, value);
+                console.log(`Preference saved: ${key} = ${value}`);
+            };
+        }
+
+        observePreferences();
+    </script>
+</body>
+</html>

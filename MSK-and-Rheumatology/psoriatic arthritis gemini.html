@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Psoriatic Arthritis Clinical Algorithm</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --text-color: #333;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            
+            /* Section Colors */
+            --color-assess: #3498db;
+            --color-diag: #9b59b6;
+            --color-treat: #e67e22;
+            --color-follow: #27ae60;
+            
+            /* Badge Colors */
+            --severity-red: #e74c3c;
+            --severity-amber: #f1c40f;
+            --severity-green: #2ecc71;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 250px;
+            background: white;
+            padding: 20px;
+            position: fixed;
+            height: 100vh;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .progress-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .progress-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .progress-item i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .progress-item.active {
+            background-color: #ecf0f1;
+            font-weight: bold;
+            color: #2c3e50;
+            border-left: 4px solid #2c3e50;
+        }
+
+        .progress-item.active.step-1 { border-color: var(--color-assess); color: var(--color-assess); }
+        .progress-item.active.step-2 { border-color: var(--color-diag); color: var(--color-diag); }
+        .progress-item.active.step-3 { border-color: var(--color-treat); color: var(--color-treat); }
+        .progress-item.active.step-4 { border-color: var(--color-follow); color: var(--color-follow); }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 40px;
+            max-width: 900px;
+        }
+
+        .header-box {
+            margin-bottom: 30px;
+        }
+
+        .header-box h1 {
+            margin: 0;
+            color: #2c3e50;
+        }
+
+        .header-box p {
+            color: #7f8c8d;
+        }
+
+        /* Card System */
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+            border-left: 5px solid #ccc;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Card Colors */
+        .card.assess { border-color: var(--color-assess); }
+        .card.diag { border-color: var(--color-diag); }
+        .card.treat { border-color: var(--color-treat); }
+        .card.follow { border-color: var(--color-follow); }
+
+        .card-header {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, #ffffff, #fdfdfd);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-title i {
+            margin-right: 15px;
+            padding: 10px;
+            border-radius: 50%;
+            color: white;
+        }
+
+        .assess .card-title i { background-color: var(--color-assess); }
+        .diag .card-title i { background-color: var(--color-diag); }
+        .treat .card-title i { background-color: var(--color-treat); }
+        .follow .card-title i { background-color: var(--color-follow); }
+
+        .card-toggle {
+            transition: transform 0.3s ease;
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+            padding: 0 20px;
+            background-color: #fafafa;
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px; /* Arbitrary large number for slide effect */
+            padding: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .card.expanded .card-toggle {
+            transform: rotate(180deg);
+        }
+
+        /* Content Styling inside Cards */
+        h3 { font-size: 1rem; color: #444; margin-top: 20px; }
+        p, li { line-height: 1.6; font-size: 0.95rem; color: #555; }
+        
+        .citation {
+            font-size: 0.75rem;
+            color: #95a5a6;
+            vertical-align: super;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+        .badge-red { background-color: var(--severity-red); }
+        .badge-amber { background-color: var(--severity-amber); color: #333; }
+        .badge-green { background-color: var(--severity-green); }
+
+        /* Treatment Tabs */
+        .tab-container {
+            margin-top: 15px;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .tab-btn.active {
+            background-color: var(--color-treat);
+            color: white;
+            border-color: var(--color-treat);
+        }
+        .tab-content {
+            display: none;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none; /* Hidden on mobile for simplicity in this demo */
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="sidebar">
+        <h2><i class="fas fa-notes-medical"></i> PsA Pathway</h2>
+        <ul class="progress-list">
+            <li class="progress-item step-1" onclick="scrollToCard('card-assess')">
+                <i class="fas fa-search"></i> Assessment
+            </li>
+            <li class="progress-item step-2" onclick="scrollToCard('card-diag')">
+                <i class="fas fa-stethoscope"></i> Diagnosis
+            </li>
+            <li class="progress-item step-3" onclick="scrollToCard('card-treat')">
+                <i class="fas fa-pills"></i> Treatment
+            </li>
+            <li class="progress-item step-4" onclick="scrollToCard('card-follow')">
+                <i class="fas fa-heartbeat"></i> Follow Up
+            </li>
+        </ul>
+        <div style="margin-top: auto; font-size: 0.7rem; color: #999;">
+            Based on BMJ Best Practice (2023)
+        </div>
+    </nav>
+
+    <div class="main-content">
+        
+        <div class="header-box">
+            <h1>Psoriatic Arthritis (PsA)</h1>
+            <p>Interactive management algorithm. Click sections to expand.</p>
+        </div>
+
+        <div class="card assess" id="card-assess">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-title">
+                    <i class="fas fa-search"></i> Assessment & Suspicion
+                </div>
+                <div>
+                    <span class="badge badge-amber">Screening</span>
+                    <i class="fas fa-chevron-down card-toggle"></i>
+                </div>
+            </div>
+            <div class="card-body">
+                <h3>When to Suspect PsA</h3>
+                <p>PsA occurs in around 25% of patients with psoriasis <span class="citation">[cite: 12]</span>. Recognition of inflammatory joint symptoms is the first step.</p>
+                <ul>
+                    <li><strong>Key Symptoms:</strong> Prolonged morning stiffness (>30 mins), first-step foot pain, tender/swollen joints <span class="citation">[cite: 120-123]</span>.</li>
+                    <li><strong>Dactylitis:</strong> "Sausage digit" swelling, present in 40-50% of patients <span class="citation">[cite: 220]</span>.</li>
+                    <li><strong>Nail Changes:</strong> Pitting or onycholysis (80-90% of patients) <span class="citation">[cite: 224]</span>.</li>
+                </ul>
+                <h3>Screening Tools</h3>
+                <p>Use questionnaires like PEST, PASE, or ePASQ to identify PsA in psoriasis patients <span class="citation">[cite: 117]</span>.</p>
+            </div>
+        </div>
+
+        <div class="card diag" id="card-diag">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-title">
+                    <i class="fas fa-stethoscope"></i> Diagnosis
+                </div>
+                <div>
+                    <span class="badge badge-green">Clinical</span>
+                    <i class="fas fa-chevron-down card-toggle"></i>
+                </div>
+            </div>
+            <div class="card-body">
+                <h3>Diagnostic Approach</h3>
+                <p>Diagnosis is made clinically based on history and physical exam <span class="citation">[cite: 115]</span>. Most patients are seronegative.</p>
+                
+                <h3>CASPAR Criteria (≥3 points) <span class="citation">[cite: 82]</span></h3>
+                <ul>
+                    <li>Current psoriasis (2 pts) or history/family history (1 pt).</li>
+                    <li>Nail dystrophy (1 pt).</li>
+                    <li>Negative Rheumatoid Factor (1 pt) <span class="citation">[cite: 85]</span>.</li>
+                    <li>Dactylitis (current or history) (1 pt).</li>
+                    <li>Juxta-articular new bone formation on X-ray (1 pt) <span class="citation">[cite: 93]</span>.</li>
+                </ul>
+
+                <h3>Investigations</h3>
+                <ul>
+                    <li><strong>Labs:</strong> ESR/CRP (markers of inflammation), negative RF/anti-CCP (to exclude RA) <span class="citation">[cite: 254]</span>.</li>
+                    <li><strong>Imaging:</strong> Plain X-rays of hands/feet (erosions, periostitis) <span class="citation">[cite: 237]</span>. X-rays of spine/pelvis if axial symptoms suspected.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card treat" id="card-treat">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-title">
+                    <i class="fas fa-pills"></i> Management Algorithm
+                </div>
+                <div>
+                    <span class="badge badge-red">Active Disease</span>
+                    <i class="fas fa-chevron-down card-toggle"></i>
+                </div>
+            </div>
+            <div class="card-body">
+                <p>Treatment depends on the dominant clinical manifestation. Select a presentation below:</p>
+                
+                <div class="tab-container">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" onclick="openTab(event, 'peripheral')">Peripheral Arthritis</button>
+                        <button class="tab-btn" onclick="openTab(event, 'axial')">Axial Disease</button>
+                        <button class="tab-btn" onclick="openTab(event, 'enthesitis')">Enthesitis/Dactylitis</button>
+                    </div>
+
+                    <div id="peripheral" class="tab-content active">
+                        <h3><i class="fas fa-hand-holding-medical"></i> Peripheral Arthritis</h3>
+                        <h4>Step 1: Treatment Naive</h4>
+                        <p><strong>Conventional Synthetic DMARD (csDMARD):</strong> Usually Methotrexate (preferred), Leflunomide, or Sulfasalazine <span class="citation">[cite: 288, 348]</span>.</p>
+                        <p><em>Adjunct:</em> NSAIDs for symptoms <span class="citation">[cite: 285]</span>. Intra-articular steroid injections for oligoarthritis <span class="citation">[cite: 401]</span>.</p>
+                        
+                        <hr>
+                        
+                        <h4>Step 2: Inadequate Response</h4>
+                        <p>If response is inadequate (3-6 months), escalate therapy <span class="citation">[cite: 288]</span>.</p>
+                        <p><strong>Biological Agents (bDMARDs):</strong>
+                            <ul>
+                                <li><strong>TNF-alpha inhibitors:</strong> (e.g., Adalimumab, Etanercept) often first-line biologic <span class="citation">[cite: 292]</span>.</li>
+                                <li><strong>IL-17 inhibitors:</strong> (e.g., Secukinumab, Ixekizumab) if relevant skin involvement or TNF contraindication <span class="citation">[cite: 381]</span>.</li>
+                                <li><strong>IL-23 inhibitors:</strong> (e.g., Guselkumab).</li>
+                                <li><strong>JAK inhibitors:</strong> (e.g., Tofacitinib) usually reserved for after biological failure <span class="citation">[cite: 306]</span>.</li>
+                            </ul>
+                        </p>
+                    </div>
+
+                    <div id="axial" class="tab-content">
+                        <h3><i class="fas fa-spine"></i> Axial Disease</h3>
+                        <p><span class="badge badge-amber">Note</span> csDMARDs (Methotrexate) are generally <strong>not effective</strong> for axial disease <span class="citation">[cite: 312]</span>.</p>
+                        
+                        <h4>Step 1: Initial Therapy</h4>
+                        <p><strong>NSAIDs</strong> and physiotherapy <span class="citation">[cite: 314]</span>.</p>
+                        
+                        <h4>Step 2: Inadequate Response</h4>
+                        <p>Escalate directly to Biological Agents:</p>
+                        <ul>
+                            <li><strong>TNF-alpha inhibitors</strong> or <strong>IL-17 inhibitors</strong> (Secukinumab/Ixekizumab) are recommended <span class="citation">[cite: 309, 310]</span>.</li>
+                            <li><strong>JAK inhibitors</strong> are an option if NSAIDs fail <span class="citation">[cite: 314]</span>.</li>
+                            <li>IL-12/23 and IL-23 inhibitors are <em>not</em> recommended for axial disease <span class="citation">[cite: 312]</span>.</li>
+                        </ul>
+                    </div>
+
+                    <div id="enthesitis" class="tab-content">
+                        <h3><i class="fas fa-bone"></i> Enthesitis & Dactylitis</h3>
+                        
+                        <h4>Dactylitis</h4>
+                        <p>Associated with severe disease and radiographic progression <span class="citation">[cite: 316]</span>.</p>
+                        <ul>
+                            <li><strong>Initial:</strong> NSAIDs + Physiotherapy.</li>
+                            <li><strong>Escalation:</strong> Biologics (TNF, IL-17, IL-12/23, JAK) are effective. Methotrexate may show some efficacy <span class="citation">[cite: 580]</span>.</li>
+                        </ul>
+
+                        <h4>Enthesitis</h4>
+                        <ul>
+                            <li><strong>Initial:</strong> NSAIDs are first-line <span class="citation">[cite: 516]</span>. Physiotherapy.</li>
+                            <li><strong>Escalation:</strong> If NSAIDs fail, switch to Biologics (TNF, IL-17, IL-12/23, JAK) or Apremilast <span class="citation">[cite: 534]</span>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card follow" id="card-follow">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-title">
+                    <i class="fas fa-heartbeat"></i> Follow Up & Prevention
+                </div>
+                <div>
+                    <span class="badge badge-green">Long-term</span>
+                    <i class="fas fa-chevron-down card-toggle"></i>
+                </div>
+            </div>
+            <div class="card-body">
+                <h3>Monitoring</h3>
+                <p>Disease and drug monitoring recommended on a regular basis. Assess CRP, joint counts, and skin extent (BSA) at visits <span class="citation">[cite: 611]</span>.</p>
+                
+                <h3>Complications & Comorbidities</h3>
+                <ul>
+                    <li><strong>Cardiovascular Disease:</strong> Medium likelihood. Risk assessment recommended every 5 years <span class="citation">[cite: 614, 618]</span>.</li>
+                    <li><strong>Metabolic Syndrome:</strong> Obesity and dyslipidaemia are common <span class="citation">[cite: 616]</span>.</li>
+                    <li><strong>Infection:</strong> Biologicals increase risk. Screen for TB/Hepatitis B prior to initiation <span class="citation">[cite: 613]</span>.</li>
+                </ul>
+                
+                <h3>Supportive Measures</h3>
+                <p>Smoking cessation, weight loss, and low-impact exercise are strongly recommended <span class="citation">[cite: 390]</span>.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Card Expansion Logic
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const body = card.querySelector('.card-body');
+            const isActive = card.classList.contains('expanded');
+
+            // Close all other cards (accordion style) - Optional
+            /*
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            */
+
+            if (isActive) {
+                card.classList.remove('expanded');
+            } else {
+                card.classList.add('expanded');
+            }
+        }
+
+        // Tab Switching Logic
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            
+            // Hide all tab content
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove('active');
+            }
+
+            // Remove active class from buttons
+            tablinks = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+
+            // Show current tab and add active class to button
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add("active");
+        }
+
+        // Scroll to Card Logic
+        function scrollToCard(cardId) {
+            const element = document.getElementById(cardId);
+            const offset = 20;
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = element.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth"
+            });
+
+            // Auto expand the target card
+            const card = document.getElementById(cardId);
+            if (!card.classList.contains('expanded')) {
+                card.classList.add('expanded');
+            }
+        }
+
+        // Highlight Sidebar on Scroll
+        window.addEventListener('scroll', () => {
+            const cards = document.querySelectorAll('.card');
+            const navItems = document.querySelectorAll('.progress-item');
+            
+            let current = '';
+
+            cards.forEach(card => {
+                const cardTop = card.offsetTop;
+                if (scrollY >= (cardTop - 200)) {
+                    current = card.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (current === 'card-assess' && item.classList.contains('step-1')) item.classList.add('active');
+                if (current === 'card-diag' && item.classList.contains('step-2')) item.classList.add('active');
+                if (current === 'card-treat' && item.classList.contains('step-3')) item.classList.add('active');
+                if (current === 'card-follow' && item.classList.contains('step-4')) item.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

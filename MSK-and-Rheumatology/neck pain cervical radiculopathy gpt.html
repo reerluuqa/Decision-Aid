@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Neck pain + Cervical Radiculopathy — Clinical Decision Support</title>
+  <meta name="description" content="Modern clinical decision-support UI for neck pain with suspected cervical radiculopathy: triage, assessment, imaging, and management pathways." />
+
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel: rgba(255,255,255,0.06);
+      --panel2: rgba(255,255,255,0.08);
+      --stroke: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.72);
+      --faint: rgba(255,255,255,0.52);
+
+      --urgent: #ff4d6d;
+      --urgent2:#ff8fa3;
+      --routine: #38bdf8;
+      --routine2:#7dd3fc;
+
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --info: #a78bfa;
+
+      --shadow: 0 18px 50px rgba(0,0,0,0.45);
+      --shadow2: 0 10px 30px rgba(0,0,0,0.35);
+
+      --r12: 12px;
+      --r16: 16px;
+      --r20: 20px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    /* light mode */
+    body[data-theme="light"]{
+      --bg: #f6f7fb;
+      --panel: rgba(0,0,0,0.04);
+      --panel2: rgba(0,0,0,0.06);
+      --stroke: rgba(0,0,0,0.09);
+      --text: rgba(0,0,0,0.88);
+      --muted: rgba(0,0,0,0.68);
+      --faint: rgba(0,0,0,0.52);
+      --shadow: 0 18px 50px rgba(10,20,40,0.12);
+      --shadow2: 0 10px 30px rgba(10,20,40,0.10);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 10% -10%, rgba(167,139,250,0.25), transparent 60%),
+        radial-gradient(900px 700px at 85% 0%, rgba(56,189,248,0.18), transparent 55%),
+        radial-gradient(1100px 900px at 60% 120%, rgba(52,211,153,0.15), transparent 55%),
+        var(--bg);
+      line-height:1.45;
+    }
+
+    a{ color:inherit; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    .app{
+      display:grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 22px 16px 60px;
+    }
+
+    @media (max-width: 980px){
+      .app{ grid-template-columns: 1fr; }
+      .sidebar{ position: relative !important; top:auto !important; }
+    }
+
+    /* header */
+    .topbar{
+      grid-column: 1 / -1;
+      display:flex;
+      gap: 14px;
+      align-items: stretch;
+      justify-content: space-between;
+      padding: 14px 14px;
+      border: 1px solid var(--stroke);
+      border-radius: var(--r20);
+      background: linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+    }
+
+    .titleblock{
+      display:flex;
+      gap: 12px;
+      align-items: flex-start;
+      min-width: 280px;
+    }
+
+    .badge{
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      display:grid; place-items:center;
+      background: linear-gradient(135deg, rgba(255,77,109,0.25), rgba(56,189,248,0.18));
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+      flex: 0 0 auto;
+    }
+    body[data-theme="light"] .badge{ border-color: rgba(0,0,0,0.08); }
+
+    h1{
+      margin:0;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+      line-height:1.2;
+    }
+    .subtitle{
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+      max-width: 64ch;
+    }
+
+    .controls{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.06);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.16);
+      backdrop-filter: blur(10px);
+      font-size: 13px;
+      color: var(--muted);
+      user-select: none;
+    }
+    .pill strong{ color: var(--text); font-weight: 650; }
+
+    .btn{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      cursor:pointer;
+      display:inline-flex;
+      gap: 8px;
+      align-items:center;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      user-select: none;
+    }
+    .btn:hover{ background: rgba(255,255,255,0.10); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btn.primary{
+      border-color: rgba(56,189,248,0.35);
+      background: linear-gradient(135deg, rgba(56,189,248,0.22), rgba(167,139,250,0.16));
+    }
+    .btn.danger{
+      border-color: rgba(255,77,109,0.40);
+      background: linear-gradient(135deg, rgba(255,77,109,0.20), rgba(255,143,163,0.12));
+    }
+
+    .search{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.06);
+      min-width: 290px;
+      max-width: 460px;
+    }
+    .search input{
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .search input::placeholder{ color: var(--faint); }
+
+    /* sidebar */
+    .sidebar{
+      position: sticky;
+      top: 14px;
+      align-self: start;
+      border: 1px solid var(--stroke);
+      border-radius: var(--r20);
+      background: rgba(255,255,255,0.05);
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+
+    .side-head{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--stroke);
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap:10px;
+    }
+    .side-head .label{
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .filters{
+      padding: 12px 14px;
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chip{
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-size: 12px;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      user-select:none;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .chip[data-on="true"]{
+      color: var(--text);
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.10);
+    }
+    .dot{
+      width: 10px; height: 10px;
+      border-radius: 999px;
+      background: var(--routine);
+      box-shadow: 0 0 0 4px rgba(56,189,248,0.12);
+    }
+    .dot.urgent{
+      background: var(--urgent);
+      box-shadow: 0 0 0 4px rgba(255,77,109,0.12);
+    }
+
+    .nav{
+      padding: 10px 8px 12px;
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+    }
+    .nav a{
+      padding: 10px 10px;
+      border-radius: 12px;
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .nav a:hover{
+      background: rgba(255,255,255,0.07);
+      border-color: var(--stroke);
+      color: var(--text);
+      text-decoration:none;
+    }
+    .nav a[data-active="true"]{
+      background: rgba(255,255,255,0.10);
+      border-color: rgba(255,255,255,0.16);
+      color: var(--text);
+    }
+    .nav .ic{
+      width: 22px; height: 22px;
+      border-radius: 10px;
+      display:grid; place-items:center;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--stroke);
+      flex: 0 0 auto;
+      margin-top: 1px;
+    }
+    .nav .meta{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+    }
+    .nav .meta small{
+      color: var(--faint);
+      font-size: 12px;
+      line-height:1.2;
+    }
+
+    /* main content */
+    .main{
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid var(--stroke);
+      border-radius: var(--r20);
+      background: rgba(255,255,255,0.05);
+      box-shadow: var(--shadow2);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+    }
+
+    .card-header{
+      padding: 14px 16px 10px;
+      display:flex;
+      justify-content: space-between;
+      align-items:flex-start;
+      gap: 10px;
+      border-bottom: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.03);
+    }
+    .card-header h2{
+      margin:0;
+      font-size: 15px;
+      letter-spacing: -0.01em;
+    }
+    .card-header p{
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 72ch;
+    }
+
+    .tagrow{ display:flex; gap: 8px; flex-wrap: wrap; justify-content:flex-end; }
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 7px 10px;
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      user-select:none;
+    }
+    .tag .mini{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: var(--info);
+      box-shadow: 0 0 0 4px rgba(167,139,250,0.14);
+    }
+    .tag .mini.urgent{
+      background: var(--urgent);
+      box-shadow: 0 0 0 4px rgba(255,77,109,0.12);
+    }
+    .tag .mini.routine{
+      background: var(--routine);
+      box-shadow: 0 0 0 4px rgba(56,189,248,0.12);
+    }
+
+    .card-body{ padding: 14px 16px 16px; }
+
+    .callout{
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 16px;
+      padding: 12px 12px;
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      background: rgba(255,255,255,0.06);
+      margin-bottom: 12px;
+    }
+    .callout .icon{
+      width: 34px; height: 34px;
+      border-radius: 14px;
+      display:grid; place-items:center;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.06);
+      flex: 0 0 auto;
+    }
+    .callout h3{
+      margin:0;
+      font-size: 13px;
+      letter-spacing: -0.01em;
+    }
+    .callout p{
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .callout.urgent{
+      border-color: rgba(255,77,109,0.35);
+      background: linear-gradient(135deg, rgba(255,77,109,0.16), rgba(255,255,255,0.04));
+    }
+    .callout.urgent .icon{
+      border-color: rgba(255,77,109,0.40);
+      background: rgba(255,77,109,0.12);
+    }
+    .callout.routine{
+      border-color: rgba(56,189,248,0.32);
+      background: linear-gradient(135deg, rgba(56,189,248,0.14), rgba(255,255,255,0.04));
+    }
+    .callout.routine .icon{
+      border-color: rgba(56,189,248,0.38);
+      background: rgba(56,189,248,0.10);
+    }
+
+    .steps{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      margin: 10px 0 0;
+    }
+    .step{
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 12px 12px;
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      gap: 12px;
+      align-items:flex-start;
+    }
+    .step .n{
+      width: 30px; height: 30px;
+      border-radius: 12px;
+      display:grid; place-items:center;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.07);
+      flex: 0 0 auto;
+    }
+    .step .t{
+      display:flex;
+      flex-direction:column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .step .t b{
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .step .t span{
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .split{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 700px){
+      .split{ grid-template-columns: 1fr; }
+    }
+
+    .accordion{
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      overflow:hidden;
+      background: rgba(255,255,255,0.04);
+      margin-top: 10px;
+    }
+    .acc-item + .acc-item{ border-top: 1px solid var(--stroke); }
+    .acc-btn{
+      width:100%;
+      text-align:left;
+      padding: 12px 12px;
+      background: transparent;
+      border:none;
+      color: var(--text);
+      cursor:pointer;
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .acc-btn small{ color: var(--muted); font-weight: 600; }
+    .acc-panel{
+      padding: 0 12px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      display:none;
+    }
+    .acc-item[data-open="true"] .acc-panel{ display:block; }
+    .chev{
+      width: 22px; height: 22px;
+      border-radius: 10px;
+      display:grid; place-items:center;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.05);
+      flex: 0 0 auto;
+    }
+    .acc-item[data-open="true"] .chev{ transform: rotate(180deg); }
+
+    ul{ margin: 8px 0 0 18px; }
+    li{ margin: 6px 0; }
+
+    table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      overflow:hidden;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.04);
+    }
+    th, td{
+      padding: 10px 10px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--stroke);
+      vertical-align: top;
+    }
+    th{
+      color: var(--muted);
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-size: 11px;
+      background: rgba(255,255,255,0.04);
+    }
+    tr:last-child td{ border-bottom:none; }
+    td code{ font-family: var(--mono); font-size: 12px; color: var(--text); }
+
+    .kpi{
+      display:flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .kpi .box{
+      flex: 1 1 170px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.05);
+      padding: 12px 12px;
+    }
+    .kpi .box .h{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom: 6px;
+    }
+    .kpi .box .h b{ font-size: 13px; }
+    .kpi .box .v{
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .kpi .box .s{ color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    /* floating flags */
+    .float{
+      position: fixed;
+      bottom: 16px;
+      right: 16px;
+      max-width: 420px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,77,109,0.38);
+      background: linear-gradient(135deg, rgba(255,77,109,0.22), rgba(255,255,255,0.06));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      padding: 12px 12px;
+      display:none;
+      z-index: 50;
+    }
+    .float[data-show="true"]{ display:block; }
+    .float .row{
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .float .row b{ font-size: 13px; }
+    .float .row p{ margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+    .float .x{
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 8px 10px;
+      cursor:pointer;
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+
+    /* content filtering */
+    body[data-filter="urgent-only"] [data-scope="routine"]{ display:none !important; }
+    body[data-filter="routine-only"] [data-scope="urgent"]{ display:none !important; }
+
+    /* search highlighting */
+    mark{
+      background: rgba(251,191,36,0.30);
+      color: inherit;
+      padding: 0 .15em;
+      border-radius: 6px;
+    }
+
+    /* print */
+    @media print{
+      .sidebar, .topbar, .float{ display:none !important; }
+      body{ background: #fff; color:#000; }
+      .app{ display:block; max-width:none; padding:0; }
+      .card{ box-shadow:none; break-inside: avoid; }
+    }
+  </style>
+</head>
+
+<body data-theme="dark" data-filter="all">
+  <div class="app">
+
+    <!-- TOPBAR -->
+    <header class="topbar" role="banner">
+      <div class="titleblock">
+        <div class="badge" aria-hidden="true">🧠</div>
+        <div>
+          <h1>Neck pain + suspected cervical radiculopathy</h1>
+          <div class="subtitle">
+            Rapid triage → focused neuro exam → imaging thresholds → conservative vs specialist pathways.
+            Designed for fast scanning in clinical workflow.
+          </div>
+        </div>
+      </div>
+
+      <div class="controls" role="group" aria-label="Global controls">
+        <div class="search" role="search">
+          <span aria-hidden="true">🔎</span>
+          <input id="q" type="search" placeholder="Search sections (e.g., ‘myelopathy’, ‘MRI’, ‘Spurling’, ‘C7’)" />
+          <button class="btn" id="clearQ" title="Clear search" aria-label="Clear search">✕</button>
+        </div>
+
+        <button class="btn danger" id="urgentOnly" title="Show urgent content only">🚨 Urgent</button>
+        <button class="btn primary" id="routineOnly" title="Show routine content only">🧾 Routine</button>
+        <button class="btn" id="showAll" title="Show all content">🧩 All</button>
+
+        <button class="btn" id="themeBtn" title="Toggle theme">🌗 Theme</button>
+        <button class="btn" id="printBtn" title="Print view">🖨️ Print</button>
+
+        <div class="pill" title="Scope">
+          <span aria-hidden="true">≥16y</span>
+          <strong>Primary care / first-contact</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" aria-label="Section navigation">
+      <div class="side-head">
+        <div class="label">Navigate</div>
+        <button class="btn" id="collapseAll" title="Collapse all accordions">▾ Collapse</button>
+      </div>
+
+      <div class="filters" aria-label="Quick filters">
+        <div class="chip" id="chipUrgent" data-on="false" role="button" tabindex="0" aria-pressed="false">
+          <span class="dot urgent" aria-hidden="true"></span> Urgent-only
+        </div>
+        <div class="chip" id="chipRoutine" data-on="false" role="button" tabindex="0" aria-pressed="false">
+          <span class="dot" aria-hidden="true"></span> Routine-only
+        </div>
+        <div class="chip" id="chipTop" data-on="true" role="button" tabindex="0" aria-pressed="true">
+          <span class="dot" style="background: var(--ok); box-shadow:0 0 0 4px rgba(52,211,153,0.12)" aria-hidden="true"></span> Keep highlights
+        </div>
+      </div>
+
+      <nav class="nav" id="nav">
+        <a href="#triage" data-link><span class="ic">🚨</span><span class="meta"><b>Triage & red flags</b><small>Serious pathology / myelopathy screen</small></span></a>
+        <a href="#assessment" data-link><span class="ic">🩺</span><span class="meta"><b>Assessment</b><small>Hx, exam, bedside tests</small></span></a>
+        <a href="#pattern" data-link><span class="ic">🧩</span><span class="meta"><b>Root pattern quick table</b><small>C5–T1 myotome/reflex/dermatome</small></span></a>
+        <a href="#imaging" data-link><span class="ic">🧲</span><span class="meta"><b>Imaging thresholds</b><small>When MRI changes management</small></span></a>
+        <a href="#management" data-link><span class="ic">🧾</span><span class="meta"><b>Management pathways</b><small>&lt;4–6w vs ≥4–6w / objective deficits</small></span></a>
+        <a href="#followup" data-link><span class="ic">📅</span><span class="meta"><b>Follow-up & safety-net</b><small>Re-exam triggers & escalation</small></span></a>
+        <a href="#ddx" data-link><span class="ic">🧠</span><span class="meta"><b>Differential prompts</b><small>Broad mimics to keep in frame</small></span></a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main" role="main">
+
+      <!-- TRIAGE -->
+      <section class="card" id="triage" data-section>
+        <div class="card-header">
+          <div>
+            <h2>🚨 Triage & red flags (immediate risk screen)</h2>
+            <p>Prioritise serious spinal pathology, systemic illness, and cervical myelopathy. Use the checklist to raise visual flags and jump to actions.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini urgent"></span>Urgent focus</span>
+            <span class="tag"><span class="mini"></span>Visual flagging</span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="callout urgent" data-scope="urgent">
+            <div class="icon" aria-hidden="true">⚠️</div>
+            <div>
+              <h3>Immediate action rule</h3>
+              <p>
+                If red flags suggesting serious spinal abnormality are present: <b>urgent referral</b> or <b>immediate assessment</b> (clinical judgement).
+                If <b>severe/progressive motor weakness</b> or <b>severe/progressive sensory loss</b>: <b>seek immediate specialist advice</b>.
+              </p>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="card" style="box-shadow:none; border-radius:18px;">
+              <div class="card-header">
+                <div>
+                  <h2 style="font-size:14px; margin:0;">Red-flag checklist</h2>
+                  <p style="margin:6px 0 0; font-size:13px;">Ticking items will surface a floating alert and count flagged domains.</p>
+                </div>
+                <div class="tagrow">
+                  <span class="tag"><span class="mini urgent"></span>Flagged = escalation</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="kpi" aria-label="Flag counters">
+                  <div class="box">
+                    <div class="h"><b>Flag count</b><span class="tag" style="padding:6px 10px;"><span class="mini urgent"></span><span id="flagCount">0</span></span></div>
+                    <div class="v" id="flagCountBig">0</div>
+                    <div class="s">Checked red-flag items</div>
+                  </div>
+                  <div class="box">
+                    <div class="h"><b>Domains hit</b><span class="tag" style="padding:6px 10px;"><span class="mini"></span><span id="domainCount">0</span></span></div>
+                    <div class="v" id="domainCountBig">0</div>
+                    <div class="s">Malignancy/infection/inflammation · Myelopathy · Neuro/age/trauma/other</div>
+                  </div>
+                </div>
+
+                <div class="accordion" id="flags">
+                  <div class="acc-item" data-open="true">
+                    <button class="acc-btn" type="button">
+                      <span><b>Malignancy / infection / inflammation</b> <small>(systemic / vertebral tenderness / meningitic-type features)</small></span>
+                      <span class="chev" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="acc-panel">
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> Fever, night sweats, or unexplained weight loss</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> Excruciating pain, cervical lymphadenopathy, intractable night pain, increasing pain, exquisite vertebral body tenderness, or generalised neck stiffness</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> Nausea or vomiting</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> New or severe headache</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> Photophobia or phonophobia</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> Visual loss</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="systemic" /> Skin erythema, wounds, or exudate</label>
+                    </div>
+                  </div>
+
+                  <div class="acc-item" data-open="false">
+                    <button class="acc-btn" type="button">
+                      <span><b>Cervical myelopathy pattern</b> <small>(UMN signs, gait, sphincter)</small></span>
+                      <span class="chev" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="acc-panel">
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Paresis</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Sensory changes or loss of sensation</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Altered muscle tone</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Clumsy or weak hands</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Gait disturbance</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Babinski / hyperreflexia / clonus / spasticity</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Hoffman's sign</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Lhermitte’s sign (electric shock sensation with neck flexion)</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="myelopathy" /> Bowel/bladder dysfunction or severe gait ataxia</label>
+                    </div>
+                  </div>
+
+                  <div class="acc-item" data-open="false">
+                    <button class="acc-btn" type="button">
+                      <span><b>Other neurological / age / trauma / risk context</b> <small>(multi-dermatomal, extremes of age, immunosuppression, trauma)</small></span>
+                      <span class="chev" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="acc-panel">
+                      <label><input type="checkbox" data-flag data-domain="neuro" /> Altered cognitive state</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="neuro" /> Weakness involving >1 myotome or sensory loss involving >1 dermatome</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="neuro" /> Headaches, facial pain, ataxia, or vertigo</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="age" /> New symptoms &lt;20y or &gt;55y</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="risk" /> History of inflammatory arthritis / cancer / TB / immunosuppression / drug abuse / AIDS / other infections</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="trauma" /> Violent trauma (e.g., RTA) or fall from height; or minor trauma with osteoporosis risk</label><br/>
+                      <label><input type="checkbox" data-flag data-domain="surgery" /> History of neck surgery</label>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+                  <button class="btn danger" id="goEscalate">🚑 Jump to urgent actions</button>
+                  <button class="btn" id="resetFlags">↺ Reset checklist</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="callout routine" data-scope="routine">
+                <div class="icon" aria-hidden="true">✅</div>
+                <div>
+                  <h3>When it’s likely uncomplicated radiculopathy</h3>
+                  <p>Symptoms in neck/shoulder/arm approximating a single dermatome; often unilateral; sensory symptoms common; C7 most common, then C6.</p>
+                </div>
+              </div>
+
+              <div class="callout" style="border-color: rgba(251,191,36,0.30); background: linear-gradient(135deg, rgba(251,191,36,0.14), rgba(255,255,255,0.04));">
+                <div class="icon" aria-hidden="true">🧭</div>
+                <div>
+                  <h3>Operational triage heuristic</h3>
+                  <p>
+                    <b>UMN signs / gait / sphincter / systemic illness / escalating deficit</b> → treat as time-sensitive until proven otherwise.
+                    <b>Stable single-root pattern</b> → proceed to focused assessment and conservative pathway.
+                  </p>
+                </div>
+              </div>
+
+              <div class="accordion">
+                <div class="acc-item" data-open="false">
+                  <button class="acc-btn" type="button">
+                    <span><b>Exam extras if meningitis suspected</b> <small>(nuchal rigidity context)</small></span>
+                    <span class="chev" aria-hidden="true">▾</span>
+                  </button>
+                  <div class="acc-panel">
+                    Consider Kernig’s sign (pain/resisted leg extension with hip/knee flexion) and Brudzinski’s sign (reflex hip/knee flexion with neck flexion) when evaluating nuchal rigidity.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ASSESSMENT -->
+      <section class="card" id="assessment" data-section>
+        <div class="card-header">
+          <div>
+            <h2>🩺 Assessment (history + exam + bedside tests)</h2>
+            <p>Goal: confirm a single-root radicular pattern, exclude non-mechanical causes, and identify triggers for urgent imaging/referral.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini routine"></span>Routine core</span>
+            <span class="tag"><span class="mini"></span>High-yield bedside tests</span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="grid">
+            <div class="callout routine" data-scope="routine">
+              <div class="icon" aria-hidden="true">🧾</div>
+              <div>
+                <h3>History essentials</h3>
+                <p>Differentiate neuropathic/radicular pain from mechanical neck pain; ask for occupational and medical history; screen psychosocial context; treat fever/cancer history as infection/malignancy until excluded.</p>
+              </div>
+            </div>
+
+            <div class="callout" style="border-color: rgba(56,189,248,0.25); background: linear-gradient(135deg, rgba(56,189,248,0.10), rgba(255,255,255,0.04));">
+              <div class="icon" aria-hidden="true">🧪</div>
+              <div>
+                <h3>Exam essentials</h3>
+                <p>Neck appearance/ROM; tenderness; skin inspection (rash/petechiae/purpura); neuro exam for dermatomal sensory loss, myotomal weakness, and reflex asymmetry.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="steps" data-scope="routine">
+            <div class="step">
+              <div class="n">1</div>
+              <div class="t">
+                <b>Map symptoms to a dermatome and a myotome</b>
+                <span>Single-root pattern supports radiculopathy; multi-dermatomal/myotomal involvement suggests broader neurological disorder.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div class="n">2</div>
+              <div class="t">
+                <b>Bedside provocation tests (use as a set)</b>
+                <span>Combine findings to increase or decrease likelihood; avoid provoking manoeuvres if contraindicated.</span>
+              </div>
+            </div>
+            <div class="step">
+              <div class="n">3</div>
+              <div class="t">
+                <b>Decide: uncomplicated vs complex</b>
+                <span>Complex = suspected myelopathy/abscess, persistent/progressive objective deficit, or failure to improve after 4–6 weeks of conservative treatment → MRI/referral threshold.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="accordion" data-scope="routine">
+            <div class="acc-item" data-open="true">
+              <button class="acc-btn" type="button">
+                <span><b>Spurling test</b> <small>(provokes radicular arm pain)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                Flex neck laterally, rotate, then apply axial pressure. Positive if typical radicular arm pain occurs.
+                <br/><br/>
+                <b>Avoid</b> in rheumatoid arthritis, cancer, infection, or possible neck injury.
+              </div>
+            </div>
+
+            <div class="acc-item" data-open="false">
+              <button class="acc-btn" type="button">
+                <span><b>Arm squeeze test</b> <small>(pain score discriminator)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                Squeeze the middle third of the upper arm (thumb posterior triceps, fingers anterior biceps). Positive if pain score (0–10) is ≥3 points higher vs pressure over two other areas.
+              </div>
+            </div>
+
+            <div class="acc-item" data-open="false">
+              <button class="acc-btn" type="button">
+                <span><b>Axial traction + combined testing</b> <small>(likelihood shift)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                A combination of positive Spurling, axial traction, and arm squeeze test increases likelihood of cervical radiculopathy.
+              </div>
+            </div>
+
+            <div class="acc-item" data-open="false">
+              <button class="acc-btn" type="button">
+                <span><b>Upper limb neurodynamic tests</b> <small>(rule-out bundle)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                A combination of four neurodynamic tests plus an arm squeeze test can rule out cervical radiculopathy.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- PATTERN TABLE -->
+      <section class="card" id="pattern" data-section>
+        <div class="card-header">
+          <div>
+            <h2>🧩 Root pattern quick table (C5–T1)</h2>
+            <p>Use for fast localisation when symptoms approximate a dermatome and there are objective deficits.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini"></span>Localisation aid</span>
+            <span class="tag"><span class="mini routine"></span>Routine workflow</span>
+          </div>
+        </div>
+
+        <div class="card-body" data-scope="routine">
+          <table aria-label="Neurological features associated with cervical radiculopathy">
+            <thead>
+              <tr>
+                <th>Nerve root</th>
+                <th>Motor (weakness)</th>
+                <th>Reflex</th>
+                <th>Sensory change</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>C5</code></td>
+                <td>Shoulder abduction/flexion; elbow flexion</td>
+                <td>Biceps</td>
+                <td>Lateral arm</td>
+              </tr>
+              <tr>
+                <td><code>C6</code></td>
+                <td>Elbow flexion; wrist extension</td>
+                <td>Biceps; supinator</td>
+                <td>Lateral forearm; thumb; index finger</td>
+              </tr>
+              <tr>
+                <td><code>C7</code></td>
+                <td>Elbow extension; wrist flexion; finger extension</td>
+                <td>Triceps</td>
+                <td>Middle finger</td>
+              </tr>
+              <tr>
+                <td><code>C8</code></td>
+                <td>Finger flexion</td>
+                <td>None</td>
+                <td>Medial lower forearm; ring & little fingers</td>
+              </tr>
+              <tr>
+                <td><code>T1</code></td>
+                <td>Finger abduction/adduction</td>
+                <td>None</td>
+                <td>Medial upper forearm; lower arm</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="accordion" style="margin-top:12px;">
+            <div class="acc-item" data-open="false">
+              <button class="acc-btn" type="button">
+                <span><b>Atypical features to keep in mind</b> <small>(do not over-localise)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                Atypical signs may include deltoid weakness, scapular winging, intrinsic hand muscle weakness, chest/deep breast pain, and headaches. Retro-orbital/temporal pain may reflect upper cervical referral (C1–C3) and can mimic giant cell arteritis.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- IMAGING -->
+      <section class="card" id="imaging" data-section>
+        <div class="card-header">
+          <div>
+            <h2>🧲 Imaging thresholds</h2>
+            <p>Imaging is not routinely required for diagnosis; reserve MRI for complex presentations or lack of improvement with conservative care.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini"></span>Decision point</span>
+            <span class="tag"><span class="mini urgent"></span>Urgent if complex</span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="grid">
+            <div class="callout routine" data-scope="routine">
+              <div class="icon" aria-hidden="true">📷</div>
+              <div>
+                <h3>Routine imaging stance</h3>
+                <p>Cervical X-rays and other imaging are <b>not routinely required</b> to diagnose neck pain with radiculopathy.</p>
+              </div>
+            </div>
+
+            <div class="callout urgent" data-scope="urgent">
+              <div class="icon" aria-hidden="true">🧲</div>
+              <div>
+                <h3>When MRI is indicated (“complex” radiculopathy)</h3>
+                <p>High suspicion of myelopathy or abscess; persistent/progressive objective neurological findings; or failure to improve after <b>4–6 weeks</b> of conservative treatment.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step" data-scope="routine">
+              <div class="n">A</div>
+              <div class="t">
+                <b>Uncomplicated, &lt;4–6 weeks, no objective deficit</b>
+                <span>Clinical diagnosis + conservative management; plan re-examination to detect evolving objective deficits.</span>
+              </div>
+            </div>
+
+            <div class="step" data-scope="urgent">
+              <div class="n">B</div>
+              <div class="t">
+                <b>Objective deficit, progression, or non-response</b>
+                <span>Escalate to MRI-confirmed diagnosis and specialist pathway (consider injections/surgery depending on severity and imaging).</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MANAGEMENT -->
+      <section class="card" id="management" data-section>
+        <div class="card-header">
+          <div>
+            <h2>🧾 Management pathways</h2>
+            <p>Separate pathways by time course and objective neurological signs. Keep the plan legible and reproducible.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini routine"></span>Conservative first</span>
+            <span class="tag"><span class="mini urgent"></span>Escalate when indicated</span>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="grid">
+            <div class="card" style="box-shadow:none;">
+              <div class="card-header">
+                <div>
+                  <h2 style="font-size:14px; margin:0;">Pathway 1 — &lt;4–6 weeks AND no objective neurological signs</h2>
+                  <p style="margin:6px 0 0;">Conservative management with explicit safety-netting and planned review.</p>
+                </div>
+                <div class="tagrow">
+                  <span class="tag"><span class="mini routine"></span>Routine</span>
+                </div>
+              </div>
+              <div class="card-body" data-scope="routine">
+                <div class="callout routine">
+                  <div class="icon" aria-hidden="true">🧠</div>
+                  <div>
+                    <h3>Reassure + set expectation</h3>
+                    <p>Long-term prognosis is good; most improve without surgery. Encourage activity and return to normal life/work as soon as possible.</p>
+                  </div>
+                </div>
+
+                <div class="steps">
+                  <div class="step">
+                    <div class="n">1</div>
+                    <div class="t">
+                      <b>Activity & self-management</b>
+                      <span>Home exercise; avoid driving if neck ROM is restricted; discourage cervical collars (may prolong symptoms).</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">2</div>
+                    <div class="t">
+                      <b>Sleep ergonomics</b>
+                      <span>Firm pillow may help; aim for lateral support and cervical hollow support; avoid forced head position (e.g., two pillows).</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">3</div>
+                    <div class="t">
+                      <b>Analgesia strategy</b>
+                      <span>Offer oral analgesics (e.g., ibuprofen, paracetamol, codeine) based on severity, preference, tolerability, and risk of adverse effects.</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">4</div>
+                    <div class="t">
+                      <b>Neuropathic pain agents (consider)</b>
+                      <span>Consider amitriptyline, duloxetine, pregabalin, or gabapentin when neuropathic symptoms dominate.</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">5</div>
+                    <div class="t">
+                      <b>Physiotherapy (consider referral)</b>
+                      <span>Strengthening and stretching exercises; manual therapy may be included.</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">6</div>
+                    <div class="t">
+                      <b>Planned review</b>
+                      <span>Repeat examination can reveal progression to objective deficit → triggers investigation/referral.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion" style="margin-top:12px;">
+                  <div class="acc-item" data-open="false">
+                    <button class="acc-btn" type="button">
+                      <span><b>Quick conservative “do / don’t”</b> <small>(scan-friendly)</small></span>
+                      <span class="chev" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="acc-panel">
+                      <ul>
+                        <li><b>Do:</b> encourage activity + return to usual function; consider physio; plan review; treat neuropathic features appropriately.</li>
+                        <li><b>Don’t:</b> default to collars; ignore new objective deficit; advise driving if neck ROM restricted.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="card" style="box-shadow:none;">
+              <div class="card-header">
+                <div>
+                  <h2 style="font-size:14px; margin:0;">Pathway 2 — ≥4–6 weeks OR objective neurological signs</h2>
+                  <p style="margin:6px 0 0;">Confirm diagnosis with MRI and consider invasive/surgical options when criteria are met.</p>
+                </div>
+                <div class="tagrow">
+                  <span class="tag"><span class="mini urgent"></span>Escalation</span>
+                </div>
+              </div>
+              <div class="card-body" data-scope="urgent">
+                <div class="callout urgent">
+                  <div class="icon" aria-hidden="true">🧲</div>
+                  <div>
+                    <h3>Referral + MRI</h3>
+                    <p>Refer to confirm diagnosis with MRI and to consider invasive procedures (e.g., interlaminar cervical epidural injections, transforaminal injections) or spinal surgery as appropriate.</p>
+                  </div>
+                </div>
+
+                <div class="steps">
+                  <div class="step">
+                    <div class="n">1</div>
+                    <div class="t">
+                      <b>Confirm structural correlate</b>
+                      <span>MRI demonstrating nerve root compression supports invasive/surgical decision-making in the appropriate clinical setting.</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">2</div>
+                    <div class="t">
+                      <b>Consider surgery when indicated</b>
+                      <span>Unremitting radicular pain despite 6–12 weeks conservative treatment, disabling symptoms, or progressive motor weakness, with MRI-confirmed nerve root compression.</span>
+                    </div>
+                  </div>
+                  <div class="step">
+                    <div class="n">3</div>
+                    <div class="t">
+                      <b>Escalate immediately if rapidly progressive deficit</b>
+                      <span>Severe/progressive motor weakness or severe/progressive sensory loss → immediate specialist advice.</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="accordion" style="margin-top:12px;">
+                  <div class="acc-item" data-open="false">
+                    <button class="acc-btn" type="button">
+                      <span><b>Practical handover payload (copy-ready)</b> <small>for referral</small></span>
+                      <span class="chev" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="acc-panel">
+                      <ul>
+                        <li>Time course: &lt;6w vs ≥6w; progression.</li>
+                        <li>Objective findings: myotomal power, dermatomal sensation, reflex changes; UMN signs if present.</li>
+                        <li>Red-flag context: systemic symptoms, trauma, immunosuppression/cancer history, sphincter symptoms, gait.</li>
+                        <li>Conservative measures trialled: activity/physio, analgesia, neuropathic agents; response.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- FOLLOW-UP -->
+      <section class="card" id="followup" data-section>
+        <div class="card-header">
+          <div>
+            <h2>📅 Follow-up & safety-netting</h2>
+            <p>Structured review reduces missed progression. Use objective change as the escalation trigger.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini"></span>Risk control</span>
+            <span class="tag"><span class="mini urgent"></span>Escalation triggers</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="callout" style="border-color: rgba(52,211,153,0.32); background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(255,255,255,0.04));" data-scope="routine">
+            <div class="icon" aria-hidden="true">🔁</div>
+            <div>
+              <h3>Why review matters</h3>
+              <p>Repeat examination can identify progression to objective neurological findings — this may signify advancing nerve root compression and should trigger further investigation/referral.</p>
+            </div>
+          </div>
+
+          <div class="steps">
+            <div class="step" data-scope="routine">
+              <div class="n">1</div>
+              <div class="t">
+                <b>Re-check objective neurology</b>
+                <span>Power (key muscles), reflexes, dermatomal sensation; compare side-to-side and to baseline.</span>
+              </div>
+            </div>
+            <div class="step" data-scope="urgent">
+              <div class="n">2</div>
+              <div class="t">
+                <b>Escalate if deterioration or new red flags</b>
+                <span>New/progressive weakness, severe/progressive sensory loss, or myelopathic/systemic red flags → urgent pathway.</span>
+              </div>
+            </div>
+            <div class="step" data-scope="routine">
+              <div class="n">3</div>
+              <div class="t">
+                <b>Functional status check</b>
+                <span>Work capacity, sleep, driving feasibility (avoid driving if neck ROM restricted), and adherence to home exercise.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DIFFERENTIAL -->
+      <section class="card" id="ddx" data-section>
+        <div class="card-header">
+          <div>
+            <h2>🧠 Differential prompts (keep broad mimics in frame)</h2>
+            <p>Neck pain differential is broad (trauma and non-MSK: neoplastic, inflammatory, infectious, vascular, endocrinological, neurological). Use this as a “don’t-miss” prompt list.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini"></span>Cognitive forcing</span>
+          </div>
+        </div>
+        <div class="card-body" data-scope="routine">
+          <div class="accordion">
+            <div class="acc-item" data-open="true">
+              <button class="acc-btn" type="button">
+                <span><b>Common clinical mimics</b> <small>(scan list)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                <ul>
+                  <li>Acute disc prolapse (can drive severe secondary torticollis)</li>
+                  <li>Acute torticollis</li>
+                  <li>Acute trauma / whiplash-type injury</li>
+                  <li>Adverse drug reactions (e.g., antipsychotics, metoclopramide, stimulants/cocaine)</li>
+                  <li>Cervical strain/fracture/dislocation/myelopathy</li>
+                  <li>Herpes zoster</li>
+                  <li>Local abscess</li>
+                  <li>Malignancy (including compressive tumours)</li>
+                  <li>Meningitis</li>
+                  <li>Neurological disorders leading to dystonia (e.g., stroke/encephalitis)</li>
+                  <li>Headache syndromes / temporomandibular disorder</li>
+                  <li>Shoulder pathology (adhesive capsulitis, tendinopathy/impingement)</li>
+                  <li>Myofascial pain / polymyalgia rheumatica</li>
+                  <li>Thoracic outlet syndrome</li>
+                  <li>CRPS / reflex sympathetic dystrophy</li>
+                  <li>Distal entrapments (carpal tunnel; interosseous nerve entrapment)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="acc-item" data-open="false">
+              <button class="acc-btn" type="button">
+                <span><b>“Pattern breaks” that should slow you down</b> <small>(high-signal)</small></span>
+                <span class="chev" aria-hidden="true">▾</span>
+              </button>
+              <div class="acc-panel">
+                <ul>
+                  <li>Multi-dermatomal sensory loss or multi-myotomal weakness</li>
+                  <li>Prominent systemic symptoms (fever, night sweats, weight loss)</li>
+                  <li>UMN signs, gait disturbance, sphincter symptoms</li>
+                  <li>Unexplained intractable night pain or vertebral point tenderness</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FOOT -->
+      <section class="card" data-section>
+        <div class="card-header">
+          <div>
+            <h2>📌 Notes</h2>
+            <p>UI is optimised for scanning: urgent content is visually separated; routine content remains accessible without noise. Print mode hides navigation and controls.</p>
+          </div>
+          <div class="tagrow">
+            <span class="tag"><span class="mini"></span>Self-contained</span>
+            <span class="tag"><span class="mini"></span>LocalStorage prefs</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="callout" style="border-color: rgba(167,139,250,0.30); background: linear-gradient(135deg, rgba(167,139,250,0.12), rgba(255,255,255,0.04));">
+            <div class="icon" aria-hidden="true">🛠️</div>
+            <div>
+              <h3>Customisation hooks</h3>
+              <p>
+                You can rename sections, add local pathways (e.g., your referral criteria), or insert drug-dose blocks.
+                The page already supports: sticky nav, filters, search highlighting, accordions, and a red-flag floating alert.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- FLOATING URGENT ALERT -->
+  <div class="float" id="float" data-show="false" role="status" aria-live="polite">
+    <div class="row">
+      <div>
+        <b>🚨 Red flags checked</b>
+        <p id="floatText">Escalation pathway likely. Consider urgent assessment/referral depending on findings.</p>
+      </div>
+      <button class="x" id="dismissFloat" type="button">Dismiss</button>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+      <button class="btn danger" id="floatEscalate" type="button">Go to urgent actions</button>
+      <button class="btn" id="floatShowAll" type="button">Show all content</button>
+    </div>
+  </div>
+
+  <script>
+    // ---------- helpers ----------
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+    function setTheme(theme){
+      document.body.setAttribute('data-theme', theme);
+      localStorage.setItem('npcr_theme', theme);
+    }
+
+    function setFilter(mode){
+      document.body.setAttribute('data-filter', mode);
+      localStorage.setItem('npcr_filter', mode);
+      updateActiveFilterButtons(mode);
+    }
+
+    function updateActiveFilterButtons(mode){
+      $('#urgentOnly').classList.toggle('primary', mode === 'urgent-only');
+      $('#urgentOnly').classList.toggle('danger', mode !== 'urgent-only');
+      $('#routineOnly').classList.toggle('primary', mode === 'routine-only');
+      $('#showAll').classList.toggle('primary', mode === 'all');
+      
+      $('#chipUrgent').setAttribute('data-on', mode === 'urgent-only');
+      $('#chipRoutine').setAttribute('data-on', mode === 'routine-only');
+    }
+
+    // ---------- search ----------
+    function highlight(term){
+      // Clear existing highlights
+      $$('mark').forEach(el => {
+        const parent = el.parentNode;
+        parent.replaceChild(document.createTextNode(el.textContent), el);
+        parent.normalize();
+      });
+
+      if(!term) return;
+
+      const walker = document.createTreeWalker(
+        document.body,
+        NodeFilter.SHOW_TEXT,
+        {
+          acceptNode: node => {
+            if(node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE') return NodeFilter.FILTER_REJECT;
+            if(node.parentElement.closest('.float')) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        }
+      );
+
+      const textNodes = [];
+      let node;
+      while(node = walker.nextNode()){
+        if(node.textContent.toLowerCase().includes(term.toLowerCase())){
+          textNodes.push(node);
+        }
+      }
+
+      textNodes.forEach(textNode => {
+        const text = textNode.textContent;
+        const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})`, 'gi');
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        
+        while(match = regex.exec(text)){
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+          const mark = document.createElement('mark');
+          mark.textContent = match[0];
+          fragment.appendChild(mark);
+          lastIndex = regex.lastIndex;
+        }
+        
+        if(lastIndex < text.length){
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+        
+        textNode.parentNode.replaceChild(fragment, textNode);
+      });
+    }
+
+    // ---------- red flags ----------
+    function updateFlagCounts(){
+      const checked = $$('input[data-flag]:checked');
+      const domains = new Set(checked.map(el => el.getAttribute('data-domain')));
+      
+      $('#flagCount').textContent = checked.length;
+      $('#flagCountBig').textContent = checked.length;
+      $('#domainCount').textContent = domains.size;
+      $('#domainCountBig').textContent = domains.size;
+      
+      const showFloat = checked.length > 0;
+      $('#float').setAttribute('data-show', showFloat);
+      
+      if(showFloat){
+        $('#floatText').textContent = `Checked ${checked.length} red flag${checked.length === 1 ? '' : 's'} across ${domains.size} domain${domains.size === 1 ? '' : 's'}. Consider urgent assessment/referral depending on findings.`;
+      }
+    }
+
+    function resetFlags(){
+      $$('input[data-flag]').forEach(cb => cb.checked = false);
+      updateFlagCounts();
+    }
+
+    // ---------- accordions ----------
+    function initAccordions(){
+      $$('.acc-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const item = btn.closest('.acc-item');
+          const isOpen = item.getAttribute('data-open') === 'true';
+          item.setAttribute('data-open', !isOpen);
+        });
+      });
+    }
+
+    function collapseAllAccordions(){
+      $$('.acc-item').forEach(item => item.setAttribute('data-open', 'false'));
+    }
+
+    // ---------- navigation ----------
+    function initNavigation(){
+      $$('a[data-link]').forEach(link => {
+        link.addEventListener('click', e => {
+          e.preventDefault();
+          const targetId = link.getAttribute('href').substring(1);
+          const target = $(`#${targetId}`);
+          if(target){
+            target.scrollIntoView({behavior: 'smooth', block: 'start'});
+            // Update active state
+            $$('a[data-link]').forEach(a => a.setAttribute('data-active', 'false'));
+            link.setAttribute('data-active', 'true');
+          }
+        });
+      });
+
+      // Update active nav on scroll
+      const sections = $$('section[data-section]');
+      const navLinks = $$('a[data-link]');
+      
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if(entry.isIntersecting){
+            const id = entry.target.id;
+            navLinks.forEach(link => {
+              link.setAttribute('data-active', link.getAttribute('href') === `#${id}`);
+            });
+          }
+        });
+      }, {rootMargin: '-20% 0px -60% 0px'});
+      
+      sections.forEach(section => observer.observe(section));
+    }
+
+    // ---------- event listeners ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      // Load saved preferences
+      const savedTheme = localStorage.getItem('npcr_theme') || 'dark';
+      const savedFilter = localStorage.getItem('npcr_filter') || 'all';
+      
+      setTheme(savedTheme);
+      setFilter(savedFilter);
+      
+      // Theme toggle
+      $('#themeBtn').addEventListener('click', () => {
+        const current = document.body.getAttribute('data-theme');
+        setTheme(current === 'dark' ? 'light' : 'dark');
+      });
+
+      // Filter buttons
+      $('#urgentOnly').addEventListener('click', () => setFilter('urgent-only'));
+      $('#routineOnly').addEventListener('click', () => setFilter('routine-only'));
+      $('#showAll').addEventListener('click', () => setFilter('all'));
+
+      // Chip filters
+      $('#chipUrgent').addEventListener('click', () => {
+        setFilter(document.body.getAttribute('data-filter') === 'urgent-only' ? 'all' : 'urgent-only');
+      });
+      $('#chipRoutine').addEventListener('click', () => {
+        setFilter(document.body.getAttribute('data-filter') === 'routine-only' ? 'all' : 'routine-only');
+      });
+      $('#chipTop').addEventListener('click', () => {
+        const chip = $('#chipTop');
+        const isOn = chip.getAttribute('data-on') === 'true';
+        chip.setAttribute('data-on', !isOn);
+        // This chip is just a visual indicator, doesn't affect functionality
+      });
+
+      // Search
+      const searchInput = $('#q');
+      const clearBtn = $('#clearQ');
+      
+      searchInput.addEventListener('input', e => {
+        highlight(e.target.value);
+      });
+      
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        highlight('');
+        searchInput.focus();
+      });
+
+      // Print
+      $('#printBtn').addEventListener('click', () => window.print());
+
+      // Red flags
+      $$('input[data-flag]').forEach(cb => {
+        cb.addEventListener('change', updateFlagCounts);
+      });
+      
+      $('#resetFlags').addEventListener('click', resetFlags);
+      $('#goEscalate').addEventListener('click', () => {
+        $('#management').scrollIntoView({behavior: 'smooth'});
+      });
+
+      // Floating alert buttons
+      $('#dismissFloat').addEventListener('click', () => $('#float').setAttribute('data-show', 'false'));
+      $('#floatEscalate').addEventListener('click', () => {
+        $('#management').scrollIntoView({behavior: 'smooth'});
+        $('#float').setAttribute('data-show', 'false');
+      });
+      $('#floatShowAll').addEventListener('click', () => {
+        setFilter('all');
+        $('#float').setAttribute('data-show', 'false');
+      });
+
+      // Collapse all
+      $('#collapseAll').addEventListener('click', collapseAllAccordions);
+
+      // Initialize
+      initAccordions();
+      initNavigation();
+      updateFlagCounts(); // Initialize counts
+    });
+  </script>
+</body>
+</html>

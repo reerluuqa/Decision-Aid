@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GTPS Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 30px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding-top: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #1a3a6c 0%, #2c3e50 100%);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(255,255,255,0.1) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(255,255,255,0.1) 0%, transparent 20%);
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .algorithm-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .algorithm-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .algorithm-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(31, 38, 135, 0.2);
+        }
+
+        .algorithm-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--card-color);
+            box-shadow: 0 2px 10px var(--card-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
+            z-index: 1;
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+            color: #1a3a6c;
+            font-weight: 600;
+        }
+
+        .card-title p {
+            color: #5a6c7d;
+            font-size: 0.95em;
+        }
+
+        .expand-icon {
+            font-size: 24px;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #1a3a6c;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), padding-top 0.5s ease;
+            padding-top: 0;
+        }
+
+        .card-content.expanded {
+            max-height: 2000px;
+            padding-top: 20px;
+        }
+
+        .assessment-card {
+            --card-color: #3498db;
+        }
+
+        .assessment-card .card-icon {
+            background: linear-gradient(135deg, #3498db 0%, #2c80c5 100%);
+            color: white;
+        }
+
+        .diagnosis-card {
+            --card-color: #9b59b6;
+        }
+
+        .diagnosis-card .card-icon {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+        }
+
+        .treatment-card {
+            --card-color: #2ecc71;
+        }
+
+        .treatment-card .card-icon {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .followup-card {
+            --card-color: #f39c12;
+        }
+
+        .followup-card .card-icon {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .step-list {
+            list-style: none;
+        }
+
+        .step-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--card-color);
+            transition: all 0.3s ease;
+            position: relative;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .step-item:hover {
+            transform: translateX(8px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+
+        .badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .step-content {
+            color: #5a6c7d;
+            font-size: 0.95em;
+            margin-top: 10px;
+        }
+
+        .step-content ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .step-content li {
+            margin-bottom: 5px;
+        }
+
+        .sub-step {
+            background: rgba(236, 240, 241, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border-left: 3px solid #bdc3c7;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        .progress-sidebar {
+            width: 280px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.4s ease;
+        }
+
+        .progress-sidebar:hover {
+            box-shadow: 0 12px 40px rgba(31, 38, 135, 0.15);
+        }
+
+        .progress-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a3a6c;
+            text-align: center;
+            position: relative;
+            padding-bottom: 10px;
+        }
+
+        .progress-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 25%;
+            right: 25%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #3498db, transparent);
+            border-radius: 3px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-label {
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .progress-sublabel {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(236, 240, 241, 0.5);
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71, #f39c12, #e74c3c);
+            width: 0%;
+            transition: width 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-radius: 2px;
+        }
+
+        .floating-action {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a3a6c 0%, #2c3e50 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(26, 58, 108, 0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .floating-action:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 25px rgba(26, 58, 108, 0.4);
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(26, 58, 108, 0.9);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 101;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(26, 58, 108, 0.9);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .interactive-button {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color) 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .interactive-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+        }
+
+        .interactive-button::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255,255,255,0.1);
+            transform: rotate(30deg);
+            transition: all 0.6s ease;
+        }
+
+        .interactive-button:hover::after {
+            transform: rotate(30deg) translate(20%, 20%);
+        }
+
+        .interactive-button:active {
+            transform: translateY(1px);
+        }
+
+        .button-group {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .outcome-box {
+            background: rgba(236, 240, 241, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 1px solid rgba(189, 195, 199, 0.3);
+            text-align: center;
+            display: none;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.4s ease;
+            transform: translateY(10px);
+            opacity: 0;
+        }
+
+        .outcome-box.show {
+            display: block;
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .outcome-title {
+            font-weight: 600;
+            color: var(--card-color);
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .flow-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+            position: relative;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .flow-item:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .flow-arrow {
+            font-size: 24px;
+            color: #bdc3c7;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+        }
+
+        .flow-arrow:hover {
+            color: var(--card-color);
+            transform: scale(1.2);
+        }
+
+        .flow-item strong {
+            color: #1a3a6c;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                position: relative;
+                order: -1;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .flow-diagram {
+                flex-direction: column;
+            }
+
+            .flow-arrow {
+                transform: rotate(90deg);
+                margin: 5px 0;
+            }
+
+            .algorithm-card {
+                padding: 20px;
+            }
+            
+            .card-header {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+            
+            .card-title h2 {
+                font-size: 1.5em;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(26, 58, 108, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(26, 58, 108, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(26, 58, 108, 0);
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, rgba(255,255,255,0.7) 0%, rgba(236, 240, 241, 0.5) 100%);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+
+        .highlight:hover {
+            background: linear-gradient(120deg, rgba(255,255,255,0.9) 0%, rgba(236, 240, 241, 0.7) 100%);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .highlight strong {
+            color: #1a3a6c;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--card-color);
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #5a6c7d;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 Greater Trochanteric Pain Syndrome</h1>
+        <p>Interactive Management Algorithm | NICE CKS Guidelines</p>
+    </div>
+
+    <div class="container">
+        <main class="main-content">
+            <!-- Assessment Card -->
+            <div class="algorithm-card assessment-card fade-in">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">
+                        <h2>Initial Assessment</h2>
+                        <p>Clinical evaluation and history taking</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">1.8-5.6</div>
+                            <div class="stat-label">Cases per 1000/year</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">40-60</div>
+                            <div class="stat-label">Typical age range (years)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">>90%</div>
+                            <div class="stat-label">Success with conservative treatment</div>
+                        </div>
+                    </div>
+
+                    <ul class="step-list">
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Clinical History</span>
+                                <span class="badges">
+                                    <span class="badge badge-info">Essential</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <ul>
+                                    <li>Location: lateral hip/thigh/buttock pain</li>
+                                    <li>Radiation: down lateral thigh, rarely below knee</li>
+                                    <li>Onset: gradual and progressive</li>
+                                    <li>Aggravating factors: physical activity, pressure on affected side</li>
+                                    <li>Occupational/sporting activities</li>
+                                    <li>History of trauma or previous hip conditions</li>
+                                    <li>Medication use (including corticosteroids)</li>
+                                </ul>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Physical Examination</span>
+                                <span class="badges">
+                                    <span class="badge badge-info">Key Tests</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="flow-diagram">
+                                    <div class="flow-item">
+                                        <strong>Palpation</strong>
+                                        <p>Tenderness over greater trochanter</p>
+                                    </div>
+                                    <div class="flow-arrow">→</div>
+                                    <div class="flow-item">
+                                        <strong>Gait Analysis</strong>
+                                        <p>Antalgic or Trendelenburg gait</p>
+                                    </div>
+                                    <div class="flow-arrow">→</div>
+                                    <div class="flow-item">
+                                        <strong>Resisted Movements</strong>
+                                        <p>Pain on abduction, internal/external rotation</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="sub-step">
+                                    <strong>Specific Tests:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li><strong>Trendelenburg's test:</strong> Pelvis dips when lifting unaffected leg</li>
+                                        <li><strong>Single leg stance:</strong> Pain within 30 seconds</li>
+                                        <li><strong>FABER test:</strong> Pain with Flexion, ABduction, External Rotation</li>
+                                        <li><strong>FADER test:</strong> Pain with Flexion, ADduction, External Rotation</li>
+                                    </ul>
+                                </div>
+
+                                <div class="button-group">
+                                    <button class="interactive-button" onclick="showTestInfo('trendelenburg')">
+                                        Trendelenburg Demo
+                                    </button>
+                                    <button class="interactive-button" onclick="showTestInfo('single-leg')">
+                                        Single Leg Demo
+                                    </button>
+                                    <button class="interactive-button" onclick="showTestInfo('faber')">
+                                        FABER Demo
+                                    </button>
+                                </div>
+                                
+                                <div id="test-demo" class="outcome-box">
+                                    <div class="outcome-title">Test Demonstration</div>
+                                    <p id="demo-content">Click a button above to see test details</p>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Rule Out Red Flags</span>
+                                <span class="badges">
+                                    <span class="badge badge-urgent">Critical</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="highlight">
+                                    <strong>Systemic Symptoms:</strong> Fever, unexplained weight loss, night sweats
+                                </div>
+                                <div class="highlight">
+                                    <strong>Infection Signs:</strong> Redness, warmth, swelling, severe tenderness
+                                </div>
+                                <div class="highlight">
+                                    <strong>Trauma:</strong> Recent fall, inability to bear weight
+                                </div>
+                                <div class="highlight">
+                                    <strong>Malignancy:</strong> History of cancer, pathological fracture suspicion
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Check Associated Conditions</span>
+                                <span class="badges">
+                                    <span class="badge badge-caution">Common</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-number">~66%</div>
+                                        <div class="stat-label">Co-existing hip or back OA</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-number">Common</div>
+                                        <div class="stat-label">Lumbar spine conditions</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-number">Risk Factors</div>
+                                        <div class="stat-label">Leg length discrepancy, obesity</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="algorithm-card diagnosis-card fade-in">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">
+                        <h2>Differential Diagnosis</h2>
+                        <p>Excluding other conditions with similar presentation</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <ul class="step-list">
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Soft Tissue Conditions</span>
+                                <span class="badges">
+                                    <span class="badge badge-caution">Consider</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="sub-step">
+                                    <strong>Iliotibial Band/Snapping Hip Syndrome:</strong>
+                                    <ul>
+                                        <li>Lateral hip pain with snapping sensation</li>
+                                        <li>Positive Ober's test</li>
+                                        <li>Pain with repetitive activity</li>
+                                    </ul>
+                                </div>
+                                <div class="sub-step">
+                                    <strong>Iliopsoas Bursitis:</strong>
+                                    <ul>
+                                        <li>Anterior hip pain</li>
+                                        <li>Painful snapping sensations</li>
+                                        <li>Tenderness in femoral triangle</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Joint & Bone Conditions</span>
+                                <span class="badges">
+                                    <span class="badge badge-urgent">Rule Out</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="button-group">
+                                    <button class="interactive-button" onclick="showImagingGuidance('hip-oa')">
+                                        Hip OA Features
+                                    </button>
+                                    <button class="interactive-button" onclick="showImagingGuidance('avn')">
+                                        Avascular Necrosis
+                                    </button>
+                                    <button class="interactive-button" onclick="showImagingGuidance('fracture')">
+                                        Fracture Signs
+                                    </button>
+                                </div>
+
+                                <div id="imaging-guidance" class="outcome-box">
+                                    <div class="outcome-title">Condition Features</div>
+                                    <p id="imaging-content">Select a condition above to see key features</p>
+                                </div>
+
+                                <div class="highlight">
+                                    <strong>Imaging Indications:</strong> Plain radiograph if suspicion of fracture, dislocation, or stress fracture
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Neurological Conditions</span>
+                                <span class="badges">
+                                    <span class="badge badge-info">Differentiate</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="sub-step">
+                                    <strong>Meralgia Paraesthetica:</strong>
+                                    <ul>
+                                        <li>Numbness/burning in anterolateral thigh</li>
+                                        <li>Aggravated by walking/hip extension</li>
+                                        <li>Reproduced by pressure over lateral femoral cutaneous nerve</li>
+                                    </ul>
+                                </div>
+                                <div class="sub-step">
+                                    <strong>Lumbar Radiculopathy:</strong>
+                                    <ul>
+                                        <li>Pain radiating below knee</li>
+                                        <li>Accompanied by low back pain</li>
+                                        <li>Positive straight leg raise or femoral nerve stretch test</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Diagnostic Confirmation</span>
+                                <span class="badges">
+                                    <span class="badge badge-stable">Clinical</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="highlight">
+                                    <strong>Key Diagnostic Features:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Pain on palpation of greater trochanter (essential)</li>
+                                        <li>Lateral hip pain aggravated by activity or pressure</li>
+                                        <li>Pain with resisted hip abduction/external rotation</li>
+                                        <li>No systemic features of infection</li>
+                                        <li>Normal gait or antalgic/Trendelenburg gait</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="algorithm-card treatment-card fade-in">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">
+                        <h2>Management Plan</h2>
+                        <p>Evidence-based treatment approach</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="flow-diagram">
+                        <div class="flow-item">
+                            <strong>Conservative</strong>
+                            <p>First line for all patients</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">
+                            <strong>Injection</strong>
+                            <p>If no improvement</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">
+                            <strong>Physiotherapy</strong>
+                            <p>Strengthening program</p>
+                        </div>
+                        <div class="flow-arrow">→</div>
+                        <div class="flow-item">
+                            <strong>Referral</strong>
+                            <p>Refractory cases</p>
+                        </div>
+                    </div>
+
+                    <ul class="step-list">
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Conservative Treatment (Phase 1)</span>
+                                <span class="badges">
+                                    <span class="badge badge-stable">First Line</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="button-group">
+                                    <button class="interactive-button" onclick="startTreatmentPlan('conservative')">
+                                        Start Conservative Plan
+                                    </button>
+                                </div>
+
+                                <div id="conservative-plan" class="outcome-box">
+                                    <div class="outcome-title">Conservative Treatment Protocol</div>
+                                    <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+                                        <p><strong>Patient Education:</strong></p>
+                                        <ul>
+                                            <li>Explain condition is usually self-limiting</li>
+                                            <li>Provide written information about GTPS</li>
+                                            <li>Reassure no serious underlying condition</li>
+                                        </ul>
+                                        
+                                        <p style="margin-top: 15px;"><strong>Activity Modification:</strong></p>
+                                        <ul>
+                                            <li>Avoid activities that worsen pain</li>
+                                            <li>Avoid lying on affected side</li>
+                                            <li>Ice pack 10 minutes every few hours</li>
+                                        </ul>
+                                        
+                                        <p style="margin-top: 15px;"><strong>Analgesia:</strong></p>
+                                        <ul>
+                                            <li>Paracetamol as first choice</li>
+                                            <li>NSAIDs (e.g., ibuprofen) if no contraindications</li>
+                                            <li>Consider GI protection if needed</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="sub-step">
+                                    <strong>Lifestyle Modifications:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Weight loss if overweight/obese</li>
+                                        <li>Smoking cessation advice</li>
+                                        <li>Appropriate footwear assessment</li>
+                                        <li>Consider walking aids if needed</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Corticosteroid Injection</span>
+                                <span class="badges">
+                                    <span class="badge badge-caution">Second Line</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="highlight">
+                                    <strong>Indications:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Persistent symptoms despite conservative treatment</li>
+                                        <li>Severe pain limiting function</li>
+                                        <li>Patient preference for faster relief</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="sub-step">
+                                    <strong>Injection Technique:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Peri-trochanteric injection (ultrasound-guided if available)</li>
+                                        <li>Can be done in primary care with appropriate training</li>
+                                        <li>Alternatively, refer to musculoskeletal clinic</li>
+                                        <li>Typical dose: 40mg methylprednisolone with local anesthetic</li>
+                                    </ul>
+                                </div>
+
+                                <div class="button-group">
+                                    <button class="interactive-button" onclick="showInjectionGuidance('technique')">
+                                        Injection Technique
+                                    </button>
+                                    <button class="interactive-button" onclick="showInjectionGuidance('post-injection')">
+                                        Post-Injection Care
+                                    </button>
+                                </div>
+
+                                <div id="injection-guidance" class="outcome-box">
+                                    <div class="outcome-title">Injection Guidance</div>
+                                    <p id="injection-content">Select an option above for detailed guidance</p>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Physiotherapy</span>
+                                <span class="badges">
+                                    <span class="badge badge-stable">Essential</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="sub-step">
+                                    <strong>Exercise Program:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Gluteal muscle strengthening (medius and minimus)</li>
+                                        <li>Quadriceps strengthening</li>
+                                        <li>Iliotibial band stretching</li>
+                                        <li>Hip abduction exercises</li>
+                                        <li>Core stability training</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="highlight">
+                                    <strong>Expected Outcome:</strong> >90% resolution with conservative treatment including physiotherapy
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Reassessment Timeline</span>
+                                <span class="badges">
+                                    <span class="badge badge-info">Timeline</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="flow-diagram">
+                                    <div class="flow-item">
+                                        <strong>4-6 weeks</strong>
+                                        <p>Review conservative treatment</p>
+                                    </div>
+                                    <div class="flow-arrow">→</div>
+                                    <div class="flow-item">
+                                        <strong>6-12 weeks</strong>
+                                        <p>Consider injection if no improvement</p>
+                                    </div>
+                                    <div class="flow-arrow">→</div>
+                                    <div class="flow-item">
+                                        <strong>3 months</strong>
+                                        <p>Refer if refractory to treatment</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Follow-up & Referral Card -->
+            <div class="algorithm-card followup-card fade-in">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">
+                        <h2>Follow-up & Referral</h2>
+                        <p>Escalation pathways and prognosis</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <ul class="step-list">
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Emergency Referral</span>
+                                <span class="badges">
+                                    <span class="badge badge-urgent">Red Flag</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="highlight pulse">
+                                    <strong>Immediate orthopaedic referral if:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Hip pain with systemic symptoms (fever, rigors)</li>
+                                        <li>Signs of infection (redness, warmth, swelling)</li>
+                                        <li>Known malignancy with suspected pathological fracture</li>
+                                        <li>Sudden inability to bear weight after trauma</li>
+                                        <li>Suspected septic bursitis</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Urgent Referral</span>
+                                <span class="badges">
+                                    <span class="badge badge-urgent">Severe</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="sub-step">
+                                    <strong>Orthopaedic Referral:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Severe pain unresponsive to analgesia</li>
+                                        <li>Persistent loss of function</li>
+                                        <li>Painful, irritable, stiff hip interfering with sleep/ADLs</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Routine Referral</span>
+                                <span class="badges">
+                                    <span class="badge badge-caution">Refractory</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="button-group">
+                                    <button class="interactive-button" onclick="showReferralPathway('young')">
+                                        Under 40 Years
+                                    </button>
+                                    <button class="interactive-button" onclick="showReferralPathway('no-response')">
+                                        No Response to Treatment
+                                    </button>
+                                    <button class="interactive-button" onclick="showReferralPathway('diagnostic')">
+                                        Diagnostic Uncertainty
+                                    </button>
+                                </div>
+
+                                <div id="referral-pathway" class="outcome-box">
+                                    <div class="outcome-title">Referral Pathway</div>
+                                    <p id="referral-content">Select a category above for specific referral criteria</p>
+                                </div>
+
+                                <div class="sub-step">
+                                    <strong>Referral Options:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Intermediate care/Musculoskeletal clinic</li>
+                                        <li>Rheumatology</li>
+                                        <li>Orthopaedic surgery</li>
+                                        <li>Physiotherapy services</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Secondary Care Management</span>
+                                <span class="badges">
+                                    <span class="badge badge-info">Specialist</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="sub-step">
+                                    <strong>Further Assessment:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Ultrasound imaging</li>
+                                        <li>MRI for tendon pathology</li>
+                                        <li>CT if needed</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="sub-step">
+                                    <strong>Specialist Treatments:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Excision of inflamed bursae</li>
+                                        <li>Trochanteric reduction osteotomy</li>
+                                        <li>Gluteal tendon repair</li>
+                                        <li>ITB lengthening techniques</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="step-item">
+                            <div class="step-header">
+                                <span class="step-title">Prognosis & Follow-up</span>
+                                <span class="badges">
+                                    <span class="badge badge-stable">Positive</span>
+                                </span>
+                            </div>
+                            <div class="step-content">
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-number">>90%</div>
+                                        <div class="stat-label">Resolve with conservative treatment</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-number">Small</div>
+                                        <div class="stat-label">Percentage requiring surgery</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-number">3-6</div>
+                                        <div class="stat-label">Typical recovery months</div>
+                                    </div>
+                                </div>
+
+                                <div class="sub-step">
+                                    <strong>Poor Prognostic Factors:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>High pain intensity and long duration</li>
+                                        <li>Widespread pain and high functional disability</li>
+                                        <li>Previous pain episodes</li>
+                                        <li>Depression/anxiety</li>
+                                        <li>Poor coping strategies</li>
+                                        <li>Movement restriction</li>
+                                    </ul>
+                                </div>
+
+                                <div class="highlight">
+                                    <strong>Follow-up Schedule:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>6 weeks: Assess response to treatment</li>
+                                        <li>3 months: Evaluate need for injection</li>
+                                        <li>6 months: Consider referral if refractory</li>
+                                        <li>12 months: Long-term outcome assessment</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <aside class="progress-sidebar">
+            <div class="progress-title">📊 Progress Tracker</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            
+            <div class="progress-item active" onclick="scrollToCard('assessment')">
+                <div class="progress-icon" style="background: #3498db; color: white;">📋</div>
+                <div class="progress-text">
+                    <div class="progress-label">Assessment</div>
+                    <div class="progress-sublabel">Clinical evaluation</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" onclick="scrollToCard('diagnosis')">
+                <div class="progress-icon" style="background: #9b59b6; color: white;">🔍</div>
+                <div class="progress-text">
+                    <div class="progress-label">Diagnosis</div>
+                    <div class="progress-sublabel">Differential diagnosis</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" onclick="scrollToCard('treatment')">
+                <div class="progress-icon" style="background: #2ecc71; color: white;">💊</div>
+                <div class="progress-text">
+                    <div class="progress-label">Management</div>
+                    <div class="progress-sublabel">Treatment plan</div>
+                </div>
+            </div>
+            
+            <div class="progress-item" onclick="scrollToCard('followup')">
+                <div class="progress-icon" style="background: #f39c12; color: white;">🔄</div>
+                <div class="progress-text">
+                    <div class="progress-label">Follow-up</div>
+                    <div class="progress-sublabel">Referral & prognosis</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="completion-percentage">0%</div>
+                        <div class="stat-label">Algorithm Completion</div>
+                    </div>
+                </div>
+                
+                <div class="highlight" style="margin-top: 20px;">
+                    <strong>Quick Tips:</strong>
+                    <ul style="margin-top: 10px; font-size: 0.85em;">
+                        <li>Click cards to expand/collapse</li>
+                        <li>Click sidebar items to navigate</li>
+                        <li>Interactive buttons provide more details</li>
+                        <li>Hover over items for highlights</li>
+                    </ul>
+                </div>
+                
+                <div class="button-group" style="margin-top: 20px;">
+                    <button class="interactive-button" onclick="resetAlgorithm()" style="width: 100%;">
+                        🔄 Reset Algorithm
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <button class="floating-action" id="help-button" onmouseover="showTooltip(event)" onmouseout="hideTooltip()" onclick="showHelp()">
+        ❓
+    </button>
+    
+    <div class="tooltip" id="tooltip">Click for help</div>
+
+    <script>
+        // State management
+        let algorithmState = {
+            currentStep: 0,
+            completedSteps: new Set(),
+            expandedCards: new Set(),
+            progress: 0
+        };
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCards();
+            setupScrollListener();
+            setupCardAnimations();
+            updateProgress();
+        });
+
+        // Card management
+        function initializeCards() {
+            const cards = document.querySelectorAll('.algorithm-card');
+            cards.forEach((card, index) => {
+                card.dataset.cardIndex = index;
+                card.dataset.cardId = ['assessment', 'diagnosis', 'treatment', 'followup'][index];
+            });
+        }
+
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const content = card.querySelector('.card-content');
+            const expandIcon = header.querySelector('.expand-icon');
+            const cardId = card.dataset.cardId;
+            
+            content.classList.toggle('expanded');
+            expandIcon.style.transform = content.classList.contains('expanded') ? 'rotate(180deg)' : 'rotate(0deg)';
+            
+            if (content.classList.contains('expanded')) {
+                algorithmState.expandedCards.add(cardId);
+                algorithmState.completedSteps.add(parseInt(card.dataset.cardIndex));
+                markProgressItemActive(parseInt(card.dataset.cardIndex));
+            } else {
+                algorithmState.expandedCards.delete(cardId);
+            }
+            
+            updateProgress();
+            updateCompletionPercentage();
+        }
+
+        function scrollToCard(cardId) {
+            const card = document.querySelector(`[data-card-id="${cardId}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                card.style.animation = 'pulse 0.6s ease-in-out';
+                setTimeout(() => {
+                    card.style.animation = '';
+                }, 600);
+            }
+        }
+
+        // Progress tracking
+        function setupScrollListener() {
+            const cards = document.querySelectorAll('.algorithm-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const cardIndex = parseInt(entry.target.dataset.cardIndex);
+                        markProgressItemActive(cardIndex);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            cards.forEach(card => observer.observe(card));
+        }
+
+        function markProgressItemActive(index) {
+            const items = document.querySelectorAll('.progress-item');
+            items.forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                    algorithmState.currentStep = index;
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        function updateProgress() {
+            const totalCards = 4;
+            const completedCards = algorithmState.completedSteps.size;
+            algorithmState.progress = (completedCards / totalCards) * 100;
+            
+            const progressFill = document.getElementById('progress-fill');
+            progressFill.style.width = algorithmState.progress + '%';
+            
+            updateCompletionPercentage();
+        }
+
+        function updateCompletionPercentage() {
+            const percentageElement = document.getElementById('completion-percentage');
+            const totalSteps = 4;
+            let completedSteps = algorithmState.completedSteps.size;
+            
+            // Add bonus for expanded cards
+            algorithmState.expandedCards.forEach(() => completedSteps += 0.5);
+            
+            const percentage = Math.min(100, Math.round((completedSteps / totalSteps) * 100));
+            percentageElement.textContent = percentage + '%';
+            
+            // Add pulse animation at milestones
+            if (percentage === 25 || percentage === 50 || percentage === 75 || percentage === 100) {
+                percentageElement.parentElement.style.animation = 'pulse 0.6s ease-in-out';
+                setTimeout(() => {
+                    percentageElement.parentElement.style.animation = '';
+                }, 600);
+            }
+        }
+
+        // Interactive features
+        function showTestInfo(testType) {
+            const demoBox = document.getElementById('test-demo');
+            const demoContent = document.getElementById('demo-content');
+            
+            const testInfo = {
+                'trendelenburg': `
+                    <strong>Trendelenburg's Test Procedure:</strong><br><br>
+                    1. Patient stands on both feet<br>
+                    2. Observe from behind<br>
+                    3. Ask patient to lift one foot off ground<br>
+                    4. Observe pelvis on lifted leg side<br><br>
+                    <strong>Positive Test:</strong> Pelvis drops instead of staying level or rising<br>
+                    <strong>Indicates:</strong> Weakness of gluteus medius on stance leg
+                `,
+                'single-leg': `
+                    <strong>Single Leg Stance Test:</strong><br><br>
+                    1. Patient stands on affected leg<br>
+                    2. Flex contralateral knee to 90°<br>
+                    3. Use finger on wall for balance if needed<br>
+                    4. Hold position for 30 seconds<br><br>
+                    <strong>Positive Test:</strong> Lateral hip pain within 30 seconds<br>
+                    <strong>Indicates:</strong> Greater trochanteric pain syndrome likely
+                `,
+                'faber': `
+                    <strong>FABER Test (Patrick's Test):</strong><br><br>
+                    1. Patient supine position<br>
+                    2. Place lateral malleolus above patella of opposite leg<br>
+                    3. Stabilize pelvis via opposite ASIS<br>
+                    4. Passively lower knee into abduction/external rotation<br><br>
+                    <strong>Positive Test:</strong> Lateral hip pain reproduction<br>
+                    <strong>Indicates:</strong> GTPS or hip joint pathology
+                `
+            };
+            
+            demoContent.innerHTML = testInfo[testType] || 'Test information not available';
+            demoBox.classList.add('show');
+            
+            // Track interaction
+            algorithmState.completedSteps.add(0); // Assessment step
+            updateProgress();
+        }
+
+        function showImagingGuidance(condition) {
+            const guidanceBox = document.getElementById('imaging-guidance');
+            const guidanceContent = document.getElementById('imaging-content');
+            
+            const conditionInfo = {
+                'hip-oa': `
+                    <strong>Hip Osteoarthritis Features:</strong><br><br>
+                    <strong>History:</strong><br>
+                    • Gradual onset groin/hip pain<br>
+                    • Worse with weight bearing<br>
+                    • Relieved by rest<br>
+                    • Morning stiffness <30 minutes<br><br>
+                    <strong>Examination:</strong><br>
+                    • Limited range of motion<br>
+                    • Pain with internal rotation<br>
+                    • Antalgic gait<br>
+                    • Crepitus on movement
+                `,
+                'avn': `
+                    <strong>Avascular Necrosis Features:</strong><br><br>
+                    <strong>History:</strong><br>
+                    • Gradual dull ache in groin/thigh<br>
+                    • May have steroid/alcohol use history<br>
+                    • Pain at rest and night pain<br><br>
+                    <strong>Examination:</strong><br>
+                    • Limited ROM in advanced stages<br>
+                    • Pain on internal rotation<br><br>
+                    <strong>Imaging:</strong><br>
+                    • Early: MRI shows changes<br>
+                    • Late: X-ray shows collapse
+                `,
+                'fracture': `
+                    <strong>Femoral Neck Fracture Features:</strong><br><br>
+                    <strong>History:</strong><br>
+                    • Acute trauma or repetitive stress<br>
+                    • Severe pain with weight bearing<br>
+                    • Unable to bear weight<br><br>
+                    <strong>Examination:</strong><br>
+                    • Shortened, externally rotated leg<br>
+                    • Severe pain with any movement<br>
+                    • Pain on palpation of greater trochanter<br><br>
+                    <strong>Action:</strong> Immediate X-ray and urgent referral
+                `
+            };
+            
+            guidanceContent.innerHTML = conditionInfo[condition] || 'Condition information not available';
+            guidanceBox.classList.add('show');
+            
+            // Track interaction
+            algorithmState.completedSteps.add(1); // Diagnosis step
+            updateProgress();
+        }
+
+        function startTreatmentPlan(type) {
+            const planBox = document.getElementById(`${type}-plan`);
+            planBox.classList.add('show');
+            
+            // Track interaction
+            algorithmState.completedSteps.add(2); // Treatment step
+            updateProgress();
+        }
+
+        function showInjectionGuidance(type) {
+            const guidanceBox = document.getElementById('injection-guidance');
+            const guidanceContent = document.getElementById('injection-content');
+            
+            const injectionInfo = {
+                'technique': `
+                    <strong>Corticosteroid Injection Technique:</strong><br><br>
+                    <strong>Preparation:</strong><br>
+                    • 40mg methylprednisolone<br>
+                    • 2-3ml 1% lidocaine<br>
+                    • Sterile technique<br>
+                    • Ultrasound guidance if available<br><br>
+                    <strong>Landmark Technique:</strong><br>
+                    • Identify point of maximal tenderness<br>
+                    • 90° angle to skin<br>
+                    • Advance to bone then withdraw slightly<br>
+                    • Inject after negative aspiration
+                `,
+                'post-injection': `
+                    <strong>Post-Injection Care:</strong><br><br>
+                    <strong>Immediate:</strong><br>
+                    • Monitor for 15-30 minutes<br>
+                    • Check for adverse reactions<br>
+                    • Assess pain improvement<br><br>
+                    <strong>Aftercare:</strong><br>
+                    • Rest for 24-48 hours<br>
+                    • Avoid strenuous activity for 1 week<br>
+                    • Ice if soreness<br>
+                    • Continue with physiotherapy<br>
+                    • Review in 4-6 weeks
+                `
+            };
+            
+            guidanceContent.innerHTML = injectionInfo[type] || 'Guidance not available';
+            guidanceBox.classList.add('show');
+        }
+
+        function showReferralPathway(category) {
+            const pathwayBox = document.getElementById('referral-pathway');
+            const pathwayContent = document.getElementById('referral-content');
+            
+            const pathwayInfo = {
+                'young': `
+                    <strong>Under 40 Years Referral Criteria:</strong><br><br>
+                    <strong>Indications:</strong><br>
+                    • Persistent hip pain >3 months<br>
+                    • Affects activities of daily living<br>
+                    • Interferes with work or leisure<br>
+                    • No response to 3-month physiotherapy<br><br>
+                    <strong>Preferred Pathway:</strong><br>
+                    • Intermediate/Musculoskeletal clinic<br>
+                    • Sports medicine clinic<br>
+                    • Young adult hip clinic if available
+                `,
+                'no-response': `
+                    <strong>No Response to Treatment:</strong><br><br>
+                    <strong>Criteria:</strong><br>
+                    • Failed conservative treatment (6-12 weeks)<br>
+                    • No response to corticosteroid injection<br>
+                    • Persistent functional limitation<br>
+                    • Pain interfering with sleep/ADLs<br><br>
+                    <strong>Referral Options:</strong><br>
+                    • Orthopaedic surgery<br>
+                    • Specialist physiotherapy<br>
+                    • Pain management clinic
+                `,
+                'diagnostic': `
+                    <strong>Diagnostic Uncertainty:</strong><br><br>
+                    <strong>When to Refer:</strong><br>
+                    • Atypical presentation<br>
+                    • Unclear diagnosis after examination<br>
+                    • Suspicion of alternative pathology<br>
+                    • Previous hip surgery or fracture<br>
+                    • Complex patient with multiple comorbidities<br><br>
+                    <strong>Refer to:</strong><br>
+                    • Musculoskeletal clinic<br>
+                    • Rheumatology<br>
+                                    • Orthopaedic surgery for opinion
+                `
+            };
+            
+            pathwayContent.innerHTML = pathwayInfo[category] || 'Pathway information not available';
+            pathwayBox.classList.add('show');
+            
+            // Track interaction
+            algorithmState.completedSteps.add(3); // Follow-up step
+            updateProgress();
+        }
+
+        // Animation setup
+        function setupCardAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            document.querySelectorAll('.algorithm-card').forEach(card => {
+                observer.observe(card);
+            });
+        }
+
+        // Utility functions
+        function resetAlgorithm() {
+            // Collapse all cards
+            document.querySelectorAll('.card-content').forEach(content => {
+                content.classList.remove('expanded');
+            });
+            
+            // Reset expand icons
+            document.querySelectorAll('.expand-icon').forEach(icon => {
+                icon.style.transform = 'rotate(0deg)';
+            });
+            
+            // Reset state
+            algorithmState = {
+                currentStep: 0,
+                completedSteps: new Set(),
+                expandedCards: new Set(),
+                progress: 0
+            };
+            
+            // Hide all outcome boxes
+            document.querySelectorAll('.outcome-box').forEach(box => {
+                box.classList.remove('show');
+            });
+            
+            // Reset progress
+            updateProgress();
+            markProgressItemActive(0);
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Show completion message
+            const completionBox = document.createElement('div');
+            completionBox.className = 'outcome-box show';
+            completionBox.style.position = 'fixed';
+            completionBox.style.top = '50%';
+            completionBox.style.left = '50%';
+            completionBox.style.transform = 'translate(-50%, -50%)';
+            completionBox.style.zIndex = '1000';
+            completionBox.style.boxShadow = '0 20px 60px rgba(0,0,0,0.3)';
+            completionBox.innerHTML = `
+                <div class="outcome-title">Algorithm Reset Complete! 🔄</div>
+                <p>All steps have been reset. You can start again from the beginning.</p>
+                <div class="button-group">
+                    <button class="interactive-button" onclick="this.parentElement.parentElement.remove()">
+                        Close
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(completionBox);
+            
+            setTimeout(() => {
+                if (completionBox.parentElement) {
+                    completionBox.remove();
+                }
+            }, 5000);
+        }
+
+        function showTooltip(event) {
+            const button = event.target;
+            const tooltip = document.getElementById('tooltip');
+            
+            // Position the tooltip above the button
+            const rect = button.getBoundingClientRect();
+            const x = rect.left + rect.width / 2;
+            const y = rect.top;
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+            tooltip.style.transform = 'translate(-50%, -100%)';
+            tooltip.classList.add('show');
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('show');
+        }
+
+        function showHelp() {
+            const helpBox = document.createElement('div');
+            helpBox.className = 'outcome-box show';
+            helpBox.style.position = 'fixed';
+            helpBox.style.top = '50%';
+            helpBox.style.left = '50%';
+            helpBox.style.transform = 'translate(-50%, -50%)';
+            helpBox.style.zIndex = '1000';
+            helpBox.style.maxWidth = '500px';
+            helpBox.style.boxShadow = '0 20px 60px rgba(0,0,0,0.3)';
+            helpBox.innerHTML = `
+                <div class="outcome-title">📚 User Guide</div>
+                <div style="text-align: left;">
+                    <p><strong>How to use this algorithm:</strong></p>
+                    <ol>
+                        <li><strong>Navigate:</strong> Click on cards to expand/collapse sections</li>
+                        <li><strong>Track Progress:</strong> Use the sidebar to jump to different sections</li>
+                        <li><strong>Interactive Elements:</strong> Click buttons for detailed information</li>
+                        <li><strong>Progress Tracking:</strong> The algorithm tracks your progress automatically</li>
+                        <li><strong>Reset:</strong> Use the reset button to start over</li>
+                    </ol>
+                    
+                    <p style="margin-top: 15px;"><strong>Color Coding:</strong></p>
+                    <ul>
+                        <li>🔵 <strong>Blue:</strong> Assessment phase</li>
+                        <li>🟣 <strong>Purple:</strong> Diagnosis phase</li>
+                        <li>🟢 <strong>Green:</strong> Treatment phase</li>
+                        <li>🟠 <strong>Orange:</strong> Follow-up phase</li>
+                    </ul>
+                    
+                    <p style="margin-top: 15px;"><strong>Badges:</strong></p>
+                    <ul>
+                        <li><span class="badge badge-urgent">Urgent</span> - Requires immediate action</li>
+                        <li><span class="badge badge-caution">Caution</span> - Important consideration</li>
+                        <li><span class="badge badge-stable">Stable</span> - Routine management</li>
+                        <li><span class="badge badge-info">Info</span> - Additional information</li>
+                    </ul>
+                </div>
+                <div class="button-group">
+                    <button class="interactive-button" onclick="this.parentElement.parentElement.remove()">
+                        Close
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(helpBox);
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                const nextStep = Math.min(3, algorithmState.currentStep + 1);
+                scrollToCard(['assessment', 'diagnosis', 'treatment', 'followup'][nextStep]);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                const prevStep = Math.max(0, algorithmState.currentStep - 1);
+                scrollToCard(['assessment', 'diagnosis', 'treatment', 'followup'][prevStep]);
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                const activeCard = document.querySelector(`[data-card-index="${algorithmState.currentStep}"]`);
+                if (activeCard) {
+                    const header = activeCard.querySelector('.card-header');
+                    if (header) header.click();
+                }
+            } else if (e.key === 'r' || e.key === 'R') {
+                resetAlgorithm();
+            } else if (e.key === 'h' || e.key === 'H') {
+                showHelp();
+            }
+        });
+
+        // Add visual feedback for keyboard navigation
+        document.querySelectorAll('.interactive-button, .progress-item').forEach(element => {
+            element.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    this.click();
+                }
+            });
+        });
+
+        // Prevent hover effects on touch devices
+        if ('ontouchstart' in window) {
+            document.querySelectorAll('.step-item, .stat-card, .flow-item').forEach(element => {
+                element.classList.add('no-hover');
+            });
+        }
+
+        // Add print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Add keyboard shortcut for print
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                printAlgorithm();
+            }
+        });
+
+        // Add print styles
+        const printStyles = document.createElement('style');
+        printStyles.innerHTML = `
+            @media print {
+                .progress-sidebar, .floating-action, .button-group {
+                    display: none !important;
+                }
+                
+                .container {
+                    flex-direction: column;
+                }
+                
+                .algorithm-card {
+                    page-break-inside: avoid;
+                    box-shadow: none;
+                    border: 1px solid #ddd;
+                }
+                
+                .card-content {
+                    max-height: none !important;
+                    display: block !important;
+                }
+                
+                body {
+                    background: white;
+                }
+            }
+        `;
+        document.head.appendChild(printStyles);
+
+                // Add subtle background pattern
+        const body = document.querySelector('body');
+        body.style.backgroundImage = `
+            radial-gradient(circle at 10% 20%, rgba(52, 152, 219, 0.03) 0%, transparent 20%),
+            radial-gradient(circle at 90% 80%, rgba(46, 204, 113, 0.03) 0%, transparent 20%),
+            linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%)
+        `;
+        body.style.backgroundAttachment = 'fixed';
+        body.style.backgroundSize = 'cover';
+    </script>
+</body>
+</html>
