@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angina Management Algorithm - NICE CKS</title>
+    <script src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/js/all.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 25px;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            z-index: 100;
+        }
+
+        .sidebar h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            border-left: 4px solid #ddd;
+        }
+
+        .progress-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-left: 4px solid #2c3e50;
+            font-weight: bold;
+        }
+
+        .progress-item.completed {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+
+        .progress-icon {
+            margin-right: 12px;
+            font-size: 1.2em;
+        }
+
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            margin-bottom: 25px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 20px;
+            color: white;
+            font-size: 1.4em;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #2980b9, #3498db);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #d35400, #e67e22);
+        }
+
+        .card-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            background: #f8f9fa;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card-content.expanded {
+            max-height: 3000px;
+        }
+
+        .section {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge.badge-urgent {
+            background: #dc3545;
+            color: white;
+        }
+
+        .badge.badge-caution {
+            background: #ffc107;
+            color: #2c3e50;
+        }
+
+        .badge.badge-stable {
+            background: #28a745;
+            color: white;
+        }
+
+        .sub-section {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .sub-section h4 {
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .sub-section ul {
+            margin-left: 20px;
+        }
+
+        .sub-section li {
+            margin: 8px 0;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .warning-box .icon {
+            color: #ffc107;
+            margin-right: 10px;
+        }
+
+        .urgent-box {
+            background: #f8d7da;
+            border: 1px solid #dc3545;
+        }
+
+        .urgent-box .icon {
+            color: #dc3545;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .info-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-top: 4px solid #667eea;
+        }
+
+        .drug-treatment {
+            background: #e3f2fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .drug-treatment h4 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+
+        .stepwise-approach {
+            background: #f3e5f5;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .stepwise-approach ol {
+            margin-left: 25px;
+        }
+
+        .stepwise-approach li {
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+
+            .progress-item {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .card-header {
+                font-size: 1.2em;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .print-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .print-button:hover {
+            background: #764ba2;
+            transform: scale(1.05);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .sidebar, .print-button {
+                display: none;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .main-content {
+                box-shadow: none;
+                padding: 20px;
+            }
+
+            .card-content {
+                max-height: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-button" onclick="window.print()">
+        <i class="fas fa-print"></i> Print
+    </button>
+
+    <div class="container">
+        <div class="sidebar">
+            <h2><i class="fas fa-bars"></i> Algorithm Progress</h2>
+            <div class="progress-item active" data-target="assessment">
+                <span class="progress-icon"><i class="fas fa-heartbeat"></i></span>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-target="diagnosis">
+                <span class="progress-icon"><i class="fas fa-search"></i></span>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-target="treatment">
+                <span class="progress-icon"><i class="fas fa-pills"></i></span>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-target="followup">
+                <span class="progress-icon"><i class="fas fa-user-check"></i></span>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-heartbeat"></i> Angina Management Algorithm</h1>
+                <p>Primary Care Management of Stable Angina - NICE CKS Guidelines (May 2025)</p>
+            </div>
+
+            <div class="card" id="assessment">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div>
+                        <i class="fas fa-heartbeat card-icon"></i>
+                        Assessment of Stable Chest Pain
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="section">
+                        <div class="section-title">
+                            Clinical Features
+                            <span class="badge badge-urgent">Key Assessment</span>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Typical Angina (All 3 Features):</h4>
+                            <ul>
+                                <li>Precipitated by physical exertion</li>
+                                <li>Constricting discomfort in chest, neck, shoulders, jaw, or arms</li>
+                                <li>Relieved by rest or GTN within ~5 minutes</li>
+                            </ul>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Atypical Angina (2 of above features):</h4>
+                            <ul>
+                                <li>May include GI discomfort, breathlessness, nausea</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Factors Making Diagnosis More Likely
+                            <span class="badge badge-caution">Risk Factors</span>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <h4><i class="fas fa-user-clock"></i> Age & Sex</h4>
+                                <p>Increasing age and male sex increase likelihood</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-heart"></i> Established CAD</h4>
+                                <p>Previous MI, coronary revascularization</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-smoking"></i> Risk Factors</h4>
+                                <p>Smoking, hypertension, diabetes, dyslipidemia</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Features Making Angina Less Likely
+                        </div>
+                        <div class="sub-section">
+                            <ul>
+                                <li>Pain continuous or prolonged</li>
+                                <li>Pain unrelated to activity</li>
+                                <li>Pain brought on by breathing</li>
+                                <li>Pain associated with dizziness, palpitations, tingling, difficulty swallowing</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Initial Investigations
+                            <span class="badge badge-stable">Routine</span>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Resting 12-lead ECG:</h4>
+                            <ul>
+                                <li>Organize as soon as possible after presentation</li>
+                                <li>Do NOT rule out angina based on normal ECG</li>
+                                <li>Abnormal findings suggestive of CAD:
+                                    <ul>
+                                        <li>Pathological Q waves</li>
+                                        <li>Left bundle branch block (LBBB)</li>
+                                        <li>ST-segment and T-wave abnormalities</li>
+                                    </ul>
+                                </li>
+                                <li>Do NOT use exercise ECG for diagnosis in people without known CAD</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div>
+                        <i class="fas fa-search card-icon"></i>
+                        Diagnosis Confirmation
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="section">
+                        <div class="section-title">
+                            Confirming Diagnosis
+                            <span class="badge badge-urgent">Referral Required</span>
+                        </div>
+                        <div class="warning-box">
+                            <i class="fas fa-exclamation-triangle icon"></i>
+                            <strong>All patients with typical or atypical angina should be referred to a specialist chest pain service for diagnostic confirmation</strong>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Referral Process:</h4>
+                            <ul>
+                                <li>Follow local protocols for diagnostic testing and referral</li>
+                                <li>Include description of anginal chest pain features in referral</li>
+                                <li>Exclude stable angina if clinical assessment indicates non-anginal chest pain (unless other factors raise suspicion)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Diagnostic Pathways
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <h4><i class="fas fa-microscope"></i> CT Coronary Angiography</h4>
+                                <p>Offer 64-slice (or above) CT coronary angiography for people with typical or atypical angina features</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-heart"></i> Functional Testing</h4>
+                                <p>Consider for patients with known CAD where diagnosis uncertain</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Management While Awaiting Diagnostic Testing
+                            <span class="badge badge-caution">Interim Treatment</span>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Provide Sublingual GTN:</h4>
+                            <ul>
+                                <li>For relief of symptoms while waiting for specialist referral</li>
+                                <li>Instruct patient:
+                                    <ul>
+                                        <li>Stop activity and rest</li>
+                                        <li>Use GTN spray/tablets as instructed</li>
+                                        <li>Second dose after 5 minutes if pain persists</li>
+                                        <li><strong>Call 999 if pain not eased 5 minutes after second dose</strong></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Consider Aspirin 75mg daily:</h4>
+                            <p>Only if chest pain is considered likely to be stable angina (consider bleeding risk)</p>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Differential Diagnosis
+                        </div>
+                        <div class="sub-section">
+                            <p>See NICE CKS topic on Chest Pain for comprehensive differential diagnosis, including:</p>
+                            <ul>
+                                <li>Acute coronary syndromes</li>
+                                <li>Gastro-oesophageal reflux disease</li>
+                                <li>Musculoskeletal chest pain</li>
+                                <li>Pulmonary embolism</li>
+                                <li>Aortic dissection</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="treatment">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div>
+                        <i class="fas fa-pills card-icon"></i>
+                        Treatment Strategy
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="section">
+                        <div class="section-title">
+                            New Diagnosis - First-Line Treatment
+                            <span class="badge badge-stable">Start Immediately</span>
+                        </div>
+                        <div class="drug-treatment">
+                            <h4><i class="fas fa-spray-can"></i> Symptom Relief:</h4>
+                            <p><strong>Sublingual Glyceryl Trinitrate (GTN)</strong></p>
+                            <ul>
+                                <li>For rapid relief of angina episodes</li>
+                                <li>Use before activities known to cause symptoms</li>
+                                <li>Tablets: 1 tablet at onset, second after 5 minutes if needed</li>
+                                <li>Spray: 1-2 sprays under tongue, repeat after 5 minutes if needed</li>
+                                <li><strong>Call 999 if pain persists after second dose</strong></li>
+                            </ul>
+                        </div>
+
+                        <div class="drug-treatment">
+                            <h4><i class="fas fa-heartbeat"></i> Regular Anti-anginal Therapy:</h4>
+                            <p><strong>First-line: Beta-blocker OR Calcium-channel blocker (CCB)</strong></p>
+                            <ul>
+                                <li>Choice depends on comorbidities, contraindications, and patient preference</li>
+                                <li>Titrate to maximum licensed or tolerated dose</li>
+                                <li>Review response after 2-4 weeks</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4>If Beta-blocker or CCB Contraindicated/Not Tolerated:</h4>
+                            <p>Consider monotherapy with:</p>
+                            <ul>
+                                <li>Long-acting nitrate (e.g., isosorbide mononitrate)</li>
+                                <li>Nicorandil</li>
+                                <li>Ivabradine (if heart rate ≥70 bpm)</li>
+                                <li>Ranolazine</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Poor Control on Treatment
+                            <span class="badge badge-caution">Stepwise Approach</span>
+                        </div>
+                        <div class="stepwise-approach">
+                            <h4>If symptoms persist on monotherapy:</h4>
+                            <ol>
+                                <li><strong>Ensure maximum licensed/tolerated dose</strong></li>
+                                <li>If on beta-blocker → Add long-acting dihydropyridine CCB (amlodipine, MR nifedipine, MR felodipine)
+                                    <br><small><strong>WARNING:</strong> Do NOT combine beta-blocker with rate-limiting CCB (diltiazem/verapamil)</small>
+                                </li>
+                                <li>If on CCB → Add beta-blocker (same warning applies)</li>
+                                <li>If combination contraindicated → Add nitrate, nicorandil, ivabradine, or ranolazine</li>
+                                <li>If symptoms persist despite optimal dual therapy → <strong class="badge badge-urgent">Refer to cardiologist</strong></li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Secondary Prevention
+                            <span class="badge badge-stable">Essential for All</span>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <h4><i class="fas fa-pill"></i> Antiplatelet</h4>
+                                <p>Aspirin 75mg daily (or clopidogrel if aspirin contraindicated)</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-heartbeat"></i> ACE Inhibitor</h4>
+                                <p>Consider if diabetes, hypertension, CKD, or post-MI</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-chart-line"></i> Statin</h4>
+                                <p>Offer to all patients with angina</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-tint"></i> Antihypertensive</h4>
+                                <p>If blood pressure >140/90 mmHg</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Referral Indications
+                            <span class="badge badge-urgent">Cardiology Referral</span>
+                        </div>
+                        <div class="warning-box urgent-box">
+                            <i class="fas fa-ambulance icon"></i>
+                            <strong>Hospital Admission for Suspected Unstable Angina:</strong>
+                            <ul>
+                                <li>Pain at rest (may occur at night)</li>
+                                <li>Pain on minimal exertion</li>
+                                <li>Rapidly progressing angina despite treatment</li>
+                            </ul>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Early Cardiology Referral:</h4>
+                            <ul>
+                                <li>Previous MI, CABG, or PCI with new angina</li>
+                                <li>ECG evidence of previous MI or significant abnormality</li>
+                                <li>New atrial fibrillation with angina</li>
+                                <li>Heart failure with angina</li>
+                                <li>Ejection systolic murmur (suggesting aortic stenosis)</li>
+                                <li>Hypertrophic cardiomyopathy features</li>
+                                <li>Doubt about diagnosis</li>
+                                <li>Several risk factors or strong family history</li>
+                                <li>Patient preference</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="followup">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div>
+                        <i class="fas fa-user-check card-icon"></i>
+                        Follow-up & Lifestyle
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="section">
+                        <div class="section-title">
+                            Routine Review
+                            <span class="badge badge-stable">6-12 Monthly</span>
+                        </div>
+                        <div class="sub-section">
+                            <h4>Review Every 6-12 Months for Stable Patients:</h4>
+                            <ul>
+                                <li>Check ongoing symptoms (rest or exercise)</li>
+                                <li>Assess cardiovascular risk and modifiable factors</li>
+                                <li>Check BP, heart rate</li>
+                                <li>Screen for heart failure signs</li>
+                                <li>Screen for depression/low mood</li>
+                                <li>Review medication adherence</li>
+                                <li>Reiterate GTN use instructions</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Cardiovascular Risk Management
+                            <span class="badge badge-caution">Essential</span>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <h4><i class="fas fa-smoking-ban"></i> Smoking</h4>
+                                <p>Advise and assist all smokers to stop</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-apple-alt"></i> Diet</h4>
+                                <p>Encourage cardioprotective diet</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-dumbbell"></i> Exercise</h4>
+                                <p>Encourage physical activity within symptom limits</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-weight"></i> Weight</h4>
+                                <p>Support weight management if overweight/obese</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-wine-bottle"></i> Alcohol</h4>
+                                <p>Limit to ≤14 units/week, spread over ≥3 days</p>
+                            </div>
+                            <div class="info-card">
+                                <h4><i class="fas fa-pills"></i> Supplements</h4>
+                                <p>Do NOT offer vitamin or fish oil supplements</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            Lifestyle Advice
+                        </div>
+                        <div class="sub-section">
+                            <h4><i class="fas fa-briefcase"></i> Work:</h4>
+                            <ul>
+                                <li>Most can continue working as before</li>
+                                <li>Heavy manual work may require modifications</li>
+                                <li>Consult occupational health if available</li>
+                            </ul>
+                        </div>
+                        <div class="sub-section">
+                            <h4><i class="fas fa-car"></i> Driving:</h4>
+                            <ul>
+                                <li><strong>Group 1 (cars/motorcycles):</strong> Cease driving if symptoms at rest/emotion/whilst driving. Can resume when symptom control achieved. DVLA need not be notified.</li>
+                                <li><strong>Group 2 (lorries/buses):</strong> Must cease driving and notify DVLA. May be relicensed after 6 weeks symptom-free and meeting functional test requirements.</li>
+                                <li>Check insurance cover is appropriate</li>
+                            </ul>
+                        </div>
+                        <div class="sub-section">
+                            <h4><i class="fas fa-heart"></i> Sexual Activity:</h4>
+                            <ul>
+                                <li>Generally safe as other equally energetic exercise</li>
+                                <li>GTN before intercourse may help prevent attacks</li>
+                                <li><strong>IMPORTANT:</strong> Concomitant nitrate/nicorandil with PDE5 inhibitors (sildenafil, tadalafil, vardenafil) is CONTRAINDICATED</li>
+                                <li>If medically essential concurrent use:
+                                    <ul>
+                                        <li>Avanafil: ≥12 hours between doses</li>
+                                        <li>Sildenafil: ≥24 hours between doses</li>
+                                        <li>Tadalafil: ≥48 hours between doses</li>
+                                        <li>Vardenafil: Concurrent use contraindicated</li>
+                                    </ul>
+                                </li>
+                                <li>If angina occurs during sexual activity: STOP, do NOT use GTN. If pain doesn't resolve within 10 minutes, call 999.</li>
+                            </ul>
+                        </div>
+                        <div class="sub-section">
+                            <h4><i class="fas fa-plane"></i> Air Travel:</h4>
+                            <ul>
+                                <li><strong>Pain on considerable exertion (stable):</strong> No restrictions</li>
+                                <li><strong>Pain on minimal exertion (stable):</strong> Consider airport assistance and possible in-flight oxygen</li>
+                                <li><strong>Pain at rest or changing symptoms:</strong> Defer travel until stable, or travel with medical escort and in-flight oxygen</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <div class="section-title">
+                            When to Seek Urgent Help
+                            <span class="badge badge-urgent">Red Flags</span>
+                        </div>
+                        <div class="warning-box urgent-box">
+                            <i class="fas fa-exclamation-triangle icon"></i>
+                            <strong>Advise patient to seek immediate medical attention if:</strong>
+                            <ul>
+                                <li>Sudden worsening in frequency or severity of angina</li>
+                                <li>Angina occurring at rest</li>
+                                <li>Angina on minimal exertion</li>
+                                <li>Pain not relieved by GTN after 2 doses (10 minutes)</li>
+                                <li>Pain intensifying or feeling unwell</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.expand-icon');
+            
+            content.classList.toggle('expanded');
+            icon.classList.toggle('expanded');
+            
+            // Update progress tracking
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                const content = card.querySelector('.card-content');
+                const progressItem = progressItems[index];
+                
+                if (content.classList.contains('expanded')) {
+                    progressItem.classList.add('active');
+                    progressItem.classList.remove('completed');
+                } else if (hasViewedContent(card)) {
+                    progressItem.classList.add('completed');
+                    progressItem.classList.remove('active');
+                } else {
+                    progressItem.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        function hasViewedContent(card) {
+            const rect = card.getBoundingClientRect();
+            return rect.top < window.innerHeight && rect.bottom > 0;
+        }
+
+        // Smooth scrolling to sections
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const targetCard = document.getElementById(targetId);
+                const header = targetCard.querySelector('.card-header');
+                
+                // Scroll to card
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Auto-expand the card
+                setTimeout(() => {
+                    const content = header.nextElementSibling;
+                    const icon = header.querySelector('.expand-icon');
+                    content.classList.add('expanded');
+                    icon.classList.add('expanded');
+                    updateProgress();
+                }, 500);
+            });
+        });
+
+        // Update progress on scroll
+        let scrollTimeout;
+        window.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(updateProgress, 100);
+        });
+
+        // Initialize by expanding assessment card
+        document.addEventListener('DOMContentLoaded', function() {
+            const assessmentHeader = document.querySelector('#assessment .card-header');
+            setTimeout(() => {
+                assessmentHeader.click();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

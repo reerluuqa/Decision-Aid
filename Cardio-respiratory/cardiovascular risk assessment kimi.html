@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVD Risk Assessment & Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(13, 71, 161, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="40" r="1.5" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="70" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+            background-size: 100px 100px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+            position: relative;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .main-content {
+            display: flex;
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .content-area {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .progress-sidebar {
+            width: 280px;
+            position: sticky;
+            top: 20px;
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            z-index: 100;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            color: #0d47a1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.7;
+            background: rgba(240, 240, 240, 0.6);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(224, 224, 224, 0.8);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            font-weight: 600;
+            background: rgba(21, 101, 192, 0.1);
+            border: 1px solid rgba(21, 101, 192, 0.2);
+            box-shadow: 0 4px 12px rgba(21, 101, 192, 0.1);
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 12px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .progress-item.assessment .progress-icon { background: #ff6b6b; }
+        .progress-item.diagnosis .progress-icon { background: #4ecdc4; }
+        .progress-item.treatment .progress-icon { background: #1a73e8; }
+        .progress-item.followup .progress-icon { background: #34a853; }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 2.2em;
+            margin-bottom: 30px;
+            color: #0d47a1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid rgba(21, 101, 192, 0.2);
+        }
+
+        .section-icon {
+            font-size: 1.5em;
+            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(13, 71, 161, 0.2);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+        }
+
+        .card.expanded {
+            transform: scale(1.02);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .card.assessment .card-header { background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%); }
+        .card.diagnosis .card-header { background: linear-gradient(135deg, #4ecdc4 0%, #26a69a 100%); }
+        .card.treatment .card-header { background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); }
+        .card.followup .card-header { background: linear-gradient(135deg, #34a853 0%, #0f9d58 100%); }
+
+        .card-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-icon {
+            font-size: 1.5em;
+            filter: drop-shadow(0 2px 2px rgba(0,0,0,0.1));
+        }
+
+        .card-subtitle {
+            font-size: 0.95em;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .expand-icon {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+            font-size: 1.2em;
+        }
+
+        .card:hover .expand-icon {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            background: white;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #ff5252 0%, #d32f2f 100%);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #ffb142 0%, #ff9800 100%);
+            color: white;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #2ed573 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #3742fa 0%, #2f3542 100%);
+            color: white;
+        }
+
+        .info-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .info-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            transition: background 0.2s ease;
+        }
+
+        .info-list li:hover {
+            background: rgba(240, 240, 240, 0.3);
+        }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .info-list li::before {
+            content: '•';
+            color: #667eea;
+            font-size: 1.5em;
+            line-height: 0;
+            margin-top: 5px;
+        }
+
+        .card-group {
+            margin-bottom: 30px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, rgba(255,235,59,0.3) 0%, rgba(255,241,118,0.3) 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .action-box {
+            background: linear-gradient(135deg, rgba(26, 115, 232, 0.05) 0%, rgba(13, 71, 161, 0.05) 100%);
+            border-left: 4px solid #1a73e8;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 87, 34, 0.05) 100%);
+            border-left: 4px solid #ff9800;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
+        }
+
+        .risk-calculator-note {
+            background: linear-gradient(135deg, rgba(255, 235, 59, 0.1) 0%, rgba(255, 241, 118, 0.1) 100%);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+
+        .drug-info {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(240, 240, 240, 0.6) 100%);
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            backdrop-filter: blur(5px);
+        }
+
+        .drug-name {
+            font-weight: 600;
+            color: #0d47a1;
+            font-size: 1.1em;
+        }
+
+        .dose-info {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                width: 100%;
+                position: static;
+                margin-bottom: 30px;
+            }
+            
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scroll-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scroll-dot.active {
+            background: #667eea;
+            transform: scale(1.3);
+        }
+
+        .floating-action-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1.5em;
+            box-shadow: 0 6px 20px rgba(13, 71, 161, 0.3);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 999;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .floating-action-btn:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 25px rgba(13, 71, 161, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🫀 CVD Risk Assessment & Management</h1>
+        <div class="header-badge">Based on NICE CKS Guidelines • July 2025</div>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="content-area">
+                <!-- Assessment Section -->
+                <section class="section fade-in" id="assessment-section">
+                    <h2 class="section-title">
+                        <div class="section-icon">📊</div>
+                        Assessment
+                    </h2>
+                    
+                    <div class="cards-grid">
+                        <div class="card assessment" data-card-id="risk-stratification">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">📋</span>
+                                    Risk Stratification
+                                </div>
+                                <div class="card-subtitle">Systematic approach to identify high-risk individuals</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Primary Strategy:</strong> Use systematic approach, not opportunistic screening
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Target Population:</strong> Adults aged 40-74 years in England (NHS Health Check)</li>
+                                        <li><strong>Prioritization:</strong> Use electronic records to estimate 10-year CVD risk</li>
+                                        <li><strong>Threshold:</strong> Full formal assessment if estimated risk ≥10%</li>
+                                        <li><strong>Exclusions:</strong> Already diagnosed CVD, type 1 diabetes, CKD, familial hypercholesterolaemia</li>
+                                    </ul>
+                                    <div class="badge badge-info">Age 18+</div>
+                                    <div class="badge badge-stable">Primary Prevention</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card assessment" data-card-id="qrisk-calculation">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🧮</span>
+                                    QRISK3 Calculation
+                                </div>
+                                <div class="card-subtitle">10-year CVD risk estimation tool</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="risk-calculator-note">
+                                        <strong>QRISK3 Tool:</strong> Calculates 10-year risk of CVD (CHD, stroke, TIA, PAD)
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Required Data:</strong> Age, sex, ethnicity, postcode, smoking status</li>
+                                        <li><strong>Clinical Data:</strong> Systolic BP, BMI, total cholesterol/HDL ratio</li>
+                                        <li><strong>Medical History:</strong> Diabetes, CKD, rheumatoid arthritis, atrial fibrillation</li>
+                                        <li><strong>Family History:</strong> Premature CVD in first-degree relatives</li>
+                                    </ul>
+                                    <div class="badge badge-caution">Non-fasting sample</div>
+                                    <div class="badge badge-info">Age 25-84 years</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card assessment" data-card-id="risk-communication">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">💬</span>
+                                    Risk Communication
+                                </div>
+                                <div class="card-subtitle">Effective discussion of risk scores with patients</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Key Principle:</strong> Use jargon-free language and visual aids
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Format:</strong> Express as percentage (e.g., 20% = 20 in 100 chance)</li>
+                                        <li><strong>Visual Aids:</strong> Use QRISK 'smiley face' diagrams</li>
+                                        <li><strong>Context:</strong> Discuss absolute risk and benefits of intervention</li>
+                                        <li><strong>Individual Variation:</strong> Scores estimate group risk, not individual outcomes</li>
+                                    </ul>
+                                    <div class="badge badge-stable">Shared Decision Making</div>
+                                    <div class="badge badge-info">Lifetime Risk Tool Available</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Diagnosis Section -->
+                <section class="section fade-in" id="diagnosis-section">
+                    <h2 class="section-title">
+                        <div class="section-icon">🔍</div>
+                        Diagnosis & Interpretation
+                    </h2>
+                    
+                    <div class="cards-grid">
+                        <div class="card diagnosis" data-card-id="risk-categories">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">📊</span>
+                                    Risk Categories
+                                </div>
+                                <div class="card-subtitle">Interpretation of QRISK3 scores</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <ul class="info-list">
+                                        <li><strong>Low Risk:</strong> &lt;10% - Lifestyle advice, review in 5 years</li>
+                                        <li><strong>Intermediate Risk:</strong> 10-20% - Consider statintherapy</li>
+                                        <li><strong>High Risk:</strong> ≥10% (NICE threshold) - Offer lifestyle + statin</li>
+                                        <li><strong>Very High Risk:</strong> &gt;20% - Statin + consider aspirin</li>
+                                    </ul>
+                                    <div class="badge badge-stable">&lt;10%: Lifestyle Only</div>
+                                    <div class="badge badge-caution">10-20%: Consider Statin</div>
+                                    <div class="badge badge-urgent">≥10%: Offer Statin</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card diagnosis" data-card-id="special-populations">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">👥</span>
+                                    Special Populations
+                                </div>
+                                <div class="card-subtitle">Groups requiring modified approach</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <ul class="info-list">
+                                        <li><strong>Type 1 Diabetes:</strong> All adults consider statin (≥40y or diabetes >10y)</li>
+                                        <li><strong>Type 2 Diabetes:</strong> Statin if CVD risk ≥10%</li>
+                                        <li><strong>CKD:</strong> eGFR <60 - Consider atorvastatin 20mg</li>
+                                        <li><strong>Age ≥85:</strong> Considered high risk, no QRISK needed</li>
+                                        <li><strong>Familial Hypercholesterolaemia:</strong> Specialist management</li>
+                                    </ul>
+                                    <div class="badge badge-info">Autoimmune Disorders</div>
+                                    <div class="badge badge-caution">Severe Mental Illness</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card diagnosis" data-card-id="risk-enhancers">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">⚠️</span>
+                                    Risk Enhancers
+                                </div>
+                                <div class="card-subtitle">Factors that may underestimate risk</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="warning-box">
+                                        <strong>Caution:</strong> QRISK may underestimate risk in certain conditions
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Treatments:</strong> HIV medication, antipsychotics, immunosuppressants</li>
+                                        <li><strong>Conditions:</strong> Hypertriglyceridaemia (&gt;4.5 mmol/L), autoimmune disorders</li>
+                                        <li><strong>Lifestyle:</strong> Recent smoking cessation, antihypertensive treatment</li>
+                                        <li><strong>Other:</strong> Severe mental illness, systemic inflammatory disorders</li>
+                                    </ul>
+                                    <div class="badge badge-caution">Clinical Judgment Required</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Treatment Section -->
+                <section class="section fade-in" id="treatment-section">
+                    <h2 class="section-title">
+                        <div class="section-icon">💊</div>
+                        Treatment
+                    </h2>
+                    
+                    <div class="cards-grid">
+                        <div class="card treatment" data-card-id="lifestyle-modification">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🥗</span>
+                                    Lifestyle Modification
+                                </div>
+                                <div class="card-subtitle">First-line intervention for all risk levels</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Core Recommendation:</strong> Address three most important modifiable risk factors
+                                    </div>
+                                    <h4>Smoking Cessation:</h4>
+                                    <ul class="info-list">
+                                        <li>Advise all smokers to stop, avoid passive smoking</li>
+                                        <li>Offer referral to NHS Stop Smoking Service</li>
+                                    </ul>
+                                    <h4>Dietary Changes:</h4>
+                                    <ul class="info-list">
+                                        <li>Fruit & vegetables: ≥5 portions/day</li>
+                                        <li>Fish: ≥2 portions/week (oily fish)</li>
+                                        <li>Fiber: 30-45g/day (wholegrain)</li>
+                                        <li>Unsalted nuts/seeds/legumes: 4-5 portions/week</li>
+                                        <li>Reduce saturated fat (&lt;7% energy) and salt (&lt;6g/day)</li>
+                                    </ul>
+                                    <h4>Physical Activity:</h4>
+                                    <ul class="info-list">
+                                        <li>≥150 min/week moderate intensity aerobic activity</li>
+                                        <li>or ≥75 min/week vigorous activity</li>
+                                        <li>Muscle-strengthening: 2+ days/week</li>
+                                    </ul>
+                                    <h4>Alcohol:</h4>
+                                    <ul class="info-list">
+                                        <li>≤14 units/week (spread over ≥3 days)</li>
+                                        <li>≥2 alcohol-free days/week</li>
+                                    </ul>
+                                    <div class="badge badge-stable">All Risk Levels</div>
+                                    <div class="badge badge-info">Tailored Advice</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card treatment" data-card-id="statin-therapy">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">💊</span>
+                                    Statin Therapy
+                                </div>
+                                <div class="card-subtitle">Pharmacological lipid modification</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>First Choice:</strong> Atorvastatin 20 mg daily
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Threshold:</strong> Offer if 10-year CVD risk ≥10%</li>
+                                        <li><strong>Target:</strong> &gt;40% reduction in non-HDL cholesterol</li>
+                                        <li><strong>Exceptions:</strong> CKD (consult renal specialist if eGFR &lt;30)</li>
+                                        <li><strong>Special Cases:</strong> Type 1 diabetes (≥40y or diabetes &gt;10y)</li>
+                                    </ul>
+                                    <div class="drug-info">
+                                        <div class="drug-name">Atorvastatin 20 mg</div>
+                                        <div class="dose-info">Once daily, any time (with or without food)</div>
+                                    </div>
+                                    <div class="warning-box">
+                                        <strong>Before Starting:</strong> Exclude secondary causes (excess alcohol, uncontrolled diabetes, hypothyroidism, liver disease, nephrotic syndrome)
+                                    </div>
+                                    <div class="badge badge-caution">Baseline LFTs Required</div>
+                                    <div class="badge badge-info">Recheck Lipids at 3 Months</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card treatment" data-card-id="antiplatelet-therapy">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🩸</span>
+                                    Antiplatelet Therapy
+                                </div>
+                                <div class="card-subtitle">Aspirin for primary prevention</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="warning-box">
+                                        <strong>Important:</strong> Do NOT routinely offer aspirin for primary prevention
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>General Population:</strong> Aspirin NOT recommended</li>
+                                        <li><strong>High Risk (&gt;20%):</strong> Consider 75 mg if no bleeding risk</li>
+                                        <li><strong>Contraindications:</strong> GI bleeding, peptic ulcer, concurrent anticoagulants</li>
+                                        <li><strong>Note:</strong> Off-label use in high-risk groups only</li>
+                                    </ul>
+                                    <div class="drug-info">
+                                        <div class="drug-name">Aspirin 75 mg</div>
+                                        <div class="dose-info">Once daily (off-label for primary prevention)</div>
+                                    </div>
+                                    <div class="badge badge-urgent">Bleeding Risk Assessment</div>
+                                    <div class="badge badge-caution">GI Protection if Needed</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card treatment" data-card-id="blood-pressure">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🩺</span>
+                                    Blood Pressure Management
+                                </div>
+                                <div class="card-subtitle">Hypertension treatment thresholds</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Target:</strong> &lt;140/90 mmHg for &lt;80 years, &lt;150/90 for ≥80 years
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Diagnosis:</strong> Ambulatory monitoring or home BP monitoring</li>
+                                        <li><strong>Treatment:</strong> Offer if persistent &gt;140/90 mmHg (&gt;160/100 if &lt;80y)</li>
+                                        <li><strong>Elderly:</strong> Offer if &gt;150/90 mmHg for ≥80 years</li>
+                                        <li><strong>Diabetes:</strong> Tighter control targets apply</li>
+                                    </ul>
+                                    <div class="badge badge-caution">Lifestyle First</div>
+                                    <div class="badge badge-info">See Hypertension Topic</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card treatment" data-card-id="comorbidity-optimization">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">⚙️</span>
+                                    Comorbidity Optimization
+                                </div>
+                                <div class="card-subtitle">Managing conditions that increase CVD risk</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Approach:</strong> Optimize management of all conditions that increase CVD risk
+                                    </div>
+                                    <h4>Key Conditions:</h4>
+                                    <ul class="info-list">
+                                        <li><strong>Atrial Fibrillation:</strong> Rate/rhythm control, anticoagulation if indicated</li>
+                                        <li><strong>Diabetes Mellitus:</strong> Glycaemic control, BP, lipids</li>
+                                        <li><strong>Chronic Kidney Disease:</strong> Proteinuria control, BP management</li>
+                                        <li><strong>Rheumatoid Arthritis:</strong> Inflammation control</li>
+                                        <li><strong>Obesity/Sleep Apnoea:</strong> Weight management, CPAP if indicated</li>
+                                        <li><strong>Periodontitis:</strong> Dental treatment</li>
+                                    </ul>
+                                    <div class="badge badge-info">Holistic Approach</div>
+                                    <div class="badge badge-caution">Regular Review</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Follow-up Section -->
+                <section class="section fade-in" id="followup-section">
+                    <h2 class="section-title">
+                        <div class="section-icon">📈</div>
+                        Follow-up
+                    </h2>
+                    
+                    <div class="cards-grid">
+                        <div class="card followup" data-card-id="monitoring">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🔄</span>
+                                    Monitoring Schedule
+                                </div>
+                                <div class="card-subtitle">Follow-up and review intervals</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <ul class="info-list">
+                                        <li><strong>Low Risk (&lt;10%):</strong> Review in 5 years</li>
+                                        <li><strong>After Lifestyle Change:</strong> Reassess risk after improvement attempts</li>
+                                        <li><strong>Statin Initiation:</strong> Check LFTs at 3 months, then annually</li>
+                                        <li><strong>Lipid Monitoring:</strong> Check lipids 2-3 months after starting/changing treatment</li>
+                                        <li><strong>Annual Review:</strong> BP, smoking status, lifestyle factors</li>
+                                    </ul>
+                                    <div class="badge badge-stable">Regular Monitoring</div>
+                                    <div class="badge badge-info">Opportunistic Checks</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card followup" data-card-id="targets">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🎯</span>
+                                    Treatment Targets
+                                </div>
+                                <div class="card-subtitle">Goals for primary prevention</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Lipid Targets:</strong> >40% reduction in non-HDL cholesterol
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>LDL Cholesterol:</strong> ≤2.0 mmol/L (or non-HDL ≤2.6 mmol/L)</li>
+                                        <li><strong>Blood Pressure:</strong> &lt;140/90 mmHg (&lt;80y), &lt;150/90 mmHg (≥80y)</li>
+                                        <li><strong>Smoking:</strong> Complete cessation</li>
+                                        <li><strong>Physical Activity:</strong> 150 min moderate/week or 75 min vigorous/week</li>
+                                        <li><strong>Alcohol:</strong> ≤14 units/week</li>
+                                    </ul>
+                                    <div class="badge badge-stable">Achievable Targets</div>
+                                    <div class="badge badge-caution">Individualized Goals</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card followup" data-card-id="adherence">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">💪</span>
+                                    Adherence Support
+                                </div>
+                                <div class="card-subtitle">Strategies to maintain lifestyle and medication adherence</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="action-box">
+                                        <strong>Key Principle:</strong> Support may be needed long-term
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Education:</strong> Reinforce benefits of treatment and lifestyle changes</li>
+                                        <li><strong>Address Barriers:</strong> Side effects, cost, complexity, health beliefs</li>
+                                        <li><strong>Simplify Regimens:</strong> Once-daily dosing, combination pills</li>
+                                        <li><strong>Family Involvement:</strong> Engage support from family members</li>
+                                        <li><strong>Reminder Systems:</strong> Apps, pill boxes, SMS reminders</li>
+                                        <li><strong>Regular Contact:</strong> Scheduled reviews, telephone follow-up</li>
+                                    </ul>
+                                    <div class="badge badge-info">Behavioral Support</div>
+                                    <div class="badge badge-stable">Shared Decision Making</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card followup" data-card-id="when-to-escalate">
+                            <div class="card-header">
+                                <div class="card-title">
+                                    <span class="card-icon">🚨</span>
+                                    When to Escalate
+                                </div>
+                                <div class="card-subtitle">Referral criteria and intensification triggers</div>
+                                <div class="expand-icon">▼</div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="warning-box">
+                                        <strong>Referral Indicators:</strong> Suspected familial hypercholesterolaemia or treatment failure
+                                    </div>
+                                    <ul class="info-list">
+                                        <li><strong>Familial Hypercholesterolaemia:</strong> 
+                                            <ul style="margin-left: 20px; margin-top: 10px;">
+                                                <li>Total cholesterol &gt;7.5 mmol/L</li>
+                                                <li>Family history of premature CHD</li>
+                                                <li>Tendon xanthomas</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>Treatment Failure:</strong> Not achieving &gt;40% non-HDL reduction</li>
+                                        <li><strong>Statin Intolerance:</strong> Significant side effects</li>
+                                        <li><strong>Complex Cases:</strong> Multiple comorbidities, polypharmacy</li>
+                                        <li><strong>CKD Stage 4-5:</strong> eGFR &lt;30 ml/min/1.73m²</li>
+                                    </ul>
+                                    <div class="badge badge-urgent">Specialist Referral</div>
+                                    <div class="badge badge-caution">Lipid Clinic</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="progress-sidebar">
+                <h3>
+                    <span>📍</span>
+                    Algorithm Progress
+                </h3>
+                <div class="progress-item assessment" data-section="assessment">
+                    <div class="progress-icon">📊</div>
+                    <div>
+                        <div style="font-weight: 600;">Assessment</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">Risk calculation & communication</div>
+                    </div>
+                </div>
+                <div class="progress-item diagnosis" data-section="diagnosis">
+                    <div class="progress-icon">🔍</div>
+                    <div>
+                        <div style="font-weight: 600;">Diagnosis</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">Risk interpretation</div>
+                    </div>
+                </div>
+                <div class="progress-item treatment" data-section="treatment">
+                    <div class="progress-icon">💊</div>
+                    <div>
+                        <div style="font-weight: 600;">Treatment</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">Lifestyle & medication</div>
+                    </div>
+                </div>
+                <div class="progress-item followup" data-section="followup">
+                    <div class="progress-icon">📈</div>
+                    <div>
+                        <div style="font-weight: 600;">Follow-up</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">Monitoring & targets</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px; padding: 20px; background: rgba(240, 240, 240, 0.6); border-radius: 12px; font-size: 0.9em;">
+                    <h4 style="margin-bottom: 15px; color: #667eea;">Quick Tips</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin-bottom: 10px;">💡 <strong>Systematic Approach:</strong> Use electronic records to identify high-risk patients</li>
+                        <li style="margin-bottom: 10px;">⚠️ <strong>Risk Enhancers:</strong> Consider additional factors that QRISK may miss</li>
+                        <li style="margin-bottom: 10px;">🗣️ <strong>Communication:</strong> Use visual aids for risk discussion</li>
+                        <li style="margin-bottom: 10px;">🔄 <strong>Shared Decision:</strong> Involve patients in treatment choices</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="floating-action-btn" id="print-btn" title="Print Algorithm">🖨️</button>
+
+    <script>
+        // Card expansion functionality
+        document.querySelectorAll('.card').forEach(card => {
+            const header = card.querySelector('.card-header');
+            
+            header.addEventListener('click', () => {
+                const isExpanded = card.classList.contains('expanded');
+                
+                // Close all other cards
+                document.querySelectorAll('.card').forEach(c => {
+                    if (c !== card) {
+                        c.classList.remove('expanded');
+                    }
+                });
+                
+                // Toggle current card
+                card.classList.toggle('expanded');
+                
+                // Scroll to card if expanding
+                if (!isExpanded) {
+                    setTimeout(() => {
+                        card.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                    }, 100);
+                }
+            });
+        });
+
+        // Progress sidebar navigation
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.section;
+                const sectionElement = document.getElementById(`${section}-section`);
+                
+                if (sectionElement) {
+                    sectionElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                    
+                    // Update active state
+                    document.querySelectorAll('.progress-item').forEach(p => p.classList.remove('active'));
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // Active section tracking on scroll
+        const sections = document.querySelectorAll('.section');
+        const progressItems = document.querySelectorAll('.progress-item');
+
+        function updateActiveSection() {
+            const scrollPosition = window.scrollY + 150;
+            
+            sections.forEach((section, index) => {
+                const sectionTop = section.offsetTop;
+                const sectionBottom = sectionTop + section.offsetHeight;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                    progressItems.forEach(item => item.classList.remove('active'));
+                    progressItems[index].classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateActiveSection);
+
+        // Set initial active state
+        updateActiveSection();
+
+        // Floating print button
+        document.getElementById('print-btn').addEventListener('click', () => {
+            window.print();
+        });
+
+        // Smooth scroll reveal animation
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        sections.forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(30px)';
+            section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(section);
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Close all expanded cards
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.remove('expanded');
+                });
+            }
+        });
+
+        // Add subtle parallax effect to header
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const header = document.querySelector('header');
+            header.style.transform = `translateY(${scrolled * 0.5}px)`;
+        });
+
+        // Add click-to-copy functionality for drug doses
+        document.querySelectorAll('.drug-info').forEach(drugInfo => {
+            drugInfo.style.cursor = 'pointer';
+            drugInfo.title = 'Click to copy drug information';
+            
+            drugInfo.addEventListener('click', () => {
+                const drugName = drugInfo.querySelector('.drug-name').textContent;
+                const doseInfo = drugInfo.querySelector('.dose-info').textContent;
+                const textToCopy = `${drugName}: ${doseInfo}`;
+                
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = drugInfo.innerHTML;
+                    drugInfo.innerHTML = '<div style="color: #4ecdc4; font-weight: 600;">✓ Copied to clipboard!</div>';
+                    setTimeout(() => {
+                        drugInfo.innerHTML = originalText;
+                    }, 2000);
+                });
+            });
+        });
+
+        // Add subtle background animation
+        const bgAnimation = document.createElement('div');
+        bgAnimation.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, rgba(26, 115, 232, 0.03) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 70%, rgba(255, 107, 107, 0.03) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: -1;
+            animation: float 20s infinite ease-in-out;
+        `;
+        document.body.appendChild(bgAnimation);
+
+        // Add CSS for floating animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes float {
+                0%, 100% { transform: translate(0, 0) rotate(0deg); }
+                33% { transform: translate(10px, -10px) rotate(0.5deg); }
+                66% { transform: translate(-5px, 5px) rotate(-0.5deg); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('🫀 CVD Risk Assessment Algorithm loaded successfully!');
+        console.log('Features: Interactive cards, progress tracking, smooth animations, print functionality');
+    </script>
+</body>
+</html>
