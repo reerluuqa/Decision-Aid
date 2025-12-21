@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polyneuropathy Assessment Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --assessment: #3498db;
+            --diagnosis: #9b59b6;
+            --treatment: #e74c3c;
+            --followup: #27ae60;
+            --urgent: #e74c3c;
+            --caution: #f39c12;
+            --stable: #27ae60;
+            --bg: #ecf0f1;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text: #2c3e50;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, #d5dbdb 100%);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 30%);
+            pointer-events: none;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px var(--shadow);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.05);
+            backdrop-filter: blur(10px);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .card-header.assessment { background: linear-gradient(135deg, var(--assessment) 0%, #2980b9 100%); }
+        .card-header.diagnosis { background: linear-gradient(135deg, var(--diagnosis) 0%, #8e44ad 100%); }
+        .card-header.treatment { background: linear-gradient(135deg, var(--treatment) 0%, #c0392b 100%); }
+        .card-header.followup { background: linear-gradient(135deg, var(--followup) 0%, #229954 100%); }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .card-icon {
+            font-size: 2.5em;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .card-title h2 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .card-title p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .expand-icon {
+            font-size: 1.5em;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255,255,255,0.2);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            background: rgba(236, 240, 241, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin-left: -15px;
+            margin-right: -15px;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .section h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 8px 15px;
+            border-radius: 25px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .badge.urgent {
+            background: linear-gradient(135deg, var(--urgent) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge.caution {
+            background: linear-gradient(135deg, var(--caution) 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .badge.stable {
+            background: linear-gradient(135deg, var(--stable) 0%, #229954 100%);
+            color: white;
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .alert-box {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 5px solid;
+            background: rgba(255,255,255,0.7);
+            transition: all 0.3s ease;
+        }
+
+        .alert-box:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .alert-urgent {
+            border-left-color: var(--urgent);
+            background: linear-gradient(to right, rgba(231, 76, 60, 0.1), transparent);
+        }
+
+        .alert-caution {
+            border-left-color: var(--caution);
+            background: linear-gradient(to right, rgba(243, 156, 18, 0.1), transparent);
+        }
+
+        .alert-stable {
+            border-left-color: var(--stable);
+            background: linear-gradient(to right, rgba(39, 174, 96, 0.1), transparent);
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        ul li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        ul li:hover {
+            background: rgba(236, 240, 241, 0.5);
+            border-radius: 5px;
+            padding-left: 35px;
+        }
+
+        ul li::before {
+            content: '•';
+            position: absolute;
+            left: 15px;
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1.5em;
+            line-height: 1;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: var(--card-bg);
+            box-shadow: -5px 0 15px var(--shadow);
+            padding: 25px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+            border-left: 1px solid rgba(0,0,0,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .sidebar.hidden {
+            transform: translateX(100%);
+        }
+
+        .sidebar h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(236, 240, 241, 0.5);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            transform: translateX(5px);
+            background: rgba(236, 240, 241, 0.8);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .progress-item.completed {
+            background: linear-gradient(135deg, var(--stable) 0%, #229954 100%);
+            color: white;
+        }
+
+        .progress-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .progress-item:hover .progress-icon {
+            transform: scale(1.2);
+        }
+
+        .toggle-sidebar {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            z-index: 1000;
+            background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-sidebar:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px var(--shadow);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        th {
+            background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(236, 240, 241, 0.3);
+        }
+
+        .floating-alert {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, var(--urgent) 0%, #c0392b 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(231, 76, 60, 0.3);
+            transform: translateY(150px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 999;
+            max-width: 350px;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .floating-alert.show {
+            transform: translateY(0);
+        }
+
+        .floating-alert-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .floating-alert-icon {
+            font-size: 2em;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .close-alert {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .close-alert:hover {
+            transform: rotate(90deg);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                transform: none;
+                transition: none;
+            }
+            
+            .sidebar.hidden {
+                display: none;
+            }
+            
+            .main-content {
+                padding: 10px;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            .card-header-content {
+                gap: 15px;
+            }
+            
+            .card-icon {
+                font-size: 2em;
+            }
+            
+            .card-title h2 {
+                font-size: 1.5em;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            .sidebar, .toggle-sidebar, .floating-alert {
+                display: none;
+            }
+            
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+                page-break-inside: avoid;
+            }
+            
+            .card-content {
+                max-height: none !important;
+            }
+            
+            .badge {
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .alert-box {
+                -webkit-print-color-adjust: exact;
+            }
+            
+            .print-only {
+                display: block;
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #f1c40f 0%, #f39c12 100%);
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .search-container {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid rgba(52, 152, 219, 0.3);
+            border-radius: 25px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 5px 15px var(--shadow);
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--assessment);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.2);
+            background: white;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--assessment);
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <header>
+                <h1><i class="fas fa-brain"></i> Polyneuropathy Assessment</h1>
+                <p>Interactive Clinical Decision Support Tool | BMJ Best Practice Guidelines</p>
+            </header>
+
+            <div class="search-container">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search algorithm content...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card" data-section="assessment">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <i class="fas fa-clipboard-list card-icon"></i>
+                        <div class="card-title">
+                            <h2>Assessment</h2>
+                            <p>Initial evaluation and clinical history</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-history"></i> Historical Considerations</h3>
+                            <ul>
+                                <li><strong>Sensory symptoms:</strong> Numbness, impaired coordination, balance problems (worse with vision impairment)</li>
+                                <li><strong>Dysaesthesias:</strong> Tingling, burning, aching, swelling, tightness, formication, electric shocks in distal lower extremities</li>
+                                <li><strong>Motor symptoms:</strong> Distal weakness, bilateral foot drop in severe cases</li>
+                                <li><strong>Autonomic symptoms:</strong> Dizziness on standing, erectile dysfunction, urinary issues, constipation/diarrhea, early satiety, sweating disturbances</li>
+                                <li><strong>Past medical history:</strong> Diabetes, renal failure, amyloidosis, family history of neuropathy</li>
+                                <li><strong>Risk factors:</strong> Smoking, hypertension, older age, alcohol use, medications (especially chemotherapeutic agents)</li>
+                                <li><strong>Progression pattern:</strong> Chronic vs rapidly progressive (hours to days)</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-stethoscope"></i> Physical Examination</h3>
+                            <div class="badge-container">
+                                <span class="badge urgent">Check for Red Flags</span>
+                                <span class="badge caution">Systemic Disease Signs</span>
+                            </div>
+                            <ul>
+                                <li><strong>General findings:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Erythema in sun-exposed areas (SLE)</li>
+                                        <li>Purpuric rashes (vasculitis)</li>
+                                        <li>Mee's lines in nails (arsenic/thallium poisoning)</li>
+                                        <li>Pes cavus, hammer toes (Charcot-Marie-Tooth)</li>
+                                        <li>Distal muscle atrophy ("stork/champagne bottle" appearance)</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Neurological findings:</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Intrinsic foot muscle atrophy and distal weakness</li>
+                                        <li>Impaired temperature/pinprick (small fibers) and vibration/proprioception (large fibers)</li>
+                                        <li>Symmetrically reduced/absent reflexes (asymmetry suggests radiculopathy)</li>
+                                        <li>Trophic skin changes (dry skin, hair loss, ulcers)</li>
+                                        <li>Semmes-Weinstein monofilament test for large fiber neuropathy</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Urgent Red Flags</h3>
+                            <div class="alert-box alert-urgent">
+                                <strong>Rapid progression over hours to days requires inpatient evaluation</strong><br>
+                                Risk of neurogenic respiratory failure, autonomic failure, cardiac arrhythmias
+                            </div>
+                            <ul>
+                                <li>Guillain-Barré syndrome</li>
+                                <li>Toxin-induced polyneuropathy (arsenic, thallium, lead)</li>
+                                <li>Porphyric polyneuropathy</li>
+                                <li>Paraneoplastic neuropathy</li>
+                                <li>Cauda equina syndrome</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" data-section="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <i class="fas fa-microscope card-icon"></i>
+                        <div class="card-title">
+                            <h2>Diagnosis</h2>
+                            <p>Laboratory tests and diagnostic workup</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-flask"></i> Initial Laboratory Tests</h3>
+                            <p>For suspected distal symmetric polyneuropathy, order:</p>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Test Category</th>
+                                            <th>Specific Tests</th>
+                                            <th>Purpose</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Hematology</td>
+                                            <td>FBC, ESR</td>
+                                            <td>Anemia, inflammation, malignancy</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Metabolic</td>
+                                            <td>Fasting glucose, cholesterol panel</td>
+                                            <td>Diabetes, dyslipidemia</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Endocrine</td>
+                                            <td>TSH</td>
+                                            <td>Hypothyroidism screening</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Nutritional</td>
+                                            <td>Vitamin B12 with metabolites</td>
+                                            <td>B12 deficiency (check methylmalonic acid if low/borderline)</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Infectious</td>
+                                            <td>Hepatitis B/C, HIV, Lyme, syphilis serologies</td>
+                                            <td>Infectious neuropathies</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Immunology</td>
+                                            <td>ANA, ANCA, SS-A/SS-B</td>
+                                            <td>Connective tissue diseases</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Protein studies</td>
+                                            <td>Serum protein electrophoresis with immunofixation</td>
+                                            <td>Monoclonal gammopathy</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-brain"></i> Electrodiagnostic Testing</h3>
+                            <div class="badge-container">
+                                <span class="badge caution">Consider Early</span>
+                                <span class="badge stable">Confirms Diagnosis</span>
+                            </div>
+                            <p><strong>Nerve conduction studies and EMG:</strong></p>
+                            <ul>
+                                <li>Confirm clinical diagnosis</li>
+                                <li>Determine axonal vs demyelinating pattern</li>
+                                <li>Assess chronicity and severity</li>
+                                <li>Identify specific patterns (length-dependent vs multifocal)</li>
+                            </ul>
+                            <p><strong>If demyelinating pattern found, consider:</strong></p>
+                            <ul>
+                                <li>Guillain-Barré syndrome</li>
+                                <li>Chronic inflammatory demyelinating polyradiculoneuropathy (CIDP)</li>
+                                <li>Monoclonal gammopathies</li>
+                                <li>Hereditary neuropathies</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-search"></i> Differential Diagnosis</h3>
+                            
+                            <h4>Common Causes</h4>
+                            <div class="badge-container">
+                                <span class="badge stable">Diabetes Mellitus (50% of cases)</span>
+                                <span class="badge stable">Hypothyroidism</span>
+                                <span class="badge stable">Vitamin B12 Deficiency</span>
+                                <span class="badge caution">Toxin/Drug-Induced</span>
+                                <span class="badge stable">Idiopathic (20-50%)</span>
+                            </div>
+
+                            <h4 style="margin-top: 20px;">Uncommon but Important</h4>
+                            <div class="badge-container">
+                                <span class="badge urgent">Guillain-Barré Syndrome</span>
+                                <span class="badge urgent">Cauda Equina Syndrome</span>
+                                <span class="badge urgent">Vasculitic Neuropathy</span>
+                                <span class="badge caution">CIDP</span>
+                                <span class="badge caution">HIV/Hepatitis C</span>
+                                <span class="badge caution">Monoclonal Gammopathy</span>
+                                <span class="badge caution">Amyloidosis</span>
+                                <span class="badge caution">Hereditary (Charcot-Marie-Tooth)</span>
+                            </div>
+
+                            <div class="alert-box alert-urgent" style="margin-top: 20px;">
+                                <strong>Mimics to Consider:</strong> Cauda equina syndrome, mononeuritis multiplex, multiple radiculopathies, plexopathies
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-tint"></i> Special Tests</h3>
+                            <ul>
+                                <li><strong>Skin biopsy:</strong> For small-fiber neuropathy (normal nerve conduction studies but symptoms present)</li>
+                                <li><strong>Nerve biopsy:</strong> Reserved for rapidly progressive/asymmetric cases (vasculitis, sarcoidosis, amyloidosis)</li>
+                                <li><strong>CSF analysis:</strong> Acellular with increased protein in GBS and CIDP</li>
+                                <li><strong>Genetic testing:</strong> For suspected hereditary neuropathies (CMT)</li>
+                                <li><strong>Autonomic testing:</strong> Cardiovagal, adrenergic, sudomotor function assessment</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" data-section="treatment">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <i class="fas fa-pills card-icon"></i>
+                        <div class="card-title">
+                            <h2>Treatment</h2>
+                            <p>Management strategies by etiology</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-heartbeat"></i> Emergency Management</h3>
+                            <div class="alert-box alert-urgent">
+                                <strong>Respiratory Failure Risk:</strong> Frequent monitoring of forced vital capacity (FVC) and maximum inspiratory force
+                            </div>
+                            <ul>
+                                <li><strong>Admission to monitored ward/ICU</strong> if respiratory insufficiency or bulbar dysfunction</li>
+                                <li><strong>Urgent intubation</strong> for FVC <20 mL/kg or rapid progression</li>
+                                <li><strong>Cardiac monitoring</strong> for autonomic dysfunction</li>
+                                <li><strong>Plasma exchange or IVIG</strong> for GBS</li>
+                                <li><strong>Supportive care:</strong> DVT prophylaxis, nutrition, physical therapy</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-disease"></i> Specific Etiology-Based Treatment</h3>
+                            
+                            <h4 style="color: var(--urgent); margin-top: 15px;">Immune-Mediated</h4>
+                            <ul>
+                                <li><strong>GBS:</strong> IVIG or plasma exchange within 2 weeks of symptom onset</li>
+                                <li><strong>CIDP:</strong> Corticosteroids, IVIG, plasma exchange, immunosuppressants</li>
+                                <li><strong>Vasculitis:</strong> High-dose steroids ± cyclophosphamide</li>
+                            </ul>
+
+                            <h4 style="color: var(--caution); margin-top: 15px;">Metabolic/Nutritional</h4>
+                            <ul>
+                                <li><strong>Diabetes:</strong> Optimize glycemic control, manage pain (duloxetine, pregabalin, gabapentin)</li>
+                                <li><strong>Hypothyroidism:</strong> Thyroid hormone replacement</li>
+                                <li><strong>Vitamin B12 deficiency:</strong> IM cyanocobalamin or oral high-dose B12</li>
+                                <li><strong>Vitamin B6 deficiency:</strong> Pyridoxine supplementation (avoid excess)</li>
+                            </ul>
+
+                            <h4 style="color: var(--caution); margin-top: 15px;">Toxic/Drug-Induced</h4>
+                            <ul>
+                                <li><strong>Discontinue offending agent</strong> immediately</li>
+                                <li><strong>Alcohol-related:</strong> Cessation, nutritional support (thiamine, folate)</li>
+                                <li><strong>Heavy metal toxicity:</strong> Chelation therapy if confirmed</li>
+                            </ul>
+
+                            <h4 style="color: var(--stable); margin-top: 15px;">Infectious</h4>
+                            <ul>
+                                <li><strong>HIV:</strong> Antiretroviral therapy, manage symptoms</li>
+                                <li><strong>Hepatitis C:</strong> Direct-acting antiviral agents</li>
+                                <li><strong>Lyme disease:</strong> Ceftriaxone or doxycycline</li>
+                                <li><strong>Leprosy:</strong> Multidrug therapy (WHO regimen)</li>
+                            </ul>
+
+                            <h4 style="color: var(--stable); margin-top: 15px;">Hereditary</h4>
+                            <ul>
+                                <li><strong>Charcot-Marie-Tooth:</strong> Supportive care, physical therapy, orthopedic interventions</li>
+                                <li><strong>FABRY disease:</strong> Enzyme replacement therapy (agalsidase beta)</li>
+                                <li><strong>hATTR amyloidosis:</strong> Tafamidis, patisiran, inotersen</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-band-aid"></i> Symptomatic Treatment</h3>
+                            <p><strong>Pain Management:</strong></p>
+                            <ul>
+                                <li><strong>First-line:</strong> Duloxetine, pregabalin, gabapentin</li>
+                                <li><strong>Second-line:</strong> Tricyclic antidepressants (amitriptyline), SNRIs (venlafaxine)</li>
+                                <li><strong>Topical agents:</strong> Lidocaine patches, capsaicin cream</li>
+                                <li><strong>Opioids:</strong> Tramadol for severe pain (short-term)</li>
+                            </ul>
+                            <p><strong>Autonomic Symptoms:</strong></p>
+                            <ul>
+                                <li>Orthostatic hypotension: Compression stockings, midodrine</li>
+                                <li>Gastroparesis: Prokinetic agents</li>
+                                <li>Erectile dysfunction: PDE5 inhibitors</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" data-section="followup">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <i class="fas fa-chart-line card-icon"></i>
+                        <div class="card-title">
+                            <h2>Follow-up</h2>
+                            <p>Monitoring and long-term management</p>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><i class="fas fa-calendar-check"></i> Monitoring Schedule</h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Time Frame</th>
+                                            <th>Assessment Points</th>
+                                            <th>Investigations</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Initial Review (2-4 weeks)</td>
+                                            <td>
+                                                <ul style="margin: 0; padding: 0;">
+                                                    <li style="padding: 5px 0;">Treatment tolerance</li>
+                                                    <li style="padding: 5px 0;">Symptom progression</li>
+                                                    <li style="padding: 5px 0;">Adverse effects</li>
+                                                </ul>
+                                            </td>
+                                            <td>Repeat FBC, renal/liver function if on medication</td>
+                                        </tr>
+                                        <tr>
+                                            <td>3 Months</td>
+                                            <td>
+                                                <ul style="margin: 0; padding: 0;">
+                                                    <li style="padding: 5px 0;">Pain scores (NRS)</li>
+                                                    <li style="padding: 5px 0;">Sensory examination</li>
+                                                    <li style="padding: 5px 0;">Functional status</li>
+                                                </ul>
+                                            </td>
+                                            <td>Consider repeat HbA1c, B12 if previously abnormal</td>
+                                        </tr>
+                                        <tr>
+                                            <td>6 Months</td>
+                                            <td>
+                                                <ul style="margin: 0; padding: 0;">
+                                                    <li style="padding: 5px 0;">Nerve conduction studies</li>
+                                                    <li style="padding: 5px 0;">Quality of life assessment</li>
+                                                    <li style="padding: 5px 0;">Medication adherence</li>
+                                                </ul>
+                                            </td>
+                                            <td>Left to specialist discretion</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Annually</td>
+                                            <td>
+                                                <ul style="margin: 0; padding: 0;">
+                                                    <li style="padding: 5px 0;">Comprehensive neurological exam</li>
+                                                    <li style="padding: 5px 0;">Risk factor assessment</li>
+                                                    <li style="padding: 5px 0;">Fall risk evaluation</li>
+                                                </ul>
+                                            </td>
+                                            <td>Screen for associated complications</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-exclamation-circle"></i> Red Flags for Re-referral</h3>
+                            <div class="badge-container">
+                                <span class="badge urgent">Rapid Progression</span>
+                                <span class="badge urgent">Respiratory Symptoms</span>
+                                <span class="badge caution">Treatment Failure</span>
+                            </div>
+                            <ul>
+                                <li><strong>Urgent (within 24 hours):</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>Rapidly progressive weakness</li>
+                                        <li>Respiratory difficulty or dysphagia</li>
+                                        <li>New bladder/bowel dysfunction</li>
+                                        <li>Severe worsening pain despite treatment</li>
+                                    </ul>
+                                </li>
+                                <li style="margin-top: 15px;"><strong>Semi-urgent (within 2 weeks):</strong>
+                                    <ul style="margin-top: 10px;">
+                                        <li>No improvement after 3 months of treatment</li>
+                                        <li>Significant functional decline</li>
+                                        <li>New onset of atypical features</li>
+                                        <li>Development of autonomic dysfunction</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-users"></i> Multidisciplinary Care</h3>
+                            <ul>
+                                <li><strong>Neurology:</strong> For diagnostic uncertainty, progressive disease, or treatment failure</li>
+                                <li><strong>Endocrinology:</strong> For diabetes optimization</li>
+                                <li><strong>Pain management:</strong> For complex pain syndromes</li>
+                                <li><strong>Physical therapy:</strong> Strength training, balance exercises, gait training</li>
+                                <li><strong>Occupational therapy:</strong> Adaptive equipment, fall prevention</li>
+                                <li><strong>Podiatry:</strong> Foot care, orthotics (especially for diabetic patients)</li>
+                                <li><strong>Psychology:</strong> Chronic pain management, coping strategies</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-shield-alt"></i> Preventive Measures</h3>
+                            <div class="alert-box alert-stable">
+                                <strong>Patient Education is Key</strong>
+                            </div>
+                            <ul>
+                                <li><strong>Foot care:</strong> Daily inspection, appropriate footwear, moisture control</li>
+                                <li><strong>Fall prevention:</strong> Home safety assessment, balance training</li>
+                                <li><strong>Pain management:</strong> Regular exercise, stress reduction techniques</li>
+                                <li><strong>Lifestyle:</strong> Smoking cessation, alcohol moderation, weight management</li>
+                                <li><strong>Vaccinations:</strong> Annual influenza, pneumococcal as indicated</li>
+                                <li><strong>Cardiovascular risk reduction:</strong> Blood pressure, lipid management</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-chart-bar"></i> Prognosis Indicators</h3>
+                            <div class="badge-container">
+                                <span class="badge stable">Good</span>
+                                <span class="badge caution">Variable</span>
+                                <span class="badge urgent">Poor</span>
+                            </div>
+                            <ul>
+                                <li><strong>Good prognosis:</strong> Diabetic neuropathy with good glycemic control, nutritional deficiencies (treatable), toxin-related (after removal)</li>
+                                <li><strong>Variable prognosis:</strong> CIDP (responsive to immunotherapy), HIV-related (with ART), hypothyroidism</li>
+                                <li><strong>Poor prognosis:</strong> Hereditary neuropathies, advanced amyloidosis, paraneoplastic, severe axonal loss</li>
+                                <li><strong>Factors affecting recovery:</strong> Severity of axonal loss, timeliness of treatment, underlying cause control</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="print-only" style="margin-top: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <h3>Documentation Summary</h3>
+                <p><strong>Algorithm completed on:</strong> <span id="printDate"></span></p>
+                <p><strong>Sections reviewed:</strong> <span id="completedSections"></span></p>
+            </div>
+        </div>
+
+        <!-- Sticky Progress Sidebar -->
+        <div class="sidebar" id="progressSidebar">
+            <h3><i class="fas fa-tasks"></i> Progress Tracker</h3>
+            
+            <div class="progress-item" onclick="scrollToSection('assessment')">
+                <i class="fas fa-clipboard-list progress-icon"></i>
+                <div>
+                    <strong>Assessment</strong>
+                    <div style="font-size: 0.85em; opacity: 0.8;">History & Examination</div>
+                </div>
+            </div>
+
+            <div class="progress-item" onclick="scrollToSection('diagnosis')">
+                <i class="fas fa-microscope progress-icon"></i>
+                <div>
+                    <strong>Diagnosis</strong>
+                    <div style="font-size: 0.85em; opacity: 0.8;">Tests & Differentials</div>
+                </div>
+            </div>
+
+            <div class="progress-item" onclick="scrollToSection('treatment')">
+                <i class="fas fa-pills progress-icon"></i>
+                <div>
+                    <strong>Treatment</strong>
+                    <div style="font-size: 0.85em; opacity: 0.8;">Management Plan</div>
+                </div>
+            </div>
+
+            <div class="progress-item" onclick="scrollToSection('followup')">
+                <i class="fas fa-chart-line progress-icon"></i>
+                <div>
+                    <strong>Follow-up</strong>
+                    <div style="font-size: 0.85em; opacity: 0.8;">Monitoring & Referral</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: rgba(236, 240, 241, 0.5); border-radius: 10px;">
+                <h4 style="margin-bottom: 15px;"><i class="fas fa-flag"></i> Quick Reference</h4>
+                <div style="font-size: 0.85em;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <i class="fas fa-circle" style="color: var(--urgent); font-size: 0.6em;"></i>
+                        <span>Urgent referral needed</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <i class="fas fa-circle" style="color: var(--caution); font-size: 0.6em;"></i>
+                        <span>Caution/Monitor closely</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-circle" style="color: var(--stable); font-size: 0.6em;"></i>
+                        <span>Stable/Routine management</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button onclick="window.print()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%); color: white; border: none; border-radius: 25px; cursor: pointer; transition: all 0.3s ease;">
+                    <i class="fas fa-print"></i> Print Algorithm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <button class="toggle-sidebar" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i> <span id="sidebarToggleText">Hide</span> Progress
+    </button>
+
+    <!-- Floating Alert for Urgent Items -->
+    <div class="floating-alert" id="urgentAlert">
+        <div class="floating-alert-content">
+            <i class="fas fa-exclamation-triangle floating-alert-icon"></i>
+            <div>
+                <strong>Urgent Red Flag Detected!</strong>
+                <div style="font-size: 0.85em; margin-top: 5px;">Review emergency management protocols</div>
+            </div>
+            <button class="close-alert" onclick="closeAlert()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update progress
+            updateProgress();
+            
+            // Check for urgent items
+            if (!isExpanded) {
+                checkForUrgentItems(card);
+            }
+        }
+
+        // Progress tracking
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                if (card.classList.contains('expanded')) {
+                    progressItems[index].classList.add('active');
+                    progressItems[index].classList.remove('completed');
+                } else if (hasBeenViewed(card)) {
+                    progressItems[index].classList.add('completed');
+                    progressItems[index].classList.remove('active');
+                } else {
+                    progressItems[index].classList.remove('active', 'completed');
+                }
+            });
+            
+            // Save progress to localStorage
+            saveProgress();
+        }
+
+        function hasBeenViewed(card) {
+            const section = card.dataset.section;
+            return localStorage.getItem(`polyneuropathy-viewed-${section}`) === 'true';
+        }
+
+        function markAsViewed(section) {
+            localStorage.setItem(`polyneuropathy-viewed-${section}`, 'true');
+        }
+
+        // Scroll to section
+        function scrollToSection(sectionName) {
+            const card = document.querySelector(`[data-section="${sectionName}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                card.classList.add('expanded');
+                markAsViewed(sectionName);
+                updateProgress();
+            }
+        }
+
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('progressSidebar');
+            const toggleText = document.getElementById('sidebarToggleText');
+            
+            sidebar.classList.toggle('hidden');
+            toggleText.textContent = sidebar.classList.contains('hidden') ? 'Show' : 'Hide';
+            
+            // Adjust main content margin
+            const mainContent = document.querySelector('.main-content');
+            if (sidebar.classList.contains('hidden')) {
+                mainContent.style.marginRight = '0';
+            } else {
+                mainContent.style.marginRight = '300px';
+            }
+        }
+
+        // Urgent alert system
+        function showUrgentAlert() {
+            const alert = document.getElementById('urgentAlert');
+            alert.classList.add('show');
+            setTimeout(() => {
+                alert.classList.remove('show');
+            }, 8000);
+        }
+
+        function closeAlert() {
+            document.getElementById('urgentAlert').classList.remove('show');
+        }
+
+        function checkForUrgentItems(card) {
+            const urgentItems = card.querySelectorAll('.badge.urgent, .alert-urgent');
+            if (urgentItems.length > 0) {
+                showUrgentAlert();
+            }
+        }
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+            
+            if (searchTerm === '') {
+                // Clear highlights
+                document.querySelectorAll('.highlight').forEach(el => {
+                    el.outerHTML = el.innerHTML;
+                });
+                return;
+            }
+            
+            // Clear previous highlights
+            document.querySelectorAll('.highlight').forEach(el => {
+                el.outerHTML = el.innerHTML;
+            });
+            
+            // Search and highlight
+            cards.forEach(card => {
+                const content = card.textContent.toLowerCase();
+                if (content.includes(searchTerm)) {
+                    card.style.display = 'block';
+                    highlightText(card, searchTerm);
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        function highlightText(element, searchTerm) {
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const textNodes = [];
+            let node;
+            
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+            
+            textNodes.forEach(textNode => {
+                const text = textNode.textContent;
+                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                if (regex.test(text)) {
+                    const span = document.createElement('span');
+                    span.innerHTML = text.replace(regex, '<span class="highlight">$1</span>');
+                    textNode.parentNode.replaceChild(span, textNode);
+                }
+            });
+        }
+
+        // Save/Load progress
+        function saveProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progress = {
+                timestamp: new Date().toISOString(),
+                sections: {}
+            };
+            
+            cards.forEach(card => {
+                const section = card.dataset.section;
+                progress.sections[section] = {
+                    expanded: card.classList.contains('expanded'),
+                    viewed: hasBeenViewed(card)
+                };
+            });
+            
+            localStorage.setItem('polyneuropathy-progress', JSON.stringify(progress));
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('polyneuropathy-progress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                Object.keys(progress.sections).forEach(section => {
+                    const card = document.querySelector(`[data-section="${section}"]`);
+                    if (progress.sections[section].viewed) {
+                        markAsViewed(section);
+                    }
+                });
+                updateProgress();
+            }
+        }
+
+        // Print functionality
+        function prepareForPrint() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.classList.add('expanded');
+            });
+            
+            const printDate = document.getElementById('printDate');
+            if (printDate) {
+                printDate.textContent = new Date().toLocaleString();
+            }
+            
+            const completedSections = document.getElementById('completedSections');
+            if (completedSections) {
+                const viewed = [];
+                document.querySelectorAll('.card').forEach(card => {
+                    if (hasBeenViewed(card.dataset.section)) {
+                        viewed.push(card.querySelector('h2').textContent);
+                    }
+                });
+                completedSections.textContent = viewed.join(', ') || 'None';
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProgress();
+            
+            // Mark sections as viewed when scrolled into view
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const section = entry.target.dataset.section;
+                        markAsViewed(section);
+                        updateProgress();
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            document.querySelectorAll('.card').forEach(card => {
+                observer.observe(card);
+            });
+            
+            // Print preparation
+            window.addEventListener('beforeprint', prepareForPrint);
+            
+            // Auto-expand first card
+            if (!localStorage.getItem('polyneuropathy-returning-user')) {
+                document.querySelector('.card').classList.add('expanded');
+                localStorage.setItem('polyneuropathy-returning-user', 'true');
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'f':
+                        e.preventDefault();
+                        document.getElementById('searchInput').focus();
+                        break;
+                    case 'p':
+                        e.preventDefault();
+                        window.print();
+                        break;
+                    case 'b':
+                        e.preventDefault();
+                        toggleSidebar();
+                        break;
+                }
+            }
+            
+            // Navigation with arrow keys
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                const expandedCard = document.querySelector('.card.expanded');
+                if (expandedCard) {
+                    e.preventDefault();
+                    const cards = Array.from(document.querySelectorAll('.card'));
+                    const currentIndex = cards.indexOf(expandedCard);
+                    const nextIndex = e.key === 'ArrowDown' 
+                        ? Math.min(currentIndex + 1, cards.length - 1)
+                        : Math.max(currentIndex - 1, 0);
+                    
+                    cards[currentIndex].classList.remove('expanded');
+                    cards[nextIndex].classList.add('expanded');
+                    cards[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+
+        // Touch/swipe support for mobile
+        let touchStartY = 0;
+        let touchEndY = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.changedTouches[0].screenY;
+        });
+
+        document.addEventListener('touchend', function(e) {
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartY - touchEndY;
+            
+            if (Math.abs(diff) > swipeThreshold) {
+                const expandedCard = document.querySelector('.card.expanded');
+                if (expandedCard) {
+                    const cards = Array.from(document.querySelectorAll('.card'));
+                    const currentIndex = cards.indexOf(expandedCard);
+                    
+                    if (diff > 0 && currentIndex < cards.length - 1) { // Swipe up
+                        cards[currentIndex].classList.remove('expanded');
+                        cards[currentIndex + 1].classList.add('expanded');
+                        cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else if (diff < 0 && currentIndex > 0) { // Swipe down
+                        cards[currentIndex].classList.remove('expanded');
+                        cards[currentIndex - 1].classList.add('expanded');
+                        cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            }
+        }
+
+        // External link warnings
+        document.querySelectorAll('a[href^="http"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (!confirm('You are about to leave this algorithm and open an external link. Continue?')) {
+                    e.preventDefault();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

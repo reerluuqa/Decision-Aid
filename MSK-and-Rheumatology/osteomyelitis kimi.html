@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osteomyelitis Clinical Decision Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 25px;
+        }
+
+        /* Sticky Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 280px;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            border-left-color: #3498db;
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+
+        .progress-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-badge {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .progress-badge.urgent { background: #e74c3c; }
+        .progress-badge.caution { background: #f39c12; }
+        .progress-badge.stable { background: #27ae60; }
+
+        /* Main Algorithm Container */
+        .algorithm-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            padding: 20px 25px;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(0.95);
+        }
+
+        .card-icon {
+            font-size: 32px;
+            margin-right: 20px;
+            width: 40px;
+            text-align: center;
+        }
+
+        .card-title {
+            flex: 1;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .card-badge {
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            margin-left: 10px;
+        }
+
+        .expand-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            margin-left: 15px;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Card Colors */
+        .assessment-card .card-header { background: linear-gradient(135deg, #3498db, #2c3e50); }
+        .diagnosis-card .card-header { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .treatment-card .card-header { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+        .followup-card .card-header { background: linear-gradient(135deg, #f39c12, #e67e22); }
+
+        /* Card Content */
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+            padding: 25px;
+        }
+
+        .content-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .content-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-icon {
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        .badge-urgent { background: #e74c3c; color: white; }
+        .badge-caution { background: #f39c12; color: white; }
+        .badge-stable { background: #27ae60; color: white; }
+
+        /* Lists */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+            border-left: 3px solid #e9ecef;
+            margin-bottom: 10px;
+        }
+
+        .checklist li::before {
+            content: "✓";
+            position: absolute;
+            left: -10px;
+            top: 10px;
+            background: #3498db;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .checklist li.urgent-item::before {
+            background: #e74c3c;
+            content: "!";
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                position: static;
+                width: 100%;
+                margin-bottom: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .card-title {
+                font-size: 20px;
+            }
+            
+            .card-header {
+                padding: 15px 20px;
+            }
+            
+            .card-icon {
+                font-size: 24px;
+                margin-right: 15px;
+            }
+        }
+
+        /* Utility Classes */
+        .highlight-box {
+            background: #fff3cd;
+            border-left: 4px solid #f39c12;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .alert-box {
+            background: #f8d7da;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <h3>Clinical Progress</h3>
+            <div class="progress-item active" data-target="assessment">
+                <span class="progress-icon">🩺</span>
+                <span class="progress-text">Assessment</span>
+                <span class="progress-badge urgent">Urgent</span>
+            </div>
+            <div class="progress-item" data-target="diagnosis">
+                <span class="progress-icon">🔬</span>
+                <span class="progress-text">Diagnosis</span>
+                <span class="progress-badge caution">Caution</span>
+            </div>
+            <div class="progress-item" data-target="treatment">
+                <span class="progress-icon">💊</span>
+                <span class="progress-text">Treatment</span>
+                <span class="progress-badge stable">Standard</span>
+            </div>
+            <div class="progress-item" data-target="followup">
+                <span class="progress-icon">📊</span>
+                <span class="progress-text">Follow-up</span>
+                <span class="progress-badge stable">Routine</span>
+            </div>
+        </aside>
+
+        <!-- Main Algorithm -->
+        <main class="algorithm-container">
+            <!-- Assessment Card -->
+            <div class="card assessment-card" data-step="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">🩺</span>
+                    <h2 class="card-title">Assessment & Clinical Evaluation</h2>
+                    <span class="badge badge-urgent">High Priority</span>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">⚠️</span>
+                            Red Flags <span class="badge badge-urgent">Immediate Action</span>
+                        </div>
+                        <div class="alert-box">
+                            <strong>Think "Could this be sepsis?"</strong> - Follow local sepsis protocols immediately
+                        </div>
+                        <ul class="checklist">
+                            <li class="urgent-item">Systemic sepsis with bone pain and fever</li>
+                            <li class="urgent-item">Diabetic foot with probe-to-bone positive</li>
+                            <li class="urgent-item">Neurological deficits in vertebral osteomyelitis</li>
+                            <li class="urgent-item">Rapidly progressive limb deformity or swelling</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">📋</span>
+                            Key Risk Factors
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Risk Factor</th>
+                                    <th>Severity</th>
+                                    <th>Clinical Significance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Previous osteomyelitis</td>
+                                    <td><span class="badge badge-urgent">High</span></td>
+                                    <td>Direct risk of recurrence</td>
+                                </tr>
+                                <tr>
+                                    <td>Open fracture/surgery</td>
+                                    <td><span class="badge badge-urgent">High</span></td>
+                                    <td>Direct inoculation risk</td>
+                                </tr>
+                                <tr>
+                                    <td>Diabetes mellitus</td>
+                                    <td><span class="badge badge-caution">Moderate</span></td>
+                                    <td>Foot infections common</td>
+                                </tr>
+                                <tr>
+                                    <td>IV drug misuse</td>
+                                    <td><span class="badge badge-caution">Moderate</span></td>
+                                    <td>Unusual sites affected</td>
+                                </tr>
+                                <tr>
+                                    <td>Immunocompromised</td>
+                                    <td><span class="badge badge-caution">Moderate</span></td>
+                                    <td>Atypical organisms</td>
+                                </tr>
+                                <tr>
+                                    <td>Sickle cell disease</td>
+                                    <td><span class="badge badge-caution">Moderate</span></td>
+                                    <td>Salmonella risk</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🔍</span>
+                            Clinical Presentation
+                        </div>
+                        <ul class="checklist">
+                            <li><strong>Acute:</strong> < 2 weeks - severe pain, fever, swelling, limited ROM</li>
+                            <li><strong>Chronic:</strong> > 3 months - draining sinus, low-grade fever, weight loss</li>
+                            <li><strong>Vertebral:</strong> Back pain, tenderness, neurological symptoms</li>
+                            <li><strong>Diabetic Foot:</strong> Ulcer probing to bone, erythema >2cm</li>
+                            <li><strong>Children:</strong> Limp, refusal to bear weight, irritability</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis-card" data-step="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">🔬</span>
+                    <h2 class="card-title">Diagnostic Workup</h2>
+                    <span class="badge badge-caution">Multiple Steps</span>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🧪</span>
+                            Laboratory Tests <span class="badge badge-stable">1st Line</span>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Test</th>
+                                    <th>Timing</th>
+                                    <th>Interpretation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>FBC, ESR, CRP</td>
+                                    <td>Immediately</td>
+                                    <td>Inflammatory markers - usually elevated</td>
+                                </tr>
+                                <tr>
+                                    <td>Blood cultures</td>
+                                    <td>Before antibiotics</td>
+                                    <td>Identify organism in 50% cases</td>
+                                </tr>
+                                <tr>
+                                    <td>Bone biopsy</td>
+                                    <td>Before antibiotics</td>
+                                    <td>Gold standard - culture and histology</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="highlight-box">
+                            <strong>Key Principle:</strong> Obtain samples BEFORE antibiotics when possible, but do not delay treatment in sepsis
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🏥</span>
+                            Imaging Modalities
+                        </div>
+                        <ul class="checklist">
+                            <li><strong>Plain X-ray:</strong> Initial screening - may be normal early</li>
+                            <li><strong>MRI:</strong> Most sensitive - detects changes in 3-5 days</li>
+                            <li><strong>CT:</strong> Best for sequestra and surgical planning</li>
+                            <li><strong>Ultrasound:</strong> Drainage guidance, pediatric use</li>
+                            <li><strong>FDG-PET/CT:</strong> Implants, equivocal MRI</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🎯</span>
+                            Diagnostic Criteria
+                        </div>
+                        <div class="info-box">
+                            <strong>Peripheral Osteomyelitis:</strong> Clinical signs + imaging + positive culture
+                        </div>
+                        <ul class="checklist">
+                            <li>Visible bone on probe-to-bone test</li>
+                            <li>Purulent drainage with radiographic evidence</li>
+                            <li>Positive culture from bone/deep tissue</li>
+                            <li>Histology showing acute/chronic inflammation</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">❓</span>
+                            Key Differentials
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Condition</th>
+                                    <th>Distinguishing Features</th>
+                                    <th>Tests</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Septic arthritis</td>
+                                    <td>Joint-specific pain, effusion</td>
+                                    <td>Joint aspiration</td>
+                                </tr>
+                                <tr>
+                                    <td>Cellulitis</td>
+                                    <td>More superficial, less bone pain</td>
+                                    <td>Clinical exam</td>
+                                </tr>
+                                <tr>
+                                    <td>Charcot arthropathy</td>
+                                    <td>Diabetes, minimal pain</td>
+                                    <td>MRI, clinical</td>
+                                </tr>
+                                <tr>
+                                    <td>Malignancy</td>
+                                    <td>Weight loss, different imaging</td>
+                                    <td>Biopsy</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment-card" data-step="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">💊</span>
+                    <h2 class="card-title">Management Strategy</h2>
+                    <span class="badge badge-stable">Protocol Based</span>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🚨</span>
+                            Initial Management <span class="badge badge-urgent">Immediate</span>
+                        </div>
+                        <div class="alert-box">
+                            <strong>Sepsis:</strong> Empirical IV antibiotics within 1 hour, follow local protocols
+                        </div>
+                        <ul class="checklist">
+                            <li class="urgent-item">Fluid resuscitation if septic</li>
+                            <li class="urgent-item">Blood cultures before antibiotics if possible</li>
+                            <li class="urgent-item">Urgent surgical consult if abscess/compartment syndrome</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">💉</span>
+                            Antibiotic Therapy
+                        </div>
+                        
+                        <div class="section-title" style="margin-top: 15px;">
+                            <span class="section-icon">👨‍⚕️</span>
+                            Adults - Empirical (Low MRSA <10%)
+                            <span class="badge badge-stable">Standard</span>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Drug</th>
+                                    <th>Dose</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Flucloxacillin</td>
+                                    <td>1-2g IV q6h</td>
+                                    <td rowspan="3">Switch to oral when stable, total 6 weeks</td>
+                                </tr>
+                                <tr>
+                                    <td>Cefazolin (if penicillin allergy)</td>
+                                    <td>2g IV q8h</td>
+                                </tr>
+                                <tr>
+                                    <td>Vancomycin (if MRSA risk)</td>
+                                    <td>15-20 mg/kg IV q8-12h</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="section-title" style="margin-top: 15px;">
+                            <span class="section-icon">👶</span>
+                            Children - Empirical
+                            <span class="badge badge-stable">Standard</span>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Age</th>
+                                    <th>Drug</th>
+                                    <th>Dose</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>3mo-5yr</td>
+                                    <td>Cefazolin</td>
+                                    <td>25-100 mg/kg/day IV divided q8h</td>
+                                </tr>
+                                <tr>
+                                    <td>≥5yr</td>
+                                    <td>Flucloxacillin</td>
+                                    <td>50 mg/kg IV q6h</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="highlight-box">
+                            <strong>Transition to oral:</strong> When afebrile 24-48h, CRP ↓30%, improved clinically
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🔪</span>
+                            Surgical Indications <span class="badge badge-caution">Specialist</span>
+                        </div>
+                        <ul class="checklist">
+                            <li>Abscess or sequestrum on imaging</li>
+                            <li>Failure to respond to antibiotics by 3-4 days</li>
+                            <li>Progressive neurological deficit (vertebral)</li>
+                            <li>Spinal instability</li>
+                            <li>Chronic osteomyelitis with dead bone</li>
+                            <li>Persistent drainage despite antibiotics</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🦶</span>
+                            Diabetic Foot Special Considerations
+                        </div>
+                        <div class="alert-box">
+                            <strong>Immediate referral</strong> to multidisciplinary foot team
+                        </div>
+                        <ul class="checklist">
+                            <li>Probe-to-bone positive = likely osteomyelitis</li>
+                            <li>X-ray first, MRI if inconclusive</li>
+                            <li>IV antibiotics 48h then review</li>
+                            <li>Strict glycemic control essential</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🦴</span>
+                            Vertebral Osteomyelitis
+                        </div>
+                        <ul class="checklist">
+                            <li>Consult ID and spine surgery early</li>
+                            <li>MRI entire spine</li>
+                            <li>6 weeks antibiotics minimum</li>
+                            <li>Surgery for: progressive neuro deficit, instability, persistent infection</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup-card" data-step="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <span class="card-icon">📊</span>
+                    <h2 class="card-title">Follow-up & Monitoring</h2>
+                    <span class="badge badge-stable">Long-term</span>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🔍</span>
+                            Monitoring Parameters
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Parameter</th>
+                                    <th>Frequency</th>
+                                    <th>Target</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Clinical exam</td>
+                                    <td>Daily in hospital</td>
+                                    <td>Improving pain, swelling, function</td>
+                                </tr>
+                                <tr>
+                                    <td>CRP/ESR</td>
+                                    <td>2-3x/week</td>
+                                    <td>↓50% in first week</td>
+                                </tr>
+                                <tr>
+                                    <td>Blood cultures</td>
+                                    <td>Until negative</td>
+                                    <td>Clearance of bacteremia</td>
+                                </tr>
+                                <tr>
+                                    <td>Imaging</td>
+                                    <td>4-6 weeks</td>
+                                    <td>Not routine unless no improvement</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">⚠️</span>
+                            Complications to Watch For
+                        </div>
+                        <ul class="checklist">
+                            <li><strong>Drug reactions:</strong> Rash, nephrotoxicity, hepatotoxicity</li>
+                            <li><strong>Fracture:</strong> Risk at surgical site (3-14%)</li>
+                            <li><strong>Neurological:</strong> Cord compression, neuropathy</li>
+                            <li><strong>Growth disturbance:</strong> Children - physeal arrest</li>
+                            <li><strong>Recurrence:</strong> Usually within 2 years</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">📈</span>
+                            Prognosis & Outcomes
+                        </div>
+                        <div class="info-box">
+                            <strong>Acute osteomyelitis:</strong> >90% cure rate with prompt treatment
+                        </div>
+                        <ul class="checklist">
+                            <li>Class A host (no comorbidities): 96% success</li>
+                            <li>Class B host (comorbidities): 73% success</li>
+                            <li>Chronic: Complex management, 60-80% cure in specialist centers</li>
+                            <li>Recurrence: Less likely after 2 years, but can occur decades later</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🏥</span>
+                            Discharge Planning
+                        </div>
+                        <ul class="checklist">
+                            <li>Stable on oral antibiotics</li>
+                            <li>CRP trending down</li>
+                            <li>Pain controlled</li>
+                            <li>OPAT service available if IV continuation needed</li>
+                            <li>Patient education completed</li>
+                            <li>Follow-up arranged: 1 week, 1 month, 3 months</li>
+                        </ul>
+                        <div class="highlight-box">
+                            <strong>Patient Education:</strong> Signs of recurrence, medication adherence, wound care
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Toggle current card
+            if (!isExpanded) {
+                card.classList.add('expanded');
+            }
+            
+            // Scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+            
+            updateProgress(card.dataset.step);
+        }
+
+        // Progress sidebar functionality
+        function updateProgress(currentStep) {
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active', 'completed');
+                if (item.dataset.target === currentStep) {
+                    item.classList.add('active');
+                } else if (isStepCompleted(item.dataset.target, currentStep)) {
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        function isStepCompleted(step, currentStep) {
+            const steps = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const stepIndex = steps.indexOf(step);
+            const currentIndex = steps.indexOf(currentStep);
+            return stepIndex < currentIndex;
+        }
+
+        // Progress item click handlers
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const targetStep = item.dataset.target;
+                const targetCard = document.querySelector(`[data-step="${targetStep}"]`);
+                
+                if (targetCard) {
+                    // Close all cards
+                    document.querySelectorAll('.card').forEach(c => {
+                        c.classList.remove('expanded');
+                    });
+                    
+                    // Open target card
+                    targetCard.classList.add('expanded');
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    updateProgress(targetStep);
+                }
+            });
+        });
+
+        // Initialize with first card expanded
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstCard = document.querySelector('.card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+            }
+        });
+
+        // Smooth scroll for internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Add intersection observer for scroll progress
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const step = entry.target.dataset.step;
+                    if (step) {
+                        updateProgress(step);
+                    }
+                }
+            });
+        }, {
+            rootMargin: '-50% 0px -50% 0px',
+            threshold: 0
+        });
+
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

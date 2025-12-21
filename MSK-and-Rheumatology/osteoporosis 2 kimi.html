@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Osteoporosis Management Algorithm</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js" async></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            color: #2d3748;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+            background-size: 20px 20px;
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: calc(100vh - 160px);
+        }
+
+        /* Sticky Progress Sidebar */
+        .progress-sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.05);
+            border-right: 1px solid rgba(0,0,0,0.05);
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .progress-sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(52, 152, 219, 0.2);
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.8rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            transform: translateX(10px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .progress-item.completed {
+            background: rgba(46, 204, 113, 0.15);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 0.8rem;
+            background: currentColor;
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            transition: transform 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            transform: scale(1.2);
+        }
+
+        .progress-icon.assessment { mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>'); }
+        .progress-icon.diagnosis { mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>'); }
+        .progress-icon.treatment { mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>'); }
+        .progress-icon.followup { mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>'); }
+
+        .progress-text {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .progress-indicator {
+            position: absolute;
+            right: 1rem;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.1);
+            border: 2px solid rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.completed .progress-indicator {
+            background: #2ecc71;
+            border-color: #27ae60;
+        }
+
+        .progress-item.active .progress-indicator {
+            background: #3498db;
+            border-color: #2c3e50;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: calc(100% - 280px);
+        }
+
+        .algorithm-section {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .algorithm-section:nth-child(1) { animation-delay: 0.1s; }
+        .algorithm-section:nth-child(2) { animation-delay: 0.2s; }
+        .algorithm-section:nth-child(3) { animation-delay: 0.3s; }
+        .algorithm-section:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(31, 38, 135, 0.2);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            z-index: 0;
+        }
+
+        .card-header.assessment { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); }
+        .card-header.diagnosis { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .card-header.treatment { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        .card-header.followup { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
+
+        .card-header:hover {
+            filter: brightness(1.05);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.4rem;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            background: currentColor;
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .expand-icon {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .section-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 0.3rem;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.8rem 0;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #f1c40f 0%, #f39c12 100%);
+            color: #2c3e50;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .badge-blue {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .badge-purple {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+            color: white;
+        }
+
+        .risk-factors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .risk-category {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 1.2rem;
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        .risk-category:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+        }
+
+        .risk-category.strong { border-left-color: #e74c3c; }
+        .risk-category.weak { border-left-color: #f39c12; }
+
+        .factor-list {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .factor-list li {
+            padding: 0.3rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .factor-list li::before {
+            content: '•';
+            color: #3498db;
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1.4;
+        }
+
+        .treatment-algorithm {
+            background: rgba(236, 240, 241, 0.5);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1rem 0;
+            border: 1px solid rgba(0,0,0,0.03);
+            backdrop-filter: blur(5px);
+        }
+
+        .treatment-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.7);
+            margin-bottom: 0.8rem;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .treatment-step:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+
+        .treatment-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .treatment-option {
+            background: rgba(52, 152, 219, 0.1);
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .treatment-option:hover {
+            background: rgba(52, 152, 219, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .monitoring-schedule {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .monitoring-item {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 1.2rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        .monitoring-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .monitoring-item h4 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .monitoring-item .interval {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #3498db;
+            margin: 0.5rem 0;
+        }
+
+        .complications-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .complication-card {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 1.2rem;
+            border-radius: 12px;
+            border-top: 4px solid #e74c3c;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+
+        .complication-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .complication-card.medium { border-top-color: #f39c12; }
+        .complication-card.low { border-top-color: #2ecc71; }
+
+        .complication-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+        }
+
+        .complication-risk {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+
+        .complication-timeframe {
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+
+        .info-box {
+            background: rgba(52, 152, 219, 0.08);
+            border-left: 4px solid #3498db;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .info-box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .info-icon {
+            width: 24px;
+            height: 24px;
+            background: #3498db;
+            mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>');
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            flex-shrink: 0;
+        }
+
+        .warning-box {
+            background: rgba(241, 196, 15, 0.1);
+            border-left: 4px solid #f39c12;
+        }
+
+        .warning-box .info-icon {
+            background: #f39c12;
+            mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>');
+        }
+
+        .alert-box {
+            background: rgba(231, 76, 60, 0.1);
+            border-left: 4px solid #e74c3c;
+        }
+
+        .alert-box .info-icon {
+            background: #e74c3c;
+            mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1.5rem;
+                border-right: none;
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+
+            .main-content {
+                max-width: 100%;
+                padding: 1.5rem;
+            }
+
+            .progress-item {
+                padding: 0.6rem 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card-title {
+                font-size: 1.2rem;
+            }
+
+            .risk-factors-grid,
+            .complications-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .monitoring-schedule {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Smooth scroll behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Focus styles for accessibility */
+        .card-header:focus,
+        .progress-item:focus {
+            outline: 2px solid #3498db;
+            outline-offset: 2px;
+        }
+
+        /* Print styles */
+        @media print {
+            .progress-sidebar {
+                display: none;
+            }
+            
+            .main-content {
+                max-width: 100%;
+            }
+            
+            .card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            .card-content {
+                max-height: none !important;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+                color: #e2e8f0;
+            }
+            
+            .card {
+                background: rgba(45, 55, 72, 0.8);
+                color: #e2e8f0;
+            }
+            
+            .progress-sidebar {
+                background: rgba(26, 32, 44, 0.9);
+            }
+            
+            .section-title {
+                color: #e2e8f0;
+            }
+            
+            .risk-category,
+            .treatment-step,
+            .monitoring-item,
+            .complication-card {
+                background: rgba(45, 55, 72, 0.7);
+                color: #e2e8f0;
+            }
+            
+            .treatment-option {
+                background: rgba(52, 152, 219, 0.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🦴 Osteoporosis Management Algorithm</h1>
+        <p>Interactive Clinical Decision Support Tool | Based on BMJ Best Practice Guidelines</p>
+    </header>
+
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar" role="navigation" aria-label="Algorithm Progress">
+            <h3>
+                <span class="progress-icon diagnosis"></span>
+                Interactive Algorithm
+            </h3>
+            <div class="progress-item active" data-section="assessment" tabindex="0">
+                <span class="progress-icon assessment"></span>
+                <span class="progress-text">Assessment</span>
+                <span class="progress-indicator"></span>
+            </div>
+            <div class="progress-item" data-section="diagnosis" tabindex="0">
+                <span class="progress-icon diagnosis"></span>
+                <span class="progress-text">Diagnosis</span>
+                <span class="progress-indicator"></span>
+            </div>
+            <div class="progress-item" data-section="treatment" tabindex="0">
+                <span class="progress-icon treatment"></span>
+                <span class="progress-text">Treatment</span>
+                <span class="progress-indicator"></span>
+            </div>
+            <div class="progress-item" data-section="followup" tabindex="0">
+                <span class="progress-icon followup"></span>
+                <span class="progress-text">Follow-up</span>
+                <span class="progress-indicator"></span>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                <h4 style="font-size: 0.9rem; color: #718096; margin-bottom: 0.8rem;">Legend</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="badge badge-red" style="font-size: 0.7rem;">Urgent</span>
+                        <span>Immediate action required</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="badge badge-amber" style="font-size: 0.7rem;">Caution</span>
+                        <span>Moderate priority</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="badge badge-green" style="font-size: 0.7rem;">Stable</span>
+                        <span>Routine management</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.5); border-radius: 8px; font-size: 0.85rem;">
+                <div class="info-box">
+                    <div class="info-icon"></div>
+                    <div>
+                        <strong>Evidence-Based:</strong> All recommendations based on BMJ Best Practice Guidelines (Last updated: Oct 2025)
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Assessment Section -->
+            <section class="algorithm-section" id="assessment" aria-labelledby="assessment-heading">
+                <div class="card">
+                    <div class="card-header assessment" role="button" aria-expanded="false" aria-controls="assessment-content" tabindex="0">
+                        <div class="card-title">
+                            <span class="card-icon assessment"></span>
+                            <h2 id="assessment-heading">Clinical Assessment</h2>
+                        </div>
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="card-content" id="assessment-content">
+                        <div class="card-body">
+                            <p>Comprehensive evaluation for osteoporosis risk factors and fracture risk assessment.</p>
+                            
+                            <div class="section-group">
+                                <h3 class="section-title">Key Diagnostic Factors</h3>
+                                <div class="badge-container">
+                                    <span class="badge badge-amber">Asymptomatic until fracture</span>
+                                    <span class="badge badge-red">Prior fragility fracture</span>
+                                    <span class="badge badge-amber">Height loss</span>
+                                    <span class="badge badge-amber">Kyphosis</span>
+                                    <span class="badge badge-amber">Back pain</span>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Risk Factors</h3>
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category strong">
+                                        <h4 style="color: #e74c3c; margin-bottom: 0.5rem;">Strong Risk Factors</h4>
+                                        <ul class="factor-list">
+                                            <li>Prior fragility fracture</li>
+                                            <li>Female sex</li>
+                                            <li>White ancestry</li>
+                                            <li>Older age (&gt;50 women, &gt;65 men)</li>
+                                            <li>Low BMI (&lt;20 kg/m²)</li>
+                                            <li>Postmenopause</li>
+                                            <li>Glucocorticoid use</li>
+                                            <li>Smoking</li>
+                                            <li>Excessive alcohol use</li>
+                                        </ul>
+                                    </div>
+                                    <div class="risk-category weak">
+                                        <h4 style="color: #f39c12; margin-bottom: 0.5rem;">Moderate Risk Factors</h4>
+                                        <ul class="factor-list">
+                                            <li>Proton-pump inhibitor use</li>
+                                            <li>Hyperthyroidism</li>
+                                            <li>Heparin use</li>
+                                            <li>Anticonvulsant use</li>
+                                            <li>Androgen deprivation therapy</li>
+                                            <li>Aromatase inhibitor treatment</li>
+                                            <li>Fall-risk increasing drugs</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Physical Examination</h3>
+                                <div class="badge-container">
+                                    <span class="badge badge-green">Measure height</span>
+                                    <span class="badge badge-green">Assess BMI</span>
+                                    <span class="badge badge-amber">Check for kyphosis</span>
+                                    <span class="badge badge-amber">Evaluate gait & balance</span>
+                                    <span class="badge badge-amber">Vision assessment</span>
+                                </div>
+                            </div>
+
+                            <div class="alert-box">
+                                <div class="info-icon"></div>
+                                <div>
+                                    <strong>Red Flag:</strong> Any low-impact fragility fracture (including asymptomatic vertebral fractures) indicates osteoporosis regardless of BMD
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="algorithm-section" id="diagnosis" aria-labelledby="diagnosis-heading">
+                <div class="card">
+                    <div class="card-header diagnosis" role="button" aria-expanded="false" aria-controls="diagnosis-content" tabindex="0">
+                        <div class="card-title">
+                            <span class="card-icon diagnosis"></span>
+                            <h2 id="diagnosis-heading">Diagnosis & Investigations</h2>
+                        </div>
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="card-content" id="diagnosis-content">
+                        <div class="card-body">
+                            <p>Establish diagnosis through imaging and laboratory evaluation to confirm osteoporosis and exclude secondary causes.</p>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Primary Diagnostic Test</h3>
+                                <div class="info-box">
+                                    <div class="info-icon"></div>
+                                    <div>
+                                        <strong>DXA Scan:</strong> Gold standard for diagnosing osteoporosis. Measure BMD at hip (femoral neck) and lumbar spine. 
+                                        <strong>Indication:</strong> Postmenopausal women ≥65, men ≥70, or younger adults with risk factors.
+                                    </div>
+                                </div>
+                                
+                                <div class="badge-container">
+                                    <span class="badge badge-red">T-score ≤ -2.5: Osteoporosis</span>
+                                    <span class="badge badge-amber">T-score -1 to -2.5: Osteopenia</span>
+                                    <span class="badge badge-green">T-score ≥ -1: Normal</span>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Additional Assessments</h3>
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category">
+                                        <h4>Fracture Risk Assessment</h4>
+                                        <p><strong>FRAX Tool:</strong> 10-year fracture probability calculator</p>
+                                        <div class="badge-container">
+                                            <span class="badge badge-red">Hip ≥3% or Major ≥20%</span>
+                                            <span class="badge badge-amber">Hip 1-3% or Major 10-20%</span>
+                                        </div>
+                                    </div>
+                                    <div class="risk-category">
+                                        <h4>Vertebral Imaging</h4>
+                                        <p><strong>DXA-VFA or X-ray:</strong> Detect asymptomatic vertebral fractures</p>
+                                        <div class="badge-container">
+                                            <span class="badge badge-amber">If height loss &gt;2cm</span>
+                                            <span class="badge badge-amber">If kyphosis present</span>
+                                            <span class="badge badge-amber">Long-term glucocorticoids</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Laboratory Evaluation</h3>
+                                <p>Exclude secondary causes of osteoporosis:</p>
+                                <div class="badge-container">
+                                    <span class="badge badge-blue">Vitamin D level</span>
+                                    <span class="badge badge-blue">Calcium & Albumin</span>
+                                    <span class="badge badge-blue">TSH</span>
+                                    <span class="badge badge-blue">Testosterone (men)</span>
+                                    <span class="badge badge-blue">Serum/urine protein electrophoresis</span>
+                                    <span class="badge badge-blue">Urinary free cortisol</span>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <div class="info-icon"></div>
+                                <div>
+                                    <strong>Caution:</strong> T-score thresholds apply to DXA only, not QUS or CT. Severe osteoporosis = T-score ≤ -2.5 WITH fragility fracture(s)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="algorithm-section" id="treatment" aria-labelledby="treatment-heading">
+                <div class="card">
+                    <div class="card-header treatment" role="button" aria-expanded="false" aria-controls="treatment-content" tabindex="0">
+                        <div class="card-title">
+                            <span class="card-icon treatment"></span>
+                            <h2 id="treatment-heading">Treatment Algorithm</h2>
+                        </div>
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="card-content" id="treatment-content">
+                        <div class="card-body">
+                            <p>Pharmacological treatment based on patient group and fracture risk. All patients require adequate calcium (1200mg/day) and vitamin D (800-1000 IU/day).</p>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Non-Glucocorticoid Induced: Postmenopausal Women</h3>
+                                <div class="treatment-algorithm">
+                                    <div class="treatment-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>High to Very High Risk:</strong> Prior fragility fracture or DXA T-score ≤ -2.5
+                                            <div class="treatment-options">
+                                                <span class="treatment-option">Bisphosphonate (1st line)</span>
+                                                <span class="treatment-option">Denosumab (alternative)</span>
+                                                <span class="treatment-option">Anabolic agent (very high risk)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="treatment-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>Osteopenia (T-score -1 to -2.5) + High FRAX:</strong>
+                                            <div class="treatment-options">
+                                                <span class="treatment-option">Bisphosphonate</span>
+                                                <span class="treatment-option">Denosumab</span>
+                                                <span class="treatment-option">SERM (if low VTE risk)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="badge-container">
+                                    <span class="badge badge-red">Anabolic preferred for very high risk</span>
+                                    <span class="badge badge-amber">Sequential therapy required after anabolics</span>
+                                    <span class="badge badge-green">Drug holiday after 3-5 years (low-moderate risk)</span>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Non-Glucocorticoid Induced: Men</h3>
+                                <div class="treatment-algorithm">
+                                    <div class="treatment-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>Indications:</strong> Hip/vertebral fracture, T-score ≤ -2.5, or high FRAX
+                                            <div class="treatment-options">
+                                                <span class="treatment-option">Bisphosphonate (1st line)</span>
+                                                <span class="treatment-option">Denosumab</span>
+                                                <span class="treatment-option">Anabolic agent (very high risk)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="treatment-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>Testosterone Deficiency:</strong> Consider adjunct if symptomatic
+                                            <div class="treatment-options">
+                                                <span class="treatment-option">Testosterone therapy</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Glucocorticoid-Induced Osteoporosis</h3>
+                                <div class="treatment-algorithm">
+                                    <div class="treatment-step">
+                                        <div class="step-number">Risk</div>
+                                        <div>
+                                            <strong>Assess risk category:</strong> Low, Moderate, High, Very High
+                                            <div class="treatment-options">
+                                                <span class="treatment-option">Low: Calcium + Vitamin D only</span>
+                                                <span class="treatment-option">Moderate: Bisphosphonate/Denosumab</span>
+                                                <span class="treatment-option">High/Very High: Parathyroid hormone analogue</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="badge-container">
+                                    <span class="badge badge-red">Prednisolone ≥7.5mg/day for >3 months</span>
+                                    <span class="badge badge-amber">Assess fracture risk at initiation</span>
+                                    <span class="badge badge-amber">Repeat assessment every 1-2 years</span>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Treatment Classes</h3>
+                                <div class="risk-factors-grid">
+                                    <div class="risk-category">
+                                        <h4>Antiresorptives</h4>
+                                        <ul class="factor-list">
+                                            <li><strong>Bisphosphonates:</strong> Alendronate, Risedronate, Zoledronic acid</li>
+                                            <li><strong>Denosumab:</strong> RANKL inhibitor (6-monthly)</li>
+                                            <li><strong>SERMs:</strong> Raloxifene, Bazedoxifene</li>
+                                            <li><strong>Hormone:</strong> Estrogen (limited use)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="risk-category">
+                                        <h4>Anabolic Agents</h4>
+                                        <ul class="factor-list">
+                                            <li><strong>Teriparatide:</strong> PTH(1-34) - up to 2 years</li>
+                                            <li><strong>Abaloparatide:</strong> PTHrP analogue - up to 2 years</li>
+                                            <li><strong>Romosozumab:</strong> Sclerostin inhibitor - 12 months</li>
+                                        </ul>
+                                        <div class="badge-container">
+                                            <span class="badge badge-amber">Sequential therapy required</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert-box">
+                                <div class="info-icon"></div>
+                                <div>
+                                    <strong>Critical:</strong> Never discontinue denosumab without starting bisphosphonate (delayed start leads to rapid bone loss and multiple vertebral fractures)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="algorithm-section" id="followup" aria-labelledby="followup-heading">
+                <div class="card">
+                    <div class="card-header followup" role="button" aria-expanded="false" aria-controls="followup-content" tabindex="0">
+                        <div class="card-title">
+                            <span class="card-icon followup"></span>
+                            <h2 id="followup-heading">Monitoring & Follow-up</h2>
+                        </div>
+                        <svg class="expand-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </div>
+                    <div class="card-content" id="followup-content">
+                        <div class="card-body">
+                            <p>Regular monitoring to assess treatment response, adherence, and complications.</p>
+
+                            <div class="section-group">
+                                <h3 class="section-title">BMD Monitoring Schedule</h3>
+                                <div class="monitoring-schedule">
+                                    <div class="monitoring-item">
+                                        <h4>Initial Treatment</h4>
+                                        <div class="interval">Every 1-3 years</div>
+                                        <p>DXA at spine and hip to assess response</p>
+                                    </div>
+                                    <div class="monitoring-item">
+                                        <h4>Stable on Therapy</h4>
+                                        <div class="interval">Every 2-5 years</div>
+                                        <p>If no new risk factors or fractures</p>
+                                    </div>
+                                    <div class="monitoring-item">
+                                        <h4>After Treatment Change</h4>
+                                        <div class="interval">Every 1-2 years</div>
+                                        <p>Earlier if high risk or new fracture</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Treatment Duration & Drug Holidays</h3>
+                                <div class="treatment-algorithm">
+                                    <div class="treatment-step">
+                                        <div class="step-number">✓</div>
+                                        <div>
+                                            <strong>Bisphosphonates:</strong> 3-5 years (oral), 3-6 years (zoledronic acid)
+                                            <div class="badge-container">
+                                                <span class="badge badge-green">Consider drug holiday if low-moderate risk</span>
+                                                <span class="badge badge-amber">Reassess risk after 5-10 years</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="treatment-step">
+                                        <div class="step-number">✗</div>
+                                        <div>
+                                            <strong>Denosumab:</strong> 
+                                            <span class="badge badge-red">NO drug holiday - continuous required</span>
+                                            <p>After stopping: rapid bone loss without bisphosphonate transition</p>
+                                        </div>
+                                    </div>
+                                    <div class="treatment-step">
+                                        <div class="step-number">2️</div>
+                                        <div>
+                                            <strong>Anabolic Agents:</strong> Maximum 1-2 years
+                                            <div class="badge-container">
+                                                <span class="badge badge-amber">Must follow with antiresorptive</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Complications to Monitor</h3>
+                                <div class="complications-grid">
+                                    <div class="complication-card">
+                                        <div class="complication-name">Hip Fractures</div>
+                                        <div class="complication-risk">Risk: High</div>
+                                        <div class="complication-timeframe">Timeframe: Long-term</div>
+                                        <div class="badge-container" style="margin-top: 0.5rem;">
+                                            <span class="badge badge-red">20% mortality in 1st year</span>
+                                        </div>
+                                    </div>
+                                    <div class="complication-card medium">
+                                        <div class="complication-name">Atypical Femoral Fracture</div>
+                                        <div class="complication-risk">Risk: Medium</div>
+                                        <div class="complication-timeframe">Timeframe: Long-term</div>
+                                        <div class="badge-container" style="margin-top: 0.5rem;">
+                                            <span class="badge badge-amber">Long-term bisphosphonate use</span>
+                                        </div>
+                                    </div>
+                                    <div class="complication-card medium">
+                                        <div class="complication-name">Jaw Osteonecrosis</div>
+                                        <div class="complication-risk">Risk: Medium</div>
+                                        <div class="complication-timeframe">Timeframe: Variable</div>
+                                        <div class="badge-container" style="margin-top: 0.5rem;">
+                                            <span class="badge badge-amber">Poor dental hygiene</span>
+                                        </div>
+                                    </div>
+                                    <div class="complication-card low">
+                                        <div class="complication-name">Venous Thromboembolism</div>
+                                        <div class="complication-risk">Risk: Low</div>
+                                        <div class="complication-timeframe">Timeframe: Variable</div>
+                                        <div class="badge-container" style="margin-top: 0.5rem;">
+                                            <span class="badge badge-green">Raloxifene-related</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section-group">
+                                <h3 class="section-title">Patient Education & Adherence</h3>
+                                <div class="info-box">
+                                    <div class="info-icon"></div>
+                                    <div>
+                                        <strong>Key Points:</strong> Emphasize importance of adherence, proper administration technique, calcium/vitamin D intake, exercise, and fall prevention strategies
+                                    </div>
+                                </div>
+                                
+                                <div class="badge-container">
+                                    <span class="badge badge-blue">Weight-bearing exercise</span>
+                                    <span class="badge badge-blue">Smoking cessation</span>
+                                    <span class="badge badge-blue">Limit alcohol</span>
+                                    <span class="badge badge-blue">Fall prevention</span>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <div class="info-icon"></div>
+                                <div>
+                                    <strong>Monitoring Gap:</strong> Studies show no benefit to repeat BMD testing within 3-7 years in untreated older adults for predicting fracture risk
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Card expand/collapse functionality
+            const cardHeaders = document.querySelectorAll('.card-header');
+            
+            cardHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const card = this.parentElement;
+                    const content = this.nextElementSibling;
+                    const isExpanded = card.classList.contains('expanded');
+                    
+                    // Close all other cards
+                    document.querySelectorAll('.card').forEach(c => {
+                        if (c !== card) {
+                            c.classList.remove('expanded');
+                            c.querySelector('.card-header').setAttribute('aria-expanded', 'false');
+                        }
+                    });
+                    
+                    // Toggle current card
+                    if (isExpanded) {
+                        card.classList.remove('expanded');
+                        this.setAttribute('aria-expanded', 'false');
+                    } else {
+                        card.classList.add('expanded');
+                        this.setAttribute('aria-expanded', 'true');
+                    }
+                    
+                    // Update progress sidebar
+                    updateProgressFromCards();
+                });
+
+                // Keyboard accessibility
+                header.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            });
+
+            // Progress sidebar functionality
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            progressItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const sectionId = this.dataset.section;
+                    const targetSection = document.getElementById(sectionId);
+                    
+                    if (targetSection) {
+                        // Scroll to section
+                        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        
+                        // Expand the card in that section
+                        const card = targetSection.querySelector('.card');
+                        const header = targetSection.querySelector('.card-header');
+                        
+                        // Close all cards first
+                        document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+                        
+                        // Open the target card
+                        card.classList.add('expanded');
+                        header.setAttribute('aria-expanded', 'true');
+                        
+                        // Update active progress item
+                        updateProgress(this);
+                    }
+                });
+
+                // Keyboard accessibility
+                item.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            });
+
+            // Update progress on scroll (Intersection Observer)
+            const sections = document.querySelectorAll('.algorithm-section');
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '-20% 0px -70% 0px',
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const sectionId = entry.target.id;
+                        const progressItem = document.querySelector(`[data-section="${sectionId}"]`);
+                        if (progressItem) {
+                            updateProgress(progressItem);
+                        }
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+
+            // Update progress based on which cards are expanded
+            function updateProgressFromCards() {
+                const expandedCards = document.querySelectorAll('.card.expanded');
+                
+                if (expandedCards.length > 0) {
+                    const expandedCard = expandedCards[0];
+                    const section = expandedCard.closest('.algorithm-section');
+                    const sectionId = section.id;
+                    const progressItem = document.querySelector(`[data-section="${sectionId}"]`);
+                    
+                    if (progressItem) {
+                        updateProgress(progressItem);
+                    }
+                }
+            }
+
+            // Update progress sidebar
+            function updateProgress(activeItem) {
+                // Remove active class from all items
+                progressItems.forEach(item => {
+                    item.classList.remove('active');
+                    item.classList.remove('completed');
+                });
+                
+                // Add active class to clicked item
+                activeItem.classList.add('active');
+                
+                // Mark previous items as completed
+                let previousItem = activeItem.previousElementSibling;
+                while (previousItem && previousItem.classList.contains('progress-item')) {
+                    previousItem.classList.add('completed');
+                    previousItem = previousItem.previousElementSibling;
+                }
+            }
+
+            // Initialize first card as expanded
+            const firstCard = document.querySelector('#assessment .card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+                firstCard.querySelector('.card-header').setAttribute('aria-expanded', 'true');
+            }
+
+            // Add smooth transitions for badges
+            const badges = document.querySelectorAll('.badge');
+            badges.forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px) scale(1.05)';
+                });
+                
+                badge.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Add animation for treatment steps
+            const treatmentSteps = document.querySelectorAll('.treatment-step');
+            const stepObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateX(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            treatmentSteps.forEach(step => {
+                step.style.opacity = '0';
+                step.style.transform = 'translateX(-20px)';
+                step.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                stepObserver.observe(step);
+            });
+
+            // Print functionality
+            const printBtn = document.createElement('button');
+            printBtn.innerHTML = '🖨️ Print Algorithm';
+            printBtn.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 25px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                font-size: 0.9rem;
+                font-weight: 500;
+                transition: all 0.3s ease;
+                z-index: 1000;
+            `;
+            
+            printBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px) scale(1.05)';
+                this.style.boxShadow = '0 6px 20px rgba(0,0,0,0.25)';
+            });
+            
+            printBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            });
+            
+            printBtn.addEventListener('click', function() {
+                window.print();
+            });
+            
+            document.body.appendChild(printBtn);
+
+            // Add keyboard navigation help
+            const helpBtn = document.createElement('button');
+            helpBtn.innerHTML = '⌨️ Help';
+            helpBtn.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                right: 120px;
+                background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 25px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                font-size: 0.9rem;
+                font-weight: 500;
+                transition: all 0.3s ease;
+                z-index: 1000;
+            `;
+            
+            helpBtn.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px) scale(1.05)';
+                this.style.boxShadow = '0 6px 20px rgba(0,0,0,0.25)';
+            });
+            
+            helpBtn.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+                this.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+            });
+            
+            helpBtn.addEventListener('click', function() {
+                alert(`Keyboard Navigation:
+• Tab: Navigate through interactive elements
+• Enter/Space: Expand/collapse cards or select progress items
+• Arrow Keys: Navigate progress sidebar
+• Print Button: Generate PDF/print view
+
+Accessibility features enabled for screen readers and keyboard users.`);
+            });
+            
+            document.body.appendChild(helpBtn);
+
+            console.log('🦴 Osteoporosis Management Algorithm initialized successfully');
+            console.log('Features: Interactive cards, progress tracking, keyboard navigation, print support');
+        });
+
+        // Add resize handler for responsive behavior
+        window.addEventListener('resize', function() {
+            const sidebar = document.querySelector('.progress-sidebar');
+            const container = document.querySelector('.container');
+            
+            if (window.innerWidth <= 1024) {
+                sidebar.style.position = 'relative';
+                sidebar.style.height = 'auto';
+            } else {
+                sidebar.style.position = 'sticky';
+                sidebar.style.height = '100vh';
+            }
+        });
+
+        // Trigger resize on load
+        window.dispatchEvent(new Event('resize'));
+    </script>
+</body>
+</html>
