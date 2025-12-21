@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Eye Management Algorithm - NICE CKS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            margin-left: 280px;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #ef476f, #ffd166, #06d6a0);
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .header .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .guideline-info {
+            background: #edf2f7;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            display: inline-block;
+            font-size: 0.9rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+        .section:nth-child(5) { animation-delay: 0.4s; }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+            transform: translateX(-100%);
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover .card-header::before {
+            transform: translateX(0);
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #7209b7, #560bad);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #f72585, #b5179e);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #2ec4b6, #1a936f);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            position: relative;
+            z-index: 1;
+        }
+
+        .icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 2rem;
+        }
+
+        .subsection {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .subsection:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .subsection h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .subsection h3::before {
+            content: '';
+            width: 6px;
+            height: 24px;
+            background: #4361ee;
+            border-radius: 3px;
+        }
+
+        .subsection.diagnosis h3::before {
+            background: #7209b7;
+        }
+
+        .subsection.treatment h3::before {
+            background: #f72585;
+        }
+
+        .subsection.followup h3::before {
+            background: #2ec4b6;
+        }
+
+        .item-list {
+            list-style: none;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .item {
+            background: #f7fafc;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            border-left: 4px solid #cbd5e0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .item:hover {
+            transform: translateX(5px);
+            background: #edf2f7;
+            border-left-color: #667eea;
+        }
+
+        .item-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            margin-top: 0.1rem;
+        }
+
+        .item-icon.history {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .item-icon.exam {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .item-icon.redflag {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .item-icon.cause {
+            background: #e0e7ff;
+            color: #5b21b6;
+        }
+
+        .item-icon.management {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background: #ef476f;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #ffd166;
+            color: #78350f;
+        }
+
+        .badge-stable {
+            background: #06d6a0;
+            color: white;
+        }
+
+        .badge-info {
+            background: #118ab2;
+            color: white;
+        }
+
+        .severity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .severity-card {
+            padding: 1.25rem;
+            border-radius: 12px;
+            border: 2px solid;
+            transition: transform 0.3s ease;
+        }
+
+        .severity-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .severity-card.urgent {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+        .severity-card.caution {
+            background: #fffbeb;
+            border-color: #fef3c7;
+        }
+
+        .severity-card.stable {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .severity-card h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .severity-card.urgent h4 {
+            color: #dc2626;
+        }
+
+        .severity-card.caution h4 {
+            color: #d97706;
+        }
+
+        .severity-card.stable h4 h4 {
+            color: #059669;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .sidebar-header h2 {
+            color: #2d3748;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            background: #e2e8f0;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4361ee, #06d6a0);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: #718096;
+            text-align: center;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #4361ee, #3a0ca3);
+            color: white;
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        .nav-item.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .nav-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.1);
+        }
+
+        .nav-item.active .nav-icon {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .nav-item.completed .nav-icon {
+            background: #10b981;
+            color: white;
+        }
+
+        .footer {
+            background: rgba(255,255,255,0.9);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #718096;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer strong {
+            color: #4361ee;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 1rem;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.8rem;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .card-title {
+                font-size: 1.2rem;
+            }
+            
+            .severity-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Floating emergency alert */
+        .emergency-alert {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, #ef476f, #dc2626);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(239, 71, 111, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 1000;
+            animation: slideInRight 0.5s ease;
+        }
+
+        .emergency-alert:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 12px 35px rgba(239, 71, 111, 0.5);
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .emergency-icon {
+            font-size: 1.5rem;
+        }
+
+        .emergency-text {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>📋 Algorithm Progress</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">0% Complete</div>
+            </div>
+            
+            <nav id="navItems">
+                <div class="nav-item active" data-section="assessment">
+                    <div class="nav-icon">👁️</div>
+                    <span>Assessment</span>
+                </div>
+                <div class="nav-item" data-section="diagnosis">
+                    <div class="nav-icon">🔍</div>
+                    <span>Diagnosis</span>
+                </div>
+                <div class="nav-item" data-section="treatment">
+                    <div class="nav-icon">💊</div>
+                    <span>Treatment</span>
+                </div>
+                <div class="nav-item" data-section="followup">
+                    <div class="nav-icon">📅</div>
+                    <span>Follow-up</span>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <h1>👁️ Red Eye Management</h1>
+                <div class="subtitle">Interactive Clinical Decision Support Tool</div>
+                <div class="guideline-info">Based on NICE CKS Guidelines • Last Revised May 2021</div>
+            </div>
+
+            <section class="section" id="assessment">
+                <div class="card">
+                    <div class="card-header assessment" onclick="toggleCard(this)">
+                        <div class="card-title">
+                            <div class="icon">👁️</div>
+                            Assessment
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="subsection">
+                                <h3>History Taking</h3>
+                                <ul class="item-list">
+                                    <li class="item">
+                                        <div class="item-icon history">📋</div>
+                                        <div><strong>Onset & Duration:</strong> When did symptoms start? How long have they persisted?</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">👁️</div>
+                                        <div><strong>Laterality:</strong> Unilateral or bilateral? Simultaneous onset if bilateral?</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">👓</div>
+                                        <div><strong>Visual Changes:</strong> Any alteration in vision, blurring, or loss of visual acuity?</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">⚡</div>
+                                        <div><strong>Pain:</strong> Severity and character of pain (mild, moderate, severe, sharp, dull)</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">🪨</div>
+                                        <div><strong>Foreign Body Sensation:</strong> Sensation of grittiness or something in the eye</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">💧</div>
+                                        <div><strong>Discharge:</strong> Nature (watery, mucoid, purulent), amount, and color</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">🤧</div>
+                                        <div><strong>Itch:</strong> Presence of itching may suggest allergic cause</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">☀️</div>
+                                        <div><strong>Photophobia:</strong> Light sensitivity intensity</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">🤕</div>
+                                        <div><strong>Headache:</strong> Associated headache may indicate serious causes</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">💊</div>
+                                        <div><strong>Contact Lens Use:</strong> Type, wear schedule, hygiene practices</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">⚠️</div>
+                                        <div><strong>Chemical/Trauma Exposure:</strong> Any recent chemical splash or mechanical injury</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">🏥</div>
+                                        <div><strong>Medical History:</strong> Hypertension, connective tissue disorders, atopy, autoimmune conditions</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon history">💊</div>
+                                        <div><strong>Medications:</strong> Current eye drops, anticoagulants, antimuscarinics, tricyclics</div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h3>Physical Examination</h3>
+                                <ul class="item-list">
+                                    <li class="item">
+                                        <div class="item-icon exam">📊</div>
+                                        <div><strong>Visual Acuity:</strong> Check using Snellen chart for both eyes</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">😊</div>
+                                        <div><strong>Facial Trauma:</strong> Assess for any signs of orbital/facial injury</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">💧</div>
+                                        <div><strong>Discharge:</strong> Note type, amount, and presence</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">👁️</div>
+                                        <div><strong>Eyelid Examination:</strong> Check for swelling, trichiasis, entropion, ectropion</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">👀</div>
+                                        <div><strong>Conjunctival Exam:</strong> Inspect both palpebral and tarsal surfaces. <strong>Evert upper lid</strong> if foreign body suspected</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">🎯</div>
+                                        <div><strong>Pattern of Redness:</strong> Ciliary flush (limbal vessel injection) indicates serious causes like uveitis or corneal pathology</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">🧪</div>
+                                        <div><strong>Fluorescein Examination:</strong> Staining indicates corneal abrasion or ulcer</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">🎯</div>
+                                        <div><strong>Pupil Assessment:</strong> Size, shape, equality, photophobia, direct/consensual responses</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">🔄</div>
+                                        <div><strong>RAPD Test:</strong> Relative Afferent Pupillary Defect - swing light test between eyes</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon exam">🩺</div>
+                                        <div><strong>Blood Pressure:</strong> Check if subconjunctival hemorrhage suspected</div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h3>Red Flag Signs & Symptoms <span class="badge badge-urgent">Emergency</span></h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card urgent">
+                                        <h4>⚠️ Immediate Referral Required</h4>
+                                        <ul>
+                                            <li>Reduced visual acuity</li>
+                                            <li>Moderate to severe pain</li>
+                                            <li>Significant headache</li>
+                                            <li>Photophobia (especially if severe)</li>
+                                            <li>Significant ciliary injection</li>
+                                            <li>Fluorescein staining with significant ulcer</li>
+                                            <li>Unequal or misshapen pupils</li>
+                                            <li>Abnormal pupillary reactions</li>
+                                            <li>Pain on pupillary constriction</li>
+                                            <li>Loss of red reflex</li>
+                                            <li>Corneal defect/haze</li>
+                                            <li>Hyphaema or hypopyon</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card caution">
+                                        <h4>⚡ High-Risk Features</h4>
+                                        <ul>
+                                            <li>High-velocity injury (hammering, chiseling)</li>
+                                            <li>Glass-related injury</li>
+                                            <li>Foreign body or penetrating lesion</li>
+                                            <li>Chemical injury</li>
+                                            <li>Contact lens use</li>
+                                            <li>Neonatal conjunctivitis (&lt;28 days)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" id="diagnosis">
+                <div class="card">
+                    <div class="card-header diagnosis" onclick="toggleCard(this)">
+                        <div class="card-title">
+                            <div class="icon">🔍</div>
+                            Differential Diagnosis
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="subsection diagnosis">
+                                <h3>Serious & Sight-Threatening Causes</h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card urgent">
+                                        <h4>🚨 Acute Glaucoma <span class="badge badge-urgent">Emergency</span></h4>
+                                        <ul>
+                                            <li><strong>Symptoms:</strong> Severe unilateral pain, headache, blurred vision with halos, nausea/vomiting</li>
+                                            <li><strong>Signs:</strong> Hard tender eye, ciliary injection, fixed mid-dilated pupil, reduced VA</li>
+                                            <li><strong>Precipitants:</strong> Pupil dilating drops, tricyclic antidepressants</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🔥 Anterior Uveitis <span class="badge badge-urgent">Urgent</span></h4>
+                                        <ul>
+                                            <li><strong>Symptoms:</strong> Pain worse with ciliary muscle contraction, photophobia, watering</li>
+                                            <li><strong>Signs:</strong> Ciliary injection, constricted/distorted pupil, variable vision</li>
+                                            <li><strong>Associations:</strong> Ankylosing spondylitis, other inflammatory disorders</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>👁️ Corneal Causes <span class="badge badge-urgent">Emergency</span></h4>
+                                        <ul>
+                                            <li><strong>Ulcer (Bacterial/Viral/Fungal):</strong> Foreign body sensation, photophobia, blurred vision, discharge, severe injection</li>
+                                            <li><strong>Contact Lens-Related:</strong> Similar to ulcer, high-risk in lens wearers</li>
+                                            <li><strong>Foreign Body:</strong> History of wind exposure or tools, visible foreign body, normal VA usually</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>👶 Neonatal Conjunctivitis <span class="badge badge-urgent">Emergency</span></h4>
+                                        <ul>
+                                            <li><strong>Definition:</strong> Conjunctivitis with discharge in first 28 days</li>
+                                            <li><strong>Serious Causes:</strong> Gonorrhea (risk of corneal ulceration), Chlamydia (may have systemic infection)</li>
+                                            <li><strong>Differentiate:</strong> From lacrimal duct obstruction (no conjunctival inflammation)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>⚡ Scleritis <span class="badge badge-urgent">Urgent</span></h4>
+                                        <ul>
+                                            <li><strong>Symptoms:</strong> Severe deep boring pain</li>
+                                            <li><strong>Associations:</strong> Rheumatoid arthritis, SLE, other connective tissue diseases</li>
+                                            <li><strong>Signs:</strong> Reduced VA, abnormal pupil reactions, risk of globe perforation</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🦠 Endophthalmitis <span class="badge badge-urgent">Emergency</span></h4>
+                                        <ul>
+                                            <li><strong>History:</strong> Recent intraocular surgery (within 2 weeks)</li>
+                                            <li><strong>Symptoms:</strong> Markedly reduced vision, severe pain/headache</li>
+                                            <li><strong>Signs:</strong> Hypopyon (pus in anterior chamber)</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>💥 Trauma <span class="badge badge-urgent">Emergency</span></h4>
+                                        <ul>
+                                            <li><strong>Penetrating Injury:</strong> High-velocity injuries (hammering, chiseling), glass injuries</li>
+                                            <li><strong>Foreign Body:</strong> May not always be visible, treat as penetrating until proven otherwise</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🧪 Chemical Injury <span class="badge badge-urgent">Emergency</span></h4>
+                                        <ul>
+                                            <li><strong>Risk:</strong> Alkali solutions particularly harmful</li>
+                                            <li><strong>Action:</strong> Immediate copious irrigation before assessment</li>
+                                            <li><strong>Complications:</strong> Long-term ocular surface problems</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection diagnosis">
+                                <h3>Non-Sight-Threatening Causes</h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card stable">
+                                        <h4>😊 Conjunctivitis <span class="badge badge-stable">Primary Care</span></h4>
+                                        <ul>
+                                            <li><strong>Allergic:</strong> Itching, watery discharge, bilateral, history of atopy</li>
+                                            <li><strong>Infective:</strong> Bacterial (purulent) or viral (watery), may be unilateral initially</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>🩸 Subconjunctival Hemorrhage <span class="badge badge-stable">Primary Care</span></h4>
+                                        <ul>
+                                            <li><strong>Appearance:</strong> Localized well-demarcated bright red patch</li>
+                                            <li><strong>Features:</strong> No pain, normal VA, normal pupils, no corneal staining</li>
+                                            <li><strong>Risk Factors:</strong> Straining, coughing, constipation, hypertension, anticoagulants</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>🦠 Episcleritis <span class="badge badge-stable">Primary Care</span></h4>
+                                        <ul>
+                                            <li><strong>Symptoms:</strong> Redness, lacrimation, photophobia, generally painless</li>
+                                            <li><strong>Signs:</strong> Segmental redness, normal VA/pupils, no corneal staining</li>
+                                            <li><strong>Course:</strong> Self-limiting, benign condition</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>🪨 Corneal Abrasion <span class="badge badge-stable">Primary Care</span></h4>
+                                        <ul>
+                                            <li><strong>Symptoms:</strong> Foreign body sensation, pain, photophobia</li>
+                                            <li><strong>Signs:</strong> Fluorescein staining positive, normal pupils</li>
+                                            <li><strong>Healing:</strong> Usually resolves within 24-48 hours</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>😊 Adnexal Causes <span class="badge badge-stable">Primary Care</span></h4>
+                                        <ul>
+                                            <li><strong>Dry Eye Syndrome:</strong> Burning, gritty sensation, worse with reading/screen use</li>
+                                            <li><strong>Blepharitis:</strong> Crusting at lid margins, irritation, chronic course</li>
+                                            <li><strong>Ectropion/Entropion:</strong> Lid malposition causing exposure or irritation</li>
+                                            <li><strong>Trichiasis:</strong> Misdirected lashes causing corneal irritation</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection diagnosis">
+                                <h3>Special Considerations</h3>
+                                <div class="item">
+                                    <div class="item-icon cause">👶</div>
+                                    <div><strong>Child Maltreatment:</strong> Consider if retinal hemorrhages present or eye injury without plausible accidental trauma explanation <span class="badge badge-caution">Important</span></div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon cause">💉</div>
+                                    <div><strong>Anticoagulation:</strong> Subconjunctival hemorrhage risk increased, check INR if on warfarin</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon cause">🩸</div>
+                                    <div><strong>Hypertension:</strong> Assess BP in subconjunctival hemorrhage cases</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" id="treatment">
+                <div class="card">
+                    <div class="card-header treatment" onclick="toggleCard(this)">
+                        <div class="card-title">
+                            <div class="icon">💊</div>
+                            Treatment & Management
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="subsection treatment">
+                                <h3>Emergency Referral <span class="badge badge-urgent">Same Day - Ophthalmology</span></h3>
+                                <p style="margin-bottom: 1rem; color: #dc2626; font-weight: 500;">Immediate referral to emergency eye service if any of the following are suspected:</p>
+                                <div class="severity-grid">
+                                    <div class="severity-card urgent">
+                                        <h4>🚨 Acute Angle-Closure Glaucoma</h4>
+                                        <p><strong>Action:</strong> Emergency same-day ophthalmology assessment</p>
+                                        <p><strong>Pre-hospital:</strong> Seat patient upright, nil by mouth, arrange immediate transfer</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>👁️ Corneal Laceration</h4>
+                                        <p><strong>Action:</strong> Same-day ophthalmology assessment</p>
+                                        <p><strong>Pre-hospital:</strong> Do NOT press on globe, shield eye, urgent transfer</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🪨 Corneal Foreign Body</h4>
+                                        <p><strong>Action:</strong> Same-day ophthalmology if cannot be removed in primary care</p>
+                                        <p><strong>Pre-hospital:</strong> Do not attempt removal if deep or central</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>💡 Contact Lens-Related Ulcer</h4>
+                                        <p><strong>Action:</strong> Emergency same-day assessment</p>
+                                        <p><strong>Pre-hospital:</strong> Stop lens wear immediately, bring lens/case for culture</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🦠 Corneal Ulcer (Non-Contact Lens)</h4>
+                                        <p><strong>Action:</strong> Same-day ophthalmology assessment</p>
+                                        <p><strong>Pre-hospital:</strong> Start topical antibiotics if available per protocol</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🦠 Endophthalmitis</h4>
+                                        <p><strong>Action:</strong> Emergency same-day assessment (post-operative infection)</p>
+                                        <p><strong>Pre-hospital:</strong> Urgent transfer, may need intravitreal antibiotics</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>✨ Intraocular Foreign Body</h4>
+                                        <p><strong>Action:</strong> Emergency same-day assessment</p>
+                                        <p><strong>Pre-hospital:</strong> CT scan orbit, shield eye, urgent ophthalmology</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>👶 Neonatal Conjunctivitis</h4>
+                                        <p><strong>Action:</strong> Emergency same-day ophthalmology + pediatric assessment</p>
+                                        <p><strong>Pre-hospital:</strong> Swabs for gonorrhea/chlamydia, systemic evaluation</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>💥 Penetrating Eye Injury</h4>
+                                        <p><strong>Action:</strong> Emergency same-day assessment</p>
+                                        <p><strong>Pre-hospital:</strong> Shield eye, NPO, urgent surgical intervention likely</p>
+                                    </div>
+                                    <div class="severity-card urgent">
+                                        <h4>🧪 Chemical Injury <span class="badge badge-urgent">IRRIGATE FIRST</span></h4>
+                                        <p><strong>Immediate Action:</strong> Copious irrigation with water or 0.9% saline until pH normal</p>
+                                        <p><strong>Referral:</strong> After irrigation if no pH checking facility available</p>
+                                        <p><strong>Continue irrigation:</strong> During transfer if possible</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection treatment">
+                                <h3>Urgent Referral <span class="badge badge-caution">Within 24 Hours</span></h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card caution">
+                                        <h4>🔥 Anterior Uveitis</h4>
+                                        <p><strong>Action:</strong> Urgent referral to local eye clinic</p>
+                                        <p><strong>Management:</strong> Requires slit-lamp confirmation, may need steroid drops</p>
+                                    </div>
+                                    <div class="severity-card caution">
+                                        <h4>⚡ Scleritis</h4>
+                                        <p><strong>Action:</strong> Urgent referral to ophthalmology</p>
+                                        <p><strong>Management:</strong> Systemic NSAIDs or steroids, investigate systemic disease</p>
+                                    </div>
+                                    <div class="severity-card caution">
+                                        <h4>❓ Unclear Diagnosis</h4>
+                                        <p><strong>Action:</strong> Seek ophthalmology advice if diagnosis uncertain after assessment</p>
+                                        <p><strong>Management:</strong> When in doubt, refer for specialist opinion</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection treatment">
+                                <h3>Primary Care Management <span class="badge badge-stable">Can be managed in GP</span></h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card stable">
+                                        <h4>🩸 Subconjunctival Hemorrhage</h4>
+                                        <ul>
+                                            <li><strong>Reassurance:</strong> Will clear in 1-2 weeks spontaneously</li>
+                                            <li><strong>BP Check:</strong> Measure blood pressure, manage if elevated</li>
+                                            <li><strong>Anticoagulation:</strong> Check INR if on warfarin and manage accordingly</li>
+                                            <li><strong>Advice:</strong> Avoid rubbing eye, no treatment needed</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>😊 Episcleritis</h4>
+                                        <ul>
+                                            <li><strong>Reassurance:</strong> Usually self-limiting, not harmful</li>
+                                            <li><strong>Symptomatic Relief:</strong> Oral NSAIDs (e.g., ibuprofen) may help</li>
+                                            <li><strong>Lubrication:</strong> Artificial tears for comfort</li>
+                                            <li><strong>Follow-up:</strong> Resolves within 1-2 weeks</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>👁️ Ectropion/Entropion/Trichiasis</h4>
+                                        <ul>
+                                            <li><strong>Red Flags:</strong> If exposure keratopathy or corneal irritation signs → urgent referral</li>
+                                            <li><strong>Routine Referral:</strong> If no serious features, refer routinely to ophthalmology</li>
+                                            <li><strong>Management:</strong> Surgical correction may be required</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>📚 Other Conditions</h4>
+                                        <ul>
+                                            <li><strong>Blepharitis:</strong> See separate CKS topic on Blepharitis</li>
+                                            <li><strong>Infective Conjunctivitis:</strong> See CKS Conjunctivitis - Infective</li>
+                                            <li><strong>Allergic Conjunctivitis:</strong> See CKS Conjunctivitis - Allergic</li>
+                                            <li><strong>Corneal Abrasion:</strong> See CKS Corneal Superficial Injury</li>
+                                            <li><strong>Dry Eye:</strong> See CKS Dry Eye Syndrome</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection treatment">
+                                <h3>Important Documentation <span class="badge badge-info">Good Practice</span></h3>
+                                <div class="item">
+                                    <div class="item-icon management">📝</div>
+                                    <div><strong>Document Everything:</strong> Record full history and examination findings (including negative findings), especially for unilateral red eye managed in primary care</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">📸</div>
+                                    <div><strong>Photographs:</strong> Consider taking photos of external findings if possible</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">📊</div>
+                                    <div><strong>VA Recording:</strong> Always document visual acuity for both eyes</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" id="followup">
+                <div class="card">
+                    <div class="card-header followup" onclick="toggleCard(this)">
+                        <div class="card-title">
+                            <div class="icon">📅</div>
+                            Follow-up & Monitoring
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="subsection followup">
+                                <h3>Primary Care Follow-up Guidelines</h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card stable">
+                                        <h4>😊 Subconjunctival Hemorrhage</h4>
+                                        <ul>
+                                            <li><strong>Resolution:</strong> Should clear within 1-2 weeks</li>
+                                            <li><strong>Follow-up:</strong> If not resolved by 2 weeks, recheck BP and consider hematology review</li>
+                                            <li><strong>Recurrence:</strong> Frequent recurrences warrant hypertension and bleeding disorder screening</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>🦠 Episcleritis</h4>
+                                        <ul>
+                                            <li><strong>Course:</strong> Usually resolves within 7-10 days</li>
+                                            <li><strong>Recurrence:</strong> Consider investigating for underlying systemic disease if recurrent</li>
+                                            <li><strong>Referral:</strong> Persistent &gt;3 weeks or severe cases → ophthalmology</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>🤧 Allergic Conjunctivitis</h4>
+                                        <ul>
+                                            <li><strong>Follow-up:</strong> Review in 1 week if symptoms persist</li>
+                                            <li><strong>Escalation:</strong> Refer to ophthalmology if no improvement with treatment</li>
+                                            <li><strong>Chronic:</strong> Consider allergy testing if seasonal/perennial</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>🦠 Infective Conjunctivitis</h4>
+                                        <ul>
+                                            <li><strong>Bacterial:</strong> Review in 3-5 days, should be improving</li>
+                                            <li><strong>Viral:</strong> May take 1-2 weeks to resolve fully</li>
+                                            <li><strong>Referral:</strong> If worsening or not improving by 5-7 days</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection followup">
+                                <h3>Post-Referral Monitoring</h3>
+                                <div class="item">
+                                    <div class="item-icon management">🏥</div>
+                                    <div><strong>Emergency Referrals:</strong> Ensure patient attended. If refused, document and advise to seek immediate care if symptoms worsen</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">⏰</div>
+                                    <div><strong>Urgent Referrals:</strong> Follow up within 24-48 hours to confirm attendance and outcome</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">📞</div>
+                                    <div><strong>Communication:</strong> Liaise with ophthalmology team if any concerns about referral urgency</div>
+                                </div>
+                            </div>
+
+                            <div class="subsection followup">
+                                <h3>Safety Netting Advice <span class="badge badge-caution">Important</span></h3>
+                                <div class="severity-grid">
+                                    <div class="severity-card caution">
+                                        <h4>⚠️ Advise patients to seek URGENT review if they develop:</h4>
+                                        <ul>
+                                            <li>Worsening or severe eye pain</li>
+                                            <li>Decreasing visual acuity</li>
+                                            <li>Increased photophobia</li>
+                                            <li>Colored halos around lights</li>
+                                            <li>Nausea/vomiting with eye pain</li>
+                                            <li>Headache with eye symptoms</li>
+                                            <li>Abnormal pupil appearance</li>
+                                            <li>Copious purulent discharge</li>
+                                            <li>Contact lens wearer with worsening symptoms</li>
+                                        </ul>
+                                    </div>
+                                    <div class="severity-card stable">
+                                        <h4>📞 Routine Follow-up Indicators:</h4>
+                                        <ul>
+                                            <li>Symptoms not improving within expected timeframe</li>
+                                            <li>Recurrence of red eye episodes</li>
+                                            <li>New symptoms developing</li>
+                                            <li>Concerns about diagnosis</li>
+                                            <li>Need for repeat prescriptions</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="subsection followup">
+                                <h3>Documentation & Audit <span class="badge badge-info">Quality Standards</span></h3>
+                                <ul class="item-list">
+                                    <li class="item">
+                                        <div class="item-icon management">📝</div>
+                                        <div><strong>Complete Documentation:</strong> Record all findings, management plan, and advice given</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon management">📊</div>
+                                        <div><strong>Visual Acuity:</strong> Always document VA for both eyes at each visit</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon management">🏥</div>
+                                        <div><strong>Referral Documentation:</strong> Record referral letter sent, method (fax/email), and confirmation of receipt</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon management">📞</div>
+                                        <div><strong>Patient Advice:</strong> Document safety netting advice provided</div>
+                                    </li>
+                                    <li class="item">
+                                        <div class="item-icon management">📅</div>
+                                        <div><strong>Follow-up Arrangements:</strong> Document planned follow-up date and responsible clinician</div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection followup">
+                                <h3>Special Populations <span class="badge badge-info">Considerations</span></h3>
+                                <div class="item">
+                                    <div class="item-icon management">👶</div>
+                                    <div><strong>Children:</strong> Lower threshold for referral, ensure parental understanding of red flag symptoms</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">👴</div>
+                                    <div><strong>Elderly:</strong> Consider medication interactions, compliance issues, and underlying vascular disease</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">🤝</div>
+                                    <div><strong>Immunocompromised:</strong> Higher risk of severe infection, lower referral threshold</div>
+                                </div>
+                                <div class="item">
+                                    <div class="item-icon management">💊</div>
+                                    <div><strong>Contact Lens Users:</strong> Emphasize hygiene, temporary cessation, and high-risk nature</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="footer">
+                <p><strong>Disclaimer:</strong> This tool is for educational purposes and clinical decision support.</p>
+                <p>Always use clinical judgment and refer to full NICE CKS guidelines.</p>
+                <p>Last updated: May 2021 | NICE CKS Red Eye Topic</p>
+                <p>For emergencies: <strong>Refer immediately to Emergency Eye Service</strong></p>
+            </div>
+        </main>
+
+        <div class="emergency-alert" onclick="scrollToEmergency()">
+            <div class="emergency-icon">🚨</div>
+            <div class="emergency-text">Emergency Referral Needed?</div>
+        </div>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update sidebar navigation
+            updateSidebar();
+            updateProgress();
+            
+            // Smooth scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+            }, 200);
+        }
+
+        // Sidebar navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.section;
+                const card = document.querySelector(`#${section} .card`);
+                
+                // Expand the card
+                card.classList.add('expanded');
+                
+                // Update active state
+                updateSidebar();
+                updateProgress();
+                
+                // Scroll to section
+                setTimeout(() => {
+                    document.getElementById(section).scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            });
+        });
+
+        function updateSidebar() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            
+            sections.forEach((section, index) => {
+                const navItem = document.querySelector(`[data-section="${section}"]`);
+                const card = document.querySelector(`#${section} .card`);
+                
+                navItem.classList.remove('active', 'completed');
+                
+                if (card.classList.contains('expanded')) {
+                    navItem.classList.add('active');
+                } else if (isSectionCompleted(section)) {
+                    navItem.classList.add('completed');
+                }
+            });
+        }
+
+        function isSectionCompleted(section) {
+            const card = document.querySelector(`#${section} .card`);
+            return card.classList.contains('expanded');
+        }
+
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            let completed = 0;
+            
+            sections.forEach(section => {
+                if (isSectionCompleted(section)) {
+                    completed++;
+                }
+            });
+            
+            const progress = (completed / sections.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = `${Math.round(progress)}% Complete`;
+            
+            // Add pulse animation at 100%
+            if (progress === 100) {
+                document.getElementById('progressFill').classList.add('pulse');
+            } else {
+                document.getElementById('progressFill').classList.remove('pulse');
+            }
+        }
+
+        // Emergency alert scroll
+        function scrollToEmergency() {
+            const treatmentSection = document.getElementById('treatment');
+            const card = treatmentSection.querySelector('.card');
+            
+            card.classList.add('expanded');
+            updateSidebar();
+            updateProgress();
+            
+            setTimeout(() => {
+                treatmentSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+                
+                // Highlight emergency section
+                const emergencySection = card.querySelector('.severity-card.urgent');
+                if (emergencySection) {
+                    emergencySection.style.animation = 'pulse 1s 3';
+                    setTimeout(() => {
+                        emergencySection.style.animation = '';
+                    }, 3000);
+                }
+            }, 200);
+        }
+
+        // Auto-expand first card on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const firstCard = document.querySelector('#assessment .card');
+                firstCard.classList.add('expanded');
+                updateSidebar();
+                updateProgress();
+            }, 500);
+        });
+
+        // Smooth scroll for all internal links
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const target = document.querySelector(link.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const currentActive = document.querySelector('.nav-item.active');
+            if (!currentActive) return;
+            
+            const currentIndex = sections.indexOf(currentActive.dataset.section);
+            
+            if (e.key === 'ArrowDown' && currentIndex < sections.length - 1) {
+                e.preventDefault();
+                document.querySelector(`[data-section="${sections[currentIndex + 1]}"]`).click();
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                e.preventDefault();
+                document.querySelector(`[data-section="${sections[currentIndex - 1]}"]`).click();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                toggleCard(document.querySelector(`#${sections[currentIndex]} .card-header`));
+            }
+        });
+
+        // Add hover effect to emergency alert
+        const emergencyAlert = document.querySelector('.emergency-alert');
+        if (emergencyAlert) {
+            emergencyAlert.addEventListener('mouseenter', () => {
+                emergencyAlert.style.transform = 'translateY(-3px) scale(1.05)';
+            });
+            emergencyAlert.addEventListener('mouseleave', () => {
+                emergencyAlert.style.transform = 'translateY(0) scale(1)';
+            });
+        }
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Add print button (optional enhancement)
+        const printButton = document.createElement('button');
+        printButton.innerHTML = '🖨️ Print Algorithm';
+        printButton.style.cssText = `
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4361ee;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            z-index: 1000;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+            transition: all 0.3s ease;
+        `;
+        printButton.onmouseover = () => printButton.style.transform = 'translateX(-50%) translateY(-3px)';
+        printButton.onmouseleave = () => printButton.style.transform = 'translateX(-50%)';
+        printButton.onclick = printAlgorithm;
+        
+        // Uncomment to add print button
+        // document.body.appendChild(printButton);
+    </script>
+</body>
+</html>

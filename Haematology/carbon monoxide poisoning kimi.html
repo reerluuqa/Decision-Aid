@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carbon Monoxide Poisoning - Clinical Decision Support</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #e74c3c, #e67e22);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            right: 0;
+            height: 20px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 20"><path d="M0,0 Q600,20 1200,0 Z" fill="white"/></svg>');
+            background-size: cover;
+        }
+
+        .main-content {
+            display: flex;
+            min-height: calc(100vh - 200px);
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 40px;
+            padding-right: 320px;
+        }
+
+        .progress-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: #f8f9fa;
+            border-left: 1px solid #e0e0e0;
+            padding: 140px 20px 20px;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid #ddd;
+        }
+
+        .progress-item.active {
+            border-left-color: #e74c3c;
+            background: #ffeaea;
+            transform: translateX(-5px);
+        }
+
+        .progress-item.completed {
+            border-left-color: #27ae60;
+            background: #e8f8f5;
+        }
+
+        .progress-item:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .progress-icon.assessment { background: #e74c3c; }
+        .progress-icon.diagnosis { background: #f39c12; }
+        .progress-icon.treatment { background: #3498db; }
+        .progress-icon.followup { background: #27ae60; }
+
+        .card {
+            margin-bottom: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+        }
+
+        .card:hover .card-header::before {
+            transform: rotate(45deg) translate(20%, 20%);
+        }
+
+        .card-header.assessment { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+        .card-header.diagnosis { background: linear-gradient(45deg, #f39c12, #d35400); }
+        .card-header.treatment { background: linear-gradient(45deg, #3498db, #2980b9); }
+        .card-header.followup { background: linear-gradient(45deg, #27ae60, #229954); }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            backdrop-filter: blur(10px);
+        }
+
+        .expand-icon {
+            font-size: 1.5em;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+            background: #fcfcfc;
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+            padding: 25px;
+        }
+
+        .card-content {
+            line-height: 1.6;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+
+        .section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .section li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .section li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: inherit;
+            font-weight: bold;
+            font-size: 1.5em;
+            line-height: 1;
+        }
+
+        .assessment .section li::before { color: #e74c3c; }
+        .diagnosis .section li::before { color: #f39c12; }
+        .treatment .section li::before { color: #3498db; }
+        .followup .section li::before { color: #27ae60; }
+
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        .badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge.red {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge.amber {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.green {
+            background: #27ae60;
+            color: white;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .info-box.warning {
+            background: #fff3cd;
+            border-left-color: #f39c12;
+        }
+
+        .info-box.danger {
+            background: #f8d7da;
+            border-left-color: #e74c3c;
+        }
+
+        .info-box.success {
+            background: #d4edda;
+            border-left-color: #27ae60;
+        }
+
+        .info-box i {
+            margin-top: 3px;
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #ffeaa7 0%, #fdcb6e 100%);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .phone-number {
+            font-family: monospace;
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #e74c3c;
+            background: #ffeaea;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+
+        .footer p {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 1024px) {
+            .progress-sidebar {
+                width: 250px;
+            }
+            .content-area {
+                padding-right: 270px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 20px;
+            }
+            .content-area {
+                padding: 20px;
+                padding-right: 20px;
+            }
+            .header h1 {
+                font-size: 1.8em;
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i class="fas fa-exclamation-triangle pulse"></i>
+                Carbon Monoxide Poisoning
+            </h1>
+            <p>NICE CKS Guidelines (June 2023) | Primary Care Management Algorithm</p>
+        </div>
+
+        <div class="main-content">
+            <div class="content-area">
+                <!-- Assessment Card -->
+                <div class="card fade-in assessment" data-step="assessment">
+                    <div class="card-header assessment">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-question-circle"></i>
+                            </div>
+                            <div>
+                                <div>Assessment</div>
+                                <small style="font-size: 0.6em; opacity: 0.8;">Identify & Evaluate Risk</small>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3><i class="fas fa-search"></i> When to Suspect CO Poisoning</h3>
+                                <p>Ask about <span class="highlight">C-O-M-A</span>:</p>
+                                <ul>
+                                    <li><strong>C - Co-occupants:</strong> Is anyone else affected? (including pets)</li>
+                                    <li><strong>O - Outdoors:</strong> Do symptoms improve when leaving the building?</li>
+                                    <li><strong>M - Maintenance:</strong> Are fuel-burning appliances properly maintained?</li>
+                                    <li><strong>A - Alarm:</strong> Is there a carbon monoxide alarm installed?</li>
+                                </ul>
+                                
+                                <div class="info-box warning">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <div>
+                                        <strong>Key Clues:</strong> Symptoms develop following exposure and improve slowly when exposure stops. Multiple people/pets with similar symptoms strongly suggests CO poisoning.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-users"></i> High-Risk Groups</h3>
+                                <div class="badge-container">
+                                    <span class="badge red"><i class="fas fa-exclamation-triangle"></i> Age >80 years</span>
+                                    <span class="badge red"><i class="fas fa-baby"></i> Pregnant women</span>
+                                    <span class="badge red"><i class="fas fa-child"></i> Children</span>
+                                    <span class="badge amber"><i class="fas fa-lungs"></i> Respiratory disease</span>
+                                    <span class="badge amber"><i class="fas fa-heart"></i> Cardiovascular disease</span>
+                                    <span class="badge amber"><i class="fas fa-tint"></i> Anaemia</span>
+                                    <span class="badge amber"><i class="fas fa-male"></i> Adult males</span>
+                                    <span class="badge amber"><i class="fas fa-pound-sign"></i> Socioeconomically deprived</span>
+                                </div>
+                                <div class="info-box danger">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div>
+                                        <strong>Important:</strong> Maternal CO levels may not reflect fetal levels. Fetal elimination half-life is 4-5x longer than mother's.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-fire"></i> Common Sources of CO</h3>
+                                <ul>
+                                    <li>Poorly installed, faulty, or unmaintained fuel-burning appliances</li>
+                                    <li>Blocked chimneys or flues</li>
+                                    <li>Inadequate ventilation</li>
+                                    <li>Using gas ovens for heating</li>
+                                    <li>Indoor BBQs (homes, caravans, tents)</li>
+                                    <li>Oversized pots on gas stoves</li>
+                                    <li>Shisha/hookah pipes in poorly ventilated rooms</li>
+                                    <li>Petrol/diesel engines in enclosed spaces</li>
+                                    <li>Paint removers containing methylene chloride</li>
+                                    <li>Neighboring properties with faulty appliances</li>
+                                </ul>
+                                <div class="info-box">
+                                    <i class="fas fa-eye"></i>
+                                    <div>
+                                        <strong>Visual Warning Signs:</strong> Yellow/orange flames (instead of blue), soot stains, frequently blown-out pilot lights, increased window condensation
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-head-side-cough"></i> Clinical Features</h3>
+                                <p><strong>Acute Low-Level Exposure:</strong></p>
+                                <ul>
+                                    <li>Headache (90% of cases)</li>
+                                    <li>Dizziness, vertigo</li>
+                                    <li>Nausea & vomiting</li>
+                                    <li>Muscle pain</li>
+                                    <li>Flushing</li>
+                                    <li>Personality changes</li>
+                                </ul>
+                                
+                                <p><strong>Acute High-Level Exposure:</strong></p>
+                                <ul>
+                                    <li>Confusion</li>
+                                    <li>Hypotension</li>
+                                    <li>Loss of consciousness & death</li>
+                                    <li>Movement problems</li>
+                                    <li>Myocardial infarction</li>
+                                    <li>Respiratory failure</li>
+                                    <li>Seizures, cerebral oedema, metabolic acidosis</li>
+                                </ul>
+
+                                <p><strong>Chronic Low-Level Exposure:</strong></p>
+                                <ul>
+                                    <li>Flu-like symptoms with tiredness</li>
+                                    <li>Lethargy, dizziness</li>
+                                    <li>Headache</li>
+                                    <li>Memory problems</li>
+                                    <li>Neuropsychological problems</li>
+                                    <li>Vision problems</li>
+                                    <li>Cardiovascular problems</li>
+                                </ul>
+
+                                <div class="badge-container">
+                                    <span class="badge red"><i class="fas fa-ambulance"></i> Severe: Seizures, coma, respiratory failure, MI</span>
+                                    <span class="badge amber"><i class="fas fa-exclamation"></i> Moderate: Confusion, hypotension, movement disorders</span>
+                                    <span class="badge green"><i class="fas fa-check"></i> Mild: Headache, nausea, dizziness</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card fade-in diagnosis" data-step="diagnosis" style="animation-delay: 0.1s">
+                    <div class="card-header diagnosis">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <div>
+                                <div>Diagnosis</div>
+                                <small style="font-size: 0.6em; opacity: 0.8;">Confirm & Quantify Exposure</small>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3><i class="fas fa-tint"></i> Carboxyhemoglobin (COHb) Interpretation</h3>
+                                <div class="info-box danger">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <strong>Timing is Critical:</strong> Measure exhaled CO levels immediately - levels decline rapidly once away from the source. Sample during or soon after exposure ends.
+                                    </div>
+                                </div>
+                                
+                                <p><strong>Normal Levels:</strong></p>
+                                <ul>
+                                    <li>Non-smokers: < 1-2%</li>
+                                    <li>Pregnant women: up to 5%</li>
+                                    <li>Smokers: up to 10%</li>
+                                    <li>Heavy smokers: up to 13%</li>
+                                </ul>
+
+                                <p><strong>Abnormal Levels:</strong></p>
+                                <ul>
+                                    <li>Toxic effects: 15-20%</li>
+                                    <li>Severe exposure: ≥30%</li>
+                                    <li><strong>Important:</strong> Levels <15% do not exclude significant poisoning</li>
+                                </ul>
+
+                                <div class="badge-container">
+                                    <span class="badge red"><i class="fas fa-skull-crossbones"></i> Critical: COHb ≥30%</span>
+                                    <span class="badge amber"><i class="fas fa-exclamation-triangle"></i> Moderate: COHb 15-30%</span>
+                                    <span class="badge green"><i class="fas fa-check-circle"></i> Mild: COHb <15%</span>
+                                </div>
+
+                                <div class="info-box">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div>
+                                        <strong>Note:</strong> Some conditions (e.g., haemolytic anaemia, sickle cell disease) cause physiologically high COHb due to endogenous CO production.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-flask"></i> Investigations</h3>
+                                <ul>
+                                    <li><strong>Breath test:</strong> Measure exhaled CO levels immediately if available</li>
+                                    <li><strong>Blood sample:</strong> Heparinised venous blood for COHb analysis</li>
+                                    <li><strong>Pulse oximetry:</strong> Standard pulse oximeters are unreliable with COHb</li>
+                                    <li><strong>CO-oximeter:</strong> Use if available to measure COHb accurately</li>
+                                    <li><strong>Neurological exam:</strong> For chronic exposure or neurological signs</li>
+                                </ul>
+                                <div class="info-box warning">
+                                    <i class="fas fa-question-circle"></i>
+                                    <div>
+                                        <strong>For interpretation help:</strong> Contact UK National Poisons Information Service (NPIS): <span class="phone-number">0344 892 0111</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-clipboard-list"></i> Differential Diagnosis</h3>
+                                <p>Many features are non-specific. Consider these alternatives:</p>
+                                <ul>
+                                    <li><strong>Viral infection</strong> - flu-like symptoms</li>
+                                    <li><strong>Migraine</strong> - headache with photophobia/phonophobia</li>
+                                    <li><strong>Tension headache</strong> - common non-specific symptom</li>
+                                    <li><strong>Depression</strong> - lethargy, mood changes</li>
+                                    <li><strong>Chronic fatigue syndrome</strong> - persistent tiredness</li>
+                                    <li><strong>Diabetic ketoacidosis</strong> - metabolic acidosis, hyperglycaemia</li>
+                                </ul>
+                                <div class="info-box danger">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Critical Point:</strong> Do not exclude CO poisoning based on non-specific symptoms alone, especially if exposure history is suggestive.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card fade-in treatment" data-step="treatment" style="animation-delay: 0.2s">
+                    <div class="card-header treatment">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-medkit"></i>
+                            </div>
+                            <div>
+                                <div>Treatment</div>
+                                <small style="font-size: 0.6em; opacity: 0.8;">Immediate Management</small>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3><i class="fas fa-wind"></i> Oxygen Therapy</h3>
+                                <div class="info-box success">
+                                    <i class="fas fa-check-circle"></i>
+                                    <div>
+                                        <strong>First-line:</strong> Give <strong>100% oxygen</strong> via tight-fitting mask with inflated seal
+                                    </div>
+                                </div>
+                                <ul>
+                                    <li>Continue until person is asymptomatic AND:</li>
+                                    <ul>
+                                        <li>COHb ≤2% in non-smokers</li>
+                                        <li>COHb ≤10% in smokers</li>
+                                    </ul>
+                                    <li>Typical duration: about 6 hours</li>
+                                    <li>Use nasal high flow cannula if available (up to 60 L/min)</li>
+                                </ul>
+                                <div class="info-box">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div>
+                                        <strong>Mechanism:</strong> Reduces COHb half-life from 4-6 hours (room air) to ~80 minutes (100% O₂)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-hospital"></i> Referral Criteria</h3>
+                                <div class="badge-container">
+                                    <span class="badge red"><i class="fas fa-ambulance"></i> URGENT ED Referral</span>
+                                </div>
+                                
+                                <p><strong>Immediate ED referral required for:</strong></p>
+                                <ul>
+                                    <li>Pregnant women (any exposure)</li>
+                                    <li>Children with suspected exposure</li>
+                                    <li>COHb >15%</li>
+                                    <li>Loss of consciousness</li>
+                                    <li>Seizures</li>
+                                    <li>Respiratory failure</li>
+                                    <li>Myocardial infarction</li>
+                                    <li>Arrhythmias</li>
+                                    <li>Severe metabolic acidosis</li>
+                                    <li>Impaired consciousness</li>
+                                    <li>Any high-risk group with significant symptoms</li>
+                                </ul>
+
+                                <div class="info-box warning">
+                                    <i class="fas fa-user-md"></i>
+                                    <div>
+                                        <strong>Clinical Judgment:</strong> Consider referral for other cases based on overall clinical picture.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-shield-alt"></i> Prevent Further Exposure</h3>
+                                <ul>
+                                    <li><strong>Immediate:</strong> Warn people not to use suspected appliances</li>
+                                    <li><strong>Ventilation:</strong> Ensure fresh air and proper ventilation</li>
+                                    <li><strong>Property:</strong> Check neighboring properties if in attached dwellings</li>
+                                    <li><strong>Investigation:</strong> Contact local Health Protection Team for coordination</li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-phone"></i> Specialist Contact Information</h3>
+                                <div class="info-box">
+                                    <i class="fas fa-headset"></i>
+                                    <div>
+                                        <strong>UK National Poisons Information Service (NPIS):</strong><br>
+                                        <span class="phone-number">0344 892 0111</span><br>
+                                        <small>For all poisoning queries and interpretation help</small>
+                                    </div>
+                                </div>
+                                <div class="info-box warning">
+                                    <i class="fas fa-baby"></i>
+                                    <div>
+                                        <strong>UK Teratology Information Service (UKTIS):</strong><br>
+                                        <span class="phone-number">0344 892 0909</span><br>
+                                        <small>For suspected poisoning in pregnancy</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-home"></i> Initial Primary Care Actions</h3>
+                                <div class="info-box">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <div>
+                                        <strong>If managing in primary care:</strong>
+                                        <ul style="margin-top: 10px;">
+                                            <li>Ensure 100% oxygen therapy</li>
+                                            <li>Obtain COHb measurement</li>
+                                            <li>Perform neurological examination if indicated</li>
+                                            <li>Advise to seek medical attention if symptoms develop</li>
+                                            <li>Arrange follow-up (see Follow-up section)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card fade-in followup" data-step="followup" style="animation-delay: 0.3s">
+                    <div class="card-header followup">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div>
+                                <div>Follow-up & Prevention</div>
+                                <small style="font-size: 0.6em; opacity: 0.8;">Long-term Management</small>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3><i class="fas fa-calendar-alt"></i> Follow-up Timeline</h3>
+                                <div class="info-box">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <strong>1-2 months post-treatment:</strong> Assess for delayed, persistent, additional, or intensified symptoms
+                                    </div>
+                                </div>
+                                <p><strong>Assess for complications:</strong></p>
+                                <ul>
+                                    <li>Apathy and inability to concentrate</li>
+                                    <li>Memory impairment</li>
+                                    <li>Personality changes, emotional lability, irritability</li>
+                                    <li>Dementia and parkinsonism</li>
+                                    <li>Disorientation</li>
+                                    <li>Lethargy, insomnia</li>
+                                    <li>Vision problems, cortical blindness</li>
+                                    <li>Neuropathy, chorea, apraxia</li>
+                                    <li>Mutism, incontinence</li>
+                                    <li>Psychosis, parosmia</li>
+                                </ul>
+                                <div class="info-box warning">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Delayed Onset:</strong> Neurological complications can appear up to <strong>40 days</strong> post-exposure and may persist in up to 50% of symptomatic acute exposures.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-shield-alt"></i> Prevention Advice</h3>
+                                <div class="info-box success">
+                                    <i class="fas fa-check-circle"></i>
+                                    <div>
+                                        <strong>DO:</strong>
+                                        <ul style="margin-top: 10px;">
+                                            <li>Fit audible CO alarm meeting EN 50291 with Kitemark/LPCB logo</li>
+                                            <li>Have chimneys swept at least annually (twice if burning coal/wood)</li>
+                                            <li>Use qualified chimney sweep</li>
+                                            <li>Have gas appliances installed/serviced by Gas Safe registered engineers</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="info-box danger">
+                                    <i class="fas fa-times-circle"></i>
+                                    <div>
+                                        <strong>DON'T:</strong>
+                                        <ul style="margin-top: 10px;">
+                                            <li>Use faulty gas appliances (yellow/orange flames, soot, pilot issues)</li>
+                                            <li>Sleep in room with flueless gas fire or paraffin heater</li>
+                                            <li>Burn charcoal indoors for cooking/heating</li>
+                                            <li>Use oversized pots on gas stove or foil around burners</li>
+                                            <li>Block ventilation grilles, air bricks, or outside flues</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="info-box">
+                                    <i class="fas fa-file-contract"></i>
+                                    <div>
+                                        <strong>Landlord Duty:</strong> Annual gas appliance checks and provide safety certificate to tenants.
+                                    </div>
+                                </div>
+
+                                <div class="badge-container">
+                                    <span class="badge green"><i class="fas fa-smoke-detector"></i> Install CO Alarm</span>
+                                    <span class="badge green"><i class="fas fa-tools"></i> Annual Servicing</span>
+                                    <span class="badge green"><i class="fas fa-wind"></i> Ensure Ventilation</span>
+                                    <span class="badge green"><i class="fas fa-user-shield"></i> Gas Safe Engineer</span>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-heart-broken"></i> Self-Harm Assessment</h3>
+                                <div class="info-box danger">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Critical Alert:</strong> Intentional self-harm accounts for ~40% of CO poisoning admissions. Carefully assess exposure scenario details.
+                                    </div>
+                                </div>
+                                
+                                <p><strong>Increased suicide risk in:</strong></p>
+                                <ul>
+                                    <li>Males</li>
+                                    <li>Repeated self-harm history or expressed suicidal intent</li>
+                                    <li>People with physical health problems</li>
+                                    <li>Concomitant alcohol or sedative use</li>
+                                </ul>
+
+                                <div class="badge-container">
+                                    <span class="badge red"><i class="fas fa-exclamation-triangle"></i> Assess Suicide Risk</span>
+                                    <span class="badge red"><i class="fas fa-user-nurse"></i> Mental Health Referral</span>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-chart-line"></i> Prognosis</h3>
+                                <ul>
+                                    <li><strong>Majority recover</strong> completely with appropriate treatment</li>
+                                    <li><strong>Risk factors for complications:</strong> Severe poisoning, prolonged exposure, unconsciousness during episode</li>
+                                    <li><strong>Neurological sequelae:</strong> May persist in up to 50% of symptomatic acute exposures</li>
+                                    <li><strong>Delayed onset:</strong> Up to 40 days post-exposure</li>
+                                    <li><strong>Mortality:</strong> ~40 deaths/year in England & Wales from accidental poisoning</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Sidebar -->
+            <div class="progress-sidebar">
+                <h3 style="margin-bottom: 20px; color: #2c3e50; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Progress
+                </h3>
+                <div class="progress-item" data-target="assessment">
+                    <div class="progress-icon assessment">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Assessment</div>
+                        <small style="color: #666;">Identify & Evaluate Risk</small>
+                    </div>
+                </div>
+                <div class="progress-item" data-target="diagnosis">
+                    <div class="progress-icon diagnosis">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Diagnosis</div>
+                        <small style="color: #666;">Confirm & Quantify Exposure</small>
+                    </div>
+                </div>
+                <div class="progress-item" data-target="treatment">
+                    <div class="progress-icon treatment">
+                        <i class="fas fa-medkit"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Treatment</div>
+                        <small style="color: #666;">Immediate Management</small>
+                    </div>
+                </div>
+                <div class="progress-item" data-target="followup">
+                    <div class="progress-icon followup">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600;">Follow-up</div>
+                        <small style="color: #666;">Long-term Management</small>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">
+                        <i class="fas fa-phone-alt"></i> Emergency Contacts
+                    </h4>
+                    <div style="font-size: 0.9em; line-height: 1.6;">
+                        <p style="margin-bottom: 10px;">
+                            <strong>NPIS:</strong><br>
+                            <span class="phone-number" style="font-size: 1em;">0344 892 0111</span>
+                        </p>
+                        <p style="margin-bottom: 10px;">
+                            <strong>UKTIS:</strong><br>
+                            <span class="phone-number" style="font-size: 1em;">0344 892 0909</span>
+                        </p>
+                        <p style="margin-bottom: 0;">
+                            <strong>ED:</strong> For any severe symptoms
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>
+                <i class="fas fa-info-circle"></i>
+                Based on NICE Clinical Knowledge Summaries (June 2023) | For primary care management of suspected carbon monoxide poisoning
+            </p>
+            <p style="margin-top: 5px; font-size: 0.85em;">
+                <i class="fas fa-exclamation-triangle"></i>
+                Emergency management is out of scope - see TOXBASE for emergency treatment guidance
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Card Expansion Logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            // Initialize - expand first card
+            cards[0].classList.add('expanded');
+            progressItems[0].classList.add('active');
+            
+            // Card click handlers
+            cards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                header.addEventListener('click', () => {
+                    const isExpanded = card.classList.contains('expanded');
+                    
+                    // Close all cards
+                    cards.forEach(c => c.classList.remove('expanded'));
+                    
+                    // Toggle clicked card
+                    if (!isExpanded) {
+                        card.classList.add('expanded');
+                        updateProgress(card.dataset.step);
+                        
+                        // Smooth scroll to card
+                        setTimeout(() => {
+                            card.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'center' 
+                            });
+                        }, 100);
+                    }
+                });
+            });
+            
+            // Progress sidebar click handlers
+            progressItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetStep = item.dataset.target;
+                    const targetCard = document.querySelector(`.card[data-step="${targetStep}"]`);
+                    
+                    if (targetCard) {
+                        // Close all cards
+                        cards.forEach(c => c.classList.remove('expanded'));
+                        // Open target card
+                        targetCard.classList.add('expanded');
+                        updateProgress(targetStep);
+                        
+                        // Smooth scroll
+                        setTimeout(() => {
+                            targetCard.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'center' 
+                            });
+                        }, 100);
+                    }
+                });
+            });
+            
+            // Update progress sidebar
+            function updateProgress(activeStep) {
+                const steps = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                const activeIndex = steps.indexOf(activeStep);
+                
+                progressItems.forEach((item, index) => {
+                    item.classList.remove('active', 'completed');
+                    if (index === activeIndex) {
+                        item.classList.add('active');
+                    } else if (index < activeIndex) {
+                        item.classList.add('completed');
+                    }
+                });
+            }
+            
+            // Intersection Observer for auto-progress update
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const step = entry.target.dataset.step;
+                            updateProgress(step);
+                        }
+                    });
+                },
+                { threshold: 0.5 }
+            );
+            
+            cards.forEach(card => observer.observe(card));
+            
+            // Add fade-in animation on scroll
+            const observerFade = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.style.opacity = '1';
+                            entry.target.style.transform = 'translateY(0)';
+                        }
+                    });
+                },
+                { threshold: 0.1 }
+            );
+            
+            document.querySelectorAll('.fade-in').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observerFade.observe(el);
+            });
+            
+            // Badge click effect
+            document.querySelectorAll('.badge').forEach(badge => {
+                badge.addEventListener('click', function() {
+                    this.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 200);
+                });
+            });
+            
+            // Pulse animation for critical alerts
+            setInterval(() => {
+                document.querySelectorAll('.pulse').forEach(el => {
+                    el.style.animation = 'none';
+                    setTimeout(() => el.style.animation = 'pulse 2s infinite', 10);
+                });
+            }, 5000);
+        });
+        
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const cards = document.querySelectorAll('.card');
+            const expandedCard = document.querySelector('.card.expanded');
+            const currentIndex = Array.from(cards).indexOf(expandedCard);
+            
+            if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                e.preventDefault();
+                cards[currentIndex].classList.remove('expanded');
+                cards[currentIndex + 1].classList.add('expanded');
+                cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateProgress(cards[currentIndex + 1].dataset.step);
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                e.preventDefault();
+                cards[currentIndex].classList.remove('expanded');
+                cards[currentIndex - 1].classList.add('expanded');
+                cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updateProgress(cards[currentIndex - 1].dataset.step);
+            }
+        });
+    </script>
+</body>
+</html>

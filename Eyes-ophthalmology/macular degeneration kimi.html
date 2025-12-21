@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMD Management Algorithm | Clinical Decision Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+            color: white;
+            padding: 2rem 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            display: flex;
+            gap: 2rem;
+            position: relative;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            width: 280px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 1.5rem;
+            height: fit-content;
+            border: 1px solid #e9ecef;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            background: #f8f9fa;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+        }
+
+        .progress-item.completed {
+            opacity: 1;
+            background: #e8f5e9;
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .progress-text {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid #e9ecef;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            padding: 1.75rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.05);
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+            opacity: 0.8;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+            padding: 0 1.75rem 1.75rem;
+        }
+
+        .card-section {
+            margin-bottom: 1.75rem;
+        }
+
+        .card-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #f1f3f5;
+        }
+
+        .section-content {
+            font-size: 0.95rem;
+            color: #495057;
+        }
+
+        .section-content p {
+            margin-bottom: 1rem;
+        }
+
+        .section-content ul, .section-content ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            color: #c62828;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            color: #e65100;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            color: #2e7d32;
+        }
+
+        .badge-icon {
+            font-size: 1rem;
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .risk-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .risk-item strong {
+            color: #2c3e50;
+        }
+
+        .referral-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .referral-card {
+            background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            transition: transform 0.2s ease;
+        }
+
+        .referral-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .referral-card h4 {
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .treatment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .treatment-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .treatment-card:hover {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            transform: translateY(-2px);
+        }
+
+        .treatment-card h4 {
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border: 1px solid #ef9a9a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 1px solid #a5d6a7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .code-box {
+            background: #2c3e50;
+            color: #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .code-box strong {
+            color: #81c784;
+        }
+
+        .code-box em {
+            color: #ffeb3b;
+            font-style: normal;
+        }
+
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                position: static;
+                margin-bottom: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                padding: 1.25rem;
+            }
+
+            .card.expanded .card-content {
+                padding: 0 1.25rem 1.25rem;
+            }
+
+            .referral-grid,
+            .treatment-grid,
+            .risk-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>🩺 Age-Related Macular Degeneration</h1>
+            <p>Interactive Clinical Decision Support Tool | NICE CKS Guidelines (October 2025)</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="progress-sidebar">
+            <h3>
+                <span>📍</span>
+                Algorithm Progress
+            </h3>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon" style="background: #3498db;">1</div>
+                <div class="progress-text">Assessment</div>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon" style="background: #e74c3c;">2</div>
+                <div class="progress-text">Diagnosis</div>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon" style="background: #2ecc71;">3</div>
+                <div class="progress-text">Treatment</div>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon" style="background: #f39c12;">4</div>
+                <div class="progress-text">Follow-up</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- ASSESSMENT CARD -->
+            <div class="card fade-in" id="assessment-card">
+                <div class="card-header" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                    <div class="card-header-content">
+                        <div class="card-icon">👁️</div>
+                        <div>
+                            <div class="card-title">Assessment</div>
+                            <div class="card-subtitle">Initial Evaluation & Risk Stratification</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>📝</span> When to Suspect AMD
+                        </div>
+                        <div class="section-content">
+                            <p><strong>Typical presentation in people aged ≥50 years:</strong></p>
+                            <ul>
+                                <li>Blurring or distortion of vision (metamorphopsia)</li>
+                                <li>Scotoma (black/grey patch in central vision)</li>
+                                <li>Difficulty reading or seeing fine detail</li>
+                                <li>Objects appearing different in size/color between eyes</li>
+                                <li>Photopsia (flickering/flashing lights)</li>
+                                <li>Rapid visual deterioration (suggests neovascular AMD)</li>
+                                <li>Gradual visual loss (suggests geographic atrophy)</li>
+                                <li>Visual hallucinations (Charles Bonnet syndrome) may occur</li>
+                            </ul>
+                            
+                            <div class="warning-box">
+                                <strong>⚠️ Key Point:</strong> Patients may be asymptomatic with retinal signs detected incidentally during routine eye tests.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>⚠️</span> Red Flag Symptoms
+                        </div>
+                        <div class="section-content">
+                            <div class="badge badge-red pulse">
+                                <span class="badge-icon">🚨</span>
+                                URGENT: Sudden vision changes or distortion - consider neovascular AMD
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>👤</span> Risk Factors
+                        </div>
+                        <div class="section-content">
+                            <div class="risk-grid">
+                                <div class="risk-item">
+                                    <strong>🔺 Non-modifiable:</strong>
+                                    <ul>
+                                        <li>Increasing age (especially >75 years)</li>
+                                        <li>Female sex</li>
+                                        <li>Family history (71% heritability)</li>
+                                        <li>Northern European ancestry</li>
+                                    </ul>
+                                </div>
+                                <div class="risk-item">
+                                    <strong>🔧 Modifiable:</strong>
+                                    <ul>
+                                        <li>SMOKING (strongest modifiable risk)</li>
+                                        <li>Hypertension</li>
+                                        <li>Cardiovascular disease</li>
+                                        <li>Obesity (BMI ≥30 kg/m²)</li>
+                                        <li>Poor diet (low omega-3, vitamins, high saturated fat)</li>
+                                        <li>Physical inactivity</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="highlight-box">
+                                <strong>💡 Smoking Cessation:</strong> Stopping smoking reduces AMD progression risk. After 20 years smoke-free, risk equals non-smokers.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🔍</span> Examination Findings
+                        </div>
+                        <div class="section-content">
+                            <p><strong>Visual acuity:</strong> May be reduced, but can be normal in early stages</p>
+                            <p><strong>Fundoscopy findings:</strong></p>
+                            <ul>
+                                <li><strong>Drusen:</strong> Pale yellow spots on retina (early stage)</li>
+                                <li><strong>Pigmentary changes:</strong> Hypo/hyperpigmentation</li>
+                                <li><strong>Geographic atrophy:</strong> Sharply demarcated depigmented areas</li>
+                                <li><strong>Exudative/hemorrhagic changes:</strong> Suggest neovascular AMD</li>
+                            </ul>
+                            <div class="info-box">
+                                <strong>📌 Note:</strong> Signs may be difficult to detect in primary care depending on expertise. When in doubt, refer for specialist assessment.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>📊</span> Classification
+                        </div>
+                        <div class="section-content">
+                            <p><strong>NICE Classification System:</strong></p>
+                            <ul>
+                                <li><strong>No AMD:</strong> No signs or small drusen (<63μm)</li>
+                                <li><strong>Early AMD:</strong> Medium drusen (63-124μm) or pigmentary abnormalities</li>
+                                <li><strong>Intermediate AMD:</strong> Large drusen (≥125μm) or reticular drusen with pigmentary changes</li>
+                                <li><strong>Late AMD:</strong>
+                                    <ul>
+                                        <li>Wet active: Choroidal neovascularization (CNV)</li>
+                                        <li>Dry: Geographic atrophy</li>
+                                        <li>Intermediate: RPE dysfunction without neovascularization</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DIAGNOSIS CARD -->
+            <div class="card fade-in" id="diagnosis-card">
+                <div class="card-header" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                    <div class="card-header-content">
+                        <div class="card-icon">🔬</div>
+                        <div>
+                            <div class="card-title">Diagnosis</div>
+                            <div class="card-subtitle">Confirmation & Differential Diagnosis</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🏥</span> Primary Care Actions
+                        </div>
+                        <div class="section-content">
+                            <div class="badge badge-red">
+                                <span class="badge-icon">⏱️</span>
+                                URGENT REFERRAL: Within 1 working day if neovascular AMD suspected
+                            </div>
+                            
+                            <div class="referral-grid">
+                                <div class="referral-card">
+                                    <h4><span>🚨</span> Emergency Pathway</h4>
+                                    <p><strong>Indication:</strong> Suspected neovascular AMD</p>
+                                    <p><strong>Timeline:</strong> Within <strong>1 working day</strong></p>
+                                    <p><strong>Destination:</strong> Specialist AMD service, fast-track macular clinic, or hospital eye emergency department</p>
+                                </div>
+                                <div class="referral-card">
+                                    <h4><span>📅</span> Routine Pathway</h4>
+                                    <p><strong>Indication:</strong> Other suspected AMD</p>
+                                    <p><strong>Timeline:</strong> Within <strong>1 week</strong> to optometrist</p>
+                                    <p><strong>Action:</strong> Direct referral to ophthalmologist if neovascular AMD identified</p>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <strong>⚠️ Patient Advice:</strong> If delay >1 week or symptoms worsen while waiting, advise immediate attendance at Eye Casualty or seek urgent medical attention.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🔬</span> Secondary Care Investigations
+                        </div>
+                        <div class="section-content">
+                            <ul>
+                                <li><strong>Slit-lamp biomicroscopy:</strong> Identify drusen, pigmentary/exudative/hemorrhagic/atrophic changes</li>
+                                <li><strong>Optical Coherence Tomography (OCT):</strong> <span class="badge badge-red">MANDATORY</span> for diagnosis and monitoring</li>
+                                <li><strong>Colour fundus photography:</strong> Document retinal appearance</li>
+                                <li><strong>Fundus autofluorescence:</strong> Visualize geographic atrophy progression</li>
+                                <li><strong>Fluorescein angiography:</strong> Confirm neovascular AMD, assess lesion type/extent</li>
+                                <li><strong>Indocyanine green angiography:</strong> Visualize choroidal circulation</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>❓</span> Differential Diagnosis
+                        </div>
+                        <div class="section-content">
+                            <p><strong>Conditions causing painless visual disturbance:</strong></p>
+                            <ul>
+                                <li>Refractive error</li>
+                                <li>Corneal disease (e.g., Fuch's dystrophy)</li>
+                                <li>Cataract</li>
+                                <li>Primary open-angle glaucoma</li>
+                                <li>Posterior vitreous detachment/vitreous hemorrhage/retinal detachment</li>
+                                <li>Cerebrovascular disease (amaurosis fugax, stroke/TIA)</li>
+                                <li>Retinal arterial/venous occlusion</li>
+                                <li>Medication toxicity (e.g., hydroxychloroquine, ethambutol)</li>
+                                <li>Pituitary tumor/papilledema</li>
+                            </ul>
+                            
+                            <p><strong>Conditions with similar retinal signs:</strong></p>
+                            <ul>
+                                <li>Diabetic maculopathy</li>
+                                <li>High myopia with CNV (younger age, different natural history)</li>
+                                <li>Inflammatory syndromes causing CNV (with uveitis signs)</li>
+                                <li>Central serous retinopathy</li>
+                                <li>Macular telangiectasia</li>
+                                <li>Pattern dystrophy</li>
+                                <li>Macular hole</li>
+                            </ul>
+                            
+                            <div class="info-box">
+                                <strong>💡 Tip:</strong> Consider hereditary macular dystrophies in patients <50 years with AMD-like features.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>📋</span> Diagnostic Criteria
+                        </div>
+                        <div class="section-content">
+                            <p><strong>AMD is characterized by:</strong></p>
+                            <ul>
+                                <li>Drusen (≥63μm diameter) - intermediate or large</li>
+                                <li>RPE abnormalities (hypo/hyperpigmentation)</li>
+                                <li>Geographic atrophy (RPE breakdown)</li>
+                                <li>Choroidal neovascularization (CNV)</li>
+                                <li>Polypoidal choroidal vasculopathy (PCV)</li>
+                                <li>Reticular pseudodrusen</li>
+                                <li>Retinal angiomatous proliferation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TREATMENT CARD -->
+            <div class="card fade-in" id="treatment-card">
+                <div class="card-header" style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);">
+                    <div class="card-header-content">
+                        <div class="card-icon">💊</div>
+                        <div>
+                            <div class="card-title">Treatment</div>
+                            <div class="card-subtitle">Management & Secondary Care Treatments</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🏠</span> Primary Care Management
+                        </div>
+                        <div class="section-content">
+                            <p><strong>For Suspected AMD:</strong></p>
+                            <ul>
+                                <li>Urgent referral if neovascular AMD suspected (within 1 working day)</li>
+                                <li>Arrange optometrist review within 1 week for other cases</li>
+                                <li>Provide advice on symptoms requiring immediate attention</li>
+                            </ul>
+                            
+                            <p><strong>For Confirmed AMD:</strong></p>
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>🚭</span> Lifestyle Interventions</h4>
+                                    <ul>
+                                        <li>Smoking cessation (strongly advised)</li>
+                                        <li>Healthy balanced diet:
+                                            <ul>
+                                                <li>Low glycaemic index</li>
+                                                <li>Rich in fruits & green leafy vegetables</li>
+                                                <li>High in omega-3 fatty acids (fish)</li>
+                                                <li>Low saturated fat & cholesterol</li>
+                                            </ul>
+                                        </li>
+                                        <li>Control hypertension & cardiovascular risk</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>💊</span> Nutritional Supplements</h4>
+                                    <p><strong>AREDS2 formulation for:</strong></p>
+                                    <ul>
+                                        <li>Intermediate AMD in one/both eyes</li>
+                                        <li>Advanced AMD in one eye</li>
+                                    </ul>
+                                    <div class="code-box">
+                                        <strong>AREDS2 Composition:</strong><br>
+                                        • Vitamin C 500 mg<br>
+                                        • Vitamin E 400 IU<br>
+                                        • Lutein 10 mg<br>
+                                        • Zeaxanthin 2 mg<br>
+                                        • Zinc 25 mg<br>
+                                        • Copper 2 mg (cupric oxide)
+                                    </div>
+                                    <div class="badge badge-amber">
+                                        <span class="badge-icon">⚠️</span>
+                                        Not for primary prevention or early AMD
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="warning-box">
+                                <strong>⚠️ Supplement Risks:</strong>
+                                <ul>
+                                    <li>Zinc: Small increased risk of genito-urinary hospitalization</li>
+                                    <li>Vitamin E: Possible increased heart failure risk in diabetes/vascular disease</li>
+                                    <li>Beta-carotene: Increased lung cancer risk in smokers (NOT recommended)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🏥</span> Secondary Care Treatments
+                        </div>
+                        <div class="section-content">
+                            <h4 style="margin-bottom: 1rem; color: #2c3e50;">1. Anti-VEGF Therapy (First-line)</h4>
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>💉</span> Anti-VEGF Agents</h4>
+                                    <ul>
+                                        <li>Ranibizumab (Lucentis®)</li>
+                                        <li>Ranibizumab biosimilars (Byooviz®, Ongavia®, Rimmyrah®, Ximluci®)</li>
+                                        <li>Bevacizumab (Avastin® - off-label)</li>
+                                        <li>Aflibercept (Eylea®)</li>
+                                        <li>Faricimab (Vabysmo®)</li>
+                                        <li>Brolucizumab (Beovu®)</li>
+                                        <li><strong>New:</strong> Aflibercept (Mynzepli®) 40 mg/mL</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>📅</span> Treatment Regimen</h4>
+                                    <ul>
+                                        <li>Intravitreal injection</li>
+                                        <li>Loading phase: Regular injections</li>
+                                        <li>Maintenance: Variable intervals based on response</li>
+                                        <li>Duration: May continue for ≥2 years</li>
+                                        <li>Monitoring: Mandatory OCT assessment</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h4 style="margin: 1.5rem 0 1rem; color: #2c3e50;">2. Older Treatments (Second-line/Specific Cases)</h4>
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>⚡</span> Laser Photocoagulation</h4>
+                                    <p>Destroys new blood vessels. Creates permanent scotoma. Only for lesions not close to foveal center.</p>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>🌟</span> Photodynamic Therapy (PDT)</h4>
+                                    <p>Verteporfin injection + laser treatment. Second-line in combination with anti-VEGF for wet active AMD.</p>
+                                </div>
+                            </div>
+
+                            <h4 style="margin: 1.5rem 0 1rem; color: #2c3e50;">3. Geographic Atrophy Treatment</h4>
+                            <div class="warning-box">
+                                <strong>⚠️ Limited Treatment Options:</strong> Mainly counseling, smoking cessation, visual rehabilitation, and nutritional supplements (as above).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🚗</span> Driving Advice
+                        </div>
+                        <div class="section-content">
+                            <ul>
+                                <li><strong>One eye affected:</strong> No need to inform DVLA if visual standards for driving met</li>
+                                <li><strong>Both eyes affected:</strong> Must inform DVLA</li>
+                                <li><strong>Patient responsibility:</strong> To ensure eyesight meets legal standards</li>
+                            </ul>
+                            <div class="info-box">
+                                <strong>💡 DVLA Guidance:</strong> Refer to "Assessing fitness to drive - a guide for medical professionals" if uncertain.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🤝</span> Support & Rehabilitation
+                        </div>
+                        <div class="section-content">
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>📜</span> Certification</h4>
+                                    <p>Offer certificate of visual impairment as soon as eligible, even during active treatment. Explain benefits and entitlements.</p>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>🔍</span> Low Vision Services</h4>
+                                    <p>Refer for optical aids (magnifiers), lighting advice, electronic aids, and non-optical aids. No registration required.</p>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>👥</span> Rehabilitation</h4>
+                                    <p>Group-based programs to promote independent living. Eccentric viewing training for bilateral central vision loss.</p>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>🧠</span> Psychological Support</h4>
+                                    <p>Screen for depression (up to 44% in advanced AMD). Optimize management of comorbidities.</p>
+                                </div>
+                            </div>
+
+                            <div class="highlight-box">
+                                <strong>📞 Key Resources:</strong>
+                                <ul style="margin-top: 0.5rem;">
+                                    <li><strong>Macular Society:</strong> www.macularsociety.org (support & information)</li>
+                                    <li><strong>RNIB:</strong> www.rnib.org.uk (information, support, local groups)</li>
+                                    <li><strong>Citizens Advice:</strong> Benefits advice</li>
+                                    <li><strong>NHS England Decision Support Tool</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOLLOW-UP CARD -->
+            <div class="card fade-in" id="followup-card">
+                <div class="card-header" style="background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);">
+                    <div class="card-header-content">
+                        <div class="card-icon">📈</div>
+                        <div>
+                            <div class="card-title">Follow-up</div>
+                            <div class="card-subtitle">Monitoring & Self-Management</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>👁️</span> Self-Monitoring
+                        </div>
+                        <div class="section-content">
+                            <p><strong>Discuss self-monitoring strategies with all AMD patients:</strong></p>
+                            
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>📐</span> Amsler Grid</h4>
+                                    <ul>
+                                        <li>Graph paper with central fixation dot</li>
+                                        <li>View central spot, evaluate for grid distortion</li>
+                                        <li>Simple, cost-effective home monitoring tool</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>📱</span> Electronic Monitoring</h4>
+                                    <p>Digital apps and devices for home monitoring of visual changes</p>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <strong>🚨 Report Immediately If:</strong>
+                                <ul>
+                                    <li>New blurred or grey patch in vision</li>
+                                    <li>Straight lines appear distorted (metamorphopsia)</li>
+                                    <li>Objects appear smaller than normal</li>
+                                    <li>Any sudden change in vision</li>
+                                </ul>
+                            </div>
+
+                            <p><strong>For patients lacking confidence:</strong></p>
+                            <ul>
+                                <li>Encourage and support self-monitoring efforts</li>
+                                <li>Discuss monitoring techniques with family/carers</li>
+                                <li>Provide clear written instructions</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>⏰</span> When to Seek Help
+                        </div>
+                        <div class="section-content">
+                            <div class="badge badge-red pulse" style="margin-bottom: 1rem;">
+                                <span class="badge-icon">🚨</span>
+                                IMMEDIATE: Present to Eye Casualty or urgent specialist clinic
+                            </div>
+                            <ul>
+                                <li>Sudden change in vision in either eye</li>
+                                <li>Development of symptoms in the second eye</li>
+                                <li>Rapid deterioration while on treatment</li>
+                                <li>New distortion or scotoma</li>
+                            </ul>
+                            
+                            <div class="badge badge-green">
+                                <span class="badge-icon">📅</span>
+                                ROUTINE: Continue regular sight tests with community optometrist
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>📈</span> Prognosis & Monitoring
+                        </div>
+                        <div class="section-content">
+                            <h4 style="margin-bottom: 1rem; color: #2c3e50;">Disease Progression Rates:</h4>
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>📊</span> Early AMD → Advanced AMD</h4>
+                                    <ul>
+                                        <li>5-year risk: <strong>1.3%</strong></li>
+                                        <li>10-year progression to large drusen: ~15%</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>📊</span> Intermediate AMD → Advanced AMD</h4>
+                                    <ul>
+                                        <li>5-year risk: <strong>~18%</strong></li>
+                                        <li>With large drusen: 6.3% at 5 years</li>
+                                        <li>Bilateral large drusen: 26% at 5 years</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>👁️</span> Second Eye Involvement</h4>
+                                    <ul>
+                                        <li>5-year risk: 22-50%</li>
+                                        <li>Neovascular AMD: 12% at 1 year, 27% at 4 years</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>📈</span> Geographic Atrophy Progression</h4>
+                                    <ul>
+                                        <li>2 years: 31% lose 3 lines of vision</li>
+                                        <li>4 years: 53% lose 3 lines of vision</li>
+                                        <li>Doubling of visual angle in up to 50% over 2 years</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h4 style="margin: 1.5rem 0 1rem; color: #2c3e50;">Treated Neovascular AMD:</h4>
+                            <div class="info-box">
+                                <strong>7-year follow-up data:</strong>
+                                <ul>
+                                    <li>43% maintained or improved visual acuity</li>
+                                    <li>34% lost ≥3 lines on visual acuity chart</li>
+                                    <li>Factors affecting outcome: VA and lesion size at diagnosis, number of injections received</li>
+                                </ul>
+                            </div>
+
+                            <div class="warning-box">
+                                <strong>⚠️ Untreated Neovascular AMD:</strong>
+                                <ul>
+                                    <li>3 months: 1 line lost</li>
+                                    <li>12 months: ~3 lines lost</li>
+                                    <li>24 months: ~4 lines lost</li>
+                                    <li>Rapid progression to moderate/severe visual loss within weeks/months</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🔄</span> Complications to Monitor
+                        </div>
+                        <div class="section-content">
+                            <div class="treatment-grid">
+                                <div class="treatment-card">
+                                    <h4><span>👁️</span> AMD Complications</h4>
+                                    <ul>
+                                        <li>Visual impairment/blindness</li>
+                                        <li>Depression (up to 44% in advanced AMD)</li>
+                                        <li>Charles Bonnet syndrome (visual hallucinations)</li>
+                                        <li>Falls and fractures</li>
+                                        <li>Reduced quality of life</li>
+                                        <li>Limitations in daily activities</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-card">
+                                    <h4><span>💉</span> Treatment Complications</h4>
+                                    <ul>
+                                        <li>Endophthalmitis (post-injection)</li>
+                                        <li>Traumatic lens injury</li>
+                                        <li>Retinal detachment</li>
+                                        <li>Photosensitivity (post-PDT)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>🎯</span> NICE Quality Standards
+                        </div>
+                        <div class="section-content">
+                            <div class="highlight-box">
+                                <strong>QS180: Serious Eye Disorders</strong>
+                                <ul style="margin-top: 0.5rem;">
+                                    <li>Adults with wet active AMD start treatment within <strong>14 days</strong> of referral to macular service</li>
+                                    <li>Adults with wet active AMD have <strong>both eyes monitored</strong></li>
+                                    <li>Adults with serious eye disorders receive certificate of vision impairment when eligible</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-section">
+                        <div class="section-title">
+                            <span>📚</span> Patient Education Checklist
+                        </div>
+                        <div class="section-content">
+                            <ul>
+                                <li>✅ Explanation of AMD type and prognosis</li>
+                                <li>✅ Information on secondary care investigations</li>
+                                <li>✅ Treatment options, benefits, and risks</li>
+                                <li>✅ Lifestyle advice (smoking cessation, diet)</li>
+                                <li>✅ Driving regulations and DVLA requirements</li>
+                                <li>✅ Self-monitoring techniques (Amsler grid)</li>
+                                <li>✅ When and how to seek urgent help</li>
+                                <li>✅ Low vision services and rehabilitation options</li>
+                                <li>✅ Psychological support resources</li>
+                                <li>✅ Benefits and entitlements information</li>
+                                <li>✅ Support group contacts (Macular Society, RNIB)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Based on NICE Clinical Knowledge Summaries: Age-related macular degeneration (October 2025)</p>
+        <p>For healthcare professionals in NHS primary care setting | Not a substitute for clinical judgment</p>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.parentElement;
+                const isExpanded = card.classList.contains('expanded');
+                
+                // Close all cards
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('expanded');
+                    c.querySelector('.expand-icon').style.transform = 'rotate(0deg)';
+                });
+                
+                // Open clicked card if it wasn't already expanded
+                if (!isExpanded) {
+                    card.classList.add('expanded');
+                    header.querySelector('.expand-icon').style.transform = 'rotate(180deg)';
+                    
+                    // Scroll to card
+                    setTimeout(() => {
+                        card.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start',
+                            inline: 'nearest'
+                        });
+                    }, 100);
+                }
+                
+                updateProgress();
+            });
+            
+            // Initialize first card as expanded
+            if (header.parentElement.id === 'assessment-card') {
+                header.click();
+            }
+        });
+
+        // Progress sidebar functionality
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                const isExpanded = card.classList.contains('expanded');
+                const isCompleted = isCardCompleted(card);
+                
+                progressItems[index].classList.remove('active', 'completed');
+                
+                if (isExpanded) {
+                    progressItems[index].classList.add('active');
+                } else if (isCompleted) {
+                    progressItems[index].classList.add('completed');
+                }
+            });
+        }
+
+        function isCardCompleted(card) {
+            // Simple check: if card has been expanded before, mark as completed
+            return card.dataset.visited === 'true';
+        }
+
+        // Mark cards as visited when expanded
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.parentElement;
+                card.dataset.visited = 'true';
+                updateProgress();
+            });
+        });
+
+        // Progress item click navigation
+        document.querySelectorAll('.progress-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                const targetCard = document.querySelectorAll('.card')[index];
+                const header = targetCard.querySelector('.card-header');
+                
+                // Close all cards
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('expanded');
+                    c.querySelector('.expand-icon').style.transform = 'rotate(0deg)';
+                });
+                
+                // Open target card
+                targetCard.classList.add('expanded');
+                targetCard.querySelector('.expand-icon').style.transform = 'rotate(180deg)';
+                targetCard.dataset.visited = 'true';
+                
+                // Scroll to card
+                setTimeout(() => {
+                    targetCard.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start',
+                        inline: 'nearest'
+                    });
+                }, 100);
+                
+                updateProgress();
+            });
+        });
+
+        // Smooth scroll for internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Add animation to cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Badge interaction effects
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+                this.style.transition = 'transform 0.2s ease';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Add print button (optional - can be triggered via browser)
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                printAlgorithm();
+            }
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateProgress();
+            
+            // Add keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                const cards = document.querySelectorAll('.card');
+                const activeCard = document.querySelector('.card.expanded');
+                const currentIndex = Array.from(cards).indexOf(activeCard);
+                
+                if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                    e.preventDefault();
+                    document.querySelectorAll('.progress-item')[currentIndex + 1].click();
+                } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                    e.preventDefault();
+                    document.querySelectorAll('.progress-item')[currentIndex - 1].click();
+                }
+            });
+        });
+
+        // Responsive behavior for mobile
+        function handleResize() {
+            const sidebar = document.querySelector('.progress-sidebar');
+            const container = document.querySelector('.container');
+            
+            if (window.innerWidth <= 768) {
+                sidebar.style.position = 'static';
+                container.style.flexDirection = 'column';
+            } else {
+                sidebar.style.position = 'sticky';
+                container.style.flexDirection = 'row';
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Call on load
+
+        // Accessibility improvements
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.setAttribute('tabindex', '0');
+            header.setAttribute('role', 'button');
+            header.setAttribute('aria-expanded', 'false');
+            
+            header.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    header.click();
+                }
+            });
+            
+            header.addEventListener('click', () => {
+                const expanded = header.parentElement.classList.contains('expanded');
+                header.setAttribute('aria-expanded', expanded);
+            });
+        });
+
+        // Add focus styles for keyboard navigation
+        const style = document.createElement('style');
+        style.textContent = `
+            .card-header:focus {
+                outline: 3px solid #3498db;
+                outline-offset: 2px;
+            }
+            .progress-item:focus {
+                outline: 3px solid #3498db;
+                outline-offset: 2px;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
