@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wilson's Disease - Interactive Clinical Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --assessment: #3b82f6;
+            --diagnosis: #10b981;
+            --treatment: #f59e0b;
+            --followup: #8b5cf6;
+            --urgent: #ef4444;
+            --caution: #f59e0b;
+            --stable: #10b981;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: linear-gradient(180deg, var(--primary), #1e40af);
+            padding: 2rem 1.5rem;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-header h1 {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header .icon {
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .progress-step:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .progress-step.active {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+
+        .progress-step.completed {
+            background: rgba(16, 185, 129, 0.3);
+            color: white;
+        }
+
+        .progress-step .step-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .progress-step.active .step-icon {
+            background: white;
+            color: var(--primary);
+        }
+
+        .progress-step .step-content h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .progress-step .step-content p {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-light);
+            font-size: 1.125rem;
+        }
+
+        .cards-container {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-5px);
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-header.assessment { background: linear-gradient(135deg, var(--assessment), #2563eb); }
+        .card-header.diagnosis { background: linear-gradient(135deg, var(--diagnosis), #059669); }
+        .card-header.treatment { background: linear-gradient(135deg, var(--treatment), #d97706); }
+        .card-header.followup { background: linear-gradient(135deg, var(--followup), #7c3aed); }
+
+        .card-header .icon {
+            font-size: 2.5rem;
+            opacity: 0.9;
+        }
+
+        .card-header .title {
+            flex: 1;
+        }
+
+        .card-header .title h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-header .title p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 0.5rem;
+        }
+
+        .badge-urgent { background: var(--urgent); color: white; }
+        .badge-caution { background: var(--caution); color: white; }
+        .badge-stable { background: var(--stable); color: white; }
+
+        .subsection {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--border);
+        }
+
+        .subsection.assessment { border-left-color: var(--assessment); }
+        .subsection.diagnosis { border-left-color: var(--diagnosis); }
+        .subsection.treatment { border-left-color: var(--treatment); }
+        .subsection.followup { border-left-color: var(--followup); }
+
+        .subsection h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .subsection p, .subsection ul {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .subsection ul {
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .subsection li {
+            margin-bottom: 0.25rem;
+        }
+
+        .subsection strong {
+            color: var(--text);
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .score-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .score-item h5 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .score-item p {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .treatment-algorithm {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .treatment-algorithm h4 {
+            color: #92400e;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .treatment-step {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            border-left: 4px solid var(--treatment);
+        }
+
+        .treatment-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .treatment-step h5 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .treatment-step p {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .medication-info {
+            background: #e0f2fe;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.75rem 0;
+        }
+
+        .medication-info h5 {
+            color: #0369a1;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .medication-info p {
+            font-size: 0.85rem;
+            color: #0c4a6e;
+        }
+
+        .warning-box {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .warning-box h5 {
+            color: #b91c1c;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .warning-box p {
+            font-size: 0.8rem;
+            color: #7f1d1d;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .info-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .info-item .icon {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .info-item h5 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.25rem;
+        }
+
+        .info-item p {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        @media (max-width: 768px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .progress-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .menu-toggle {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1001;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                padding: 0.75rem;
+                cursor: pointer;
+            }
+        }
+
+        .menu-toggle {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h1>Wilson's Disease</h1>
+                <p style="color: rgba(255,255,255,0.8); font-size: 0.875rem;">Interactive Clinical Algorithm</p>
+            </div>
+            
+            <nav class="progress-steps">
+                <div class="progress-step active" onclick="scrollToCard('assessment')">
+                    <div class="step-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="step-content">
+                        <h3>Assessment</h3>
+                        <p>Clinical evaluation & investigations</p>
+                    </div>
+                </div>
+                
+                <div class="progress-step" onclick="scrollToCard('diagnosis')">
+                    <div class="step-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="step-content">
+                        <h3>Diagnosis</h3>
+                        <p>Scoring & criteria</p>
+                    </div>
+                </div>
+                
+                <div class="progress-step" onclick="scrollToCard('treatment')">
+                    <div class="step-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div class="step-content">
+                        <h3>Treatment</h3>
+                        <p>Management algorithms</p>
+                    </div>
+                </div>
+                
+                <div class="progress-step" onclick="scrollToCard('followup')">
+                    <div class="step-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="step-content">
+                        <h3>Follow-up</h3>
+                        <p>Monitoring & prognosis</p>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h2>Wilson's Disease Management Algorithm</h2>
+                <p>Based on BMJ Best Practice Guidelines (January 2025)</p>
+            </div>
+
+            <div class="cards-container">
+                <!-- Assessment Card -->
+                <div class="card" id="assessment-card">
+                    <div class="card-header assessment" onclick="toggleCard(this)">
+                        <div class="icon">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div class="title">
+                            <h2>Assessment</h2>
+                            <p>Comprehensive clinical evaluation and initial investigations</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Key Diagnostic Factors
+                                    <span class="badge badge-caution">High Suspicion</span>
+                                </h3>
+                                
+                                <div class="subsection assessment">
+                                    <h4><i class="fas fa-check"></i> Common Findings</h4>
+                                    <ul>
+                                        <li><strong>Elevated serum aminotransferases</strong> (AST/ALT) in 40-60% of patients</li>
+                                        <li><strong>Behavioral abnormalities</strong> - temper tantrums, anxiety, memory loss, impulsiveness</li>
+                                        <li><strong>Kayser-Fleischer rings</strong> present in 95% neurological, 44-62% hepatic presentations</li>
+                                        <li><strong>Tremor</strong> - fine, intentional, or rest tremor</li>
+                                        <li><strong>Dysarthria</strong> - slurred speech, hypophonia, echolalia</li>
+                                        <li><strong>Dystonia & rigidity</strong> - especially hands, causing postural/gait abnormalities</li>
+                                        <li><strong>Incoordination</strong> - affects handwriting, buttoning, walking</li>
+                                        <li><strong>Sloppy/small handwriting (micrographia)</strong></li>
+                                    </ul>
+                                </div>
+
+                                <div class="subsection assessment">
+                                    <h4><i class="fas fa-exclamation-triangle"></i> Uncommon but Important</h4>
+                                    <ul>
+                                        <li>Acute liver failure (20% of presentations)</li>
+                                        <li>Jaundice, ascites, peripheral edema</li>
+                                        <li>Spider angiomata, gynecomastia</li>
+                                        <li>Encephalopathy, dysphagia</li>
+                                        <li>Coombs-negative hemolytic anemia</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-dna"></i>
+                                    Risk Factors
+                                    <span class="badge badge-urgent">Genetic</span>
+                                </h3>
+                                
+                                <div class="subsection assessment">
+                                    <h4><i class="fas fa-info-circle"></i> Strong Risk Factors</h4>
+                                    <ul>
+                                        <li><strong>ATP7B gene mutation</strong> - autosomal recessive, two mutated copies required</li>
+                                        <li><strong>Family history</strong> - first-degree relatives must be screened</li>
+                                        <li><strong>Consanguinity</strong> - higher prevalence in certain populations</li>
+                                    </ul>
+                                    <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-light);">
+                                        Most patients are compound heterozygotes with >700 known pathogenic mutations
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-flask"></i>
+                                    Initial Investigations
+                                    <span class="badge badge-stable">Essential</span>
+                                </h3>
+                                
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <div class="icon"><i class="fas fa-tint"></i></div>
+                                        <h5>Liver Function Tests</h5>
+                                        <p>Almost always abnormal in hepatic presentation. Check AST, ALT, bilirubin, albumin, INR</p>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="icon"><i class="fas fa-eye"></i></div>
+                                        <h5>Slit-lamp Examination</h5>
+                                        <p>Detect Kayser-Fleischer rings - gold-brown copper deposits in Descemet's membrane</p>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="icon"><i class="fas fa-vial"></i></div>
+                                        <h5>Serum Ceruloplasmin</h5>
+                                        <p>Normal: 200-350 mg/L. <50 mg/L strongly suggests Wilson's disease</p>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="icon"><i class="fas fa-urine"></i></div>
+                                        <h5>24-hour Urinary Copper</h5>
+                                        <p>>100 micrograms consistent with Wilson's disease. >40 micrograms suggests further investigation</p>
+                                    </div>
+                                </div>
+
+                                <div class="warning-box">
+                                    <h5><i class="fas fa-exclamation-triangle"></i> Important Notes</h5>
+                                    <p>
+                                        <strong>No single test is diagnostic.</strong> Ceruloplasmin can be normal in ~20% of patients and low in other conditions (protein-losing enteropathy, end-stage liver disease, nephrotic syndrome). Urinary copper can be elevated in cholestatic diseases.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card" id="diagnosis-card">
+                    <div class="card-header diagnosis" onclick="toggleCard(this)">
+                        <div class="icon">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <div class="title">
+                            <h2>Diagnosis</h2>
+                            <p>Diagnostic criteria, scoring systems, and differential diagnosis</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-calculator"></i>
+                                    Leipzig Score
+                                    <span class="badge badge-stable">Diagnostic</span>
+                                </h3>
+                                <p style="color: var(--text-light); margin-bottom: 1rem;">
+                                    A score ≥4 is diagnostic for Wilson's disease. Score 2-3 requires further investigation. Score 0-1 makes diagnosis unlikely.
+                                </p>
+                                
+                                <div class="score-grid">
+                                    <div class="score-item">
+                                        <h5>Kayser-Fleischer Rings</h5>
+                                        <p>Present: <strong>2 points</strong><br>Absent: 0 points</p>
+                                    </div>
+                                    
+                                    <div class="score-item">
+                                        <h5>Neuropsychiatric Symptoms</h5>
+                                        <p>Present: <strong>2 points</strong><br>Absent: 0 points</p>
+                                    </div>
+                                    
+                                    <div class="score-item">
+                                        <h5>Coombs-negative Hemolysis</h5>
+                                        <p>Present: <strong>1 point</strong><br>Absent: 0 points</p>
+                                    </div>
+                                    
+                                    <div class="score-item">
+                                        <h5>Urinary Copper</h5>
+                                        <p>Normal: 0<br>1-2x ULN: <strong>1 point</strong><br>>2x ULN: <strong>2 points</strong></p>
+                                    </div>
+                                    
+                                    <div class="score-item">
+                                        <h5>Liver Copper</h5>
+                                        <p>Normal: -1<br>≤5x ULN: <strong>1 point</strong><br>>5x ULN: <strong>2 points</strong></p>
+                                    </div>
+                                    
+                                    <div class="score-item">
+                                        <h5>Serum Ceruloplasmin</h5>
+                                        <p>Normal: 0<br>100-200 mg/L: <strong>1 point</strong><br><100 mg/L: <strong>2 points</strong></p>
+                                    </div>
+                                    
+                                    <div class="score-item">
+                                        <h5>Mutation Analysis</h5>
+                                        <p>2 mutations: <strong>4 points</strong><br>1 mutation: <strong>1 point</strong><br>None: 0</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-search"></i>
+                                    Differential Diagnosis
+                                    <span class="badge badge-caution">Exclude First</span>
+                                </h3>
+                                
+                                <div class="subsection diagnosis">
+                                    <h4><i class="fas fa-virus"></i> Hepatic Disorders</h4>
+                                    <ul>
+                                        <li><strong>Hepatitis B/C</strong> - Check viral serologies</li>
+                                        <li><strong>Autoimmune hepatitis</strong> - Autoantibody screen positive</li>
+                                        <li><li><strong>Steatohepatitis</strong> - Obesity, metabolic syndrome features</li>
+                                        <li><strong>Alcohol-related cirrhosis</strong> - History of alcohol excess</li>
+                                        <li><strong>Hemochromatosis</strong> - Transferrin saturation >50% in men, >45% in women</li>
+                                        <li><strong>Alpha-1 antitrypsin deficiency</strong> - Low AAT levels, early emphysema</li>
+                                    </ul>
+                                </div>
+
+                                <div class="subsection diagnosis">
+                                    <h4><i class="fas fa-brain"></i> Neurological Disorders</h4>
+                                    <ul>
+                                        <li><strong>Parkinson's disease</strong> - Usually >50 years, dopaminergic agents improve symptoms</li>
+                                        <li><strong>Essential tremor</strong> - Isolated tremor, positive family history</li>
+                                        <li><strong>Psychiatric disease</strong> - No KF rings, normal ceruloplasmin</li>
+                                        <li><strong>Multiple sclerosis</strong> - Sensory abnormalities, MRI findings differ</li>
+                                    </ul>
+                                </div>
+
+                                <div class="subsection diagnosis">
+                                    <h4><i class="fas fa-blood"></i> Other Conditions</h4>
+                                    <ul>
+                                        <li><strong>Hemolytic anemia</strong> - Check Coombs test, other hemolysis workup</li>
+                                        <li><strong>Aceruloplasminemia</strong> - Undetectable ceruloplasmin, CP gene mutation</li>
+                                        <li><strong>Congenital disorders of glycosylation</strong> - Normal 24-hour urine copper</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-users"></i>
+                                    Family Screening
+                                    <span class="badge badge-urgent">Mandatory</span>
+                                </h3>
+                                
+                                <div class="subsection diagnosis">
+                                    <h4><i class="fas fa-info-circle"></i> First-Degree Relatives</h4>
+                                    <p>All first-degree relatives of a newly diagnosed patient must be screened:</p>
+                                    <ul>
+                                        <li>Molecular testing for ATP7B mutations or haplotype studies (preferred)</li>
+                                        <li>Liver function tests, serum ceruloplasmin, serum copper</li>
+                                        <li>24-hour urinary copper excretion</li>
+                                        <li>Slit-lamp examination for KF rings</li>
+                                        <li>Liver ultrasound if indicated</li>
+                                    </ul>
+                                    <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-light);">
+                                        Asymptomatic children should start treatment at 2-3 years of age
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card" id="treatment-card">
+                    <div class="card-header treatment" onclick="toggleCard(this)">
+                        <div class="icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <div class="title">
+                            <h2>Treatment</h2>
+                            <p>Pharmacological therapy and management algorithms</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Acute Hepatic Failure
+                                    <span class="badge badge-urgent">Emergency</span>
+                                </h3>
+                                
+                                <div class="treatment-algorithm">
+                                    <h4><i class="fas fa-calculator"></i> Prognostic Scoring</h4>
+                                    
+                                    <div class="treatment-step">
+                                        <h5>Nazer Score <span class="badge badge-urgent">Adults</span></h5>
+                                        <p>Based on bilirubin, AST, and prothrombin time (PT). Maximum score: 12</p>
+                                        <ul style="font-size: 0.8rem; margin-top: 0.5rem;">
+                                            <li><strong>≥10:</strong> Urgent liver transplantation</li>
+                                            <li><strong>7-9:</strong> Evaluate clinical trajectory</li>
+                                            <li><strong>≤6:</strong> Pharmacological therapy</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="treatment-step">
+                                        <h5>New Wilson Index (NWI) <span class="badge badge-urgent">Pediatrics/Adults</span></h5>
+                                        <p>Based on bilirubin, INR, AST, WBC, albumin. Score 0-20</p>
+                                        <ul style="font-size: 0.8rem; margin-top: 0.5rem;">
+                                            <li><strong>≥11:</strong> High mortality without transplant</li>
+                                            <li><strong>≤10:</strong> Consider medical therapy</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-ambulance"></i> Severe Acute Liver Failure</h4>
+                                    <p style="margin-bottom: 0.5rem;">
+                                        <strong>Nazer ≥10 OR NWI ≥11:</strong> Urgent referral to liver transplantation center
+                                    </p>
+                                    <span class="badge badge-urgent">Immediate Action</span>
+                                    <p style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-light);">
+                                        ~20% of patients present with acute liver failure (jaundice, coagulopathy, encephalopathy, ascites, renal failure)
+                                    </p>
+                                </div>
+
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-pills"></i> Mild to Moderate Hepatic Failure</h4>
+                                    <p style="margin-bottom: 0.5rem;">
+                                        <strong>Nazer ≤9 OR NWI ≤10:</strong> Pharmacological therapy with oral chelation + zinc
+                                    </p>
+                                    <span class="badge badge-caution">Monitor Closely</span>
+                                    <p style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-light);">
+                                        Combination therapy recommended. Monitor 24-hour urinary copper and clinical response. Normalization may take 1-12 months.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-capsules"></i>
+                                    Pharmacological Therapy
+                                    <span class="badge badge-stable">Lifelong Treatment</span>
+                                </h3>
+                                
+                                <div class="medication-info">
+                                    <h5><i class="fas fa-pills"></i> Penicillamine (D-isomer)</h5>
+                                    <p><strong>Mechanism:</strong> Oral chelator, increases urinary copper excretion</p>
+                                    <p><strong>Dosing:</strong> Children 20mg/kg/day (max 1000mg); Adults 750-1500mg/day in divided doses</p>
+                                    <p><strong>Adverse Effects:</strong> Fever, lymphadenopathy, thrombocytopenia, proteinuria, nephrotoxicity, bone marrow toxicity, dermatological changes. ~30% discontinue due to adverse effects.</p>
+                                    <p><strong>Warning:</strong> <span class="badge badge-caution">Neurological Worsening</span> Paradoxical worsening in 10-50% of patients with neurological symptoms</p>
+                                </div>
+
+                                <div class="medication-info">
+                                    <h5><i class="fas fa-pills"></i> Trientine (Trientine Hydrochloride)</h5>
+                                    <p><strong>Mechanism:</strong> Oral chelator, promotes renal copper excretion</p>
+                                    <p><strong>Dosing:</strong> Children <13y: 20mg/kg/day (max 1500mg); ≥13y & Adults: 750-1250mg/day (max 2000mg)</p>
+                                    <p><strong>Advantages:</strong> Lower risk of neurological worsening, better adverse effect profile than penicillamine</p>
+                                    <p><strong>Adverse Effects:</strong> Pancytopenia, colitis, iron deficiency, SLE (rare)</p>
+                                    <p><strong>Note:</strong> <span class="badge badge-stable">Increasingly Used</span> As first-line therapy due to better tolerability</p>
+                                </div>
+
+                                <div class="medication-info">
+                                    <h5><i class="fas fa-tablets"></i> Zinc Salts (Zinc Acetate/Sulfate)</h5>
+                                    <p><strong>Mechanism:</strong> Inhibits intestinal copper absorption</p>
+                                    <p><strong>Dosing:</strong> Children <10y: 25mg 2-3x daily; ≥10y & Adults: 25-50mg 3x daily</p>
+                                    <p><strong>Advantages:</strong> Minimal adverse effects, comparable efficacy to penicillamine, better tolerated</p>
+                                    <p><strong>Adverse Effects:</strong> Gastric irritation (main), change salt if needed</p>
+                                    <p><strong>Monitoring:</strong> 24-hour urinary copper <1.6 micromol/day (<100 micrograms)</p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-project-diagram"></i>
+                                    Ongoing Management
+                                    <span class="badge badge-stable">Maintenance</span>
+                                </h3>
+                                
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-brain"></i> Symptomatic Patients (Neurological or Hepatic)</h4>
+                                    <p><strong>Initial Therapy:</strong> Oral chelation (penicillamine or trientine) OR zinc monotherapy</p>
+                                    <p><strong>Maintenance:</strong> Switch to zinc OR continue lower-dose chelation after 1-5 years when:</p>
+                                    <ul>
+                                        <li>Clinically well</li>
+                                        <li>Normal hepatic synthetic function</li>
+                                        <li>Normal aminotransferases and non-ceruloplasmin-bound copper</li>
+                                        <li>24-hour urinary copper <1.6 micromol/day on chelation</li>
+                                    </ul>
+                                    <span class="badge badge-caution">Monitor Adherence</span>
+                                </div>
+
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-user-check"></i> Asymptomatic Patients</h4>
+                                    <p><strong>Treatment:</strong> Zinc or oral chelation therapy</p>
+                                    <p><strong>Children:</strong> Start treatment at 2-3 years of age</p>
+                                    <p><strong>Preference:</strong> Zinc preferred in children due to favorable safety profile</p>
+                                    <span class="badge badge-stable">Preventive</span>
+                                </div>
+
+                                <div class="warning-box">
+                                    <h5><i class="fas fa-exclamation-triangle"></i> Neurological Worsening Risk</h5>
+                                    <p>Patients with neurological symptoms at presentation are at risk for paradoxical worsening during initiation of chelation therapy. Start slowly and monitor closely for at least 12 months.</p>
+                                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">
+                                        <strong>Incidence:</strong> 10-50% with penicillamine, less with trientine, rare with zinc
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-baby"></i>
+                                    Special Populations
+                                    <span class="badge badge-caution">Adjust Dosing</span>
+                                </h3>
+                                
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-female"></i> Pregnancy</h4>
+                                    <p><strong>Pre-conception:</strong> Discuss stability, genetic counseling, medication safety</p>
+                                    <p><strong>During Pregnancy:</strong> Continue treatment</p>
+                                    <ul style="font-size: 0.85rem;">
+                                        <li>Penicillamine/Trientine: Reduce to 25-50% of pre-pregnancy dose</li>
+                                        <li>Zinc: No dose reduction needed</li>
+                                        <li>All are teratogenic (3% birth defect rate reported)</li>
+                                    </ul>
+                                    <p><strong>Breastfeeding:</strong> Discuss individually - may lack copper in milk, penicillamine excreted</p>
+                                    <span class="badge badge-caution">Multidisciplinary Care</span>
+                                </div>
+
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-child"></i> Children</h4>
+                                    <p><strong>Symptomatic:</strong> Prompt treatment to prevent progression</p>
+                                    <p><strong>Asymptomatic:</strong> Start treatment at 2-3 years of age</p>
+                                    <p><strong>Decompensated cirrhosis:</strong> May be treated successfully with chelation (monthly monitoring)</p>
+                                    <p><strong>Transplant:</strong> Use NWI score for pediatric transplant decisions</p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-apple-alt"></i>
+                                    Dietary Management
+                                    <span class="badge badge-stable">Adjunctive</span>
+                                </h3>
+                                
+                                <div class="subsection treatment">
+                                    <h4><i class="fas fa-utensils"></i> Copper Restriction</h4>
+                                    <p><strong>Important:</strong> Dietary restriction alone is NOT sufficient</p>
+                                    <p><strong>First Year:</strong> Low-copper diet recommended during initial treatment phase</p>
+                                    <p><strong>Avoid:</strong> Nuts, chocolate, most shellfish, soy-based products, organ meats, mushrooms</p>
+                                    <p><strong>Check:</strong> Supplements and water supply for high copper content</p>
+                                    <p><strong>Long-term:</strong> Few studies support prolonged restriction after first year</p>
+                                    <span class="badge badge-stable">Refer to Dietitian</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card" id="followup-card">
+                    <div class="card-header followup" onclick="toggleCard(this)">
+                        <div class="icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="title">
+                            <h2>Follow-up</h2>
+                            <p>Monitoring, complications, and long-term prognosis</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-clock"></i>
+                                    Monitoring Schedule
+                                    <span class="badge badge-stable">Regular Follow-up</span>
+                                </h3>
+                                
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-calendar-alt"></i> Frequency</h4>
+                                    <p><strong>Minimum:</strong> Every 6 months</p>
+                                    <p><strong>During Initiation:</strong> More frequent (monthly for acute liver failure)</p>
+                                    <p><strong>Adherence:</strong> Measure 24-hour urinary copper and zinc to check compliance</p>
+                                </div>
+
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-tasks"></i> Assessment Components</h4>
+                                    <ul>
+                                        <li><strong>History:</strong> New neurological/psychiatric symptoms, new medications</li>
+                                        <li><strong>Examination:</strong> Liver disease stigmata, neurological examination</li>
+                                        <li><strong>Laboratory:</strong> Liver function tests, serum copper, ceruloplasmin</li>
+                                        <li><strong>Urinary Studies:</strong> 24-hour urinary copper and zinc excretion</li>
+                                        <li><strong>Hematology:</strong> FBC with differential (if on chelation)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-target"></i> Treatment Targets</h4>
+                                    <p><strong>Urinary Copper:</strong> <1.6 micromol/day (<100 micrograms) on maintenance</p>
+                                    <p><strong>Non-ceruloplasmin-bound copper:</strong> Normalize with effective treatment</p>
+                                    <p><strong>Liver function:</strong> Improvement in 2-6 months</p>
+                                    <p><strong>Neurological symptoms:</strong> Improvement in 50-60% over 1-3 years</p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Complications
+                                    <span class="badge badge-caution">Monitor For</span>
+                                </h3>
+                                
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <div class="icon" style="color: var(--urgent);"><i class="fas fa-liver"></i></div>
+                                        <h5>Liver Failure</h5>
+                                        <p>Short-term, medium likelihood<br>Acute or decompensated failure</p>
+                                        <span class="badge badge-urgent">Urgent</span>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="icon" style="color: var(--caution);"><i class="fas fa-brain"></i></div>
+                                        <h5>Neurological Worsening</h5>
+                                        <p>Long-term, medium likelihood<br>Paradoxical or late worsening</p>
+                                        <span class="badge badge-caution">Monitor</span>
+                                    </div>
+                                    
+                                    <div class="info-item">
+                                        <div class="icon" style="color: var(--stable);"><i class="fas fa-shield-alt"></i></div>
+                                        <h5>Hepatocellular Carcinoma</h5>
+                                        <p>Long-term, low likelihood<br>Screen if cirrhotic</p>
+                                        <span class="badge badge-stable">Screen</span>
+                                    </div>
+                                </div>
+
+                                <div class="warning-box">
+                                    <h5><i class="fas fa-info-circle"></i> Neurological Worsening Details</h5>
+                                    <p>Can occur after initiation of chelation (10-50% with penicillamine) or less commonly with zinc. Usually in patients with neurological symptoms at presentation.</p>
+                                    <p style="font-size: 0.8rem; margin-top: 0.5rem;">
+                                        <strong>Outcomes:</strong> 24.2% recover completely, 27.3% partially, 39.8% no improvement
+                                    </p>
+                                    <p style="font-size: 0.8rem;">
+                                        <strong>Prevention:</strong> Start chelation slowly, monitor for 12 months with movement disorder consultant
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-chart-line"></i>
+                                    Prognosis
+                                    <span class="badge badge-stable">Generally Good</span>
+                                </h3>
+                                
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-thumbs-up"></i> Positive Indicators</h4>
+                                    <ul>
+                                        <li>Early treatment initiation → normal quality and quantity of life</li>
+                                        <li>Liver function improves within 2-6 months</li>
+                                        <li>Neurological symptoms improve in 50-60% over 1-3 years</li>
+                                        <li>Adequate compliance → normal lifespan (unless additional liver insult)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-exclamation"></i> Poor Prognostic Factors</h4>
+                                    <ul>
+                                        <li>Severe neurological involvement at start of therapy → more residual symptoms</li>
+                                        <li>Decompensated cirrhosis with portal hypertension → persistent variceal bleeding risk</li>
+                                        <li>Poor compliance → ongoing copper toxicity</li>
+                                    </ul>
+                                    <p style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-light);">
+                                        Variceal bleeding risk lessens over years of medical therapy
+                                    </p>
+                                </div>
+
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-shield-alt"></i> Hepatocellular Carcinoma Surveillance</h4>
+                                    <p>Recommended for patients with Wilson's disease and cirrhosis</p>
+                                    <p style="font-size: 0.8rem; color: var(--text-light);">
+                                        No increased risk of HCC compared to other cirrhosis etiologies when on treatment
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-user-friends"></i>
+                                    Patient Discussions
+                                    <span class="badge badge-stable">Essential</span>
+                                </h3>
+                                
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-comments"></i> Counseling Points</h4>
+                                    <ul>
+                                        <li>Importance of lifelong medication compliance</li>
+                                        <li>Maintaining low-copper diet in initial phases</li>
+                                        <li>Multidisciplinary team involvement (nutritionist, psychiatrist, neurologist, physiotherapist)</li>
+                                        <li>Screening of first-degree relatives</li>
+                                        <li>Monitoring for adverse effects</li>
+                                    </ul>
+                                </div>
+
+                                <div class="subsection followup">
+                                    <h4><i class="fas fa-handshake"></i> Adherence Support</h4>
+                                    <p>Regular follow-up with healthcare team critical for:</p>
+                                    <ul>
+                                        <li>Medication adherence monitoring (urinary copper/zinc levels)</li>
+                                        <li>Early detection of adverse effects</li>
+                                        <li>Adjustment of therapy based on response</li>
+                                        <li>Psychosocial support for chronic disease management</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+                c.classList.remove('active');
+            });
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                card.classList.add('active');
+            }
+            
+            updateProgress();
+        }
+
+        // Expand first card on load
+        window.addEventListener('load', () => {
+            const firstCard = document.querySelector('.card');
+            firstCard.classList.add('expanded');
+            firstCard.classList.add('active');
+            updateProgress();
+        });
+
+        // Progress tracking
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const steps = document.querySelectorAll('.progress-step');
+            
+            cards.forEach((card, index) => {
+                const step = steps[index];
+                if (card.classList.contains('expanded')) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                } else if (card.classList.contains('visited')) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        // Smooth scroll to card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            const header = card.querySelector('.card-header');
+            
+            // Mark as visited
+            card.classList.add('visited');
+            
+            // Expand the card
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded', 'active');
+            });
+            card.classList.add('expanded', 'active');
+            
+            // Scroll to card
+            const offset = 20;
+            const cardPosition = card.offsetTop - offset;
+            
+            window.scrollTo({
+                top: cardPosition,
+                behavior: 'smooth'
+            });
+            
+            updateProgress();
+            
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        // Mobile sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Update progress on scroll
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const cards = document.querySelectorAll('.card');
+                const scrollPosition = window.scrollY + 100;
+                
+                cards.forEach(card => {
+                    const cardTop = card.offsetTop;
+                    const cardBottom = cardTop + card.offsetHeight;
+                    
+                    if (scrollPosition >= cardTop && scrollPosition < cardBottom) {
+                        card.classList.add('visited');
+                    }
+                });
+                
+                updateProgress();
+            }, 50);
+        });
+
+        // Badge click animation
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 100);
+            });
+        });
+
+        // Subsection expand/collapse
+        document.querySelectorAll('.subsection h4').forEach(header => {
+            header.style.cursor = 'pointer';
+            header.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    this.querySelector('i').style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.display = 'none';
+                    this.querySelector('i').style.transform = 'rotate(-90deg)';
+                }
+            });
+            
+            // Add arrow icon
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-chevron-down';
+            icon.style.fontSize = '0.8rem';
+            icon.style.marginRight = '0.5rem';
+            icon.style.transition = 'transform 0.2s ease';
+            header.prepend(icon);
+        });
+
+        // Initialize all subsections as expanded
+        document.querySelectorAll('.subsection h4').forEach(header => {
+            const content = header.nextElementSibling;
+            if (content) {
+                content.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
