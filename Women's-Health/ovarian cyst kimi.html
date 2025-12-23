@@ -1,0 +1,1402 @@
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ovarian Cyst Management Algorithm | BMJ Best Practice</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        } 
+:root {
+        --assessment-color: #3498db;
+        --diagnosis-color: #9b59b6;
+        --treatment-color: #27ae60;
+        --followup-color: #e67e22;
+        --urgent-color: #e74c3c;
+        --caution-color: #f39c12;
+        --stable-color: #2ecc71;
+        --bg-color: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #7f8c8d;
+        --shadow: 0 4px 12px rgba(0,0,0,0.08);
+        --hover-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg-color);
+        color: var(--text-primary);
+        line-height: 1.6;
+        overflow-x: hidden;
+    }
+
+    .header {
+        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+        color: white;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: var(--shadow);
+        position: relative;
+        z-index: 10;
+    }
+
+    .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+
+    .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .container {
+        display: flex;
+        max-width: 1400px;
+        margin: 0 auto;
+        min-height: calc(100vh - 200px);
+    }
+
+    .progress-sidebar {
+        width: 280px;
+        background: var(--card-bg);
+        padding: 2rem 1.5rem;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow);
+        border-right: 1px solid #eaeaea;
+        z-index: 5;
+    }
+
+    .progress-sidebar h3 {
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .progress-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+        border-left: 4px solid transparent;
+    }
+
+    .progress-item:hover {
+        background: #f8f9fa;
+        transform: translateX(4px);
+    }
+
+    .progress-item.active {
+        background: linear-gradient(90deg, rgba(52, 152, 219, 0.1) 0%, transparent 100%);
+        border-left-color: var(--assessment-color);
+        font-weight: 600;
+    }
+
+    .progress-item.diagnosis-active {
+        border-left-color: var(--diagnosis-color);
+        background: linear-gradient(90deg, rgba(155, 89, 182, 0.1) 0%, transparent 100%);
+    }
+
+    .progress-item.treatment-active {
+        border-left-color: var(--treatment-color);
+        background: linear-gradient(90deg, rgba(39, 174, 96, 0.1) 0%, transparent 100%);
+    }
+
+    .progress-item.followup-active {
+        border-left-color: var(--followup-color);
+        background: linear-gradient(90deg, rgba(230, 126, 34, 0.1) 0%, transparent 100%);
+    }
+
+    .progress-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        color: white;
+        font-size: 0.9rem;
+    }
+
+    .progress-item:nth-child(1) .progress-icon { background: var(--assessment-color); }
+    .progress-item:nth-child(2) .progress-icon { background: var(--diagnosis-color); }
+    .progress-item:nth-child(3) .progress-icon { background: var(--treatment-color); }
+    .progress-item:nth-child(4) .progress-icon { background: var(--followup-color); }
+
+    .main-content {
+        flex: 1;
+        padding: 2rem;
+    }
+
+    .section {
+        margin-bottom: 3rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.6s ease forwards;
+    }
+
+    .section:nth-child(1) { animation-delay: 0.1s; }
+    .section:nth-child(2) { animation-delay: 0.2s; }
+    .section:nth-child(3) { animation-delay: 0.3s; }
+    .section:nth-child(4) { animation-delay: 0.4s; }
+
+    @keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 3px solid;
+        position: relative;
+    }
+
+    .section-header::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 100px;
+        height: 3px;
+        background: currentColor;
+    }
+
+    .section-header.assessment { border-color: var(--assessment-color); color: var(--assessment-color); }
+    .section-header.diagnosis { border-color: var(--diagnosis-color); color: var(--diagnosis-color); }
+    .section-header.treatment { border-color: var(--treatment-color); color: var(--treatment-color); }
+    .section-header.followup { border-color: var(--followup-color); color: var(--followup-color); }
+
+    .section-icon {
+        font-size: 2.5rem;
+        margin-right: 1rem;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.9);
+        box-shadow: var(--shadow);
+    }
+
+    .section-title h2 {
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .section-title p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+    }
+
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    .card-header {
+        padding: 1.5rem 1.5rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.05) 0%, rgba(52, 152, 219, 0.02) 100%);
+        border-bottom: 2px solid rgba(52, 152, 219, 0.1);
+    }
+
+    .card-header.diagnosis-card {
+        background: linear-gradient(135deg, rgba(155, 89, 182, 0.05) 0%, rgba(155, 89, 182, 0.02) 100%);
+        border-bottom-color: rgba(155, 89, 182, 0.1);
+    }
+
+    .card-header.treatment-card {
+        background: linear-gradient(135deg, rgba(39, 174, 96, 0.05) 0%, rgba(39, 174, 96, 0.02) 100%);
+        border-bottom-color: rgba(39, 174, 96, 0.1);
+    }
+
+    .card-header.followup-card {
+        background: linear-gradient(135deg, rgba(230, 126, 34, 0.05) 0%, rgba(230, 126, 34, 0.02) 100%);
+        border-bottom-color: rgba(230, 126, 34, 0.1);
+    }
+
+    .card-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.1rem;
+    }
+
+    .assessment-card .card-icon { background: var(--assessment-color); }
+    .diagnosis-card .card-icon { background: var(--diagnosis-color); }
+    .treatment-card .card-icon { background: var(--treatment-color); }
+    .followup-card .card-icon { background: var(--followup-color); }
+
+    .card-title h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+
+    .expand-icon {
+        font-size: 1.2rem;
+        color: var(--text-secondary);
+        transition: transform 0.3s ease;
+    }
+
+    .card.expanded .expand-icon {
+        transform: rotate(180deg);
+    }
+
+    .card-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.4s ease;
+        padding: 0 1.5rem;
+    }
+
+    .card.expanded .card-content {
+        max-height: 1000px;
+        padding: 1.5rem;
+    }
+
+    .card-content ul {
+        list-style: none;
+        margin: 0;
+    }
+
+    .card-content li {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        transition: background 0.2s ease;
+    }
+
+    .card-content li:hover {
+        background: rgba(52, 152, 219, 0.02);
+        border-radius: 6px;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        margin: 0 -0.5rem;
+    }
+
+    .card-content li:last-child {
+        border-bottom: none;
+    }
+
+    .card-content li::before {
+        content: '•';
+        color: var(--assessment-color);
+        font-weight: bold;
+        font-size: 1.5rem;
+        line-height: 1;
+        margin-top: -0.25rem;
+    }
+
+    .diagnosis-card .card-content li::before { color: var(--diagnosis-color); }
+    .treatment-card .card-content li::before { color: var(--treatment-color); }
+    .followup-card .card-content li::before { color: var(--followup-color); }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 0.5rem;
+    }
+
+    .badge-urgent {
+        background: rgba(231, 76, 60, 0.1);
+        color: var(--urgent-color);
+        border: 1px solid rgba(231, 76, 60, 0.3);
+    }
+
+    .badge-caution {
+        background: rgba(243, 156, 18, 0.1);
+        color: var(--caution-color);
+        border: 1px solid rgba(243, 156, 18, 0.3);
+    }
+
+    .badge-stable {
+        background: rgba(46, 204, 113, 0.1);
+        color: var(--stable-color);
+        border: 1px solid rgba(46, 204, 113, 0.3);
+    }
+
+    .algorithm-flow {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 2rem 0;
+        box-shadow: var(--shadow);
+    }
+
+    .flow-step {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding: 1.25rem;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(39, 174, 96, 0.05) 0%, rgba(39, 174, 96, 0.02) 100%);
+        border: 2px solid rgba(39, 174, 96, 0.2);
+        transition: var(--transition);
+    }
+
+    .flow-step:hover {
+        transform: translateX(8px);
+        border-color: var(--treatment-color);
+    }
+
+    .flow-step.urgent-step {
+        background: linear-gradient(135deg, rgba(231, 76, 60, 0.05) 0%, rgba(231, 76, 60, 0.02) 100%);
+        border-color: rgba(231, 76, 60, 0.2);
+    }
+
+    .flow-step.urgent-step:hover {
+        border-color: var(--urgent-color);
+    }
+
+    .flow-step.caution-step {
+        background: linear-gradient(135deg, rgba(243, 156, 18, 0.05) 0%, rgba(243, 156, 18, 0.02) 100%);
+        border-color: rgba(243, 156, 18, 0.2);
+    }
+
+    .flow-step.caution-step:hover {
+        border-color: var(--caution-color);
+    }
+
+    .flow-step:last-child {
+        margin-bottom: 0;
+    }
+
+    .flow-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.3rem;
+        margin-right: 1.25rem;
+        flex-shrink: 0;
+    }
+
+    .urgent-step .flow-icon { background: var(--urgent-color); }
+    .caution-step .flow-icon { background: var(--caution-color); }
+    .flow-step:not(.urgent-step):not(.caution-step) .flow-icon { background: var(--treatment-color); }
+
+    .flow-content h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+
+    .flow-content p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        margin: 0.25rem 0;
+    }
+
+    .risk-calculator {
+        background: linear-gradient(135deg, rgba(155, 89, 182, 0.05) 0%, rgba(155, 89, 182, 0.02) 100%);
+        border: 2px solid rgba(155, 89, 182, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .risk-calculator h4 {
+        color: var(--diagnosis-color);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .risk-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .risk-item {
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid var(--diagnosis-color);
+    }
+
+    .risk-item strong {
+        display: block;
+        margin-bottom: 0.25rem;
+        color: var(--text-primary);
+    }
+
+    .risk-item small {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+    }
+
+    .mobile-menu-toggle {
+        display: none;
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--treatment-color);
+        color: white;
+        border: none;
+        box-shadow: var(--hover-shadow);
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        z-index: 1000;
+    }
+
+    .mobile-menu-toggle:hover {
+        transform: scale(1.1);
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            flex-direction: column;
+        }
+
+        .progress-sidebar {
+            width: 100%;
+            height: auto;
+            position: relative;
+            padding: 1rem;
+            display: none;
+        }
+
+        .progress-sidebar.mobile-open {
+            display: block;
+        }
+
+        .main-content {
+            padding: 1rem;
+        }
+
+        .cards-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+        }
+
+        .section-header {
+            flex-direction: column;
+            text-align: center;
+            gap: 1rem;
+        }
+
+        .mobile-menu-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .flow-step {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .flow-icon {
+            margin-right: 0;
+            margin-bottom: 1rem;
+        }
+    }
+
+    .scroll-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: rgba(52, 152, 219, 0.2);
+        z-index: 100;
+    }
+
+    .scroll-progress {
+        height: 100%;
+        background: linear-gradient(90deg, var(--assessment-color) 0%, var(--diagnosis-color) 25%, var(--treatment-color) 50%, var(--followup-color) 75%, var(--urgent-color) 100%);
+        width: 0%;
+        transition: width 0.3s ease;
+    }
+</style>
+
+</head>
+<body>
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+Copy
+<header class="header">
+    <h1><i class="fas fa-female"></i> Ovarian Cyst Management</h1>
+    <p>BMJ Best Practice Guidelines (March 2025) | Interactive Clinical Decision Support</p>
+</header>
+
+<div class="container">
+    <aside class="progress-sidebar" id="progressSidebar">
+        <h3><i class="fas fa-list-check"></i> Algorithm Progress</h3>
+        <div class="progress-item active" data-section="assessment">
+            <div class="progress-icon"><i class="fas fa-stethoscope"></i></div>
+            <div>
+                <strong>Assessment</strong>
+                <small style="color: #95a5a6;">History, Exam, Investigations</small>
+            </div>
+        </div>
+        <div class="progress-item" data-section="diagnosis">
+            <div class="progress-icon"><i class="fas fa-microscope"></i></div>
+            <div>
+                <strong>Diagnosis</strong>
+                <small style="color: #95a5a6;">Risk Stratification & Criteria</small>
+            </div>
+        </div>
+        <div class="progress-item" data-section="treatment">
+            <div class="progress-icon"><i class="fas fa-procedures"></i></div>
+            <div>
+                <strong>Treatment</strong>
+                <small style="color: #95a5a6;">Management Algorithm</small>
+            </div>
+        </div>
+        <div class="progress-item" data-section="followup">
+            <div class="progress-icon"><i class="fas fa-chart-line"></i></div>
+            <div>
+                <strong>Follow-up</strong>
+                <small style="color: #95a5a6;">Monitoring & Prognosis</small>
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+            <h4 style="font-size: 0.9rem; margin-bottom: 0.5rem;"><i class="fas fa-exclamation-triangle"></i> Red Flags</h4>
+            <ul style="list-style: none; font-size: 0.85rem; color: #7f8c8d;">
+                <li>• Acute abdomen/shock</li>
+                <li>• Elevated CA-125 >35 U/mL (post-menopausal)</li>
+                <li>• Solid/complex cysts in post-menopausal</li>
+                <li>• Nodular/fixed pelvic mass</li>
+                <li>• Ascites or metastasis</li>
+            </ul>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <!-- Assessment Section -->
+        <section class="section" id="assessment">
+            <div class="section-header assessment">
+                <div class="section-icon" style="color: var(--assessment-color);">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <div class="section-title">
+                    <h2>Assessment</h2>
+                    <p>Comprehensive evaluation of ovarian cyst presentation and risk factors</p>
+                </div>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card assessment-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
+                            <h3>History & Examination</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Pelvic Pain</strong> - Dull, pressure-like, exacerbated by movement/intercourse
+                                <span class="badge badge-caution">Common</span>
+                            </li>
+                            <li>
+                                <strong>Bloating & Early Satiety</strong> - <12 months duration, >12 times/month
+                                <span class="badge badge-caution">Malignancy Risk</span>
+                            </li>
+                            <li>
+                                <strong>Palpable Adnexal Mass</strong> - Bimanual exam sensitivity 28%
+                                <span class="badge badge-stable">Variable</span>
+                            </li>
+                            <li>
+                                <strong>Urinary Frequency</strong> - Bladder compression symptoms
+                                <span class="badge badge-stable">Common</span>
+                            </li>
+                            <li>
+                                <strong>Acute Abdomen</strong> - Consider torsion/rupture
+                                <span class="badge badge-urgent">Emergency</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card assessment-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-exclamation-circle"></i></div>
+                            <h3>Risk Factors</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--urgent-color); margin-bottom: 0.5rem;"><i class="fas fa-fire"></i> Strong Risk Factors</h4>
+                            <ul>
+                                <li>Pre-menopausal age group <span class="badge badge-stable">Protective</span></li>
+                                <li>Early menarche</li>
+                                <li>First trimester pregnancy</li>
+                                <li>Infertility treatment / PCOS</li>
+                                <li>Increased gonadotrophins</li>
+                                <li>Tamoxifen therapy</li>
+                                <li>Endometriosis <span class="badge badge-caution">Cancer Risk</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--caution-color); margin-bottom: 0.5rem;"><i class="fas fa-smoking"></i> Weak Risk Factors</h4>
+                            <ul>
+                                <li>Cigarette smoking <span class="badge badge-caution">3x risk mucinous tumors</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card assessment-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-search"></i></div>
+                            <h3>Investigations</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Transvaginal Ultrasound</strong> - First-line imaging
+                                <span class="badge badge-urgent">Essential</span>
+                                <br><small>Characterize size, consistency, location, nodularity</small>
+                            </li>
+                            <li>
+                                <strong>CA-125</strong> - Tumor marker
+                                <span class="badge badge-caution">Post-menopausal >35 U/mL</span>
+                                <br><small>Elevated in 80% epithelial ovarian cancer</small>
+                            </li>
+                            <li>
+                                <strong>Color Doppler</strong> - Assess vascularity
+                                <br><small>Resistive & pulsatility indices</small>
+                            </li>
+                            <li>
+                                <strong>MRI/CT</strong> - Complex cases
+                                <span class="badge badge-stable">Selective</span>
+                                <br><small>CT for metastases, MRI for soft tissue</small>
+                            </li>
+                            <li>
+                                <strong>Germ Cell Markers</strong> - Women <40 years
+                                <br><small>AFP, β-hCG, LDH</small>
+                            </li>
+                            <li>
+                                <strong>Laparoscopy</strong> - Diagnostic & therapeutic
+                                <span class="badge badge-urgent">If US non-diagnostic</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card assessment-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-project-diagram"></i></div>
+                            <h3>Differential Diagnoses</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Ovarian Cancer</strong> - Multiloculated, solid areas, CA-125 ≥35
+                                <span class="badge badge-urgent">Rule Out</span>
+                            </li>
+                            <li>
+                                <strong>Ovarian Torsion</strong> - Absent venous flow on Doppler
+                                <span class="badge badge-urgent">Emergency</span>
+                            </li>
+                            <li>
+                                <strong>Polycystic Ovary Syndrome</strong> - ≥12 follicles 2-9mm
+                                <span class="badge badge-stable">Benign</span>
+                            </li>
+                            <li>
+                                <strong>Uterine Fibroids</strong> - Solid mass projecting from uterus
+                                <span class="badge badge-stable">Common</span>
+                            </li>
+                            <li>
+                                <strong>Pelvic Inflammatory Disease</strong> - Purulent discharge, tenderness
+                                <span class="badge badge-caution">Infection</span>
+                            </li>
+                            <li>
+                                <strong>Endometrioma</strong> - Endometrial-like lining cells
+                                <span class="badge badge-caution">Cancer potential</span>
+                            </li>
+                            <li>
+                                <strong>Ectopic Pregnancy</strong> - Positive β-hCG, empty uterus
+                                <span class="badge badge-urgent">Emergency</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Diagnosis Section -->
+        <section class="section" id="diagnosis">
+            <div class="section-header diagnosis">
+                <div class="section-icon" style="color: var(--diagnosis-color);">
+                    <i class="fas fa-microscope"></i>
+                </div>
+                <div class="section-title">
+                    <h2>Diagnosis</h2>
+                    <p>Risk stratification tools and diagnostic criteria</p>
+                </div>
+            </div>
+
+            <div class="risk-calculator">
+                <h4><i class="fas fa-calculator"></i> Risk of Malignancy Index (RMI)</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    <strong>RMI = U × M × CA-125</strong>
+                </p>
+                <div class="risk-grid">
+                    <div class="risk-item">
+                        <strong>U = Ultrasound Score</strong>
+                        <small>0 = 0, 1 = 1 point, 3 = 2-5 points<br>
+                        Points for: multilocular, solid areas, metastases, ascites, bilateral lesions</small>
+                    </div>
+                    <div class="risk-item">
+                        <strong>M = Menopausal Status</strong>
+                        <small>1 = Pre-menopausal<br>
+                        3 = Post-menopausal</small>
+                    </div>
+                    <div class="risk-item">
+                        <strong>CA-125</strong>
+                        <small>Serum level in U/mL</small>
+                    </div>
+                </div>
+                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                    <h4 style="margin-bottom: 0.5rem;">Risk Categories:</h4>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <span class="badge badge-stable">Low: RMI <25 (<3% cancer risk)</span>
+                        <span class="badge badge-caution">Moderate: RMI 25-250 (20% cancer risk)</span>
+                        <span class="badge badge-urgent">High: RMI >250 (75% cancer risk)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card diagnosis-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
+                            <h3>DePriest Morphology Index</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Tumor Volume</strong> - <10cm³, 10-50cm³, >50-200cm³, >200cm³
+                                <span class="badge badge-caution">Score 0-4</span>
+                            </li>
+                            <li>
+                                <strong>Wall Structure</strong> - Smooth <3mm, smooth >3mm, papillary <3mm, papillary >3mm
+                                <span class="badge badge-caution">Score 0-4</span>
+                            </li>
+                            <li>
+                                <strong>Septal Structure</strong> - No septa, thin <3mm, thick 3-10mm, solid area >10mm
+                                <span class="badge badge-caution">Score 0-4</span>
+                            </li>
+                            <li>
+                                <strong>Total Score</strong> - Range 0-12
+                                <span class="badge badge-stable"><5: Benign (100% NPV)</span>
+                            </li>
+                            <li>
+                                <strong>Post-menopausal</strong> - Score ≥5
+                                <span class="badge badge-urgent">PPV 45% for malignancy</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card diagnosis-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-user-md"></i></div>
+                            <h3>ACOG Referral Guidelines</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--urgent-color); margin-bottom: 0.5rem;">Post-menopausal Women</h4>
+                            <ul>
+                                <li>CA-125 >35 U/mL</li>
+                                <li>Ascites present</li>
+                                <li>Nodular or fixed pelvic mass</li>
+                                <li>Evidence of metastasis</li>
+                                <li>Family history of ovarian/breast cancer</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--caution-color); margin-bottom: 0.5rem;">Pre-menopausal Women</h4>
+                            <ul>
+                                <li>CA-125 >200 U/mL</li>
+                                <li>Ascites present</li>
+                                <li>Evidence of metastasis</li>
+                                <li>Family history of ovarian/breast cancer</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card diagnosis-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-dna"></i></div>
+                            <h3>Genetic Risk Assessment</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--urgent-color); margin-bottom: 0.5rem;">>20-25% Risk - Refer</h4>
+                            <ul>
+                                <li>Personal history of breast AND ovarian cancer</li>
+                                <li>Ovarian cancer + close relative with ovarian/pre-menopausal breast cancer</li>
+                                <li>Ashkenazi Jewish ancestry with ovarian cancer</li>
+                                <li>Breast cancer ≤50 years + close relative with ovarian/male breast cancer</li>
+                                <li>Known BRCA-1/BRCA-2 mutation in family</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--caution-color); margin-bottom: 0.5rem;">5-10% Risk - Consider</h4>
+                            <ul>
+                                <li>Breast cancer ≤40 years</li>
+                                <li>High-grade serous ovarian cancer at any age</li>
+                                <li>Bilateral breast cancer (first case ≤50 years)</li>
+                                <li>Two+ close relatives with breast cancer</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Treatment Section -->
+        <section class="section" id="treatment">
+            <div class="section-header treatment">
+                <div class="section-icon" style="color: var(--treatment-color);">
+                    <i class="fas fa-procedures"></i>
+                </div>
+                <div class="section-title">
+                    <h2>Treatment</h2>
+                    <p>Management algorithms based on patient group and cyst characteristics</p>
+                </div>
+            </div>
+
+            <div class="algorithm-flow">
+                <h3 style="margin-bottom: 1.5rem; color: var(--treatment-color);">
+                    <i class="fas fa-route"></i> Treatment Algorithm Overview
+                </h3>
+                
+                <div class="flow-step urgent-step">
+                    <div class="flow-icon"><i class="fas fa-ambulance"></i></div>
+                    <div class="flow-content">
+                        <h4>Acutely Unwell / Acute Abdomen <span class="badge badge-urgent">Emergency</span></h4>
+                        <p>• Laparoscopy or laparotomy with resuscitation</p>
+                        <p>• IV broad-spectrum antibiotics (cyst rupture/abscess)</p>
+                        <p>• Consider ovarian torsion/rupture/hemorrhage</p>
+                    </div>
+                </div>
+
+                <div class="flow-step caution-step">
+                    <div class="flow-icon"><i class="fas fa-user-clock"></i></div>
+                    <div class="flow-content">
+                        <h4>Pre-menopausal Simple Cyst <span class="badge badge-stable">Conservative</span></h4>
+                        <p>• Expectant management if <5-7cm and asymptomatic</p>
+                        <p>• Serial ultrasound every 2-6 months for characterization</p>
+                        <p>• Laparoscopy if persistent/enlarging >3 months</p>
+                    </div>
+                </div>
+
+                <div class="flow-step caution-step">
+                    <div class="flow-icon"><i class="fas fa-user-clock"></i></div>
+                    <div class="flow-content">
+                        <h4>Pre-menopausal Complex/Solid Cyst <span class="badge badge-caution">Monitor</span></h4>
+                        <p>• Repeat ultrasound in 2-3 months if benign appearance</p>
+                        <p>• Laparoscopy if persistent (<10cm, low suspicion)</p>
+                        <p>• Laparotomy + oncology referral if solid or suspicious</p>
+                    </div>
+                </div>
+
+                <div class="flow-step caution-step">
+                    <div class="flow-icon"><i class="fas fa-user-clock"></i></div>
+                    <div class="flow-content">
+                        <h4>Post-menopausal Simple Cyst <span class="badge badge-stable">Conservative</span></h4>
+                        <p>• Serial US + CA-125 every 2-3 months if <10cm + normal CA-125</p>
+                        <p>• No follow-up needed for cysts ≤3cm per SRU guidelines</p>
+                        <p>• Surgical evaluation if increasing size or morphology</p>
+                    </div>
+                </div>
+
+                <div class="flow-step urgent-step">
+                    <div class="flow-icon"><i class="fas fa-user-clock"></i></div>
+                    <div class="flow-content">
+                        <h4>Post-menopausal Complex/Solid Cyst <span class="badge badge-urgent">Oncology Referral</span></h4>
+                        <p>• Refer to gynecological oncologist for surgical evaluation</p>
+                        <p>• Laparotomy by experienced oncologist</p>
+                        <p>• Complete staging and lymph node exploration</p>
+                    </div>
+                </div>
+
+                <div class="flow-step">
+                    <div class="flow-icon"><i class="fas fa-baby"></i></div>
+                    <div class="flow-content">
+                        <h4>Pregnancy <span class="badge badge-stable">Most Resolve</span></h4>
+                        <p>• Conservative observation for simple/complex <8cm</p>
+                        <p>• Laparoscopy for symptomatic or >8cm cysts</p>
+                        <p>• Laparotomy in 2nd trimester if malignant features</p>
+                        <p>• 70% spontaneous resolution rate for complex cysts</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card treatment-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-pills"></i></div>
+                            <h3>Medical Management</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Oral Contraceptives</strong> - Do NOT hasten resolution
+                                <span class="badge badge-stable">No Effect</span>
+                            </li>
+                            <li>
+                                <strong>Antibiotics</strong> - For tubo-ovarian abscess/PID
+                                <span class="badge badge-urgent">Cefoxitin + Doxycycline</span>
+                            </li>
+                            <li>
+                                <strong>Progesterone Support</strong> - If corpus luteum removed <12 weeks
+                                <span class="badge badge-caution">Pregnancy</span>
+                            </li>
+                            <li>
+                                <strong>Analgesia</strong> - NSAIDs for pain management
+                                <span class="badge badge-stable">Symptomatic</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card treatment-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-cut"></i></div>
+                            <h3>Surgical Options</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Laparoscopy</strong> - Minimally invasive, low morbidity
+                                <span class="badge badge-stable">Benign-appearing <10cm</span>
+                            </li>
+                            <li>
+                                <strong>Mini-laparotomy</strong> - Alternative to laparoscopy
+                                <span class="badge badge-caution">Obesity, pulmonary disease</span>
+                            </li>
+                            <li>
+                                <strong>Laparotomy</strong> - Open surgery for malignant suspicion
+                                <span class="badge badge-urgent">Oncology cases</span>
+                            </li>
+                            <li>
+                                <strong>Cystectomy</strong> - Cyst removal preserving ovary
+                                <span class="badge badge-stable">Pre-menopausal</span>
+                            </li>
+                            <li>
+                                <strong>Oophorectomy</strong> - Ovary removal when necessary
+                                <span class="badge badge-caution">Post-menopausal/malignant</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Follow-up Section -->
+        <section class="section" id="followup">
+            <div class="section-header followup">
+                <div class="section-icon" style="color: var(--followup-color);">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="section-title">
+                    <h2>Follow-up</h2>
+                    <p>Monitoring protocols and prognosis indicators</p>
+                </div>
+            </div>
+
+            <div class="cards-grid">
+                <div class="card followup-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-calendar-alt"></i></div>
+                            <h3>Monitoring Protocols</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--assessment-color); margin-bottom: 0.5rem;">Pre-menopausal</h4>
+                            <ul>
+                                <li>Simple cysts >5-7cm: US every 2-6 months</li>
+                                <li>Complex cysts: US every 2-3 months</li>
+                                <li>Pelvic exam at each visit</li>
+                            </ul>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--urgent-color); margin-bottom: 0.5rem;">Post-menopausal</h4>
+                            <ul>
+                                <li>Simple cysts 3-5cm: US every 3-6 months</li>
+                                <li>CA-125 at each follow-up visit</li>
+                                <li>Rectovaginal exam (if feasible)</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--treatment-color); margin-bottom: 0.5rem;">Pregnancy</h4>
+                            <ul>
+                                <li>Serial US to monitor growth/torsion</li>
+                                <li>Absent venous flow → urgent intervention</li>
+                                <li>Most resolve by 16-20 weeks</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card followup-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <h3>Complications</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Cyst Spillage</strong> - 18% laparoscopy vs 1% laparotomy
+                                <span class="badge badge-caution">Medium Risk</span>
+                            </li>
+                            <li>
+                                <strong>Cyst Rupture</strong> - Intraperitoneal bleed (corpus luteum)
+                                <span class="badge badge-urgent">Low Risk</span>
+                            </li>
+                            <li>
+                                <strong>Ovarian Torsion</strong> - 14.8% of surgically treated masses
+                                <span class="badge badge-urgent">14.8% Rate</span>
+                            </li>
+                            <li>
+                                <strong>Dyspareunia</strong> - Pain with intercourse
+                                <span class="badge badge-stable">Low Risk</span>
+                            </li>
+                            <li>
+                                <strong>Malignant Transformation</strong> - Small percentage in endometriomas
+                                <span class="badge badge-caution">Rare</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card followup-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-chart-pie"></i></div>
+                            <h3>Prognosis & Resolution Rates</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--stable-color); margin-bottom: 0.5rem;">Pre-menopausal</h4>
+                            <ul>
+                                <li>Simple cysts <6cm: 50% resolution at 6 months, 75% at 75 months</li>
+                                <li>Complex cysts: 8.3% spontaneous resolution</li>
+                                <li>Recurrence after laparoscopy: 7.6%</li>
+                            </ul>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <h4 style="color: var(--urgent-color); margin-bottom: 0.5rem;">Post-menopausal</h4>
+                            <ul>
+                                <li>Simple cysts <10cm: 69.4% resolution, <0.1% malignancy risk</li>
+                                <li>Complex cysts: 36-39% malignancy frequency</li>
+                                <li>Multiloculated solid tumors: Do not manage expectantly</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--treatment-color); margin-bottom: 0.5rem;">Pregnancy</h4>
+                            <ul>
+                                <li>Complex cysts: 70% spontaneous resolution</li>
+                                <li>Simple cysts: Nearly 100% resolution</li>
+                                <li>Malignancy risk: 1 in 12,000 to 47,000</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card followup-card" onclick="toggleCard(this)">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                            <h3>Patient Education</h3>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="card-content">
+                        <ul>
+                            <li>
+                                <strong>Symptom Monitoring</strong> - Report bloating, early satiety, urinary changes, pelvic pain
+                                <span class="badge badge-caution">Essential</span>
+                            </li>
+                            <li>
+                                <strong>Activity Restrictions</strong> - Avoid vigorous exercise/intercourse with large cysts
+                                <span class="badge badge-stable">Prevention</span>
+                            </li>
+                            <li>
+                                <strong>Combined Oral Contraceptives</strong> - 40% relative risk reduction for ovarian cancer
+                                <span class="badge badge-stable">Long-term use benefit</span>
+                            </li>
+                            <li>
+                                <strong>Prophylactic Oophorectomy</strong> - BRCA-1/BRCA-2 carriers
+                                <span class="badge badge-caution">High-risk groups</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+    <i class="fas fa-bars"></i>
+</button>
+
+<script>
+    // Card expansion functionality
+    function toggleCard(card) {
+        card.classList.toggle('expanded');
+    }
+
+    // Progress sidebar functionality
+    const progressItems = document.querySelectorAll('.progress-item');
+    const sections = document.querySelectorAll('.section');
+    const scrollProgress = document.getElementById('scrollProgress');
+
+    // Intersection Observer for section tracking
+    const observerOptions = {
+        root: null,
+        rootMargin: '-20% 0px -70% 0px',
+        threshold: 0
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const sectionId = entry.target.id;
+                
+                // Update active state on progress sidebar
+                progressItems.forEach(item => {
+                    item.classList.remove('active', 'diagnosis-active', 'treatment-active', 'followup-active');
+                    
+                    if (item.dataset.section === sectionId) {
+                        switch(sectionId) {
+                            case 'assessment':
+                                item.classList.add('active');
+                                break;
+                            case 'diagnosis':
+                                item.classList.add('diagnosis-active');
+                                break;
+                            case 'treatment':
+                                item.classList.add('treatment-active');
+                                break;
+                            case 'followup':
+                                item.classList.add('followup-active');
+                                break;
+                        }
+                    }
+                });
+            }
+        });
+    }, observerOptions);
+
+    sections.forEach(section => {
+        observer.observe(section);
+    });
+
+    // Smooth scroll to section when clicking progress items
+    progressItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            const sectionId = item.dataset.section;
+            const targetSection = document.getElementById(sectionId);
+            
+            targetSection.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+    });
+
+    // Scroll progress indicator
+    function updateScrollProgress() {
+        const scrollTop = window.pageYOffset;
+        const docHeight = document.body.scrollHeight - window.innerHeight;
+        const scrollPercent = (scrollTop / docHeight) * 100;
+        scrollProgress.style.width = scrollPercent + '%';
+    }
+
+    window.addEventListener('scroll', updateScrollProgress);
+
+    // Mobile menu toggle
+    function toggleMobileMenu() {
+        const sidebar = document.getElementById('progressSidebar');
+        sidebar.classList.toggle('mobile-open');
+        
+        const icon = document.querySelector('.mobile-menu-toggle i');
+        if (sidebar.classList.contains('mobile-open')) {
+            icon.classList.remove('fa-bars');
+            icon.classList.add('fa-times');
+        } else {
+            icon.classList.remove('fa-times');
+            icon.classList.add('fa-bars');
+        }
+    }
+
+    // Initialize all cards as collapsed on load
+    document.addEventListener('DOMContentLoaded', () => {
+        // Auto-expand key cards
+        const keyCards = document.querySelectorAll('.urgent-step');
+        keyCards.forEach(card => {
+            // Keep them collapsed initially but highlighted
+            card.style.borderWidth = '3px';
+        });
+
+        // Add subtle animation to badges
+        const badges = document.querySelectorAll('.badge');
+        badges.forEach(badge => {
+            badge.style.animation = 'pulse 2s infinite';
+        });
+    });
+
+    // Add CSS animation for badges
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .badge:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s ease;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Close mobile menu when clicking on a section
+    sections.forEach(section => {
+        section.addEventListener('click', () => {
+            const sidebar = document.getElementById('progressSidebar');
+            if (sidebar.classList.contains('mobile-open')) {
+                toggleMobileMenu();
+            }
+        });
+    });
+
+    // Add keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const sidebar = document.getElementById('progressSidebar');
+            if (sidebar.classList.contains('mobile-open')) {
+                toggleMobileMenu();
+            }
+        }
+    });
+
+    // Print-friendly functionality
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'p') {
+            // Auto-expand all cards before printing
+            const allCards = document.querySelectorAll('.card');
+            allCards.forEach(card => card.classList.add('expanded'));
+        }
+    });
+</script>
+</body>
+</html>
