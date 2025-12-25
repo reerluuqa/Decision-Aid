@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dementia Management Algorithm | NICE CKS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --assessment: #0d6efd;
+            --diagnosis: #6f42c1;
+            --treatment: #198754;
+            --followup: #fd7e14;
+            --urgent: #dc3545;
+            --caution: #ffc107;
+            --stable: #198754;
+            --sidebar-bg: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --border-color: #343a40;
+            --shadow: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.4);
+            --sidebar-bg: #1e1e1e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-box {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            width: 250px;
+            transition: var(--transition);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--assessment);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+        }
+
+        .theme-toggle {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .theme-toggle:hover {
+            background: var(--assessment);
+            color: white;
+            border-color: var(--assessment);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 6rem 2rem 2rem;
+            margin-left: 280px;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 80px;
+            width: 280px;
+            height: calc(100vh - 80px);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem 1rem;
+            overflow-y: auto;
+            z-index: 999;
+            transition: var(--transition);
+        }
+
+        .sidebar h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: var(--bg-primary);
+            transform: translateX(4px);
+        }
+
+        .progress-item.active {
+            background: var(--bg-primary);
+            border-left-color: var(--assessment);
+            font-weight: 600;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            color: white;
+        }
+
+        .progress-item:nth-child(1) .progress-icon { background: var(--assessment); }
+        .progress-item:nth-child(2) .progress-icon { background: var(--diagnosis); }
+        .progress-item:nth-child(3) .progress-icon { background: var(--treatment); }
+        .progress-item:nth-child(4) .progress-icon { background: var(--followup); }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header.assessment { background: var(--assessment); }
+        .card-header.diagnosis { background: var(--diagnosis); }
+        .card-header.treatment { background: var(--treatment); }
+        .card-header.followup { background: var(--followup); }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 3000px;
+        }
+
+        .card-content {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .subsection {
+            margin-bottom: 1.5rem;
+        }
+
+        .subsection h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection h4 {
+            font-size: 1rem;
+            margin: 0.75rem 0 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-urgent {
+            background: var(--urgent);
+            color: white;
+        }
+
+        .badge-caution {
+            background: var(--caution);
+            color: #000;
+        }
+
+        .badge-stable {
+            background: var(--stable);
+            color: white;
+        }
+
+        .list {
+            list-style: none;
+            margin: 0.5rem 0;
+        }
+
+        .list li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--assessment);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .highlight {
+            background: rgba(13, 110, 253, 0.1);
+            padding: 1rem;
+            border-left: 4px solid var(--assessment);
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .warning {
+            background: rgba(220, 53, 69, 0.1);
+            border-left-color: var(--urgent);
+        }
+
+        .caution {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: var(--caution);
+        }
+
+        .drug-info {
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.75rem 0;
+            border-left: 4px solid var(--treatment);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 3rem;
+        }
+
+        .matching-text {
+            background: rgba(255, 193, 7, 0.3);
+            padding: 0.1rem 0.2rem;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            .main-content {
+                margin-left: 0;
+                padding-top: 8rem;
+            }
+            .header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .search-box {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <header class="header">
+        <h1>Dementia Management Algorithm | NICE CKS May 2025</h1>
+        <div class="header-controls">
+            <input type="text" class="search-box" placeholder="Search algorithm..." id="searchBox">
+            <button class="theme-toggle" id="themeToggle">🌙 Dark Mode</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <h3>Progress</h3>
+            <div class="progress-item active" data-step="0">
+                <div class="progress-icon">🔍</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-step="1">
+                <div class="progress-icon">🧠</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-step="2">
+                <div class="progress-icon">💊</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-step="3">
+                <div class="progress-icon">📋</div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Card -->
+            <div class="card" id="assessment-card">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">🔍</div>
+                        <h2>Assessment</h2>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><span>⚠️</span> When to Suspect Dementia</h3>
+                            <ul class="list">
+                                <li>Memory loss – deferring to family, missing appointments</li>
+                                <li>Problems with reasoning and communication</li>
+                                <li>Difficulty making decisions or executive dysfunction</li>
+                                <li>Behavioural and psychological symptoms (BPSD)</li>
+                                <li>Difficulties with activities of daily living (ADLs)</li>
+                                <li>Symptoms present for <strong>months to years</strong></li>
+                            </ul>
+                            <span class="badge badge-caution">Cognitive decline</span>
+                            <span class="badge badge-urgent">Functional impact</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>📋</span> Initial Assessment</h3>
+                            <h4>History:</h4>
+                            <ul class="list">
+                                <li>Onset and progression timeline</li>
+                                <li>Impact on ADLs (shopping, finances, medication)</li>
+                                <li>Cognitive, behavioural, psychological symptoms</li>
+                                <li>Comorbidities (stroke, Parkinson's, depression)</li>
+                                <li>Medication review (anticholinergic burden)</li>
+                                <li>Family history and risk factors</li>
+                            </ul>
+                            
+                            <h4>Physical Examination:</h4>
+                            <ul class="list">
+                                <li>Neurological exam (focal signs, coordination, gait)</li>
+                                <li>Motor symptoms (hemiparesis, tremor, rigidity)</li>
+                                <li>Cardiovascular examination</li>
+                            </ul>
+                            
+                            <h4>Blood Tests:</h4>
+                            <div class="drug-info">
+                                <strong>FBC, ESR, CRP, U&E, Calcium, HbA1c, LFT, TFT, B12 & Folate</strong>
+                            </div>
+                            <span class="badge badge-stable">Routine investigations</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>🧮</span> Cognitive Assessment Tools</h3>
+                            <div class="highlight">
+                                <strong>Do not rely solely on scores</strong> – consider learning disabilities, sensory impairments, and baseline function
+                            </div>
+                            
+                            <h4>Recommended Tools:</h4>
+                            <ul class="list">
+                                <li><strong>10-CS (10-point Cognitive Screener):</strong> Score 8+ normal, 6-7 possible impairment, 0-5 probable impairment</li>
+                                <li><strong>6-CIT:</strong> Score 0-7 normal, 8+ significant</li>
+                                <li><strong>Mini-Cog:</strong> 3-item recall + clock drawing. Score 3-5 = lower likelihood</li>
+                                <li><strong>TYM (Test Your Memory):</strong> Self-administered, max 50. Score ≤42 detects 93% of mild Alzheimer's</li>
+                            </ul>
+                            <span class="badge badge-caution">Interpret with clinical context</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>🤔</span> Differential Diagnosis</h3>
+                            <div class="warning highlight">
+                                <strong>Consider treatable causes:</strong> Delirium, depression, vitamin deficiency, hypothyroidism, medication effects
+                            </div>
+                            <ul class="list">
+                                <li><strong>Normal ageing:</strong> Mild decline, no functional impact</li>
+                                <li><strong>Mild Cognitive Impairment:</strong> Objective impairment, minimal functional impact</li>
+                                <li><strong>Depression:</strong> Screen for low mood, anhedonia, self-neglect</li>
+                                <li><strong>Delirium:</strong> Acute fluctuating course, disturbed consciousness</li>
+                            </ul>
+                            <span class="badge badge-urgent">Rule out delirium</span>
+                            <span class="badge badge-caution">Depression screen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis-card">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">🧠</div>
+                        <h2>Diagnosis</h2>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><span>🏥</span> Referral to Specialist</h3>
+                            <div class="warning highlight">
+                                <strong>Refer to specialist dementia diagnostic service</strong> if reversible causes investigated AND dementia still suspected
+                            </div>
+                            <ul class="list">
+                                <li>Memory clinic or community old age psychiatry service</li>
+                                <li>People with learning disabilities → psychiatrist with expertise</li>
+                                <li>Rapidly progressive dementia → neurology service</li>
+                                <li>Mild cognitive impairment → discuss, annual follow-up, monitor progression</li>
+                            </ul>
+                            <span class="badge badge-urgent">Specialist referral</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>🔬</span> Specialist Investigations</h3>
+                            <h4>Essential:</h4>
+                            <ul class="list">
+                                <li><strong>Structural imaging:</strong> MRI or CT scan</li>
+                            </ul>
+                            
+                            <h4>When indicated:</h4>
+                            <ul class="list">
+                                <li><strong>FDG-PET/Perfusion SPECT:</strong> Functional imaging</li>
+                                <li><strong>I-FP-CIT SPECT:</strong> If dementia with Lewy bodies suspected</li>
+                                <li><strong>CSF examination:</strong> Rapid decline, atypical presentation, age <55</li>
+                            </ul>
+                            
+                            <h4>Subtype Features:</h4>
+                            <ul class="list">
+                                <li><strong>Alzheimer's:</strong> Memory loss first, difficulty with executive function</li>
+                                <li><strong>Vascular:</strong> Stepwise progression, focal neurological signs</li>
+                                <li><strong>Dementia with Lewy bodies:</strong> Fluctuating cognition, visual hallucinations, parkinsonism</li>
+                                <li><strong>Frontotemporal:</strong> Personality change, behavioral disturbance, preserved memory</li>
+                            </ul>
+                            <span class="badge badge-caution">Specialist interpretation</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment-card">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        <h2>Treatment</h2>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><span>🧘</span> Non-Pharmacological Interventions</h3>
+                            <ul class="list">
+                                <li><strong>Cognitive stimulation therapy:</strong> Group activities for cognitive/social function</li>
+                                <li><strong>Group reminiscence therapy:</strong> Objects from daily life to stimulate memory</li>
+                                <li><strong>Cognitive rehabilitation/Occupational therapy:</strong> Functional ability support</li>
+                                <li><strong>Personalized activities:</strong> Engagement, pleasure, interest</li>
+                            </ul>
+                            <span class="badge badge-stable">First-line approach</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>💊</span> Pharmacological Treatment</h3>
+                            <div class="highlight">
+                                <strong>Initiated by specialist</strong> – may be continued in primary care
+                            </div>
+                            
+                            <h4>Acetylcholinesterase (AChE) Inhibitors:</h4>
+                            <div class="drug-info">
+                                <strong>Donepezil:</strong> 5mg daily, increase to 10mg after 1 month if tolerated<br>
+                                <strong>Galantamine:</strong> 8mg daily for 4 weeks, then 16mg daily<br>
+                                <strong>Rivastigmine:</strong> 1.5mg twice daily, titrate up to 6mg twice daily<br>
+                                <span class="badge badge-stable">Mild-moderate Alzheimer's</span>
+                            </div>
+                            
+                            <h4>Memantine:</h4>
+                            <div class="drug-info">
+                                <strong>Indications:</strong><br>
+                                • Moderate AD intolerant to AChE inhibitors<br>
+                                • Severe Alzheimer's disease<br>
+                                • Add-on to AChE in moderate-severe disease<br>
+                                <strong>Dose:</strong> 5mg daily, titrate to 20mg weekly<br>
+                                <span class="badge badge-stable">Specialist initiation</span>
+                            </div>
+                            
+                            <h4>Other Dementias:</h4>
+                            <ul class="list">
+                                <li><strong>Dementia with Lewy bodies:</strong> Donepezil or rivastigmine first-line</li>
+                                <li><strong>Vascular dementia:</strong> AChE inhibitors if comorbid Alzheimer's suspected</li>
+                                <li><strong>Frontotemporal dementia:</strong> Do NOT offer AChE inhibitors or memantine</li>
+                            </ul>
+                            <span class="badge badge-caution">Subtype-specific</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>⚠️</span> Managing Non-Cognitive Symptoms</h3>
+                            <h4>Behaviour that Challenges:</h4>
+                            <div class="warning highlight">
+                                <strong>Structured assessment first</strong> – explore reasons, check clinical/environmental causes
+                            </div>
+                            <ul class="list">
+                                <li>Psychosocial and environmental interventions</li>
+                                <li>Personalized activities for engagement</li>
+                                <li><strong>Antipsychotics ONLY if:</strong> Risk of harm OR severe distress from hallucinations/delusions</li>
+                            </ul>
+                            
+                            <h4>Antipsychotic Guidance:</h4>
+                            <div class="caution highlight">
+                                <strong>Risperidone or haloperidol ONLY</strong> – specialist supervision required<br>
+                                <strong>Lowest effective dose, shortest duration</strong> – review every 6 weeks<br>
+                                <strong>Increased risk:</strong> Cerebrovascular adverse events and mortality
+                            </div>
+                            <ul class="list">
+                                <li><strong>Haloperidol:</strong> Start 0.5mg daily, max 5mg daily</li>
+                                <li><strong>Risperidone:</strong> Start 0.25mg twice daily, max 1mg twice daily</li>
+                                <li><strong>Avoid in DLB/Parkinson's:</strong> May worsen motor features</li>
+                            </ul>
+                            <span class="badge badge-urgent">High risk medication</span>
+                            <span class="badge badge-caution">Specialist initiation</span>
+                            
+                            <h4>Depression & Anxiety:</h4>
+                            <ul class="list">
+                                <li>Consider psychological treatments for mild-moderate symptoms</li>
+                                <li>Do NOT routinely offer antidepressants</li>
+                            </ul>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>👥</span> Support for Carers</h3>
+                            <div class="highlight">
+                                <strong>Offer psychoeducation and skills training:</strong>
+                            </div>
+                            <ul class="list">
+                                <li>Education about dementia and progression</li>
+                                <li>Personalized care strategies</li>
+                                <li>Communication techniques</li>
+                                <li>Carer health and wellbeing advice</li>
+                                <li>Information about services and support</li>
+                                <li>Carer's Assessment and respite care</li>
+                            </ul>
+                            <span class="badge badge-stable">Essential component</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup-card">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon">📋</div>
+                        <h2>Follow-up</h2>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="subsection">
+                            <h3><span>🏥</span> Primary Care Follow-up</h3>
+                            <h4>At Diagnosis:</h4>
+                            <ul class="list">
+                                <li>Provide information about subtype and progression</li>
+                                <li>Discuss driving and DVLA notification</li>
+                                <li>Legal rights, lasting power of attorney, advance care planning</li>
+                                <li>Signpost to support groups and charities</li>
+                            </ul>
+                            
+                            <h4>Ongoing Care:</h4>
+                            <ul class="list">
+                                <li><strong>Single named practitioner</strong> to coordinate care</li>
+                                <li><strong>Annual care plan review</strong> (minimum)</li>
+                                <li>Assess emerging needs and risks</li>
+                                <li>Monitor physical and mental health (depression, anxiety)</li>
+                                <li>Review medications – minimize anticholinergics, polypharmacy</li>
+                            </ul>
+                            <span class="badge badge-stable">Annual review</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>🔄</span> Treatment Monitoring</h3>
+                            <ul class="list">
+                                <li>Monitor response and adverse effects of dementia drugs</li>
+                                <li>Consider memantine add-on in moderate-severe disease</li>
+                                <li>Review antipsychotic use regularly (every 6 weeks)</li>
+                                <li>Stop unnecessary medicines cautiously</li>
+                            </ul>
+                            <span class="badge badge-caution">Medication review</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>🚨</span> When to Refer/Seek Advice</h3>
+                            <div class="warning highlight">
+                                <strong>Refer to specialist if:</strong>
+                            </div>
+                            <ul class="list">
+                                <li>BPSD not responding to initial management</li>
+                                <li>Safeguarding concerns</li>
+                                <li>Legal issues or Mental Health Act considerations</li>
+                                <li>Dose adjustments of AChE inhibitors/memantine needed</li>
+                                <li>Need for other services (dentistry, optometry, OT, SALT)</li>
+                            </ul>
+                            <span class="badge badge-urgent">Specialist input</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>❤️</span> End of Life Care</h3>
+                            <div class="caution highlight">
+                                <strong>Plan ahead early:</strong> Advance decisions, lasting power of attorney, preferred place of care
+                            </div>
+                            <h4>Key Issues:</h4>
+                            <ul class="list">
+                                <li><strong>Eating/Drinking:</strong> Encourage oral intake, avoid routine enteral feeding</li>
+                                <li><strong>Distress:</strong> Assess for pain, delirium, inappropriate care</li>
+                                <li><strong>Withholding Treatment:</strong> Follow GMC guidance, consider advance decisions</li>
+                                <li><strong>Resuscitation:</strong> Discuss with person, family, and MDT. Record decisions</li>
+                            </ul>
+                            <span class="badge badge-urgent">Palliative approach</span>
+                            <span class="badge badge-caution">Sensitive discussion</span>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><span>📊</span> Key Performance Indicators</h3>
+                            <ul class="list">
+                                <li><strong>QOF DEM004:</strong> 35-70% of patients have care plan reviewed in preceding 12 months (14 points)</li>
+                                <li>Antipsychotic prescribing review</li>
+                                <li>Carer education and skills training</li>
+                            </ul>
+                            <span class="badge badge-stable">Quality indicator</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="footer">
+                <p>Based on NICE Clinical Knowledge Summaries: Dementia (May 2025) | For healthcare professionals only</p>
+                <p>This tool is for guidance and does not replace clinical judgement</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update all cards to close others (optional - remove if want multiple open)
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) c.classList.remove('expanded');
+            });
+            
+            // Update progress tracking
+            updateProgress();
+        }
+
+        // Expand first card by default
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('assessment-card').classList.add('expanded');
+        });
+
+        // Theme toggle
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const body = document.body;
+            const isDark = body.getAttribute('data-theme') === 'dark';
+            body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            themeToggle.textContent = isDark ? '🌙 Dark Mode' : '☀️ Light Mode';
+        });
+
+        // Progress sidebar functionality
+        const progressItems = document.querySelectorAll('.progress-item');
+        const cards = document.querySelectorAll('.card');
+
+        progressItems.forEach((item, index) => {
+            item.addEventListener('click', () => {
+                // Remove active class from all
+                progressItems.forEach(i => i.classList.remove('active'));
+                // Add active to clicked
+                item.classList.add('active');
+                
+                // Scroll to corresponding card
+                cards[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Expand the card
+                cards[index].classList.add('expanded');
+                // Collapse others
+                cards.forEach((c, i) => {
+                    if (i !== index) c.classList.remove('expanded');
+                });
+            });
+        });
+
+        // Update progress based on scroll position
+        function updateProgress() {
+            const scrollPosition = window.scrollY + 100;
+            
+            cards.forEach((card, index) => {
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition < cardBottom) {
+                    progressItems.forEach(i => i.classList.remove('active'));
+                    progressItems[index].classList.add('active');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', updateProgress);
+
+        // Search functionality
+        const searchBox = document.getElementById('searchBox');
+        searchBox.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            // Clear previous highlights
+            document.querySelectorAll('.matching-text').forEach(span => {
+                const parent = span.parentNode;
+                parent.replaceChild(document.createTextNode(span.textContent), span);
+                parent.normalize();
+            });
+
+            if (searchTerm.length < 2) return;
+
+            // Search and highlight matching text
+            const walker = document.createTreeWalker(
+                document.querySelector('.main-content'),
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+
+            const textNodes = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.toLowerCase().includes(searchTerm) && 
+                    !['SCRIPT', 'STYLE', 'NOSCRIPT'].includes(node.parentNode.tagName)) {
+                    textNodes.push(node);
+                }
+            }
+
+            textNodes.forEach(node => {
+                const span = document.createElement('span');
+                span.className = 'matching-text';
+                const regex = new RegExp(`(${searchTerm})`, 'gi');
+                const parts = node.textContent.split(regex);
+                
+                parts.forEach((part, i) => {
+                    if (part.toLowerCase() === searchTerm) {
+                        const highlight = document.createElement('span');
+                        highlight.className = 'matching-text';
+                        highlight.textContent = part;
+                        node.parentNode.insertBefore(highlight, node);
+                    } else if (part) {
+                        node.parentNode.insertBefore(document.createTextNode(part), node);
+                    }
+                });
+                node.parentNode.removeChild(node);
+            });
+
+            // Scroll to first match
+            const firstMatch = document.querySelector('.matching-text');
+            if (firstMatch) {
+                firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+
+        // Print functionality
+        const printBtn = document.createElement('button');
+        printBtn.className = 'theme-toggle';
+        printBtn.textContent = '🖨️ Print';
+        printBtn.onclick = () => window.print();
+        document.querySelector('.header-controls').appendChild(printBtn);
+    </script>
+</body>
+</html>
