@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPH Management Algorithm - BMJ Best Practice</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --assessment: #3498db;
+            --diagnosis: #27ae60;
+            --treatment: #f39c12;
+            --followup: #9b59b6;
+            --red-flag: #e74c3c;
+            --amber-flag: #f39c12;
+            --green-flag: #27ae60;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --shadow: 0 5px 15px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 25px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding-right: 300px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), #34495e);
+            color: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .step-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            overflow: hidden;
+            border-left: 6px solid;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .step-card.assessment {
+            border-left-color: var(--assessment);
+        }
+
+        .step-card.diagnosis {
+            border-left-color: var(--diagnosis);
+        }
+
+        .step-card.treatment {
+            border-left-color: var(--treatment);
+        }
+
+        .step-card.followup {
+            border-left-color: var(--followup);
+        }
+
+        .card-header {
+            padding: 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, rgba(0,0,0,0.02), transparent);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: white;
+        }
+
+        .assessment .card-icon { background: var(--assessment); }
+        .diagnosis .card-icon { background: var(--diagnosis); }
+        .treatment .card-icon { background: var(--treatment); }
+        .followup .card-icon { background: var(--followup); }
+
+        .expand-icon {
+            font-size: 1.2em;
+            transition: var(--transition);
+            color: var(--text-light);
+        }
+
+        .step-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .step-card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 0 25px 25px;
+        }
+
+        .sub-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .sub-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .sub-heading {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px;
+            transition: var(--transition);
+        }
+
+        .badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge.red {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--red-flag);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .badge.amber {
+            background: rgba(243, 156, 18, 0.15);
+            color: var(--amber-flag);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+        }
+
+        .badge.green {
+            background: rgba(39, 174, 96, 0.15);
+            color: var(--green-flag);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+        }
+
+        .badge i {
+            font-size: 1.1em;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--assessment);
+        }
+
+        .treatment .info-card {
+            border-left-color: var(--treatment);
+        }
+
+        .followup .info-card {
+            border-left-color: var(--followup);
+        }
+
+        .medication-list {
+            list-style: none;
+        }
+
+        .medication-list li {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid var(--treatment);
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 20px;
+            top: 20px;
+            width: 280px;
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar h3 {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.95em;
+        }
+
+        .progress-item:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(90deg, var(--assessment), var(--diagnosis));
+            color: white;
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        .progress-item.completed {
+            background: rgba(39, 174, 96, 0.1);
+            color: var(--green-flag);
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            background: #ecf0f1;
+            color: var(--text-light);
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: var(--green-flag);
+            color: white;
+        }
+
+        .red-flag-alert {
+            background: linear-gradient(135deg, var(--red-flag), #c0392b);
+            color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .red-flag-alert h4 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .warning-box {
+            background: rgba(243, 156, 18, 0.1);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .warning-box h5 {
+            color: var(--amber-flag);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .success-box {
+            background: rgba(39, 174, 96, 0.1);
+            border: 1px solid rgba(39, 174, 96, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .success-box h5 {
+            color: var(--green-flag);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .algorithm-path {
+            background: linear-gradient(90deg, #ecf0f1, transparent);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid var(--treatment);
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                padding: 15px;
+            }
+            .main-content {
+                padding-right: 0;
+            }
+            .sidebar {
+                position: relative;
+                right: auto;
+                top: auto;
+                width: 100%;
+                margin-top: 30px;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            .card-title {
+                font-size: 1.2em;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, rgba(52, 152, 219, 0.2), rgba(52, 152, 219, 0.1));
+            border-left: 4px solid var(--assessment);
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-procedures"></i> Benign Prostatic Hyperplasia</h1>
+                <p class="subtitle">Interactive Management Algorithm | BMJ Best Practice (Sep 2024)</p>
+            </div>
+
+            <!-- Red Flag Alert -->
+            <div class="red-flag-alert fade-in">
+                <h4><i class="fas fa-exclamation-triangle"></i> URGENT UROLOGY REFERRAL INDICATORS</h4>
+                <div class="info-grid" style="margin-top: 15px;">
+                    <div><i class="fas fa-tint"></i> Microscopic/macroscopic haematuria</div>
+                    <div><i class="fas fa-brain"></i> Neurological disease (PD, MS, CVA)</div>
+                    <div><i class="fas fa-history"></i> Prior urological surgeries/stricture</div>
+                    <div><i class="fas fa-tint"></i> Recurrent/persistent UTI</div>
+                    <div><i class="fas fa-ban"></i> Acute/chronic urinary retention</div>
+                    <div><i class="fas fa-hand-paper"></i> Palpable bladder</div>
+                    <div><i class="fas fa-kidneys"></i> Renal impairment</div>
+                    <div><i class="fas fa-exclamation"></i> Abnormal DRE/PSA</div>
+                </div>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="step-card assessment fade-in" data-step="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-clipboard-check"></i></div>
+                        Assessment & History
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-question-circle"></i> Key History Components</div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <strong>Voiding Symptoms:</strong> Hesitancy, weak stream, intermittency, straining, incomplete emptying, post-void dribbling
+                                </div>
+                                <div class="info-card">
+                                    <strong>Storage Symptoms:</strong> Frequency, nocturia, urgency
+                                </div>
+                                <div class="info-card">
+                                    <strong>Red Flags:</strong> Fever, pain, dysuria (suggests UTI/prostatitis)
+                                </div>
+                                <div class="info-card">
+                                    <strong>Medication Review:</strong> Diuretics, anticholinergics, cholinesterase inhibitors, alpha-agonists
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-user-md"></i> Physical Examination</div>
+                            <ul style="list-style-type: none; padding-left: 0;">
+                                <li style="padding: 8px 0; border-bottom: 1px solid #ecf0f1;"><i class="fas fa-hand-paper text-muted"></i> <strong>Digital Rectal Exam:</strong> Assess size, nodules, tenderness</li>
+                                <li style="padding: 8px 0; border-bottom: 1px solid #ecf0f1;"><i class="fas fa-belly text-muted"></i> <strong>Abdominal Exam:</strong> Palpable bladder?</li>
+                                <li style="padding: 8px 0; border-bottom: 1px solid #ecf0f1;"><i class="fas fa-brain text-muted"></i> <strong>Neurological Assessment:</strong> If neurogenic bladder suspected</li>
+                                <li style="padding: 8px 0;"><i class="fas fa-chart-line text-muted"></i> <strong>Pelvic Floor:</strong> Assess for dysfunction in pain-predominant complaints</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-flask"></i> Initial Investigations</div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <div class="badge red"><i class="fas fa-asterisk"></i> ESSENTIAL</div>
+                                    <strong>Urinalysis:</strong> Glucose, protein, blood, infection
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-balance-scale"></i> SHARED DECISION</div>
+                                    <strong>PSA:</strong> Discuss before testing; >70y or <10-15yr life expectancy generally not recommended
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge green"><i class="fas fa-chart-bar"></i> STANDARDIZED</div>
+                                    <strong>IPSS Questionnaire:</strong> 7 questions + QoL score
+                                    <div class="highlight">
+                                        <strong>Scoring:</strong> Mild (0-7) | Moderate (8-19) | Severe (20-35)
+                                    </div>
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-calendar-alt"></i> SELECTIVE</div>
+                                    <strong>Frequency/Volume Chart:</strong> If significant nocturia (≥3 days)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="step-card diagnosis fade-in" data-step="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-microscope"></i></div>
+                        Diagnosis & Risk Stratification
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-shield-alt"></i> Risk Factors for Progression</div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <div class="badge red"><i class="fas fa-exclamation-triangle"></i> STRONG</div>
+                                    <strong>Age >50 years:</strong> Linear increase in incidence<br>
+                                    <small>65-74y: 42% of cases | 75-79y: Highest prevalence</small>
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-users"></i> WEAK</div>
+                                    <strong>Family History:</strong> 3.3-fold higher risk in monozygotic twins
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-smoking"></i> WEAK</div>
+                                    <strong>Lifestyle:</strong> Smoking, male pattern baldness, metabolic syndrome
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-globe"></i> DEMOGRAPHIC</div>
+                                    <strong>Race:</strong> Asian men have smaller prostates vs white/black men
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-stethoscope"></i> Differential Diagnosis</div>
+                            <div class="warning-box">
+                                <h5><i class="fas fa-exclamation-triangle"></i> Consider These Alternatives:</h5>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li><strong>Overactive Bladder:</strong> Low post-void residuals, abnormal urodynamics</li>
+                                    <li><strong>Prostatitis:</strong> Fever, tender prostate, elevated WCC/PSA</li>
+                                    <li><strong>Prostate Cancer:</strong> Abnormal DRE, elevated PSA, low free PSA</li>
+                                    <li><strong>UTI:</strong> Pyuria, positive culture</li>
+                                    <li><strong>Bladder Cancer:</strong> Hematuria, risk factors (smoking)</li>
+                                    <li><strong>Neurogenic Bladder:</strong> Neurological disease, abnormal urodynamics</li>
+                                    <li><strong>Urethral Stricture:</strong> History of trauma/surgery</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-search-plus"></i> Additional Testing (Selective)</div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-ruler"></i> PROSTATE SIZE</div>
+                                    <strong>Ultrasound:</strong> Transrectal > Transabdominal (more accurate)
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-volume-up"></i> FLOW ASSESSMENT</div>
+                                    <strong>Uroflowmetry:</strong> Qmax <15 mL/s suggests obstruction<br>
+                                    <small>Note: Low flow may be due to obstruction, detrusor underactivity, or underfilled bladder</small>
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-tint"></i> RESIDUAL VOLUME</div>
+                                    <strong>Post-Void Residual:</strong> Perform before surgical intervention<br>
+                                    <small>PPV 63%, NPV 52% for BOO (50 mL threshold)</small>
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-wave-square"></i> COMPLEX CASES</div>
+                                    <strong>Pressure Flow Studies:</strong> When diagnostic uncertainty exists
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="step-card treatment fade-in" data-step="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-pills"></i></div>
+                        Treatment Algorithm
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-leaf"></i> Conservative Management</div>
+                            <div class="success-box">
+                                <h5><i class="fas fa-check-circle"></i> First-Line for All Patients</h5>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Education & reassurance about condition</li>
+                                    <li>Fluid limitation (especially evening/travel)</li>
+                                    <li>Reduce caffeine/alcohol intake</li>
+                                    <li>Review/timing of medications (diuretics, anticholinergics)</li>
+                                    <li>Prevent/treat constipation</li>
+                                    <li>Bladder training & pelvic floor exercises</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-eye"></i> Watchful Waiting</div>
+                            <div class="info-card">
+                                <div class="badge green"><i class="fas fa-clock"></i> APPROPRIATE FOR</div>
+                                <strong>Mild-moderate, non-bothersome LUTS</strong><br>
+                                <small>Most remain stable; few progress to retention/complications</small>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-capsules"></i> Medical Therapy</div>
+                            
+                            <div class="algorithm-path">
+                                <h5>Prostate Volume-Based Approach</h5>
+                            </div>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-shield-alt"></i> Alpha-Blockers (First-Line for Most)</h6>
+                            <ul class="medication-list">
+                                <li><strong>Terazosin:</strong> 1 mg daily → titrate to max 20 mg/day (divided)</li>
+                                <li><strong>Doxazosin (IR):</strong> 1 mg daily → titrate to max 8 mg/day</li>
+                                <li><strong>Doxazosin (XR):</strong> 4 mg daily → titrate to max 8 mg/day</li>
+                                <li><strong>Alfuzosin (XR):</strong> 10 mg daily (fixed dose)</li>
+                                <li><strong>Tamsulosin:</strong> 0.4 mg daily → titrate to max 0.8 mg/day</li>
+                                <li><strong>Silodosin:</strong> 8 mg daily (fixed dose) - most selective alpha-1A</li>
+                            </ul>
+
+                            <div class="warning-box">
+                                <h5><i class="fas fa-exclamation-triangle"></i> Important Considerations</h5>
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>Floppy Iris Syndrome:</strong> Highest risk with tamsulosin - ask about cataract surgery</li>
+                                    <li><strong>Fall/Fracture Risk:</strong> Increased risk with prostate-selective alpha-blockers</li>
+                                    <li><strong>Heart Failure:</strong> Risk increased, especially non-selective agents</li>
+                                    <li><strong>Ejaculatory Dysfunction:</strong> Common with silodosin/tamsulosin; less with alfuzosin/doxazosin/terazosin</li>
+                                </ul>
+                            </div>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-cut"></i> 5-Alpha-Reductase Inhibitors (for Larger Prostates)</h6>
+                            <ul class="medication-list">
+                                <li><strong>Finasteride:</strong> 5 mg daily (beneficial only if prostate >30 g)</li>
+                                <li><strong>Dutasteride:</strong> 0.5 mg daily</li>
+                            </ul>
+                            <div class="warning-box">
+                                <h5><i class="fas fa-clock"></i> Slow Onset</h5>
+                                <p>Take several months to improve symptoms - suitable for long-term treatment only</p>
+                                <p><strong>Adverse Effects:</strong> Sexual dysfunction (5-10%), gynecomastia, rare depression/suicidal thoughts (finasteride)</p>
+                            </div>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-heart"></i> PDE-5 Inhibitors (for ED + BPH)</h6>
+                            <ul class="medication-list">
+                                <li><strong>Tadalafil:</strong> 5 mg daily (only approved agent for BPH)</li>
+                            </ul>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-bladder"></i> Anticholinergics (for Storage Symptoms)</h6>
+                            <ul class="medication-list">
+                                <li><strong>Tolterodine (IR):</strong> 2 mg twice daily | (XR): 4 mg daily</li>
+                                <li><strong>Fesoterodine (XR):</strong> 4-8 mg daily</li>
+                                <li><strong>Oxybutynin (IR):</strong> 5 mg 2-3x daily → max 20 mg/day | (XR): 5-10 mg daily → max 30 mg/day</li>
+                                <li><strong>Solifenacin:</strong> 5 mg daily → max 10 mg/day</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-compress"></i> Combination Therapy</div>
+                            <div class="warning-box">
+                                <h5><i class="fas fa-plus-circle"></i> When to Consider</h5>
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>5-ARI + Alpha-blocker:</strong> Large prostate with symptom progression on monotherapy</li>
+                                    <li><strong>Alpha-blocker + Anticholinergic:</strong> Predominant storage symptoms</li>
+                                    <li><strong>Alpha-blocker + Beta-3 Agonist:</strong> Moderate-severe storage LUTS</li>
+                                    <li><strong>Alpha-blocker + Tadalafil:</strong> Incomplete response/intolerant to alpha-blocker</li>
+                                    <li><strong>Finasteride/Tadalafil Fixed-Dose:</strong> Men with larger prostates (max 26 weeks)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-user-md"></i> Surgical Referral Indications</div>
+                            <div class="red-flag-alert" style="margin-top: 0;">
+                                <h4><i class="fas fa-exclamation-triangle"></i> COMPLICATIONS REQUIRING SURGERY</h4>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Acute/chronic renal insufficiency</li>
+                                    <li>Recurrent bladder stones</li>
+                                    <li>Gross recurrent hematuria</li>
+                                    <li>Recurrent UTIs</li>
+                                    <li>Refractory urinary retention</li>
+                                    <li>Refractory response to medication or intolerable adverse effects</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-scalpel"></i> Surgical Options by Prostate Size</div>
+                            
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-weight"></i> ≤30 g: Minimally Invasive</h6>
+                            <ul class="medication-list">
+                                <li><strong>TUIP (Transurethral Incision):</strong> Lower retrograde ejaculation rates vs TURP</li>
+                                <li><strong>Temporary Implanted Devices:</strong> iTIND (25-75 g, no middle lobe)</li>
+                            </ul>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-weight-hanging"></i> 30-80 g: Multiple Options</h6>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <strong>Minimally Invasive:</strong><br>
+                                    • Prostatic Urethral Lift (PUL)<br>
+                                    • Water Vapor Thermal Therapy<br>
+                                    • Prostatic Artery Embolization (PAE)<br>
+                                    • Temporary Implanted Devices
+                                </div>
+                                <div class="info-card">
+                                    <strong>Moderately Invasive:</strong><br>
+                                    • TURP (standard <80 g)<br>
+                                    • TUVP (bipolar preferred)<br>
+                                    • Laser Enucleation (HoLEP/ThuLEP)<br>
+                                    • Photoselective Vaporization (PVP)<br>
+                                    • Aquablation
+                                </div>
+                            </div>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--treatment);"><i class="fas fa-weight-hanging"></i> ≥80 g: Large Gland Procedures</h6>
+                            <ul class="medication-list">
+                                <li><strong>Open/Laparoscopic/Robotic Prostatectomy:</strong> Significantly enlarged glands</li>
+                                <li><strong>Laser Enucleation (HoLEP/ThuLEP):</strong> Prostate size-independent, excellent for large glands</li>
+                            </ul>
+
+                            <div class="warning-box">
+                                <h5><i class="fas fa-info-circle"></i> Key Surgical Considerations</h5>
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>Anticoagulation:</strong> Laser procedures preferred (less bleeding)</li>
+                                    <li><strong>Sexual Function:</strong> PUL and water vapor may preserve ejaculatory function</li>
+                                    <li><strong>TURP:</strong> Historical gold standard but higher bleeding/ejaculatory dysfunction risk</li>
+                                    <li><strong>Experience:</strong> Choice depends on surgeon expertise & equipment availability</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="step-card followup fade-in" data-step="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                        Follow-up & Monitoring
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-calendar-check"></i> Monitoring Schedule</div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <div class="badge green"><i class="fas fa-clock"></i> ALPHA-BLOCKER</div>
+                                    <strong>Re-assess:</strong> 4-12 weeks after initiation
+                                </div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-clock"></i> 5-ARI</div>
+                                    <strong>Re-assess:</strong> 3-6 months (slow onset)</div>
+                                <div class="info-card">
+                                    <div class="badge green"><i class="fas fa-syringe"></i> POST-SURGERY</div>
+                                    <strong>Full recovery:</strong> ~6 weeks, evaluate efficacy</div>
+                                <div class="info-card">
+                                    <div class="badge amber"><i class="fas fa-eye"></i> WATCHFUL WAITING</div>
+                                    <strong>Follow-up:</strong> Yearly assessment</div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-chart-bar"></i> Monitoring Parameters</div>
+                            <ul style="list-style: none; padding-left: 0;">
+                                <li style="padding: 8px 0; border-bottom: 1px solid #ecf0f1;"><i class="fas fa-question-circle text-muted"></i> <strong>IPSS:</strong> Accurate & reliable for symptom monitoring</li>
+                                <li style="padding: 8px 0; border-bottom: 1px solid #ecf0f1;"><i class="fas fa-tint text-muted"></i> <strong>Urinalysis:</strong> As clinically indicated</li>
+                                <li style="padding: 8px 0; border-bottom: 1px solid #ecf0f1;"><i class="fas fa-kidneys text-muted"></i> <strong>Renal Function:</strong> If indicated (suspected insufficiency, hydronephrosis, pre-op)</li>
+                                <li style="padding: 8px 0;"><i class="fas fa-shield-alt text-muted"></i> <strong>Prostate Cancer Screening:</strong> Individualized discussion for men 55-69 years</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-exclamation-triangle"></i> Complications & Prognosis</div>
+                            
+                            <h6 style="margin: 15px 0 10px; color: var(--followup);"><i class="fas fa-chart-line"></i> Progression Risk</h6>
+                            <div class="info-card">
+                                <strong>~20% will have progressive symptoms over 5 years</strong><br>
+                                <small>Risk factors: Baseline prostate volume >40 g AND PSA >1.4 ng/mL</small>
+                                <div class="highlight">
+                                    <strong>Risk Reduction:</strong> Combination therapy reduces progression by 66% (vs 39% doxazosin, 34% finasteride alone)
+                                </div>
+                            </div>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--followup);"><i class="fas fa-ban"></i> Acute Urinary Retention</h6>
+                            <div class="warning-box">
+                                <h5><i class="fas fa-info-circle"></i> 5-Year Risk: ~2.5%</h5>
+                                <p><strong>Management:</strong> Foley catheter → trial alpha-blocker 10-14 days → trial without catheter</p>
+                                <p><strong>Outcome:</strong> ~2/3 require catheter replacement → invasive therapy</p>
+                            </div>
+
+                            <h6 style="margin: 15px 0 10px; color: var(--followup);"><i class="fas fa-heart-broken"></i> Sexual Dysfunction</h6>
+                            <div class="info-card">
+                                <strong>Incidence:</strong> 5-8% with alpha-blockers | 10-15% with 5-ARI or surgery<br>
+                                <small>Tamsulosin: ejaculatory dysfunction | 5-ARI: decreased libido, ED, gynecomastia</small>
+                            </div>
+
+                            <div class="success-box">
+                                <h5><i class="fas fa-thumbs-up"></i> Overall Prognosis</h5>
+                                <p>Majority achieve at least moderate symptom improvement with decreased bother score and improved QoL. Lower urinary tract symptoms may affect sexual wellbeing.</p>
+                            </div>
+
+                            <div class="warning-box">
+                                <h5><i class="fas fa-info-circle"></i> Long-term Outcomes</h5>
+                                <p><strong>MTOP Study:</strong> Combination therapy with doxazosin + finasteride reduced acute retention by 81% and invasive surgery by 69% over 5 years.</p>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-heading"><i class="fas fa-hand-holding-heart"></i> Patient Discussions</div>
+                            <div class="success-box">
+                                <h5><i class="fas fa-comments"></i> Shared Decision-Making</h5>
+                                <p>Encourage open discussion about bother, treatment effects, and adverse events. Caution patients about dizziness, impotence, gynecomastia.</p>
+                                <p><strong>Watchful Waiting:</strong> Encourage voiding diary tracking for untreated patients.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 40px; padding: 20px; color: var(--text-light);">
+                <i class="fas fa-info-circle"></i> This algorithm is based on BMJ Best Practice guidelines (September 2024). Always consider individual patient factors and local protocols.
+            </div>
+        </main>
+
+        <!-- Sticky Sidebar -->
+        <aside class="sidebar">
+            <h3><i class="fas fa-compass"></i> Algorithm Progress</h3>
+            <div class="progress-item active" onclick="scrollToStep('assessment')">
+                <div class="progress-icon"><i class="fas fa-clipboard-check"></i></div>
+                <div>
+                    <div>Assessment</div>
+                    <small style="font-size: 0.85em; opacity: 0.7;">History & Examination</small>
+                </div>
+            </div>
+            <div class="progress-item" onclick="scrollToStep('diagnosis')">
+                <div class="progress-icon"><i class="fas fa-microscope"></i></div>
+                <div>
+                    <div>Diagnosis</div>
+                    <small style="font-size: 0.85em; opacity: 0.7;">Risk Stratification</small>
+                </div>
+            </div>
+            <div class="progress-item" onclick="scrollToStep('treatment')">
+                <div class="progress-icon"><i class="fas fa-pills"></i></div>
+                <div>
+                    <div>Treatment</div>
+                    <small style="font-size: 0.85em; opacity: 0.7;">Medical & Surgical</small>
+                </div>
+            </div>
+            <div class="progress-item" onclick="scrollToStep('followup')">
+                <div class="progress-icon"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <div>Follow-up</div>
+                    <small style="font-size: 0.85em; opacity: 0.7;">Monitoring & Prognosis</small>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1;">
+                <h3><i class="fas fa-bookmark"></i> Quick Reference</h3>
+                <div style="font-size: 0.9em; line-height: 1.5;">
+                    <div style="margin-bottom: 10px;">
+                        <div class="badge red" style="margin: 2px;"><i class="fas fa-exclamation-triangle"></i> Urgent Referral</div>
+                        <small>Hematuria, retention, abnormal DRE/PSA</small>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div class="badge amber" style="margin: 2px;"><i class="fas fa-exclamation"></i> Moderate Risk</div>
+                        <small>IPSS 8-19, prostate >30g</small>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div class="badge green" style="margin: 2px;"><i class="fas fa-check"></i> Stable</div>
+                        <small>IPSS <8, watchful waiting</small>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 0.85em;">
+                <i class="fas fa-info-circle"></i> <strong>IPSS Score</strong><br>
+                Mild: 0-7 | Moderate: 8-19 | Severe: 20-35
+            </div>
+
+            <div style="margin-top: 20px; text-align: center;">
+                <button onclick="window.print()" style="background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; width: 100%; transition: var(--transition);">
+                    <i class="fas fa-print"></i> Print Algorithm
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update progress tracking
+            updateProgress();
+        }
+
+        // Smooth scroll to step
+        function scrollToStep(stepId) {
+            const element = document.querySelector(`[data-step="${stepId}"]`);
+            if (element) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Expand the target card
+                setTimeout(() => {
+                    element.classList.add('expanded');
+                    updateProgress();
+                }, 300);
+            }
+        }
+
+        // Update progress sidebar
+        function updateProgress() {
+            const cards = document.querySelectorAll('.step-card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                const item = progressItems[index];
+                if (card.classList.contains('expanded')) {
+                    item.classList.add('active');
+                    item.classList.remove('completed');
+                } else if (isCardInViewport(card)) {
+                    item.classList.add('active');
+                    item.classList.remove('completed');
+                } else if (hasCardBeenViewed(card)) {
+                    item.classList.add('completed');
+                    item.classList.remove('active');
+                } else {
+                    item.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        // Check if card is in viewport
+        function isCardInViewport(card) {
+            const rect = card.getBoundingClientRect();
+            return rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2;
+        }
+
+        // Check if card has been viewed (scrolled past)
+        function hasCardBeenViewed(card) {
+            const rect = card.getBoundingClientRect();
+            return rect.top < window.innerHeight / 2;
+        }
+
+        // Throttled scroll handler for better performance
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(updateProgress, 50);
+        });
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Expand first card by default
+            const firstCard = document.querySelector('.step-card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+            }
+            
+            updateProgress();
+            
+            // Add fade-in animation to cards
+            const cards = document.querySelectorAll('.step-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('fade-in');
+                }, index * 200);
+            });
+        });
+
+        // Badge click interactions
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                this.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 200);
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const expandedCard = document.querySelector('.step-card.expanded');
+            const cards = Array.from(document.querySelectorAll('.step-card'));
+            const currentIndex = cards.indexOf(expandedCard);
+            
+            if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                expandedCard.classList.remove('expanded');
+                cards[currentIndex + 1].classList.add('expanded');
+                cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                expandedCard.classList.remove('expanded');
+                cards[currentIndex - 1].classList.add('expanded');
+                cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+
+        // Save expanded state in localStorage
+        window.addEventListener('beforeunload', () => {
+            const expandedCards = Array.from(document.querySelectorAll('.step-card.expanded')).map(card => card.dataset.step);
+            localStorage.setItem('bph-expanded-cards', JSON.stringify(expandedCards));
+        });
+
+        // Restore expanded state on load
+        window.addEventListener('load', () => {
+            const saved = JSON.parse(localStorage.getItem('bph-expanded-cards') || '[]');
+            saved.forEach(stepId => {
+                const card = document.querySelector(`[data-step="${stepId}"]`);
+                if (card) card.classList.add('expanded');
+            });
+        });
+    </script>
+</body>
+</html>

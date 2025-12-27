@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widespread Itch - Clinical Decision Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            color: #2d3748;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c5282 0%, #3182ce 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            width: 280px;
+            border-left: 4px solid #3182ce;
+        }
+
+        .progress-sidebar h3 {
+            color: #2c5282;
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-step::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: linear-gradient(90deg, transparent, rgba(49, 130, 206, 0.1));
+            transition: width 0.3s ease;
+        }
+
+        .progress-step:hover::before {
+            width: 100%;
+        }
+
+        .progress-step.active {
+            background: rgba(49, 130, 206, 0.08);
+            border-left-color: #3182ce;
+            font-weight: 600;
+        }
+
+        .progress-step.completed {
+            background: rgba(72, 187, 120, 0.08);
+            border-left-color: #48bb78;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .main-content {
+            flex: 1;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 4px solid;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .card-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .card-subtitle {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+
+        .expand-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #edf2f7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.8rem;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+            background: #3182ce;
+            color: white;
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .step-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .step-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c5282;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #cbd5e0;
+        }
+
+        .info-card h4 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .info-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-card li {
+            padding: 0.25rem 0;
+            position: relative;
+            padding-left: 1rem;
+        }
+
+        .info-card li::before {
+            content: '•';
+            color: #3182ce;
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .severity-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+            color: white;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #68d391 0%, #48bb78 100%);
+            color: white;
+        }
+
+        .badge-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid;
+            background: #f7fafc;
+        }
+
+        .alert-red {
+            border-left-color: #e53e3e;
+            background: #fff5f5;
+        }
+
+        .alert-amber {
+            border-left-color: #ed8936;
+            background: #fffaf0;
+        }
+
+        .alert-green {
+            border-left-color: #48bb78;
+            background: #f0fff4;
+        }
+
+        .medicine-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .medicine-item {
+            background: #edf2f7;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border-left: 3px solid #3182ce;
+        }
+
+        .medicine-name {
+            font-weight: 600;
+            color: #2c5282;
+        }
+
+        .medicine-dose {
+            font-size: 0.9rem;
+            color: #4a5568;
+            margin-top: 0.25rem;
+        }
+
+        .footer {
+            background: #2d3748;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+        }
+
+        /* Card specific colors */
+        .card-assessment {
+            border-top-color: #3182ce;
+        }
+
+        .card-diagnosis {
+            border-top-color: #805ad5;
+        }
+
+        .card-treatment {
+            border-top-color: #38a169;
+        }
+
+        .card-followup {
+            border-top-color: #dd6b20;
+        }
+
+        .card-icon-assessment {
+            background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
+        }
+
+        .card-icon-diagnosis {
+            background: linear-gradient(135deg, #805ad5 0%, #553c9a 100%);
+        }
+
+        .card-icon-treatment {
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+        }
+
+        .card-icon-followup {
+            background: linear-gradient(135deg, #dd6b20 0%, #9c4221 100%);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                position: static;
+                width: 100%;
+                margin-bottom: 2rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .card-title {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Loading animation */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeIn 0.6s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🩺 Widespread Itch Management</h1>
+        <p>Clinical Decision Support Tool | NICE CKS Guidelines (January 2024)</p>
+    </header>
+
+    <div class="container">
+        <aside class="progress-sidebar">
+            <h3>
+                <span>📊</span>
+                Progress
+            </h3>
+            <div class="progress-step active" data-step="assessment">
+                <span class="progress-icon">📝</span>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" data-step="diagnosis">
+                <span class="progress-icon">🔍</span>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" data-step="treatment">
+                <span class="progress-icon">💊</span>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" data-step="followup">
+                <span class="progress-icon">📅</span>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Card -->
+            <div class="card card-assessment" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-wrapper">
+                        <div class="card-icon card-icon-assessment">📝</div>
+                        <div>
+                            <div class="card-title">Assessment</div>
+                            <div class="card-subtitle">Comprehensive evaluation of widespread itch</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>💬</span>
+                                History Taking
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Itch Characteristics</h4>
+                                    <ul>
+                                        <li>Location and distribution</li>
+                                        <li>Onset and duration (>6 weeks = chronic)</li>
+                                        <li>Timing (nocturnal suggests systemic cause)</li>
+                                        <li>Severity and impact on QoL</li>
+                                        <li>Relieving/exacerbating factors</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Associated Symptoms</h4>
+                                    <ul>
+                                        <li>Fatigue, fever, night sweats</li>
+                                        <li>Weight loss (red flag)</li>
+                                        <li>Sensory symptoms (burning, crawling)</li>
+                                        <li> Stress, anxiety, depression</li>
+                                        <li>Systemic symptoms of organ disease</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Risk Factors</h4>
+                                    <ul>
+                                        <li>Drug history (opioids, statins, ACE inhibitors)</li>
+                                        <li>Medical comorbidities</li>
+                                        <li>Family history of systemic disease</li>
+                                        <li>Household contacts (scabies)</li>
+                                        <li>Alcohol intake, travel history</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🔍</span>
+                                Physical Examination
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Skin Assessment</h4>
+                                    <ul>
+                                        <li>Primary lesions vs secondary scratch marks</li>
+                                        <li>Excoriations, lichenification</li>
+                                        <li>Signs of infestation</li>
+                                        <li>Dermographism (urticaria/atopy)</li>
+                                        <li>Skin dryness (xerosis)</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Systemic Signs</h4>
+                                    <ul>
+                                        <li>Jaundice (liver disease)</li>
+                                        <li>Pallor (anaemia)</li>
+                                        <li>Lymphadenopathy (malignancy)</li>
+                                        <li>Hepatosplenomegaly</li>
+                                        <li>Signs of endocrine disorders</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🧪</span>
+                                Initial Investigations
+                            </h3>
+                            <div class="alert-box alert-amber">
+                                <strong>Standard Panel:</strong> Arrange if no active skin disease to explain itch
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Blood Tests</h4>
+                                    <ul>
+                                        <li>Full blood count & blood film</li>
+                                        <li>Liver function tests</li>
+                                        <li>Renal function tests</li>
+                                        <li>Serum iron & ferritin</li>
+                                        <li>Inflammatory markers (ESR/CRP)</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Consider Additional Tests</h4>
+                                    <ul>
+                                        <li>Thyroid function tests</li>
+                                        <li>HbA1c (diabetes screening)</li>
+                                        <li>Hepatitis B & C serology</li>
+                                        <li>HIV test (if risk factors)</li>
+                                        <li>Chest X-ray (if lymphadenopathy)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="severity-badge badge-red">
+                            <span class="badge-icon">⚠️</span>
+                            RED FLAG: Weight loss, night sweats, lymphadenopathy - consider malignancy
+                        </div>
+                        <div class="severity-badge badge-amber">
+                            <span class="badge-icon">🔍</span>
+                            CAUTION: Most chronic itch requires investigation
+                        </div>
+                        <div class="severity-badge badge-green">
+                            <span class="badge-icon">✅</span>
+                            STABLE: Likely dry skin if elderly, responds to emollients
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card card-diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-wrapper">
+                        <div class="card-icon card-icon-diagnosis">🔍</div>
+                        <div>
+                            <div class="card-title">Diagnosis</div>
+                            <div class="card-subtitle">Interpret findings and establish differential diagnosis</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🎯</span>
+                                Differential Diagnosis Framework
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Dermatological Causes</h4>
+                                    <ul>
+                                        <li>Dry skin (xerosis) - most common in elderly</li>
+                                        <li>Atopic eczema</li>
+                                        <li>Contact dermatitis</li>
+                                        <li>Urticaria</li>
+                                        <li>Psoriasis</li>
+                                        <li>Scabies infestation</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Systemic Disease (20-30%)</h4>
+                                    <ul>
+                                        <li>Renal disease (uraemia)</li>
+                                        <li>Liver disease (cholestasis)</li>
+                                        <li>Haematological disorders (iron deficiency, polycythaemia)</li>
+                                        <li>Endocrine (diabetes, thyroid)</li>
+                                        <li>Malignancy (Hodgkin's lymphoma)</li>
+                                        <li>Neurological (MS, cord lesions)</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Other Causes</h4>
+                                    <ul>
+                                        <li>Drug-induced (opioids, statins, ACE inhibitors)</li>
+                                        <li>Infections (hepatitis B/C, HIV)</li>
+                                        <li>Menopause</li>
+                                        <li>Psychogenic/functional itch disorder</li>
+                                        <li>Delusional infestation</li>
+                                        <li>Idiopathic (8% of cases)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>⚠️</span>
+                                Red Flag Indicators
+                            </h3>
+                            <div class="alert-box alert-red">
+                                <strong>Immediate Concern:</strong> These features warrant urgent referral
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Malignancy Clues</h4>
+                                    <ul>
+                                        <li>Unexplained weight loss</li>
+                                        <li>Persistent night sweats</li>
+                                        <li>Generalised lymphadenopathy</li>
+                                        <li>Hepatosplenomegaly</li>
+                                        <li>Abnormal blood film</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Psychiatric Emergency</h4>
+                                    <ul>
+                                        <li>Delusional infestation beliefs</li>
+                                        <li>Severe self-harm from scratching</li>
+                                        <li>Suicidal ideation secondary to itch</li>
+                                        <li>Fixed false beliefs about parasites</li>
+                                        <li>Skin picking causing significant damage</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>📋</span>
+                                Diagnostic Clues from History
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Nocturnal Itch</h4>
+                                    <p>May suggest uraemia, cholestasis, or psychogenic causes</p>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Aquagenic Pruritus</h4>
+                                    <p>Itch provoked by hot baths/showers - associated with polycythaemia vera</p>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Stress-Related</h4>
+                                    <p>Worsening with stress suggests psychogenic component or functional disorder</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="severity-badge badge-red">
+                            <span class="badge-icon">🚨</span>
+                            URGENT REFERRAL: Haematological malignancy suspected
+                        </div>
+                        <div class="severity-badge badge-amber">
+                            <span class="badge-icon">🏥</span>
+                            SPECIALIST REFERRAL: Organ dysfunction confirmed
+                        </div>
+                        <div class="severity-badge badge-green">
+                            <span class="badge-icon">🏠</span>
+                            PRIMARY CARE: Likely xerosis or mild drug reaction
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card card-treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-wrapper">
+                        <div class="card-icon card-icon-treatment">💊</div>
+                        <div>
+                            <div class="card-title">Treatment</div>
+                            <div class="card-subtitle">Stepwise management approach in primary care</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🔄</span>
+                                Stepwise Management Approach
+                            </h3>
+                            <div class="alert-box alert-green">
+                                <strong>Principle:</strong> Treat underlying cause where identified; provide symptomatic relief
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Step 1: Address Underlying Cause</h4>
+                                    <ul>
+                                        <li>Discontinue offending drugs</li>
+                                        <li>Optimize management of systemic disease</li>
+                                        <li>Treat specific conditions (scabies, liver disease)</li>
+                                        <li>Refer to appropriate specialist if needed</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Step 2: Self-Care & Emollients</h4>
+                                    <ul>
+                                        <li>Regular emollient use (soap substitute)</li>
+                                        <li>Avoid excessive bathing</li>
+                                        <li>Cool environment, humidify air</li>
+                                        <li>Loose cotton clothing</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Step 3: Pharmacological</h4>
+                                    <ul>
+                                        <li>Menthol 0.5-1% in aqueous cream</li>
+                                        <li>Non-sedating antihistamines</li>
+                                        <li>Sedating antihistamines for nocturnal itch</li>
+                                        <li>Avoid topical steroids routinely</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🧴</span>
+                                Pharmacological Options
+                            </h3>
+                            <div class="medicine-list">
+                                <div class="medicine-item">
+                                    <div class="medicine-name">Non-Sedating Antihistamines (First-line)</div>
+                                    <div class="medicine-dose">
+                                        • Cetirizine 10 mg once daily (2-3 week trial)<br>
+                                        • Loratadine 10 mg once daily<br>
+                                        • Fexofenadine 180 mg once daily
+                                    </div>
+                                </div>
+                                <div class="medicine-item">
+                                    <div class="medicine-name">Sedating Antihistamines (Nocturnal itch)</div>
+                                    <div class="medicine-dose">
+                                        • Hydroxyzine 25 mg at night (adults)<br>
+                                        • Chlorphenamine 4 mg at night (adults & children)
+                                    </div>
+                                </div>
+                                <div class="medicine-item">
+                                    <div class="medicine-name">Emollients with Active Ingredients</div>
+                                    <div class="medicine-dose">
+                                        • Menthol 0.5% or 1% in aqueous cream<br>
+                                        • Use as soap substitute and moisturizer
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="alert-box alert-amber">
+                                <strong>Note:</strong> Avoid routine use of topical anaesthetics, antihistamines, crotamiton, calamine, capsaicin, corticosteroids, and calcineurin inhibitors in primary care
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🚫</span>
+                                Medications to Avoid or Use with Caution
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Not Routinely Recommended</h4>
+                                    <ul>
+                                        <li>Topical corticosteroids (unless inflammation)</li>
+                                        <li>Oral corticosteroids</li>
+                                        <li>Topical antihistamines (sensitisation risk)</li>
+                                        <li>Topical anaesthetics</li>
+                                        <li>Calamine lotion (drying effect)</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Use with Caution</h4>
+                                    <ul>
+                                        <li>Hydroxyzine - QT prolongation risk</li>
+                                        <li>Sedating antihistamines in elderly</li>
+                                        <li>Dose adjust for renal/hepatic impairment</li>
+                                        <li>Warn about driving/sedation</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🏥</span>
+                                Referral Criteria
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Urgent Referral</h4>
+                                    <ul>
+                                        <li>Suspected haematological malignancy</li>
+                                        <li>Severe systemic disease</li>
+                                        <li>Delusional infestation (psychiatric)</li>
+                                        <li>Rapidly progressive symptoms</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Routine Referral</h4>
+                                    <ul>
+                                        <li>Symptoms persist >3 months</li>
+                                        <li>Failed primary care treatment</li>
+                                        <li>Unexplained chronic itch</li>
+                                        <li>Need for specialist investigations</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="severity-badge badge-red">
+                            <span class="badge-icon">🚨</span>
+                            URGENT: Consider malignancy - refer to haematology
+                        </div>
+                        <div class="severity-badge badge-amber">
+                            <span class="badge-icon">🏥</span>
+                            REFERRAL: Dermatology for persistent unexplained itch
+                        </div>
+                        <div class="severity-badge badge-green">
+                            <span class="badge-icon">✅</span>
+                            MANAGE: Likely dry skin - emollients + self-care
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card card-followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-wrapper">
+                        <div class="card-icon card-icon-followup">📅</div>
+                        <div>
+                            <div class="card-title">Follow-up</div>
+                            <div class="card-subtitle">Monitoring and ongoing management</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>📊</span>
+                                Monitoring Response
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Short-term (2-4 weeks)</h4>
+                                    <ul>
+                                        <li>Assess adherence to emollient therapy</li>
+                                        <li>Evaluate antihistamine effectiveness</li>
+                                        <li>Monitor sleep improvement</li>
+                                        <li>Check for side effects</li>
+                                        <li>Review self-care measures</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Medium-term (6-12 weeks)</h4>
+                                    <ul>
+                                        <li>Symptom control and QoL assessment</li>
+                                        <li>Skin condition improvement</li>
+                                        <li>Need for continued medication</li>
+                                        <li>Psychological impact evaluation</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🔄</span>
+                                When to Reassess or Escalate
+                            </h3>
+                            <div class="alert-box alert-amber">
+                                <strong>Reassessment Triggers:</strong> Lack of improvement, new symptoms, or worsening QoL
+                            </div>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Escalation Indicators</h4>
+                                    <ul>
+                                        <li>No improvement after 3 months</li>
+                                        <li>New systemic symptoms appear</li>
+                                        <li>Severe psychological distress</li>
+                                        <li>Development of skin complications</li>
+                                        <li>Suspicion of underlying disease</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Investigation Review</h4>
+                                    <ul>
+                                        <li>Repeat abnormal blood tests</li>
+                                        <li>Consider additional specialist tests</li>
+                                        <li>Skin biopsy if indicated</li>
+                                        <li>Imaging if malignancy suspected</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>🧠</span>
+                                Psychological Support
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Screen for Psychiatric Comorbidity</h4>
+                                    <ul>
+                                        <li>Depression screening at each visit</li>
+                                        <li>Anxiety assessment</li>
+                                        <li>Impact on sleep quality</li>
+                                        <li>Social isolation/stigmatization</li>
+                                        <li>Consider referral to mental health services</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Patient Support Resources</h4>
+                                    <ul>
+                                        <li>British Association of Dermatologists leaflets</li>
+                                        <li>Itch support groups</li>
+                                        <li>Cognitive behavioural therapy (CBT)</li>
+                                        <li>Relaxation techniques</li>
+                                        <li>Sleep hygiene advice</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>⏱️</span>
+                                Timeline for Review
+                            </h3>
+                            <div class="medicine-list">
+                                <div class="medicine-item">
+                                    <div class="medicine-name">Initial Review</div>
+                                    <div class="medicine-dose">2-3 weeks after starting treatment - assess initial response</div>
+                                </div>
+                                <div class="medicine-item">
+                                    <div class="medicine-name">Primary Care Follow-up</div>
+                                    <div class="medicine-dose">Every 6-8 weeks until stable, then 3-6 monthly</div>
+                                </div>
+                                <div class="medicine-item">
+                                    <div class="medicine-name">Specialist Review</div>
+                                    <div class="medicine-dose">As per referral - typically within 4-6 weeks for dermatology</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="step-section">
+                            <h3 class="section-title">
+                                <span>📚</span>
+                                Patient Education & Prevention
+                            </h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4>Ongoing Self-Care</h4>
+                                    <ul>
+                                        <li>Maintain regular emollient use</li>
+                                        <li>Avoid known triggers</li>
+                                        <li>Continue gentle skincare routine</li>
+                                        <li>Keep symptom diary</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Prevention Strategies</h4>
+                                    <ul>
+                                        <li>Regular moisturising prevents xerosis</li>
+                                        <li>Avoid harsh soaps and hot water</li>
+                                        <li>Manage underlying conditions</li>
+                                        <li>Regular medication review</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="severity-badge badge-red">
+                            <span class="badge-icon">🚨</span>
+                            ESCALATE: Urgent referral if malignancy suspected
+                        </div>
+                        <div class="severity-badge badge-amber">
+                            <span class="badge-icon">📞</span>
+                            REVIEW: Psychiatry if delusional infestation suspected
+                        </div>
+                        <div class="severity-badge badge-green">
+                            <span class="badge-icon">✅</span>
+                            DISCHARGE: If stable and well-controlled for 6 months
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>Clinical Decision Support Tool | Based on NICE CKS Guidelines for Widespread Itch (January 2024)</p>
+        <p>For healthcare professionals only - always use clinical judgment</p>
+    </footer>
+
+    <script>
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                
+                // Smooth scroll to card
+                setTimeout(() => {
+                    card.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            }
+            
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressSteps = document.querySelectorAll('.progress-step');
+            
+            cards.forEach((card, index) => {
+                const stepId = card.id;
+                const stepElement = document.querySelector(`[data-step="${stepId}"]`);
+                
+                if (card.classList.contains('expanded')) {
+                    stepElement.classList.add('active');
+                    stepElement.classList.remove('completed');
+                    progressSteps.forEach((step, i) => {
+                        if (i < index) {
+                            step.classList.add('completed');
+                            step.classList.remove('active');
+                        } else if (i > index) {
+                            step.classList.remove('active', 'completed');
+                        }
+                    });
+                }
+            });
+        }
+
+        // Initialize - open first card
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstCard = document.querySelector('.card');
+            setTimeout(() => {
+                firstCard.classList.add('expanded');
+                updateProgress();
+            }, 500);
+        });
+
+        // Progress sidebar navigation
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', function() {
+                const targetStep = this.dataset.step;
+                const targetCard = document.getElementById(targetStep);
+                
+                // Close all cards
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('expanded');
+                });
+                
+                // Open target card
+                targetCard.classList.add('expanded');
+                targetCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                updateProgress();
+            });
+        });
+
+        // Add hover effect to severity badges
+        document.querySelectorAll('.severity-badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-2px) scale(1.02)';
+            });
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Create intersection observer for scroll-based progress update
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cardId = entry.target.id;
+                    const stepElement = document.querySelector(`[data-step="${cardId}"]`);
+                    if (stepElement) {
+                        document.querySelectorAll('.progress-step').forEach(s => s.classList.remove('active'));
+                        stepElement.classList.add('active');
+                    }
+                }
+            });
+        }, {
+            threshold: 0.5
+        });
+
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

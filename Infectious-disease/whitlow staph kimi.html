@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whitlow Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            color: #2d3748;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem 5rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            color: #4a5568;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 240px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 2rem 1rem;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: #718096;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .progress-item:hover {
+            background: #edf2f7;
+        }
+
+        .progress-item.active {
+            background: #e2e8f0;
+            color: #1a202c;
+            font-weight: 600;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .progress-item:nth-child(1) .progress-icon { background: #667eea; }
+        .progress-item:nth-child(2) .progress-icon { background: #48bb78; }
+        .progress-item:nth-child(3) .progress-icon { background: #ed8936; }
+        .progress-item:nth-child(4) .progress-icon { background: #4299e1; }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 10px 20px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+            border-top: 5px solid;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .assessment-card { border-top-color: #667eea; }
+        .diagnosis-card { border-top-color: #48bb78; }
+        .treatment-card { border-top-color: #ed8936; }
+        .followup-card { border-top-color: #4299e1; }
+
+        .card-header {
+            padding: 1.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: background 0.3s ease;
+        }
+
+        .card:hover .card-header {
+            background: #f9f9f9;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .assessment-card .card-icon { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .diagnosis-card .card-icon { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); }
+        .treatment-card .card-icon { background: linear-gradient(135deg, #ed8936 0%, #dd7728 100%); }
+        .followup-card .card-icon { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); }
+
+        .card-title h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .card-title p {
+            font-size: 0.95rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 1.2rem;
+            color: #a0aec0;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 0 1.75rem 1.75rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge svg {
+            width: 16px;
+            height: 16px;
+            margin-right: 0.5rem;
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #ed8936 0%, #dd7728 100%);
+            color: white;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+        /* Content sections */
+        .subsection {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #e2e8f0;
+        }
+
+        .subsection h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #2d3748;
+        }
+
+        .subsection ul {
+            margin-left: 1.5rem;
+        }
+
+        .subsection li {
+            margin-bottom: 0.5rem;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .comparison-table th {
+            background: #edf2f7;
+            font-weight: 600;
+        }
+
+        .comparison-table tr:hover {
+            background: #f7fafc;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding-left: 1.5rem;
+            }
+
+            .progress-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .progress-sidebar.visible {
+                transform: translateX(0);
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                padding: 1.25rem;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Animation for sidebar items */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .progress-item.active .progress-icon {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <aside class="progress-sidebar">
+        <h3>Progress</h3>
+        <div class="progress-item active" onclick="scrollToSection('assessment')">
+            <div class="progress-icon">📋</div>
+            <span>Assessment</span>
+        </div>
+        <div class="progress-item" onclick="scrollToSection('diagnosis')">
+            <div class="progress-icon">🔬</div>
+            <span>Diagnosis</span>
+        </div>
+        <div class="progress-item" onclick="scrollToSection('treatment')">
+            <div class="progress-icon">💊</div>
+            <span>Treatment</span>
+        </div>
+        <div class="progress-item" onclick="scrollToSection('followup')">
+            <div class="progress-icon">📅</div>
+            <span>Follow-up</span>
+        </div>
+    </aside>
+
+    <main class="container">
+        <header>
+            <h1>Whitlow Management Algorithm</h1>
+            <p>Clinical Decision Support Tool for Staphylococcal & Herpetic Whitlow</p>
+        </header>
+
+        <!-- Assessment Card -->
+        <section class="card assessment-card" data-step="assessment" id="assessment">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-icon">📋</div>
+                <div class="card-title">
+                    <h2>Assessment</h2>
+                    <p>Initial evaluation and differentiation</p>
+                </div>
+                <div class="expand-icon">▼</div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>History</h3>
+                        <ul>
+                            <li>Preceding injury or trauma</li>
+                            <li>Onset and progression of symptoms</li>
+                            <li>Previous episodes</li>
+                            <li>Occupation (healthcare worker?)</li>
+                            <li>Immunocompromised status</li>
+                            <li>Contact with oral/genital herpes lesions</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Key Features - Staphylococcal</h3>
+                        <ul>
+                            <li><strong>History:</strong> Penetrating injury or untreated paronychia</li>
+                            <li><strong>Pain:</strong> Rapid onset, severe, throbbing</li>
+                            <li><strong>Exam:</strong> Redness, tense swelling of distal pulp</li>
+                            <li><strong>Signs:</strong> Fluctuance may be present, no vesicles</li>
+                            <li><strong>Systemic:</strong> Usually absent</li>
+                        </ul>
+                        <span class="badge badge-red">Urgent drainage if tense/fluctuant</span>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Key Features - Herpetic</h3>
+                        <ul>
+                            <li><strong>History:</strong> No injury, recent herpetic lesions</li>
+                            <li><strong>Prodrome:</strong> Pain and paraesthesia for days</li>
+                            <li><strong>Exam:</strong> Oedema, redness, severe pain but soft pulp</li>
+                            <li><strong>Signs:</strong> Vesicles with clear/cloudy fluid</li>
+                            <li><strong>Systemic:</strong> Fever, malaise, lymphadenopathy possible</li>
+                        </ul>
+                        <span class="badge badge-red">DO NOT INCISE</span>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Risk Factors</h3>
+                        <ul>
+                            <li>Diabetes mellitus</li>
+                            <li>Immunosuppression (HIV, steroids)</li>
+                            <li>Healthcare workers (dental, GPs)</li>
+                            <li>IV drug use</li>
+                            <li>Farm workers</li>
+                            <li>Thumb-sucking children</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Diagnosis Card -->
+        <section class="card diagnosis-card" data-step="diagnosis" id="diagnosis">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-icon">🔬</div>
+                <div class="card-title">
+                    <h2>Diagnosis</h2>
+                    <p>Confirm diagnosis & rule out differentials</p>
+                </div>
+                <div class="expand-icon">▼</div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>Diagnostic Differentiation</h3>
+                        <table class="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th>Staphylococcal</th>
+                                    <th>Herpetic</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Common fingers</td>
+                                    <td>Thumb & index</td>
+                                    <td>Thumb & index (multiple possible)</td>
+                                </tr>
+                                <tr>
+                                    <td>Injury</td>
+                                    <td>Usually present</td>
+                                    <td>Absent</td>
+                                </tr>
+                                <tr>
+                                    <td>Pulp feel</td>
+                                    <td>Tense, boggy</td>
+                                    <td>Soft, oedematous</td>
+                                </tr>
+                                <tr>
+                                    <td>Vesicles</td>
+                                    <td>Absent</td>
+                                    <td>Present (clear/cloudy)</td>
+                                </tr>
+                                <tr>
+                                    <td>Systemic signs</td>
+                                    <td>Uncommon</td>
+                                    <td>Fever, malaise, lymphadenopathy</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Differential Diagnosis</h3>
+                        <ul>
+                            <li><strong>Cellulitis</strong> - more diffuse swelling</li>
+                            <li><strong>Acute paronychia</strong> - nail fold involvement</li>
+                            <li><strong>Subungual haematoma</strong> - history of trauma</li>
+                            <li><strong>Gout</strong> - tophi, crystal analysis</li>
+                            <li><strong>Osteomyelitis</strong> - X-ray changes</li>
+                            <li><strong>Orf virus</strong> - farm animal contact</li>
+                            <li><strong>Skin cancer</strong> - atypical lesions</li>
+                        </ul>
+                        <span class="badge badge-amber">Consider X-ray if history of trauma</span>
+                        <span class="badge badge-amber">Swab if uncertain diagnosis</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Treatment Card -->
+        <section class="card treatment-card" data-step="treatment" id="treatment">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-icon">💊</div>
+                <div class="card-title">
+                    <h2>Treatment</h2>
+                    <p>Scenario-based management</p>
+                </div>
+                <div class="expand-icon">▼</div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>Staphylococcal Whitlow</h3>
+                        <span class="badge badge-red">Admit if systemic features (fever, tachycardia)</span>
+                        <span class="badge badge-red">Same-day incision & drainage if tense/fluctuant</span>
+                        
+                        <h4 style="margin-top: 1rem; color: #e53e3e;">Urgent Criteria:</h4>
+                        <ul>
+                            <li>Fever, tachycardia, signs of shock</li>
+                            <li>Ascending lymphangitis</li>
+                            <li>Rapid spread</li>
+                            <li>Immunocompromised patient</li>
+                        </ul>
+
+                        <h4 style="margin-top: 1rem; color: #ed8936;">Antibiotic Therapy:</h4>
+                        <ul>
+                            <li><strong>First line:</strong> Flucloxacillin 250-500mg QDS (5-7 days)</li>
+                            <li><strong>Penicillin allergy:</strong> Erythromycin 250-500mg QDS or Clarithromycin 250-500mg BD</li>
+                            <li><strong>Pregnancy:</strong> Erythromycin</li>
+                            <li><strong>MRSA:</strong> Seek specialist advice</li>
+                        </ul>
+                        <span class="badge badge-amber">Swab if recurrent, immunosuppressed, or treatment failure</span>
+
+                        <h4 style="margin-top: 1rem; color: #38a169;">Supportive Care:</h4>
+                        <ul>
+                            <li>Elevate finger</li>
+                            <li>Moist heat 3-4 times daily</li>
+                            <li>Paracetamol/ibuprofen for pain</li>
+                            <li>Tetanus prophylaxis if needed</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Herpetic Whitlow</h3>
+                        <span class="badge badge-red">⚠️ DO NOT INCISE - causes systemic spread</span>
+                        <span class="badge badge-red">Wear gloves when examining</span>
+
+                        <h4 style="margin-top: 1rem; color: #ed8936;">Antiviral Therapy:</h4>
+                        <ul>
+                            <li><strong>Aciclovir</strong> within 48 hours of symptom onset</li>
+                            <li>Adults & children ≥2y: 200mg five times daily for 5 days</li>
+                            <li>Children 1mo-23mo: 100mg five times daily for 5 days</li>
+                            <li>Can be used for recurrent episodes if started early</li>
+                        </ul>
+
+                        <h4 style="margin-top: 1rem; color: #38a169;">Supportive Care:</h4>
+                        <ul>
+                            <li>Paracetamol/ibuprofen for pain</li>
+                            <li>Clean, dry dressing to prevent transmission</li>
+                            <li>Avoid touching eyes, remove contact lenses</li>
+                            <li>Discourage thumb-sucking in children</li>
+                        </ul>
+
+                        <h4 style="margin-top: 1rem; color: #4299e1;">Patient Education:</h4>
+                        <ul>
+                            <li>Infection is self-limiting (~3 weeks)</li>
+                            <li>Recurrence is common (50%)</li>
+                            <li>Offer HIV testing if extensive</li>
+                            <li>Manage underlying oral/genital herpes</li>
+                        </ul>
+                        <span class="badge badge-amber">Swab for virology if diagnosis uncertain</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Follow-up Card -->
+        <section class="card followup-card" data-step="followup" id="followup">
+            <div class="card-header" onclick="toggleCard(this)">
+                <div class="card-icon">📅</div>
+                <div class="card-title">
+                    <h2>Follow-up</h2>
+                    <p>Monitoring & recurrence prevention</p>
+                </div>
+                <div class="expand-icon">▼</div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="subsection">
+                        <h3>When to Seek Urgent Review</h3>
+                        <span class="badge badge-red">Worsening pain or swelling</span>
+                        <span class="badge badge-red">Becoming systemically unwell</span>
+                        <span class="badge badge-red">No improvement after 48-72 hours</span>
+                        <span class="badge badge-red">Signs of necrosis or tendon involvement</span>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Complications to Monitor</h3>
+                        <ul>
+                            <li><strong>Staphylococcal:</strong> Flexor tenosynovitis, osteomyelitis, tissue necrosis, septic arthritis</li>
+                            <li><strong>Herpetic:</strong> Ocular spread, scarring, lymphoedema (rare), recurrent episodes</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Prevention Strategies</h3>
+                        <ul>
+                            <li>Avoid fingertip injuries</li>
+                            <li>Proper hand hygiene</li>
+                            <li>Wear gloves when in contact with oral secretions</li>
+                            <li>Manage underlying herpes infections</li>
+                            <li>Control diabetes</li>
+                        </ul>
+                        <span class="badge badge-green">Good prognosis if treated early</span>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>Recurrent Infections</h3>
+                        <ul>
+                            <li>Take swabs for culture</li>
+                            <li>Consider underlying immunosuppression</li>
+                            <li>Review risk factors</li>
+                            <li>For herpetic: antivirals effective if started early</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        // Scroll to section
+        function scrollToSection(step) {
+            const element = document.getElementById(step);
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Expand the target card
+            const card = element;
+            card.classList.add('expanded');
+        }
+
+        // Intersection Observer for progress tracking
+        const cards = document.querySelectorAll('.card');
+        const progressItems = document.querySelectorAll('.progress-item');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const step = entry.target.dataset.step;
+                    
+                    // Remove active class from all items
+                    progressItems.forEach(item => item.classList.remove('active'));
+                    
+                    // Add active class to current item
+                    const activeItem = document.querySelector(`.progress-item:nth-child(${getIndex(step) + 1})`);
+                    if (activeItem) activeItem.classList.add('active');
+                }
+            });
+        }, { threshold: 0.5 });
+
+        cards.forEach(card => observer.observe(card));
+
+        function getIndex(step) {
+            const steps = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            return steps.indexOf(step);
+        }
+
+        // Auto-expand all cards on large screens
+        if (window.innerWidth > 768) {
+            document.querySelectorAll('.card').forEach(card => card.classList.add('expanded'));
+        }
+
+        // Highlight card when clicking in sidebar
+        progressItems.forEach((item, index) => {
+            item.addEventListener('click', () => {
+                const targetCard = cards[index];
+                cards.forEach(card => card.style.boxShadow = '');
+                targetCard.style.boxShadow = '0 0 0 4px rgba(66, 153, 225, 0.4)';
+                setTimeout(() => {
+                    targetCard.style.boxShadow = '';
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
