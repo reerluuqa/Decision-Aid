@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manchester Frail Adult Care Pathways | GP Quick-Scan</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --color-bg: #f4f6f8;
+            --color-text: #2c3e50;
+            --color-card-bg: #ffffff;
+            
+            --color-danger: #d32f2f;      /* Emergency/Critical */
+            --color-danger-light: #ffcdd2;
+            --color-warning: #f57c00;     /* Urgent/Non-Life Threat */
+            --color-warning-light: #ffe0b2;
+            --color-success: #2e7d32;     /* Safe/Routine */
+            --color-success-light: #c8e6c9;
+            --color-info: #1976d2;        /* General/System */
+            --color-info-light: #bbdefb;
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+            --radius: 8px;
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* App-like feel */
+        }
+
+        /* --- Header & Nav --- */
+        header {
+            background: white;
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow-sm);
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 4px solid var(--color-info);
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--color-info);
+        }
+
+        .brand span {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .search-bar {
+            display: none; /* Hidden on small mobile initially */
+        }
+        @media(min-width: 768px) {
+            .search-bar {
+                display: block;
+                position: relative;
+            }
+            .search-bar input {
+                padding: 0.5rem 1rem;
+                border-radius: 20px;
+                border: 1px solid #ddd;
+                width: 250px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* --- Main Layout --- */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            background: white;
+            width: 80px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #eee;
+            transition: width 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .sidebar {
+                width: 240px;
+            }
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 1rem;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #666;
+            font-weight: 600;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+        }
+
+        .nav-btn:hover {
+            background: #f9f9f9;
+            color: var(--color-info);
+        }
+
+        .nav-btn.active {
+            background: #f0f7ff;
+            color: var(--color-info);
+            border-left-color: var(--color-info);
+        }
+        
+        .nav-btn.active-emergency {
+            background: #ffebee;
+            color: var(--color-danger);
+            border-left-color: var(--color-danger);
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .nav-label {
+            display: none;
+            white-space: nowrap;
+        }
+        @media (min-width: 768px) {
+            .nav-label { display: block; }
+        }
+
+        /* Content Area */
+        main {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Components --- */
+
+        /* Grid Layouts */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--color-card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            padding: 1.5rem;
+            border-top: 5px solid transparent;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card.emergency { border-top-color: var(--color-danger); background: linear-gradient(to bottom, #fff, #fff5f5); }
+        .card.urgent { border-top-color: var(--color-warning); }
+        .card.routine { border-top-color: var(--color-success); }
+        .card.info { border-top-color: var(--color-info); }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--color-text);
+            margin-bottom: 0.25rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.85rem;
+            color: #777;
+        }
+
+        .big-number {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--color-text);
+            letter-spacing: 0.5px;
+            background: #eee;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.5rem;
+            text-decoration: none;
+        }
+        .big-number:hover { background: #ddd; }
+        .big-number.emergency { color: var(--color-danger); background: var(--color-danger-light); border: 1px solid var(--color-danger); }
+
+        /* Action Buttons within Cards */
+        .action-row {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            border: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: var(--transition);
+        }
+
+        .btn-copy { background: #eee; color: #333; }
+        .btn-copy:hover { background: #ddd; }
+
+        .btn-call { background: var(--color-success); color: white; }
+        .btn-call:hover { background: #1b5e20; }
+
+        .btn-alert { background: var(--color-danger); color: white; }
+        .btn-alert:hover { background: #b71c1c; }
+
+        /* Lists and Tables */
+        .checklist {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+        .checklist li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+        .checklist li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--color-info);
+            font-weight: bold;
+        }
+        .checklist li.red-flag::before { content: "!"; color: var(--color-danger); }
+
+        /* Two Column Detail */
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            padding: 0.5rem 0;
+            font-size: 0.9rem;
+        }
+        .detail-label { font-weight: 600; color: #555; }
+        .detail-value { text-align: right; max-width: 60%; }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .tag.red { background: var(--color-danger-light); color: var(--color-danger); }
+        .tag.orange { background: var(--color-warning-light); color: var(--color-warning); }
+        .tag.green { background: var(--color-success-light); color: var(--color-success); }
+        .tag.blue { background: var(--color-info-light); color: var(--color-info); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(10px);
+            transition: var(--transition);
+            z-index: 1000;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar, .search-bar, .btn-copy { display: none; }
+            body, .app-container, main { height: auto; overflow: visible; display: block; }
+            .card { break-inside: avoid; border: 1px solid #ccc; box-shadow: none; }
+        }
+
+        /* SVG Icons */
+        .icon { width: 1.2em; height: 1.2em; fill: currentColor; }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>Manchester GP Pathways</h1>
+            <span>Frail Adults: Social Care & Emergency</span>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search keywords (e.g., 'dementia', 'fall')...">
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- Navigation Sidebar -->
+        <nav class="sidebar">
+            <button class="nav-btn active-emergency" onclick="showSection('emergency')">
+                <span class="nav-icon">🚨</span>
+                <span class="nav-label">Emergency</span>
+            </button>
+            <button class="nav-btn" onclick="showSection('urgent')">
+                <span class="nav-icon">⚡</span>
+                <span class="nav-label">Urgent</span>
+            </button>
+            <button class="nav-btn" onclick="showSection('routine')">
+                <span class="nav-icon">📅</span>
+                <span class="nav-label">Routine</span>
+            </button>
+            <button class="nav-btn" onclick="showSection('system')">
+                <span class="nav-icon">🏛️</span>
+                <span class="nav-label">System Info</span>
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main>
+            
+            <!-- SECTION: EMERGENCY -->
+            <section id="emergency" class="section active">
+                <div style="margin-bottom: 1.5rem;">
+                    <span class="tag red">Critical / Immediate Risk</span>
+                    <h2 style="color: var(--color-danger); margin-top: 0.5rem;">Crisis & Admission Avoidance</h2>
+                </div>
+
+                <div class="card-grid">
+                    <!-- Main Hotline -->
+                    <div class="card emergency">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">Social Care Emergency</div>
+                                <div class="card-subtitle">24/7 Single Point of Access (SPOA)</div>
+                            </div>
+                            <div style="font-size: 2rem;">📞</div>
+                        </div>
+                        <a href="tel:01612345001" class="big-number emergency">0161 234 5001</a>
+                        <div class="action-row">
+                            <button class="btn btn-copy" onclick="copyNumber('0161 234 5001')">Copy Number</button>
+                        </div>
+                        <hr style="margin: 1rem 0; border: 0; border-top: 1px solid #ffcdd2;">
+                        <ul class="checklist">
+                            <li class="red-flag">Carer breakdown / collapse</li>
+                            <li class="red-flag">Patient unsafe at home (immediate risk)</li>
+                            <li class="red-flag">Sudden loss of access to essential care</li>
+                            <li class="red-flag">Urgent safeguarding / self-neglect</li>
+                        </ul>
+                        <p style="margin-top:0.5rem; font-size:0.85rem; color:#d32f2f; font-weight:bold;">
+                            Note: Out of hours (Evenings/Weekends) this routes to Emergency Duty Service (EDS).
+                        </p>
+                    </div>
+
+                    <!-- Mental Health Crisis -->
+                    <div class="card info">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">Mental Health Crisis</div>
+                                <div class="card-subtitle">24/7 Helpline</div>
+                            </div>
+                            <div style="font-size: 2rem;">🧠</div>
+                        </div>
+                        <a href="tel:08009530285" class="big-number">0800 953 0285</a>
+                        <div class="action-row">
+                            <button class="btn btn-copy" onclick="copyNumber('0800 953 0285')">Copy Number</button>
+                        </div>
+                        <p style="margin-top:1rem; font-size:0.9rem;">For adults with a psychiatric component to their frailty crisis.</p>
+                    </div>
+
+                    <!-- Placement Emergency -->
+                    <div class="card urgent">
+                        <div class="card-header">
+                            <div class="card-title">Emergency Placement</div>
+                            <div class="card-subtitle">Step-up to Care Home</div>
+                        </div>
+                        <p style="font-size: 0.9rem;">For medically fit patients who cannot remain at home even with carers.</p>
+                        <div style="margin-top: 0.5rem; background: var(--color-warning-light); padding: 0.5rem; border-radius: 4px;">
+                            <strong>GP Action:</strong> Provide medical summary, allergies, DNACPR to Social Care. Call <strong>0161 234 5001</strong>.
+                        </div>
+                        <ul class="checklist" style="margin-top: 0.5rem;">
+                            <li>Social care brokers vacancy on approved list.</li>
+                            <li>EDS can authorize overnight placement if OOH.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: URGENT -->
+            <section id="urgent" class="section">
+                <div style="margin-bottom: 1.5rem;">
+                    <span class="tag orange">Urgent / Same-Day</span>
+                    <h2 style="color: var(--color-warning); margin-top: 0.5rem;">Crisis Response & Virtual Wards</h2>
+                    <p style="font-size: 0.9rem; color: #666;">Target: 2-hour response to prevent admission. (Available 8:30am–10:00pm)</p>
+                </div>
+
+                <!-- Crisis Response Teams -->
+                <div class="card-grid">
+                    <div class="card urgent">
+                        <div class="card-header">
+                            <div class="card-title">North Manchester</div>
+                            <div class="tag orange">UCR & Hospital@Home</div>
+                        </div>
+                        <a href="tel:01616673292" class="big-number">0161 667 3292</a>
+                        <div style="margin-top:0.5rem; font-size:0.85rem;">
+                            Option 2: Crisis Response<br>
+                            Option 3: Hospital at Home
+                        </div>
+                        <div class="action-row">
+                            <button class="btn btn-copy" onclick="copyNumber('0161 667 3292')">Copy</button>
+                            <button class="btn btn-call" onclick="location.href='tel:01616673292'">Call</button>
+                        </div>
+                    </div>
+
+                    <div class="card urgent">
+                        <div class="card-header">
+                            <div class="card-title">Central Manchester</div>
+                            <div class="tag orange">Direct Line</div>
+                        </div>
+                        <a href="tel:01615296220" class="big-number">0161 529 6220</a>
+                        <p style="margin-top:0.5rem; font-size:0.85rem;">Crisis Response Direct (8:30am–10pm)</p>
+                        <div class="detail-row"><span class="detail-label">Hospital@Home:</span> <span class="detail-value">0161 529 6262</span></div>
+                        <div class="action-row" style="margin-top:0.5rem;">
+                            <button class="btn btn-copy" onclick="copyNumber('0161 529 6220')">Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="card urgent">
+                        <div class="card-header">
+                            <div class="card-title">South Manchester</div>
+                            <div class="tag orange">SPA</div>
+                        </div>
+                        <a href="tel:03003039650" class="big-number">0300 303 9650</a>
+                        <p style="margin-top:0.5rem; font-size:0.85rem;">Includes Trafford cross-boundary cases.</p>
+                        <div class="action-row" style="margin-top:0.5rem;">
+                            <button class="btn btn-copy" onclick="copyNumber('0300 303 9650')">Copy</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card info">
+                    <div class="card-title">When to use Crisis Response (UCR)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                        <div>
+                            <strong>✅ In Scope:</strong>
+                            <ul class="checklist">
+                                <li>New onset delirium/mild infection</li>
+                                <li>Falls with minor injury</li>
+                                <li>Functional decline / Exacerbations</li>
+                                <li>Palliative care crises</li>
+                                <li>IV fluids / Antibiotics / Nebulizers at home</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>❌ Out of Scope:</strong>
+                            <ul class="checklist">
+                                <li>Major emergencies (Stroke, MI, Sepsis) -> 999</li>
+                                <li>Acute Mental Health crises</li>
+                                <li>Obstetric issues</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card info" style="margin-top: 1rem;">
+                    <div class="card-title">Virtual Ward (Hospital @ Home)</div>
+                    <p style="margin-bottom: 0.5rem;">For frailty, respiratory infections, or heart failure needing hospital-level care at home.</p>
+                    <div class="action-row">
+                        <span class="tag blue">Step-up</span> <span class="tag blue">Step-down</span>
+                        <span style="margin-left:auto; font-size:0.9rem;"><strong>Max Stay:</strong> ~14 days</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: ROUTINE -->
+            <section id="routine" class="section">
+                <div style="margin-bottom: 1.5rem;">
+                    <span class="tag green">Routine / Non-Urgent</span>
+                    <h2 style="color: var(--color-success); margin-top: 0.5rem;">Social Care Assessments</h2>
+                </div>
+
+                <div class="card-grid">
+                    <div class="card routine">
+                        <div class="card-header">
+                            <div class="card-title">Referral Channel</div>
+                            <div class="card-subtitle">Single Point of Access</div>
+                        </div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Phone:</strong> 0161 234 5001</div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Email:</strong> <a href="mailto:mcsreply@manchester.gov.uk" style="color:var(--color-info)">mcsreply@manchester.gov.uk</a></div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Online:</strong> Council Website Form</div>
+                        <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid #eee;">
+                        <p style="font-size: 0.85rem; color: #666;">Do not use online form for urgent cases.</p>
+                    </div>
+
+                    <div class="card info">
+                        <div class="card-title">The Process</div>
+                        <ul class="checklist">
+                            <li><strong>Assessment:</strong> Social Worker/Social Care Assessor visits home.</li>
+                            <li><strong>Criteria:</strong> Care Act 2014 eligibility (impact on wellbeing).</li>
+                            <li><strong>Planning:</strong> Strengths-based approach + Personal Budget calculation.</li>
+                            <li><strong>Financials:</strong> Council pays if savings < £23,250.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card info">
+                    <div class="card-title">What to Include in Referral</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 0.5rem;">
+                        <div class="tag blue" style="font-size:0.8rem; text-align:center; border-radius:4px; padding:0.5rem;">NHS Number</div>
+                        <div class="tag blue" style="font-size:0.8rem; text-align:center; border-radius:4px; padding:0.5rem;">Address & GP Details</div>
+                        <div class="tag blue" style="font-size:0.8rem; text-align:center; border-radius:4px; padding:0.5rem;">Functional Decline Summary</div>
+                        <div class="tag blue" style="font-size:0.8rem; text-align:center; border-radius:4px; padding:0.5rem;">Safeguarding Concerns</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: SYSTEM INFO -->
+            <section id="system" class="section">
+                <div style="margin-bottom: 1.5rem;">
+                    <span class="tag blue">Context</span>
+                    <h2 style="color: var(--color-info); margin-top: 0.5rem;">Commissioning & Structure</h2>
+                </div>
+
+                <div class="card-grid">
+                    <div class="card info">
+                        <div class="card-title">Organisation Structure</div>
+                        <div class="detail-row"><span class="detail-label">Provider:</span> <span class="detail-value">MLCO (Manchester Local Care Org)</span></div>
+                        <div class="detail-row"><span class="detail-label">Commissioner:</span> <span class="detail-value">NHS GM Integrated Care Board (ICB)</span></div>
+                        <div class="detail-row"><span class="detail-label">Legal Duty:</span> <span class="detail-value">Manchester City Council (Care Act)</span></div>
+                        <div class="detail-row"><span class="detail-label">Strategy:</span> <span class="detail-value">"Our Healthier Manchester"</span></div>
+                        <p style="margin-top:1rem; font-size:0.9rem;">Integrated teams (Social Workers + NHS staff) work together under MLCO.</p>
+                    </div>
+
+                    <div class="card info">
+                        <div class="card-title">Useful Resources</div>
+                        <ul class="checklist">
+                            <li><strong>MLCO Service Directory:</strong> Details on all integrated services.</li>
+                            <li><strong>Paying for Care Guide:</strong> Financial thresholds info.</li>
+                            <li><strong>GM Professional Hub:</strong> Access via 111 for system-wide services.</li>
+                        </ul>
+                        <div class="action-row">
+                            <button class="btn btn-copy" onclick="copyNumber('manchester@nhs.net')">Copy ICB Email</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card info">
+                    <div class="card-title">Specialist Groups</div>
+                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">The main Adult Social Care Contact Centre (0161 234 5001) handles:</p>
+                    <div class="tag green" style="margin-right: 5px;">Older Frail Adults</div>
+                    <div class="tag green" style="margin-right: 5px;">Physical Disabilities (18+)</div>
+                    <div class="tag green">Neurological (MS, MND)</div>
+                    <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid #eee;">
+                    <p style="font-size: 0.9rem; margin-bottom: 0.5rem;">Separate Pathways exist for:</p>
+                    <div class="tag blue" style="margin-right: 5px;">Learning Disabilities</div>
+                    <div class="tag blue">Serious Mental Health</div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Copied to clipboard!</div>
+
+    <script>
+        // Tab Switching Logic
+        function showSection(sectionId) {
+            // Remove active class from all sections
+            document.querySelectorAll('.section').forEach(sec => {
+                sec.classList.remove('active');
+            });
+
+            // Remove active class from all nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active', 'active-emergency');
+            });
+
+            // Activate specific section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Activate specific nav button logic
+            const activeBtn = Array.from(document.querySelectorAll('.nav-btn')).find(btn => 
+                btn.getAttribute('onclick').includes(sectionId)
+            );
+            
+            if (sectionId === 'emergency') {
+                activeBtn.classList.add('active-emergency');
+            } else {
+                activeBtn.classList.add('active');
+            }
+        }
+
+        // Copy to Clipboard Logic
+        function copyNumber(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`Copied: ${text}`);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // Search Filter Logic
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            const term = e.target.value.toLowerCase();
+            const sections = document.querySelectorAll('.section');
+
+            // If search is empty, revert to default behavior (only show active tab)
+            if(term.length === 0) {
+                sections.forEach(sec => {
+                    if(sec.classList.contains('active')) sec.style.display = 'block';
+                });
+                return;
+            }
+
+            // Search within all sections and show matches regardless of tab
+            let hasResults = false;
+            sections.forEach(sec => {
+                const text = sec.textContent.toLowerCase();
+                if (text.includes(term)) {
+                    sec.style.display = 'block';
+                    // Highlight the tab for this section visually in sidebar (optional)
+                    hasResults = true;
+                } else {
+                    if(!sec.classList.contains('active')) sec.style.display = 'none';
+                }
+            });
+            
+            // If search matches items in a hidden tab, we might want to show that tab. 
+            // For simplicity in this tool, we show the section content even if tab isn't active.
+        });
+    </script>
+</body>
+</html>

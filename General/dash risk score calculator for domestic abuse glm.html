@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DASH Risk Assessment Tool - Clinical Reference</title>
+    <style>
+        :root {
+            --primary-color: #005EB8; /* NHS Blue */
+            --secondary-color: #003087;
+            --danger-color: #D32F2F; /* Red for flags */
+            --warning-color: #F57C00;
+            --safe-color: #388E3C; /* Green */
+            --bg-color: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text-color: #212121;
+            --text-muted: #757575;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding-bottom: 40px;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .header-content p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .emergency-badge {
+            background-color: var(--danger-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+
+        /* Layout */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* 2/3 Form, 1/3 Score/Info */
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+            .score-sidebar {
+                position: static !important;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--box-shadow);
+            margin-bottom: 1.5rem;
+            border-left: 5px solid transparent;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* Questions List */
+        .question-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .question-item:hover {
+            background-color: #f0f7ff;
+            border-color: var(--primary-color);
+            transform: translateX(4px);
+        }
+
+        .question-item.checked {
+            background-color: #e3f2fd;
+            border-color: var(--primary-color);
+        }
+
+        .checkbox-container {
+            margin-right: 1rem;
+            margin-top: 4px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--primary-color);
+        }
+
+        .question-text {
+            flex-grow: 1;
+        }
+
+        .question-text strong {
+            display: block;
+            margin-bottom: 0.2rem;
+        }
+
+        .question-text small {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        /* Sticky Sidebar for Score */
+        .score-sidebar {
+            position: sticky;
+            top: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .score-card {
+            text-align: center;
+            border-left-color: var(--primary-color);
+        }
+
+        .score-display {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+            transition: color 0.3s;
+        }
+
+        .risk-level {
+            font-size: 1.5rem;
+            font-weight: 700;
+            padding: 0.5rem;
+            border-radius: 4px;
+            color: white;
+            margin-bottom: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        /* Action Panel */
+        .action-panel {
+            border-left-color: var(--text-color);
+        }
+
+        .action-step {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+
+        .action-step h4 {
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            margin-top: 1rem;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            font-size: 1rem;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--secondary-color); }
+
+        .btn-emergency {
+            background-color: var(--danger-color);
+            color: white;
+            font-size: 1.2rem;
+            animation: pulse 2s infinite;
+        }
+        .btn-emergency:hover { background-color: #b71c1c; }
+
+        .btn-reset {
+            background-color: transparent;
+            color: var(--text-muted);
+            border: 1px solid #ccc;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .btn-reset:hover { background-color: #eee; }
+
+        /* Colors for Risk Levels */
+        .risk-standard { background-color: var(--safe-color); }
+        .risk-medium { background-color: var(--warning-color); }
+        .risk-high { background-color: var(--danger-color); }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+        }
+
+        /* Quick Reference Table */
+        .ref-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+        }
+        .ref-table th, .ref-table td {
+            border: 1px solid #ddd;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        .ref-table th {
+            background-color: #eee;
+        }
+        .flag-red { color: var(--danger-color); font-weight: bold; }
+        .flag-green { color: var(--safe-color); font-weight: bold; }
+
+        /* Tooltip/Modal style for explanation */
+        .info-icon {
+            color: var(--primary-color);
+            cursor: help;
+            font-size: 1.1rem;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 1rem;
+        }
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @keyframes fadein {
+            from {bottom: 0; opacity: 0;}
+            to {bottom: 30px; opacity: 1;}
+        }
+        @keyframes fadeout {
+            from {bottom: 30px; opacity: 1;}
+            to {bottom: 0; opacity: 0;}
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-content">
+        <h1>DASH-RISK (2009) Tool</h1>
+        <p>Manchester GP Clinical Reference</p>
+    </div>
+    <div class="emergency-badge" onclick="window.print()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9V2h12v7"></path>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <path d="M6 14h12v8H6z"></path>
+        </svg>
+        Print / Save PDF
+    </div>
+</header>
+
+<main>
+    <!-- Left Column: Questions -->
+    <section class="questions-container">
+        
+        <!-- Critical Red Flags Section -->
+        <div class="card" style="border-left-color: var(--danger-color);">
+            <div class="card-header">
+                <div class="card-title" style="color: var(--danger-color);">
+                    <span style="font-size:1.2rem;">⚠️</span> Immediate Danger & Critical Red Flags
+                </div>
+            </div>
+            <div style="margin-bottom: 1rem; background-color: #ffebee; padding: 1rem; border-radius: 4px;">
+                <p style="font-weight: bold; color: var(--danger-color);">If present, consider immediate Police referral (999) and MARAC.</p>
+                <p style="font-size: 0.9rem;">These questions carry significant weight in the scoring.</p>
+            </div>
+
+            <!-- Q1 -->
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q1" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q1"><strong>1. Have you separated?</strong> (Or planning to?)</label>
+                    <small>Separation is a high-risk trigger point.</small>
+                </div>
+            </div>
+
+            <!-- Q2 -->
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q2" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q2"><strong>2. Is there a child in the family?</strong> (Or pregnancy?)</label>
+                    <small>Includes unborn children, step-children, and looked-after children.</small>
+                </div>
+            </div>
+
+            <!-- Q3 -->
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q3" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q3"><strong>3. Has the abuse become more frequent or severe?</strong></label>
+                    <small>Escalation indicates increasing danger.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- General Risk Factors -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Risk Factors (Domestic Abuse)</div>
+            </div>
+            
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q4" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q4"><strong>4. Is the victim extremely frightened?</strong></label>
+                    <small>Self-assessment of fear is a strong predictor.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q5" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q5"><strong>5. Has there been harassment/stalking?</strong></label>
+                    <small>Online, phone, or physical following.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q6" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q6"><strong>6. Is the abuse sexual in nature?</strong></label>
+                    <small>Rape or sexual degradation.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q7" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q7"><strong>7. Does the partner have access to weapons?</strong></label>
+                    <small>Gun, knife, or ability to use household items as weapons.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q8" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q8"><strong>8. Has there been specific threats to kill?</strong></label>
+                    <small>Verbal or written threats.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q9" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q9"><strong>9. Has there been attempted strangulation/choking?</strong></label>
+                    <small>Even if minor or "playful". Critical risk factor.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q10" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q10"><strong>10. Is the victim controlled (e.g., finances, social life)?</strong></label>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q11" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q11"><strong>11. Has there been forced marriage or "honour-based" violence?</strong></label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Factors (Mental Health, Drugs etc) -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Vulnerability & Context</div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q12" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q12"><strong>12. Does the victim have mental health issues?</strong></label>
+                    <small>Depression, anxiety, self-harm.</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q13" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q13"><strong>13. Does the abuser have mental health issues?</strong></label>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q14" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q14"><strong>14. Drug/Alcohol misuse (Victim)?</strong></label>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q15" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q15"><strong>15. Drug/Alcohol misuse (Abuser)?</strong></label>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q16" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q16"><strong>16. Is the victim pregnant?</strong></label>
+                    <small>(If not already covered in Q2)</small>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q17" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q17"><strong>17. Are there other children at risk?</strong></label>
+                </div>
+            </div>
+
+            <div class="question-item" onclick="toggleCheckbox(this)">
+                <div class="checkbox-container">
+                    <input type="checkbox" id="q18" onchange="calculateScore()">
+                </div>
+                <div class="question-text">
+                    <label for="q18"><strong>18. Is the victim isolated from support?</strong></label>
+                    <small>No family or friends nearby.</small>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- Right Column: Score & Actions -->
+    <aside class="score-sidebar">
+        
+        <!-- Calculator Card -->
+        <div class="card score-card">
+            <div class="card-header">
+                <div class="card-title">DASH Score</div>
+            </div>
+            <div class="score-display" id="total-score">0</div>
+            <div class="risk-level risk-standard" id="risk-text">Standard Risk</div>
+            <p style="font-size: 0.85rem; color: #666; margin-bottom: 1rem;">Based on checked items.</p>
+            <button class="btn btn-primary" onclick="copyResults()">Copy Summary</button>
+            <button class="btn btn-reset" onclick="resetForm()">Reset Assessment</button>
+        </div>
+
+        <!-- Decision Support -->
+        <div class="card action-panel" id="action-panel">
+            <div class="card-header">
+                <div class="card-title">Clinical Action Plan</div>
+            </div>
+            <div id="action-content">
+                <div class="action-step">
+                    <h4>📋 Initial Steps</h4>
+                    <p>See patient alone. Document injuries using body map.</p>
+                </div>
+                <div class="action-step">
+                    <h4>✅ Routine Referral</h4>
+                    <p>Refer to <strong>Manchester IDVA (Independent Domestic Violence Advisor)</strong> service.</p>
+                    <p style="font-size:0.8rem; margin-top:5px;">Discuss safety plan and "Clare's Law" (Right to Ask).</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Local Resources Quick View -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Manchester Contacts</div>
+            </div>
+            <table class="ref-table">
+                <tr>
+                    <td>Emergency</td>
+                    <td class="flag-red">999</td>
+                </tr>
+                <tr>
+                    <td>Domestic Abuse Helpline</td>
+                    <td><strong>0808 200 0247</strong></td>
+                </tr>
+                <tr>
+                    <td>Police (Non-emergency)</td>
+                    <td>101</td>
+                </tr>
+                <tr>
+                    <td>Manchester IDVA</td>
+                    <td>Ask GP System</td>
+                </tr>
+                <tr>
+                    <td>National DA Helpline</td>
+                    <td>0808 2000 247</td>
+                </tr>
+            </table>
+            <a href="https://www.manchester.gov.uk/domesticabuse" target="_blank" class="btn btn-primary" style="margin-top: 1rem; font-size: 0.8rem;">MCC DA Info Portal ↗</a>
+        </div>
+        
+        <div class="card" style="background-color: #e3f2fd; border-left-color: var(--primary-color);">
+            <div class="card-header" style="border-bottom:none;">
+                <div class="card-title">💡 Clinician Tip</div>
+            </div>
+            <p style="font-size: 0.9rem;">
+                If the patient discloses forced marriage or "honour-based" violence, do <strong>NOT</strong> contact family. Refer to the Forced Marriage Unit (020 7008 0151).
+            </p>
+        </div>
+
+    </aside>
+</main>
+
+<!-- Toast Notification -->
+<div id="toast">Summary copied to clipboard!</div>
+
+<script>
+    // Map of Checkbox IDs to specific weights if we wanted complex scoring
+    // However, standard DASH is a simple count of positive responses.
+    // Some specific markers (Strangulation, Separation, Pregnancy) are critical flags.
+
+    function toggleCheckbox(element) {
+        // Find the checkbox inside the clicked div
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            // Trigger visual update manually
+            if(checkbox.checked) {
+                element.classList.add('checked');
+            } else {
+                element.classList.remove('checked');
+            }
+            calculateScore();
+        }
+    }
+
+    function calculateScore() {
+        let score = 0;
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        let criticalFlags = [];
+
+        checkboxes.forEach(box => {
+            if (box.checked) {
+                score++;
+                // Track critical flags by ID for high-risk override logic
+                if (['q8', 'q9', 'q1', 'q2'].includes(box.id)) {
+                    criticalFlags.push(box.id);
+                }
+            }
+        });
+
+        updateUI(score, criticalFlags);
+    }
+
+    function updateUI(score, criticalFlags) {
+        const scoreDisplay = document.getElementById('total-score');
+        const riskText = document.getElementById('risk-text');
+        const actionPanel = document.getElementById('action-content');
+
+        scoreDisplay.textContent = score;
+
+        // Simple logic for categorization
+        // Note: Professional judgment always supersedes score.
+        let riskLevel = "standard";
+        let riskLabel = "Standard Risk";
+        let adviceHTML = "";
+
+        // High Risk Override Logic (Presence of specific severe markers or high count)
+        // Typically >= 14 is high, but specific markers trigger immediate high risk.
+        let isHighRisk = (score >= 14) || 
+                         criticalFlags.includes('q8') || // Threats to kill
+                         criticalFlags.includes('q9');    // Strangulation
+
+        let isMediumRisk = (score >= 7 && score < 14) && !isHighRisk;
+
+        if (isHighRisk) {
+            riskLevel = "high";
+            riskLabel = "HIGH RISK";
+            riskText.className = "risk-level risk-high";
+            
+            adviceHTML = `
+                <div class="action-step" style="background-color: #ffebee; border-left: 4px solid var(--danger-color);">
+                    <h4 class="flag-red">🚨 URGENT: MARAC Referral Required</h4>
+                    <p>Patient is at imminent risk of serious harm or homicide.</p>
+                </div>
+                <div class="action-step">
+                    <h4>1. Immediate Safety</h4>
+                    <ul style="padding-left: 20px; font-size: 0.9rem;">
+                        <li>Are they safe to go home?</li>
+                        <li>If immediate danger: Call 999.</li>
+                        <li>Consider emergency accommodation.</li>
+                    </ul>
+                </div>
+                <div class="action-step">
+                    <h4>2. Referral Pathway</h4>
+                    <p><strong>Complete MARAC Referral Form</strong> (usually available on local authority portal).</p>
+                    <p><strong>Inform IDVA Service ASAP</strong> for same-day contact.</p>
+                </div>
+                 <div class="action-step">
+                    <h4>3. Documentation</h4>
+                    <p>Quote patient's words exactly regarding threats/strangulation.</p>
+                </div>
+            `;
+        } else if (isMediumRisk) {
+            riskLevel = "medium";
+            riskLabel = "Medium Risk";
+            riskText.className = "risk-level risk-medium";
+
+            adviceHTML = `
+                <div class="action-step" style="background-color: #fff3e0; border-left: 4px solid var(--warning-color);">
+                    <h4 style="color: var(--warning-color);">⚠️ Medium Risk Identified</h4>
+                    <p>Risk of escalation is present. Needs proactive safety planning.</p>
+                </div>
+                <div class="action-step">
+                    <h4>1. Referral</h4>
+                    <p><strong>Refer to IDVA Service</strong> for risk management and safety planning.</p>
+                    <p>Does not usually require MARAC unless escalated.</p>
+                </div>
+                <div class="action-step">
+                    <h4>2. Safety Plan</h4>
+                    <p>Discuss code words, emergency bag, and escape route.</p>
+                </div>
+            `;
+        } else {
+            riskLevel = "standard";
+            riskLabel = "Standard Risk";
+            riskText.className = "risk-level risk-standard";
+
+            adviceHTML = `
+                <div class="action-step">
+                    <h4>✅ Standard Risk</h4>
+                    <p>Risk factors present but not indicating imminent severe danger.</p>
+                </div>
+                <div class="action-step">
+                    <h4>1. Discuss Options</h4>
+                    <p>Provide information on local support services.</p>
+                    <p>Allow the patient to self-refer if they prefer.</p>
+                </div>
+                <div class="action-step">
+                    <h4>2. Review</h4>
+                    <p>Review at next appointment. Warn that abuse often escalates over time.</p>
+                </div>
+            `;
+        }
+
+        actionPanel.innerHTML = adviceHTML;
+    }
+
+    function copyResults() {
+        const score = document.getElementById('total-score').textContent;
+        const risk = document.getElementById('risk-text').textContent;
+        const date = new Date().toLocaleDateString();
+        const text = `DASH Assessment (${date})\nScore: ${score}\nRisk Level: ${risk}\nReferral: Actioned per clinical protocol.`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            showToast();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+        });
+    }
+
+    function showToast() {
+        const toast = document.getElementById("toast");
+        toast.className = "show";
+        setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    function resetForm() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        const items = document.querySelectorAll('.question-item');
+        
+        checkboxes.forEach(box => box.checked = false);
+        items.forEach(item => item.classList.remove('checked'));
+        
+        calculateScore();
+    }
+
+    // Initialize state on load
+    document.addEventListener('DOMContentLoaded', () => {
+        // Attach click listeners to ensure highlighting works on label click
+        document.querySelectorAll('.question-item').forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if(checkbox.checked) item.classList.add('checked');
+        });
+    });
+
+</script>
+
+</body>
+</html>

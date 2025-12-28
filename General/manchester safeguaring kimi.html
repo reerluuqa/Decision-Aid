@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safeguarding in Manchester - Clinical Decision Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 25px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            flex: 1;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 280px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .progress-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f8f9ff;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: #e8ecff;
+            border-left-color: #667eea;
+            font-weight: bold;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .progress-label {
+            flex: 1;
+        }
+
+        .progress-status {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .step-card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 6px solid;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .step-card.assessment {
+            border-left-color: #3498db;
+        }
+
+        .step-card.diagnosis {
+            border-left-color: #9b59b6;
+        }
+
+        .step-card.treatment {
+            border-left-color: #f39c12;
+        }
+
+        .step-card.followup {
+            border-left-color: #27ae60;
+        }
+
+        .card-header {
+            padding: 25px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: #f8f9ff;
+        }
+
+        .card-title-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .assessment .card-icon { background: #3498db; }
+        .diagnosis .card-icon { background: #9b59b6; }
+        .treatment .card-icon { background: #f39c12; }
+        .followup .card-icon { background: #27ae60; }
+
+        .card-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .card-subtitle {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+
+        .expand-icon {
+            font-size: 24px;
+            color: #bdc3c7;
+            transition: all 0.3s ease;
+        }
+
+        .step-card.expanded .expand-icon {
+            transform: rotate(180deg);
+            color: #667eea;
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .step-card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 0 25px 25px;
+        }
+
+        .action-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 15px;
+            border-left: 4px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .action-item:hover {
+            background: #e8f4fd;
+            border-left-color: #3498db;
+            transform: translateX(5px);
+        }
+
+        .action-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-content {
+            color: #5a6c7d;
+            font-size: 0.95em;
+        }
+
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        .badge-red {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .badge-amber {
+            background: #fff8e1;
+            color: #f57c00;
+            border: 1px solid #ffe0b2;
+        }
+
+        .badge-green {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .contact-highlight {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .contact-highlight a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .resource-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .resource-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .resource-list li:last-child {
+            border-bottom: none;
+        }
+
+        .resource-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .resource-link:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+
+        .step-indicator {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .step-1 { background: #3498db; }
+        .step-2 { background: #9b59b6; }
+        .step-3 { background: #f39c12; }
+        .step-4 { background: #27ae60; }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+                max-height: none;
+                margin-bottom: 20px;
+            }
+
+            .progress-item {
+                flex: 1;
+                justify-content: center;
+            }
+
+            .progress-sidebar > div {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .card-title {
+                font-size: 1.2em;
+            }
+
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header fade-in">
+                <h1>🏥 Safeguarding in Manchester</h1>
+                <p>Clinical Decision Support for General Practitioners</p>
+                <p style="font-size: 0.9em; margin-top: 10px;">A quick-reference guide for safeguarding children and adults at risk</p>
+            </div>
+
+            <div class="step-card assessment fade-in" data-step="1">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-section">
+                        <div class="card-icon">🚨</div>
+                        <div>
+                            <div class="card-title">Initial Assessment</div>
+                            <div class="card-subtitle">Immediate actions and threshold evaluation</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="contact-highlight">
+                            ☎️ EMERGENCY CONTACT: 0161 234 5001 (24/7)<br>
+                            <small>For all safeguarding concerns - Children & Adults</small>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-1">1</span>
+                                Immediate Danger Assessment
+                                <span class="severity-badge badge-red">999 First</span>
+                            </div>
+                            <div class="action-content">
+                                If there is immediate risk to life, call <strong>999</strong> before any other action. 
+                                For non-emergency police concerns, call <strong>101</strong>. Document your decision-making process.
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-1">2</span>
+                                Determine Threshold Level
+                                <span class="severity-badge badge-amber">Consult Guidelines</span>
+                            </div>
+                            <div class="action-content">
+                                <strong>Children:</strong> Use "Right Intervention - Right Time" framework (Levels 1-4/5)<br>
+                                <strong>Adults:</strong> Apply Care Act 2014 Section 42 criteria<br>
+                                <strong>Key Question:</strong> Is there actual or potential significant harm?
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-1">3</span>
+                                Gather Essential Information
+                            </div>
+                            <div class="action-content">
+                                <strong>Before calling, prepare:</strong>
+                                <ul style="margin-left: 20px; margin-top: 8px;">
+                                    <li>Full name, DOB, address, NHS number</li>
+                                    <li>Family composition and key relationships</li>
+                                    <li>Specific concerns (what, when, where, who)</li>
+                                    <li>Relevant history and previous concerns</li>
+                                    <li>Parents'/adult's awareness and response</li>
+                                    <li>Your risk assessment justification</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="warning-box">
+                            <strong>⚠️ Confidentiality Note:</strong> Safeguarding concerns override confidentiality. 
+                            You CAN share information without consent if someone is at risk of significant harm. 
+                            Document your reasoning for information sharing decisions.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card diagnosis fade-in" data-step="2">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-section">
+                        <div class="card-icon">🔍</div>
+                        <div>
+                            <div class="card-title">Multi-Agency Referral</div>
+                            <div class="card-subtitle">Making effective safeguarding referrals</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="contact-highlight">
+                            📞 CALL MANCHESTER MASH: 0161 234 5001<br>
+                            <small>Single point of contact for Children & Adults - 24/7</small>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-2">1</span>
+                                Make the Referral
+                                <span class="severity-badge badge-red">Phone First</span>
+                            </div>
+                            <div class="action-content">
+                                <strong>Always phone first for urgent concerns.</strong> Online forms are for non-emergencies only.<br>
+                                <strong>Children:</strong> Manchester Children's Services Contact Centre → MASH<br>
+                                <strong>Adults:</strong> Adult Social Care Contact Centre → Adults MASH<br>
+                                <strong>Key Message:</strong> State clearly if you believe threshold for significant harm is met
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-2">2</span>
+                                Information Sharing Protocol
+                                <span class="severity-badge badge-amber">GDPR Compliant</span>
+                            </div>
+                            <div class="action-content">
+                                <strong>Children:</strong> Share info without consent if at risk of significant harm. 
+                                Inform parents unless it increases risk.<br>
+                                <strong>Adults:</strong> Obtain consent where possible. Share without consent if:
+                                <ul style="margin-left: 20px; margin-top: 8px;">
+                                    <li>Serious harm to adult or others</li>
+                                    <li>Coercion or incapacity present</li>
+                                    <li>Life-threatening neglect</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-2">3</span>
+                                Online Referral Forms (Non-Urgent)
+                            </div>
+                            <div class="action-content">
+                                <strong>Children:</strong> Professional Referral Form (Manchester City Council website)<br>
+                                <strong>Adults:</strong> Adult Safeguarding Referral Form<br>
+                                <small>⚠️ Follow up written referrals within 48 hours of calling</small>
+                            </div>
+                        </div>
+
+                        <div class="info-box">
+                            <strong>💡 MASH Process:</strong> Multi-Agency Safeguarding Hub screens referral within 1 working day. 
+                            They will assign risk rating (Red/Amber/Green) and decide on next steps. 
+                            You should receive feedback within 3 working days.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card treatment fade-in" data-step="3">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-section">
+                        <div class="card-icon">⚙️</div>
+                        <div>
+                            <div class="card-title">Post-Referral Actions</div>
+                            <div class="card-subtitle">What happens next and your ongoing role</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-3">1</span>
+                                Children's Cases - Possible Outcomes
+                            </div>
+                            <div class="action-content">
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>No Further Action:</strong> Redirected to other services</li>
+                                    <li><strong>Early Help / Child in Need:</strong> Section 17 assessment and support</li>
+                                    <li><strong>Child Protection Enquiry:</strong> Section 47 investigation
+                                        <ul style="margin-left: 20px;">
+                                            <li>Strategy Discussion/Meeting within 1 working day</li>
+                                            <li>Initial Child Protection Conference within 15 working days</li>
+                                            <li>GPs invited to conferences - attend or send report</li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-3">2</span>
+                                Adult Cases - MASH Risk Ratings
+                            </div>
+                            <div class="action-content">
+                                <ul style="margin-left: 20px;">
+                                    <li><strong>RED (High Risk):</strong> Same-day multi-agency discussion → Section 42 Safeguarding Enquiry</li>
+                                    <li><strong>AMBER (Moderate):</strong> MASH enquiry to gather more information → decision on next steps</li>
+                                    <li><strong>GREEN (Lower):</strong> Signposted to other services or no further action</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-3">3</span>
+                                Your Ongoing Responsibilities
+                                <span class="severity-badge badge-green">Stay Involved</span>
+                            </div>
+                            <div class="action-content">
+                                <ul style="margin-left: 20px;">
+                                    <li>Provide additional information when requested</li>
+                                    <li>Contribute to Safeguarding Plans (medical oversight, capacity assessments)</li>
+                                    <li>Attend multi-agency meetings when invited</li>
+                                    <li>Maintain clear documentation in patient records</li>
+                                    <li>Follow up if no feedback within 3 working days</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-3">4</span>
+                                Escalation Process
+                                <span class="severity-badge badge-amber">If Concerns Remain</span>
+                            </div>
+                            <div class="action-content">
+                                If you are dissatisfied with the response or decision, use the <strong>Escalation and Resolution Protocol (2025)</strong>. 
+                                Contact the Designated Safeguarding Professionals for advice on next steps.
+                            </div>
+                        </div>
+
+                        <div class="warning-box">
+                            <strong>⚠️ Professional Allegations (LADO):</strong> If concern involves a professional or volunteer who works with children, 
+                            you must inform the <strong>Local Authority Designated Officer (LADO)</strong> via Contact Centre.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card followup fade-in" data-step="4">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title-section">
+                        <div class="card-icon">📋</div>
+                        <div>
+                            <div class="card-title">Documentation & Training</div>
+                            <div class="card-subtitle">Record keeping and ongoing competency</div>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-4">1</span>
+                                Essential Documentation
+                                <span class="severity-badge badge-red">Legal Requirement</span>
+                            </div>
+                            <div class="action-content">
+                                <strong>In patient records, document:</strong>
+                                <ul style="margin-left: 20px; margin-top: 8px;">
+                                    <li>Time and date of referral</li>
+                                    <li>Name of person you spoke to at MASH</li>
+                                    <li>Summary of concerns and evidence</li>
+                                    <li>Advice given andactions taken</li>
+                                    <li>Follow-up arrangements</li>
+                                    <li>Your decision-making rationale (especially if sharing without consent)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-4">2</span>
+                                Required Training Levels
+                                <span class="severity-badge badge-amber">Level 3 Expected</span>
+                            </div>
+                            <div class="action-content">
+                                <strong>GPs should maintain Level 3 competency:</strong>
+                                <ul style="margin-left: 20px; margin-top: 8px;">
+                                    <li>Attend MSP multi-agency training (free for Manchester practitioners)</li>
+                                    <li>Complete e-learning modules via Virtual College platform</li>
+                                    <li>Topics: Domestic Abuse, Child Exploitation, MCA, FGM, Prevent</li>
+                                    <li>Regular refreshers and updates</li>
+                                </ul>
+                                <div class="success-box" style="margin-top: 10px;">
+                                    <strong>Access Training:</strong> 
+                                    <a href="https://www.manchestersafeguardingpartnership.co.uk/training/" target="_blank" class="resource-link">MSP Training Booking Portal</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-4">3</span>
+                                Key Resources & Contacts
+                                <span class="severity-badge badge-green">Bookmark These</span>
+                            </div>
+                            <div class="action-content">
+                                <ul class="resource-list">
+                                    <li>📘 <a href="https://www.manchestersafeguardingpartnership.co.uk" target="_blank" class="resource-link">Manchester Safeguarding Partnership Website</a></li>
+                                    <li>👶 <a href="https://greatermanchesterscp.trixonline.co.uk/" target="_blank" class="resource-link">GM Safeguarding Children Procedures Manual</a></li>
+                                    <li>👥 <a href="https://www.manchestersafeguardingpartnership.co.uk/multi-agency-policy-and-procedure-adults/" target="_blank" class="resource-link">Adult Safeguarding Policy & Procedures</a></li>
+                                    <li>📞 <a href="https://www.manchestersafeguardingpartnership.co.uk/help/" target="_blank" class="resource-link">Report a Concern - Online Forms</a></li>
+                                    <li>👨‍⚕️ Named GP for Safeguarding: Via NHS Manchester locality safeguarding team</li>
+                                    <li>🏥 Designated Professionals: Designated Nurse/Doctor for Safeguarding Children & Adults</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="action-item">
+                            <div class="action-title">
+                                <span class="step-indicator step-4">4</span>
+                                Stay Informed
+                            </div>
+                            <div class="action-content">
+                                <ul style="margin-left: 20px;">
+                                    <li>Read MSP Annual Reports (published on website)</li>
+                                    <li>Sign up for procedure manual update alerts</li>
+                                    <li>Attend multi-agency learning events</li>
+                                    <li>Know your locality team (North/Central/South)</li>
+                                    <li>Understand "Think Family" approach in Manchester</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="success-box">
+                            <strong>✅ Remember:</strong> Safeguarding is everyone's responsibility. When in doubt, call MASH for advice. 
+                            It's better to discuss a concern than to miss a potential risk. Manchester Safeguarding Partnership provides 
+                            comprehensive support and training to help you protect vulnerable children and adults.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-sidebar fade-in">
+            <div class="progress-title">
+                <span>📊</span> Progress Tracker
+            </div>
+            <div>
+                <div class="progress-item active" onclick="scrollToCard(1)">
+                    <div class="progress-icon" style="background: #3498db;">1</div>
+                    <div class="progress-label">
+                        Assessment
+                        <div class="progress-status">Immediate Actions</div>
+                    </div>
+                </div>
+                <div class="progress-item" onclick="scrollToCard(2)">
+                    <div class="progress-icon" style="background: #9b59b6;">2</div>
+                    <div class="progress-label">
+                        Diagnosis
+                        <div class="progress-status">MASH Referral</div>
+                    </div>
+                </div>
+                <div class="progress-item" onclick="scrollToCard(3)">
+                    <div class="progress-icon" style="background: #f39c12;">3</div>
+                    <div class="progress-label">
+                        Treatment
+                        <div class="progress-status">Post-Referral</div>
+                    </div>
+                </div>
+                <div class="progress-item" onclick="scrollToCard(4)">
+                    <div class="progress-icon" style="background: #27ae60;">4</div>
+                    <div class="progress-label">
+                        Follow-up
+                        <div class="progress-status">Documentation</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #f0f0f0;">
+                <div class="contact-highlight" style="font-size: 0.9em; padding: 15px;">
+                    <strong>24/7 Emergency Contact</strong><br>
+                    ☎️ 0161 234 5001<br>
+                    <small>Manchester Contact Centre</small>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #f8f9ff; border-radius: 10px; font-size: 0.85em;">
+                <strong>Quick Tips:</strong>
+                <ul style="margin-left: 20px; margin-top: 8px;">
+                    <li>Phone first for urgent concerns</li>
+                    <li>Document all decisions</li>
+                    <li>Share info proportionately</li>
+                    <li>Follow up within 3 days</li>
+                    <li>Keep training current</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.step-card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                
+                // Update progress sidebar
+                const stepNumber = parseInt(card.dataset.step);
+                updateProgressSidebar(stepNumber);
+                
+                // Smooth scroll to card
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+
+        function scrollToCard(stepNumber) {
+            const card = document.querySelector(`[data-step="${stepNumber}"]`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => {
+                    card.classList.add('expanded');
+                    updateProgressSidebar(stepNumber);
+                }, 300);
+            }
+        }
+
+        function updateProgressSidebar(activeStep) {
+            document.querySelectorAll('.progress-item').forEach((item, index) => {
+                if (index + 1 === activeStep) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // Initialize with first card expanded
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstCard = document.querySelector('.step-card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+                updateProgressSidebar(1);
+            }
+            
+            // Add fade-in animation to cards
+            const cards = document.querySelectorAll('.step-card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(30px)';
+                    card.style.transition = 'all 0.6s ease';
+                    
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 200);
+            });
+        });
+
+        // Intersection Observer for progress tracking
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const stepNumber = parseInt(entry.target.dataset.step);
+                    updateProgressSidebar(stepNumber);
+                }
+            });
+        }, {
+            threshold: 0.5
+        });
+
+        document.querySelectorAll('.step-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                const activeStep = parseInt(document.querySelector('.progress-item.active').textContent);
+                const nextStep = Math.min(activeStep + 1, 4);
+                scrollToCard(nextStep);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                const activeStep = parseInt(document.querySelector('.progress-item.active').textContent);
+                const prevStep = Math.max(activeStep - 1, 1);
+                scrollToCard(prevStep);
+            }
+        });
+    </script>
+</body>
+</html>
