@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypercalcaemia Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1600px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 30px 20px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .sidebar h3 {
+            color: #667eea;
+            margin-bottom: 25px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: rgba(102, 126, 234, 0.15);
+            border-left-color: #667eea;
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            background: rgba(40, 167, 69, 0.1);
+            border-left-color: #28a745;
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 0.9em;
+            color: white;
+        }
+
+        .progress-icon.assessment { background: #3498db; }
+        .progress-icon.diagnosis { background: #9b59b6; }
+        .progress-icon.treatment { background: #e74c3c; }
+        .progress-icon.followup { background: #2ecc71; }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 280px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border-left: 8px solid;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.6s forwards;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .step-card.assessment { border-left-color: #3498db; }
+        .step-card.diagnosis { border-left-color: #9b59b6; }
+        .step-card.treatment { border-left-color: #e74c3c; }
+        .step-card.followup { border-left-color: #2ecc71; }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .step-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .step-title.assessment { color: #3498db; }
+        .step-title.diagnosis { color: #9b59b6; }
+        .step-title.treatment { color: #e74c3c; }
+        .step-title.followup { color: #2ecc71; }
+
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .step-card:hover .step-icon {
+            transform: scale(1.1);
+        }
+
+        .assessment .step-icon { background: #3498db; }
+        .diagnosis .step-icon { background: #9b59b6; }
+        .treatment .step-icon { background: #e74c3c; }
+        .followup .step-icon { background: #2ecc71; }
+
+        .expand-icon {
+            font-size: 1.2em;
+            color: #666;
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .step-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .step-content.expanded {
+            max-height: 2000px;
+        }
+
+        .subsection {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #ddd;
+        }
+
+        .subsection h4 {
+            color: #444;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .severity-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .severity-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #feca57, #ff9ff3);
+            color: #333;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #1dd1a1, #2ecc71);
+            color: white;
+        }
+
+        .alert-box {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+
+        .alert-red {
+            background: #ffe6e6;
+            border-left: 4px solid #dc3545;
+            color: #721c24;
+        }
+
+        .alert-amber {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #856404;
+        }
+
+        .alert-green {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            color: #155724;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .reference-box {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.85em;
+            color: #1976d2;
+            border-left: 4px solid #2196f3;
+        }
+
+        .btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 5px;
+            font-size: 0.9em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f1c40f, #f39c12);
+            color: #333;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 20px;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 20px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h3><i class="fas fa-tasks"></i> Progress</h3>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon assessment"><i class="fas fa-user-md"></i></div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon diagnosis"><i class="fas fa-microscope"></i></div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon treatment"><i class="fas fa-syringe"></i></div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon followup"><i class="fas fa-calendar-check"></i></div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-flask"></i> Hypercalcaemia Management</h1>
+                <p>Primary Care Algorithm | NICE CKS September 2024 | Adult patients (18+ years)</p>
+            </div>
+
+            <!-- Assessment Section -->
+            <div class="step-card assessment" data-step="assessment">
+                <div class="step-header" onclick="toggleSection('assessment')">
+                    <div class="step-title assessment">
+                        <div class="step-icon"><i class="fas fa-user-md"></i></div>
+                        Assessment
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="expand-assessment"></i>
+                </div>
+                <div class="step-content" id="content-assessment">
+                    <div class="subsection">
+                        <h4><i class="fas fa-search"></i> When to Suspect Hypercalcaemia</h4>
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-green">Incidental Finding</span>
+                            <span class="severity-badge badge-red">Malignancy Deterioration</span>
+                        </div>
+                        <ul>
+                            <li>Incidental finding of corrected serum calcium ≥2.6 mmol/L on blood testing</li>
+                            <li>Sudden deterioration in patient with advanced cancer</li>
+                            <li>Suggestive clinical features (often non-specific):</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-stethoscope"></i> Clinical Features by System</h4>
+                        <div class="alert-box alert-amber">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div>
+                                <strong>Severity correlates with:</strong> Calcium level, rate of onset, and underlying cause
+                            </div>
+                        </div>
+                        <ul>
+                            <li><strong>Skeletal:</strong> Bone pain, skeletal deformities, osteoporosis, fragility fractures</li>
+                            <li><strong>Neuromuscular:</strong> Drowsiness, delirium, coma, fatigue, muscle weakness, insomnia, impaired concentration</li>
+                            <li><strong>Gastrointestinal:</strong> Nausea, vomiting, anorexia, constipation, abdominal pain</li>
+                            <li><strong>Renal:</strong> Renal colic, polyuria, polydipsia, nocturia, renal impairment</li>
+                            <li><strong>Cardiovascular:</strong> Hypertension, shortened QT interval, arrhythmias (rare)</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-clipboard-list"></i> Assessment Checklist</h4>
+                        <ul>
+                            <li><strong>Symptoms:</strong> Duration, severity, onset pattern</li>
+                            <li><strong>Malignancy symptoms:</strong> Fever, weight loss, night sweats, decreased appetite, cough</li>
+                            <li><strong>Medical history:</strong> Osteoporosis, fractures, renal stones, malignancy</li>
+                            <li><strong>Medications:</strong> Thiazides, lithium, vitamin D/A, calcium supplements</li>
+                            <li><strong>Family history:</strong> Hypercalcaemia, genetic endocrinopathies</li>
+                            <li><strong>Examination:</strong> Hydration status, cognitive function, head/neck/abdominal exam</li>
+                            <li><strong>Review previous calcium levels:</strong> Assess chronicity and progression</li>
+                        </ul>
+                        <div class="alert-box alert-green">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Pattern Recognition:</strong> Primary hyperparathyroidism = mild, stable, slowly progressive; Malignancy = rapid-onset, severe, with systemic symptoms
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Section -->
+            <div class="step-card diagnosis" data-step="diagnosis">
+                <div class="step-header" onclick="toggleSection('diagnosis')">
+                    <div class="step-title diagnosis">
+                        <div class="step-icon"><i class="fas fa-microscope"></i></div>
+                        Diagnosis
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="expand-diagnosis"></i>
+                </div>
+                <div class="step-content" id="content-diagnosis">
+                    <div class="subsection">
+                        <h4><i class="fas fa-check-circle"></i> Confirmation</h4>
+                        <div class="alert-box alert-green">
+                            <i class="fas fa-flask"></i>
+                            <div>
+                                <strong>Initial Test:</strong> Serum calcium (adjust for albumin) - avoid prolonged tourniquet
+                            </div>
+                        </div>
+                        <ul>
+                            <li>Repeat raised calcium test to confirm diagnosis</li>
+                            <li>Frequency depends on severity and clinical presentation</li>
+                            <li>Mild/asymptomatic: Repeat after 1 week</li>
+                            <li>Severe/symptomatic: Confirm in secondary care setting</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-layer-group"></i> Severity Classification</h4>
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-green">Mild: 2.6–2.99 mmol/L</span>
+                            <span class="severity-badge badge-amber">Moderate: 3.0–3.5 mmol/L</span>
+                            <span class="severity-badge badge-red">Severe: >3.5 mmol/L</span>
+                        </div>
+                        <ul>
+                            <li><strong>Mild:</strong> Often asymptomatic, may be stable over years (primary hyperparathyroidism)</li>
+                            <li><strong>Moderate:</strong> Usually symptomatic, requires prompt treatment</li>
+                            <li><strong>Severe:</strong> Emergency requiring immediate hospital admission</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-cogs"></i> Key Investigations</h4>
+                        <p style="margin-bottom: 10px;"><strong>Core Tests:</strong></p>
+                        <ul>
+                            <li><strong>PTH:</strong> Raised in primary hyperparathyroidism; suppressed/undetectable in malignancy</li>
+                            <li><strong>FBC:</strong> Exclude anaemia of chronic disease/haematologic malignancy</li>
+                            <li><strong>ESR/CRP:</strong> Elevated in malignancy/inflammatory conditions</li>
+                            <li><strong>eGFR/Creatinine:</strong> Assess hydration, AKI, CKD</li>
+                            <li><strong>Serum/urine protein electrophoresis:</strong> Exclude myeloma</li>
+                        </ul>
+                        <p style="margin-bottom: 10px; margin-top: 15px;"><strong>Targeted Tests:</strong></p>
+                        <ul>
+                            <li><strong>Thyroid function:</strong> If thyrotoxicosis suspected</li>
+                            <li><strong>Vitamin D:</strong> If toxicity suspected</li>
+                            <li><strong>Cortisol (8-9am):</strong> If Addison's disease suspected</li>
+                            <li><strong>Chest X-ray:</strong> Exclude lung cancer, lymphoma, sarcoidosis, TB</li>
+                        </ul>
+                        <div class="alert-box alert-amber">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <div>
+                                <strong>Note:</strong> If PTH testing not available in primary care, refer to endocrinologist unless clear non-endocrine cause
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Section -->
+            <div class="step-card treatment" data-step="treatment">
+                <div class="step-header" onclick="toggleSection('treatment')">
+                    <div class="step-title treatment">
+                        <div class="step-icon"><i class="fas fa-syringe"></i></div>
+                        Treatment
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="expand-treatment"></i>
+                </div>
+                <div class="step-content" id="content-treatment">
+                    <div class="subsection">
+                        <h4><i class="fas fa-first-aid"></i> Emergency Management</h4>
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-red">Severe: >3.5 mmol/L</span>
+                            <span class="severity-badge badge-red">Severe Symptoms</span>
+                        </div>
+                        <div class="alert-box alert-red">
+                            <i class="fas fa-ambulance"></i>
+                            <div>
+                                <strong>Immediate Action:</strong> Arrange emergency hospital admission for IV fluids and IV bisphosphonate therapy
+                            </div>
+                        </div>
+                        <ul>
+                            <li><strong>Severe hypercalcaemia (>3.5 mmol/L)</strong> = Emergency admission</li>
+                            <li><strong>Severe symptoms</strong> (delirium, coma, severe dehydration) = Emergency admission</li>
+                            <li>Treatment: IV rehydration, IV bisphosphonates/denosumab, calcitonin, steroids (if indicated)</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Urgent Management</h4>
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-amber">Moderate: 3.0–3.5 mmol/L</span>
+                            <span class="severity-badge badge-amber">Symptomatic</span>
+                        </div>
+                        <div class="alert-box alert-amber">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <strong>Same-day referral:</strong> Prompt treatment usually required in hospital/ambulatory care
+                            </div>
+                        </div>
+                        <ul>
+                            <li><strong>Moderate hypercalcaemia (3.0-3.5 mmol/L) + symptoms</strong> = Urgent referral</li>
+                            <li><strong>Known malignancy + moderate hypercalcaemia</strong> = Urgent assessment</li>
+                            <li>Liaise with on-call endocrinologist, ambulatory care, or medical team</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-stethoscope"></i> Primary Care Management</h4>
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-green">Mild: 2.6–2.99 mmol/L</span>
+                            <span class="severity-badge badge-green">Asymptomatic</span>
+                        </div>
+                        <div class="alert-box alert-green">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Investigate & Refer:</strong> Full clinical assessment and initial investigations before specialist referral
+                            </div>
+                        </div>
+                        <p style="margin-bottom: 10px;"><strong>Reversible Causes:</strong></p>
+                        <ul>
+                            <li><strong>Thiazide diuretics:</strong> Stop if possible, repeat calcium in 3 weeks</li>
+                            <li><strong>Lithium:</strong> Liaise with mental health specialist</li>
+                            <li><strong>Excess intake:</strong> Stop calcium/vitamin D/vitamin A supplements, repeat in 3 weeks</li>
+                        </ul>
+                        <p style="margin-bottom: 10px; margin-top: 15px;"><strong>Specialist Liaison:</strong></p>
+                        <ul>
+                            <li><strong>Raised PTH:</strong> Refer to endocrinology (primary hyperparathyroidism)</li>
+                            <li><strong>Malignancy suspected:</strong> Refer via local cancer pathway</li>
+                            <li><strong>Other conditions:</strong> Refer to relevant specialty (renal, thyroid, etc.)</li>
+                            <li><strong>No clear cause:</strong> Refer to endocrinology for further investigation</li>
+                        </ul>
+                        <div class="alert-box alert-green">
+                            <i class="fas fa-tint"></i>
+                            <div>
+                                <strong>Always advise:</strong> Maintain adequate oral fluid intake
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-cancer"></i> Known Malignancy</h4>
+                        <div class="alert-box alert-amber">
+                            <i class="fas fa-hands-helping"></i>
+                            <div>
+                                <strong>Key Decision:</strong> Discuss with patient/carers whether treatment is appropriate
+                            </div>
+                        </div>
+                        <ul>
+                            <li><strong>Palliative care:</strong> May not be appropriate if approaching end of life</li>
+                            <li><strong>Severe/Moderate:</strong> Emergency/urgent admission as above</li>
+                            <li><strong>Mild/Asymptomatic:</strong> Liaise with oncologist/palliative care specialist</li>
+                            <li><strong>Review medications:</strong> Stop thiazides, calcium/vitamin D supplements if appropriate</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Section -->
+            <div class="step-card followup" data-step="followup">
+                <div class="step-header" onclick="toggleSection('followup')">
+                    <div class="step-title followup">
+                        <div class="step-icon"><i class="fas fa-calendar-check"></i></div>
+                        Follow-up
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="expand-followup"></i>
+                </div>
+                <div class="step-content" id="content-followup">
+                    <div class="subsection">
+                        <h4><i class="fas fa-user-clock"></i> Primary Hyperparathyroidism (Conservative)</h4>
+                        <div class="alert-box alert-green">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Monitoring:</strong> Patients not having surgery or unsuccessful surgery
+                            </div>
+                        </div>
+                        <ul>
+                            <li><strong>Annual:</strong> Serum calcium, vitamin D, eGFR/creatinine</li>
+                            <li><strong>Every 2 years:</strong> Bone mineral density (DXA scan)</li>
+                            <li><strong>If indicated:</strong> Renal imaging (ultrasound/CT) for stones</li>
+                            <li><strong>If indicated:</strong> X-ray/vertebral fracture assessment for height loss/back pain</li>
+                            <li><strong>Cardiovascular:</strong> Risk assessment</li>
+                        </ul>
+                        <div class="alert-box alert-amber">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <div>
+                                <strong>Re-refer if:</strong> Symptoms develop, calcium increases ≥0.25 mmol/L above normal, eGFR <60, renal stones, osteoporosis/fragility fractures
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fasfa-procedures"></i> Post-Parathyroidectomy</h4>
+                        <ul>
+                            <li><strong>Annual:</strong> Check calcium levels</li>
+                            <li><strong>If complications:</strong> Seek specialist advice about monitoring (osteoporosis, renal stones)</li>
+                            <li><strong>Cure rate:</strong> >95% for solitary adenoma, recurrence <2%</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-cancer"></i> Malignancy-Associated</h4>
+                        <div class="alert-box alert-amber">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <strong>Recurrence:</strong> Usually returns 1–4 weeks after calcium-lowering treatment if cancer not actively treated
+                            </div>
+                        </div>
+                        <ul>
+                            <li><strong>Monitor symptoms:</strong> Of hypercalcaemia and malignancy</li>
+                            <li><strong>Biochemistry:</strong> Serum calcium, eGFR, creatinine (frequency per specialist advice)</li>
+                            <li><strong>Liaison:</strong> With oncologist or palliative care specialist</li>
+                            <li><strong>Support:</strong> Cancer Research UK patient information resources</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h4><i class="fas fa-heartbeat"></i> Lifestyle Advice for All Patients</h4>
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-green">Hydration</span>
+                            <span class="severity-badge badge-green">Mobilization</span>
+                            <span class="severity-badge badge-green">Vitamin D</span>
+                        </div>
+                        <ul>
+                            <li><strong>Hydration:</strong> Maintain adequate oral fluid intake (avoid dehydration)</li>
+                            <li><strong>Vitamin D:</strong> Ensure repletion (cautious supplementation arranged by specialist)</li>
+                            <li><strong>Dietary calcium:</strong> Sufficient but not excessive intake</li>
+                            <li><strong>Mobilization:</strong> Encourage activity where possible (avoid immobility)</li>
+                            <li><strong>Avoid exacerbating meds:</strong> Thiazides, calcium-containing antacids, excessive vitamin A/D, NSAIDs</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reference-box">
+                <i class="fas fa-book"></i> <strong>Reference:</strong> NICE Clinical Knowledge Summaries - Hypercalcaemia (September 2024) | Target audience: UK NHS primary care professionals
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize - expand assessment by default
+        document.addEventListener('DOMContentLoaded', function() {
+            expandSection('assessment');
+            updateExpandIcon('assessment', true);
+        });
+
+        // Toggle section expansion
+        function toggleSection(step) {
+            const content = document.getElementById(`content-${step}`);
+            const isExpanded = content.classList.contains('expanded');
+            
+            if (isExpanded) {
+                collapseSection(step);
+            } else {
+                expandSection(step);
+            }
+            
+            updateExpandIcon(step, !isExpanded);
+            updateProgress(step);
+        }
+
+        // Expand section
+        function expandSection(step) {
+            const content = document.getElementById(`content-${step}`);
+            content.classList.add('expanded');
+            
+            // Add fade-in animation to subsections
+            const subsections = content.querySelectorAll('.subsection, .alert-box, .severity-badges');
+            subsections.forEach((el, index) => {
+                setTimeout(() => {
+                    el.style.opacity = '0';
+                    el.classList.add('fade-in');
+                    setTimeout(() => {
+                        el.style.opacity = '1';
+                    }, 50);
+                }, index * 100);
+            });
+        }
+
+        // Collapse section
+        function collapseSection(step) {
+            const content = document.getElementById(`content-${step}`);
+            content.classList.remove('expanded');
+        }
+
+        // Update expand/collapse icon
+        function updateExpandIcon(step, isExpanded) {
+            const icon = document.getElementById(`expand-${step}`);
+            if (isExpanded) {
+                icon.classList.add('expanded');
+            } else {
+                icon.classList.remove('expanded');
+            }
+        }
+
+        // Update progress sidebar
+        function updateProgress(step) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                const itemStep = item.dataset.step;
+                if (itemStep === step) {
+                    item.classList.add('active');
+                    item.classList.remove('completed');
+                } else {
+                    item.classList.remove('active');
+                    // Mark as completed if its section has been expanded
+                    const content = document.getElementById(`content-${itemStep}`);
+                    if (content && content.classList.contains('expanded')) {
+                        item.classList.add('completed');
+                    }
+                }
+            });
+        }
+
+        // Smooth scroll when clicking progress items
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const step = this.dataset.step;
+                const card = document.querySelector(`.step-card.${step}`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    expandSection(step);
+                    updateExpandIcon(step, true);
+                    updateProgress(step);
+                }
+            });
+        });
+
+        // Add hover effect to severity badges
+        document.querySelectorAll('.severity-badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Auto-collapse other sections when one is expanded (optional enhancement)
+        document.querySelectorAll('.step-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const currentStep = this.parentElement.dataset.step;
+                document.querySelectorAll('.step-card').forEach(card => {
+                    const step = card.dataset.step;
+                    if (step !== currentStep) {
+                        collapseSection(step);
+                        updateExpandIcon(step, false);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

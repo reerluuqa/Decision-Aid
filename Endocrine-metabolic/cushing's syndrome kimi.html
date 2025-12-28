@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cushing's Syndrome - Clinical Decision Support</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            gap: 2rem;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            width: 280px;
+            height: fit-content;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            font-weight: 600;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .progress-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .progress-item .icon {
+            margin-right: 0.8rem;
+            font-size: 1.2rem;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #f39c12, #d35400);
+            color: white;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .list-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            margin-bottom: 0.8rem;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .list-item:hover {
+            transform: translateX(5px);
+            background: #e3f2fd;
+            border-left-color: #2980b9;
+        }
+
+        .list-item ul {
+            margin-top: 0.5rem;
+            margin-left: 1.5rem;
+        }
+
+        .list-item li {
+            margin-bottom: 0.3rem;
+        }
+
+        .alert {
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            animation: pulse 2s infinite;
+        }
+
+        .alert-red {
+            background: #ffebee;
+            border: 1px solid #ef9a9a;
+            color: #b71c1c;
+        }
+
+        .alert-amber {
+            background: #fff8e1;
+            border: 1px solid #ffcc80;
+            color: #e65100;
+        }
+
+        .alert-green {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            color: #1b5e20;
+        }
+
+        .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .grid-item {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border-top: 4px solid #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .grid-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .grid-item h4 {
+            color: #2c3e50;
+            margin-bottom: 0.8rem;
+            font-size: 1.1rem;
+        }
+
+        .test-box {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border: 1px solid #90caf9;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .test-box h4 {
+            color: #1565c0;
+            margin-bottom: 0.8rem;
+        }
+
+        .test-box ul {
+            margin-left: 1.5rem;
+            color: #0d47a1;
+        }
+
+        .footer {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            text-align: center;
+            margin-top: 3rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .footer p {
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+
+        .footer strong {
+            color: #2c3e50;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-body {
+                padding: 1.5rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cushing's Syndrome Management</h1>
+        <p>Interactive Clinical Decision Support Tool based on NICE CKS Guidelines (December 2024)</p>
+    </div>
+
+    <div class="container">
+        <div class="progress-sidebar">
+            <h3>Navigation</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-item active" data-target="assessment">
+                <span class="icon">🔍</span>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-target="diagnosis">
+                <span class="icon">🔬</span>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-target="treatment">
+                <span class="icon">💊</span>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-target="followup">
+                <span class="icon">📅</span>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Assessment Card -->
+            <div class="card expanded" id="assessment">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <span class="card-icon">🔍</span>
+                        <span class="card-title">Assessment</span>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <div class="section-title">
+                                Clinical Features
+                                <span class="badge badge-amber">Key Signs</span>
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>🔴 Most Specific Features</h4>
+                                    <ul>
+                                        <li>Proximal muscle wasting & weakness</li>
+                                        <li>Facial plethora</li>
+                                        <li>Violaceous striae</li>
+                                        <li>Thin friable skin</li>
+                                        <li>Easy bruising</li>
+                                        <li>Poor wound healing</li>
+                                        <li>Premature osteoporosis/fractures</li>
+                                        <li>Recurrent infections</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🟡 Common Associated Features</h4>
+                                    <ul>
+                                        <li>Weight gain with central obesity</li>
+                                        <li>Facial rounding</li>
+                                        <li>Hypertension</li>
+                                        <li>Impaired glucose tolerance/diabetes</li>
+                                        <li>Hyperlipidaemia</li>
+                                        <li>Supraclavicular/dorsocervical fat pads</li>
+                                        <li>Neuropsychiatric disorders</li>
+                                        <li>Menstrual disturbance</li>
+                                        <li>Hirsutism</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                History Taking
+                                <span class="badge badge-amber">Critical</span>
+                            </div>
+                            <div class="list">
+                                <div class="list-item">
+                                    <strong>Symptoms & Onset:</strong> Onset and progression of symptoms; be alert for features unusual for age
+                                </div>
+                                <div class="list-item">
+                                    <strong>Medication Review:</strong> All corticosteroids (oral, intra-articular, inhaled, topical) to exclude exogenous cause
+                                </div>
+                                <div class="list-item">
+                                    <strong>Hormonal Therapy:</strong> Oral contraceptives or HRT (can increase cortisol-binding globulin)
+                                </div>
+                                <div class="list-item">
+                                    <strong>Associated Conditions:</strong> Pregnancy, obesity, alcohol use disorder, PCOS, psychiatric conditions, chronic disease
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Physical Examination
+                            </div>
+                            <div class="alert alert-amber">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <strong>Key Signs to Look For:</strong> Bruising, thin skin, facial plethora/rounding, violaceous striae, fat pads, proximal muscle weakness
+                                </div>
+                            </div>
+                            <div class="alert alert-red">
+                                <span class="alert-icon">🚨</span>
+                                <div>
+                                    <strong>Virilization in Females:</strong> Rapid-onset hirsutism, voice deepening, clitoral enlargement may indicate adrenal carcinoma
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Special Populations
+                                <span class="badge badge-red">High Risk</span>
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>👶 Children</h4>
+                                    <ul>
+                                        <li>Linear growth deceleration</li>
+                                        <li>Atypical pubertal development</li>
+                                        <li>Extremely rare but consider</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🤰 Pregnant Women</h4>
+                                    <ul>
+                                        <li>Violaceous striae (non-abdominal)</li>
+                                        <li>Skin thinning, easy bruising</li>
+                                        <li>Acne, hirsutism</li>
+                                        <li>Proximal muscle weakness</li>
+                                        <li>Unexplained fractures</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <span class="card-icon">🔬</span>
+                        <span class="card-title">Diagnosis</span>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <div class="section-title">
+                                When to Suspect
+                                <span class="badge badge-amber">Clinical Judgement</span>
+                            </div>
+                            <div class="alert alert-amber">
+                                <span class="alert-icon">💡</span>
+                                <div>
+                                    <strong>Suspect Cushing's syndrome in people presenting with:</strong>
+                                    <ul style="margin-top: 0.5rem;">
+                                        <li>Clinical features unusual for age (e.g., HTN &lt;40y, osteoporosis in premenopausal women/men &lt;65y)</li>
+                                        <li>Multiple and progressive clinical features</li>
+                                        <li>Adrenal incidentaloma on imaging</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Screening Investigations
+                                <span class="badge badge-amber">Primary Care</span>
+                            </div>
+                            
+                            <div class="test-box">
+                                <h4>🧪 First-Line Screening Tests</h4>
+                                <p>Perform ≥1 test to confirm hypercortisolism:</p>
+                            </div>
+
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>1. Overnight Dexamethasone Suppression Test</h4>
+                                    <ul>
+                                        <li><strong>Method:</strong> 1mg dexamethasone at 11pm-midnight, cortisol at 8-9am</li>
+                                        <li><strong>Best for:</strong> Night-shift workers/disrupted circadian rhythm</li>
+                                        <li><strong>False positives:</strong> Malabsorption, CYP3A4 inducers, oral estrogens, pseudo-Cushing's</li>
+                                        <li><strong>False negatives:</strong> CYP3A4 inhibitors, nephrotic syndrome, slow metabolizers</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>2. 24-Hour Urinary Free Cortisol</h4>
+                                    <ul>
+                                        <li><strong>Method:</strong> Complete urine collection over 24 hours</li>
+                                        <li><strong>Requirements:</strong> High compliance, 2-3 samples recommended</li>
+                                        <li><strong>False positives:</strong> Large urine volumes (&gt;3-4L/day)</li>
+                                        <li><strong>False negatives:</strong> Incomplete collection, renal impairment</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>3. Late-Night Salivary Cortisol</h4>
+                                    <ul>
+                                        <li><strong>Method:</strong> 2-3 samples at 11pm-midnight</li>
+                                        <li><strong>Preparation:</strong> No eating/drinking/brushing teeth 2h prior</li>
+                                        <li><strong>Contraindicated:</strong> Night-shift workers</li>
+                                        <li><strong>False positives:</strong> Smoking, older age, HTN, diabetes, variable sleep patterns</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-amber">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <strong>Important:</strong> Random cortisol levels are rarely useful unless grossly elevated due to circadian fluctuations
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Additional Tests
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>🤰 Pregnancy Test</h4>
+                                    <p>All women of childbearing age to exclude pregnancy</p>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🩸 HbA1c</h4>
+                                    <p>Screen for impaired glucose tolerance/diabetes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Referral Criteria
+                                <span class="badge badge-red">Action Required</span>
+                            </div>
+                            <div class="list">
+                                <div class="list-item">
+                                    <strong>Abnormal Screening:</strong> Any test outside normal range → Refer to endocrinology
+                                </div>
+                                <div class="list-item">
+                                    <strong>High Suspicion:</strong> Negative screening but progressive symptoms → Re-evaluate in 3-6 months or discuss with endocrinology
+                                </div>
+                                <div class="list-item">
+                                    <strong>Cyclical Cushing's:</strong> Suspected if fluctuating symptoms or normal tests with high suspicion
+                                </div>
+                                <div class="list-item">
+                                    <strong>Adrenal Incidentaloma:</strong> Refer to endocrinology for further assessment
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Differential Diagnosis
+                                <span class="badge badge-amber">Pseudo-Cushing's</span>
+                            </div>
+                            <div class="alert alert-green">
+                                <span class="alert-icon">🔄</span>
+                                <div>
+                                    <strong>Non-neoplastic hypercortisolism causes:</strong> Obesity, alcohol use disorder, PCOS, depression, CKD, malnutrition, physical stress, pregnancy
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <span class="card-icon">💊</span>
+                        <span class="card-title">Treatment</span>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <div class="section-title">
+                                Emergency Management
+                                <span class="badge badge-red">Urgent</span>
+                            </div>
+                            <div class="alert alert-red">
+                                <span class="alert-icon">🚨</span>
+                                <div>
+                                    <strong>Life-Threatening Complications → Urgent Admission:</strong> Sepsis, pulmonary embolism, MI, stroke
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Exogenous Cushing's Syndrome
+                                <span class="badge badge-amber">Primary Care</span>
+                            </div>
+                            <div class="alert alert-amber">
+                                <span class="alert-icon">⚠️</span>
+                                <div>
+                                    <strong>Gradual Steroid Reduction:</strong> Abrupt discontinuation can cause life-threatening adrenal insufficiency
+                                </div>
+                            </div>
+                            <div class="list">
+                                <div class="list-item">
+                                    <strong>Management:</strong> Gradual reduction and withdrawal of corticosteroid treatment
+                                </div>
+                                <div class="list-item">
+                                    <strong>Monitoring:</strong> Individualize based on underlying condition and response
+                                </div>
+                                <div class="list-item">
+                                    <strong>Adrenal Insufficiency:</strong> Advise urgent medical help if symptoms develop
+                                </div>
+                                <div class="list-item">
+                                    <strong>Steroid Withdrawal:</strong> May cause fever, myalgia, arthralgia, skin nodules, weight loss
+                                </div>
+                                <div class="list-item">
+                                    <strong>If withdrawal symptoms:</strong> Resume higher dose and reduce more slowly
+                                </div>
+                                <div class="list-item">
+                                    <strong>Condition Worsening:</strong> Dose reduction may worsen underlying condition - discuss alternatives
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Endogenous Cushing's Syndrome
+                                <span class="badge badge-red">Referral</span>
+                            </div>
+                            <div class="alert alert-red">
+                                <span class="alert-icon">🎯</span>
+                                <div>
+                                    <strong>Suspected Cancer Pathway:</strong> Refer within 2 weeks if malignant cause suspected
+                                </div>
+                            </div>
+                            <div class="list">
+                                <div class="list-item">
+                                    <strong>Children & Pregnancy:</strong> Urgent referral to paediatric endocrinology or obstetrics
+                                </div>
+                                <div class="list-item">
+                                    <strong>Adults:</strong> Refer to endocrinology for confirmation and treatment
+                                </div>
+                                <div class="list-item">
+                                    <strong>Goal:</strong> Normalization of cortisol levels and treatment of comorbidities
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Secondary Care Management
+                                <span class="badge badge-amber">Specialist</span>
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>🏥 Pituitary Tumour (Cushing's Disease)</h4>
+                                    <ul>
+                                        <li>First-line: Transsphenoidal surgery</li>
+                                        <li>Recurrence common (9.6-18%)</li>
+                                        <li>Options: Pituitary-directed meds or bilateral adrenalectomy</li>
+                                        <li>Lifelong monitoring required</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🩺 Adrenal Adenoma</h4>
+                                    <ul>
+                                        <li>First-line: Unilateral adrenalectomy</li>
+                                        <li>Usually curative</li>
+                                        <li>Recurrence in contralateral gland is rare</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🎗️ Adrenal Carcinoma</h4>
+                                    <ul>
+                                        <li>First-line: Surgical resection</li>
+                                        <li>Often aggressive and rapidly growing</li>
+                                        <li>Prognosis varies by stage</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🫁 Ectopic ACTH Secretion</h4>
+                                    <ul>
+                                        <li>First-line: Tumour resection</li>
+                                        <li>Often metastatic at presentation</li>
+                                        <li>Medical therapy to stabilize cortisol while awaiting oncology treatment</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Medical Therapy
+                                <span class="badge badge-amber">Adjunctive</span>
+                            </div>
+                            <div class="alert alert-green">
+                                <span class="alert-icon">💊</span>
+                                <div>
+                                    <strong>Indications:</strong> Mild hypercortisolism, adjunct for severe disease, persistent/recurrent disease post-surgery, or when surgery declined/not feasible
+                                </div>
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>🧪 Steroidogenesis Inhibitors</h4>
+                                    <p>Block cortisol synthesis (most commonly used)</p>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🔬 Glucocorticoid Receptor Antagonists</h4>
+                                    <p>Block cortisol action at receptor (less common)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <span class="card-icon">📅</span>
+                        <span class="card-title">Long-term Follow-up</span>
+                    </div>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <div class="section-title">
+                                Primary Care Responsibilities
+                                <span class="badge badge-green">Ongoing</span>
+                            </div>
+                            <div class="alert alert-green">
+                                <span class="alert-icon">🏥</span>
+                                <div>
+                                    <strong>All patients with Cushing's syndrome require long-term follow-up to monitor and treat complications</strong>
+                                </div>
+                            </div>
+                            <div class="list">
+                                <div class="list-item">
+                                    <strong>Screen for Complications:</strong>
+                                    <ul>
+                                        <li>Diabetes mellitus</li>
+                                        <li>Hypertension</li>
+                                        <li>Osteoporosis</li>
+                                        <li>Increased cardiovascular risk</li>
+                                    </ul>
+                                </div>
+                                <div class="list-item">
+                                    <strong>Individualized Care:</strong> Assessment and monitoring based on complications present, following local/national guidelines
+                                </div>
+                                <div class="list-item">
+                                    <strong>Care Coordination:</strong> Coordinate between secondary and primary care as appropriate
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Vaccinations
+                                <span class="badge badge-amber">Prevention</span>
+                            </div>
+                            <div class="alert alert-amber">
+                                <span class="alert-icon">💉</span>
+                                <div>
+                                    <strong>Offer age-appropriate vaccinations:</strong> Influenza, herpes zoster, pneumococcus (increased infection risk)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Persistent Morbidity
+                                <span class="badge badge-amber">Important</span>
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>📊 Resolution Rates After Treatment</h4>
+                                    <ul>
+                                        <li>Diabetes: 56% resolve</li>
+                                        <li>Depression: 52% resolve</li>
+                                        <li>Hypertension: 36% resolve</li>
+                                        <li>Hyperlipidaemia: 23% resolve</li>
+                                        <li>Weight: 75% still overweight/obese at 5 years</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>⚠️ Long-term Risks</h4>
+                                    <ul>
+                                        <li>Increased cardiovascular risk may persist</li>
+                                        <li>Decreased quality of life</li>
+                                        <li>Recurrence common in pituitary disease</li>
+                                        <li>Lifelong monitoring required</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Prognosis & Mortality
+                                <span class="badge badge-red">Critical</span>
+                            </div>
+                            <div class="alert alert-red">
+                                <span class="alert-icon">📈</span>
+                                <div>
+                                    <strong>Mortality:</strong> 3x higher than age/sex-matched population. Most common causes: cardiovascular disease, infection, thromboembolism, malignancy
+                                </div>
+                            </div>
+                            <div class="list">
+                                <div class="list-item">
+                                    <strong>Predictors of Higher Mortality:</strong> Age, male sex, diabetes, ectopic ACTH secretion
+                                </div>
+                                <div class="list-item">
+                                    <strong>Improving Prognosis:</strong> Early diagnosis, prompt treatment, strict cardiovascular/metabolic risk control
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <div class="section-title">
+                                Patient Information
+                                <span class="badge badge-green">Education</span>
+                            </div>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h4>📚 Resources</h4>
+                                    <ul>
+                                        <li>NHS: Cushing's syndrome information</li>
+                                        <li>Pituitary Foundation: Cushing's disease resources</li>
+                                        <li>NHS: Steroid medication guides</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🗣️ Support</h4>
+                                    <ul>
+                                        <li>Educate about condition and complications</li>
+                                        <li>Advise on medication adherence</li>
+                                        <li>Provide warning signs for adrenal crisis</li>
+                                        <li>Psychosocial support for chronic disease</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>Source:</strong> NICE Clinical Knowledge Summaries - Cushing's Syndrome (December 2024)</p>
+        <p>For healthcare professionals only. Always consult current guidelines and specialist advice.</p>
+    </div>
+
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reveal cards with animation
+            setTimeout(() => {
+                const cards = document.querySelectorAll('.card');
+                cards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('visible');
+                    }, index * 200);
+                });
+            }, 100);
+
+            // Update progress based on scroll
+            updateProgress();
+            window.addEventListener('scroll', updateProgress);
+
+            // Add click handlers for navigation
+            setupNavigation();
+        });
+
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Smooth scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        function setupNavigation() {
+            const navItems = document.querySelectorAll('.progress-item');
+            navItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetId = item.getAttribute('data-target');
+                    const targetCard = document.getElementById(targetId);
+                    
+                    // Expand target card
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+                    targetCard.classList.add('expanded');
+                    
+                    // Smooth scroll
+                    setTimeout(() => {
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                });
+            });
+        }
+
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const navItems = document.querySelectorAll('.progress-item');
+            const scrollPosition = window.scrollY + 100;
+            
+            cards.forEach((card, index) => {
+                const cardTop = card.offsetTop;
+                const cardHeight = card.offsetHeight;
+                const isVisible = scrollPosition >= cardTop && scrollPosition < cardTop + cardHeight;
+                
+                if (isVisible) {
+                    navItems.forEach(n => n.classList.remove('active'));
+                    navItems[index].classList.add('active');
+                    
+                    // Update progress bar
+                    const progressFill = document.getElementById('progressFill');
+                    const progress = ((index + 1) / cards.length) * 100;
+                    progressFill.style.width = progress + '%';
+                }
+            });
+            
+            // Add scroll-triggered animations
+            cards.forEach(card => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    card.classList.add('visible');
+                }
+            });
+        }
+
+        // Add hover effects for list items
+        document.addEventListener('DOMContentLoaded', function() {
+            const listItems = document.querySelectorAll('.list-item');
+            listItems.forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateX(8px)';
+                });
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateX(0)';
+                });
+            });
+        });
+
+        // Add interactive badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const colors = ['badge-red', 'badge-amber', 'badge-green'];
+                const currentClass = colors.find(cls => this.classList.contains(cls));
+                const currentIndex = colors.indexOf(currentClass);
+                const nextIndex = (currentIndex + 1) % colors.length;
+                
+                this.classList.remove(currentClass);
+                this.classList.add(colors[nextIndex]);
+            });
+        });
+    </script>
+</body>
+</html>

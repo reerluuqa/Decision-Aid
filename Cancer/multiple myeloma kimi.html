@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiple Myeloma - Interactive Clinical Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-right: 80px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header .icon {
+            font-size: 1.2em;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .section {
+            margin-bottom: 50px;
+            scroll-margin-top: 80px;
+        }
+
+        .section-title {
+            font-size: 2em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .assessment-title { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .diagnosis-title { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .treatment-title { background: linear-gradient(135deg, #10b981, #059669); }
+        .followup-title { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+            border-color: currentColor;
+        }
+
+        .card.assessment-card { border-left: 5px solid #3b82f6; color: #3b82f6; }
+        .card.diagnosis-card { border-left: 5px solid #8b5cf6; color: #8b5cf6; }
+        .card.treatment-card { border-left: 5px solid #10b981; color: #10b981; }
+        .card.followup-card { border-left: 5px solid #f59e0b; color: #f59e0b; }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            font-size: 1.5em;
+        }
+
+        .card-toggle {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .card-toggle {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #4b5563;
+        }
+
+        .card.expanded .card-content {
+            max-height: 1000px;
+            margin-top: 20px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent { background: #ef4444; color: white; }
+        .badge-caution { background: #f59e0b; color: white; }
+        .badge-stable { background: #10b981; color: white; }
+
+        .badge-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+            margin: 10px 0;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .highlight-box {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .warning-box {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .info-item {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid #d1d5db;
+        }
+
+        .info-item strong {
+            color: #374151;
+        }
+
+        .sidebar {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            width: 60px;
+            transition: width 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar:hover {
+            width: 220px;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .sidebar-item:hover {
+            background: #f3f4f6;
+        }
+
+        .sidebar-item.active {
+            background: #e0e7ff;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+
+        .sidebar-icon {
+            font-size: 1.4em;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .sidebar-text {
+            display: none;
+            font-size: 0.9em;
+        }
+
+        .sidebar:hover .sidebar-text {
+            display: inline;
+        }
+
+        .progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+        }
+
+        .progress-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: linear-gradient(to bottom, #3b82f6, #8b5cf6, #10b981, #f59e0b);
+            transition: height 0.3s ease;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                padding: 10px;
+            }
+            .main-content {
+                margin-right: 70px;
+            }
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                right: 10px;
+            }
+            .main-content {
+                margin-right: 0;
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="main-content">
+            <div class="header fade-in">
+                <h1><span class="icon">🩸</span> Multiple Myeloma Management</h1>
+                <p>Interactive Clinical Algorithm Based on NICE CKS Guidelines (September 2025)</p>
+            </div>
+
+            <!-- Assessment Section -->
+            <section class="section" id="assessment">
+                <h2 class="section-title assessment-title">
+                    <span class="icon">🔍</span> Assessment
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card assessment-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🚨</span>
+                                When to Suspect Multiple Myeloma
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-urgent">Age > 60 Years</span>
+                            <span class="badge badge-caution">Persistent Symptoms</span>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Suspect in adults, particularly >60 years, with:</strong></p>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Bone Pain</strong><br>
+                                    Lower back/thoracic area (60-70%)
+                                </div>
+                                <div class="info-item">
+                                    <strong>Fatigue</strong><br>
+                                    Present in ~30%
+                                </div>
+                                <div class="info-item">
+                                    <strong>Hypercalcaemia</strong><br>
+                                    Symptoms in up to 30%
+                                </div>
+                                <div class="info-item">
+                                    <strong>Weight Loss</strong><br>
+                                    Present in ~25%
+                                </div>
+                                <div class="info-item">
+                                    <strong>Hyperviscosity</strong><br>
+                                    <7% (headache, visual disturbance)
+                                </div>
+                                <div class="info-item">
+                                    <strong>Spinal Cord Compression</strong><br>
+                                    ~5% (sensory loss, weakness)
+                                </div>
+                            </div>
+                            
+                            <div class="warning-box">
+                                <strong>⚠️ Red Flags - Urgent Admission:</strong><br>
+                                • Symptoms of spinal cord compression<br>
+                                • Moderate-severe hypercalcaemia (≥3.01 mmol/L)<br>
+                                • Acute kidney injury
+                            </div>
+
+                            <p><strong>Examination Findings:</strong></p>
+                            <ul>
+                                <li>Usually normal</li>
+                                <li>Hepatosplenomegaly or lymphadenopathy (<5%)</li>
+                            </ul>
+
+                            <p><strong>Incidental Lab Findings:</strong></p>
+                            <ul>
+                                <li>Normochromic, normocytic anaemia (up to 70%)</li>
+                                <li>Renal impairment (~50%)</li>
+                                <li>Hypercalcaemia (~15%)</li>
+                                <li>Raised ESR, plasma viscosity, globulin</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card assessment-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">⚠️</span>
+                                Risk Factors
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-caution">Non-modifiable</span>
+                            <span class="badge badge-stable">Modifiable</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Age</strong><br>
+                                    ↑ from 50-54 years, peak 80-89
+                                </div>
+                                <div class="info-item">
+                                    <strong>Sex</strong><br>
+                                    Male (58% of cases)
+                                </div>
+                                <div class="info-item">
+                                    <strong>Ethnicity</strong><br>
+                                    Black > White > Asian (2x risk)
+                                </div>
+                                <div class="info-item">
+                                    <strong>Family History</strong><br>
+                                    First-degree relative: OR 1.90
+                                </div>
+                                <div class="info-item">
+                                    <strong>MGUS</strong><br>
+                                    1% progression/year
+                                </div>
+                                <div class="info-item">
+                                    <strong>Obesity</strong><br>
+                                    14% of UK cases
+                                </div>
+                                <div class="info-item">
+                                    <strong>Autoimmune</strong><br>
+                                    Pernicious anaemia
+                                </div>
+                                <div class="info-item">
+                                    <strong>Occupation</strong><br>
+                                    Firefighters, Agent Orange
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="section" id="diagnosis">
+                <h2 class="section-title diagnosis-title">
+                    <span class="icon">🧪</span> Diagnosis
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card diagnosis-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🩺</span>
+                                Initial Investigations
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-urgent">Urgent if indicated</span>
+                            <span class="badge badge-caution">Within 48 hours</span>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>For persistent bone pain/fracture (age ≥60):</strong></p>
+                            <ul>
+                                <li>Full blood count</li>
+                                <li>Serum calcium</li>
+                                <li>Plasma viscosity or ESR</li>
+                                <li>Paraproteins (serum protein electrophoresis)</li>
+                                <li>Serum free light chains (or Bence-Jones urine if unavailable)</li>
+                            </ul>
+
+                            <p><strong>For hypercalcaemia/leukopenia with myeloma features:</strong></p>
+                            <div class="badge badge-urgent">Very urgent (within 48 hours)</div>
+                            <ul>
+                                <li>Serum electrophoresis</li>
+                                <li>Serum-free light-chain assay</li>
+                                <li>Bence-Jones protein urine assessment</li>
+                            </ul>
+
+                            <p><strong>For abnormal PV/ESR/incidental findings:</strong></p>
+                            <div class="badge badge-urgent">Very urgent (within 48 hours)</div>
+                            <ul>
+                                <li>Same panel as above</li>
+                            </ul>
+
+                            <div class="highlight-box">
+                                <strong>Note:</strong> 1-5% are "non-secretory" (negative electrophoresis)
+                            </div>
+
+                            <p><strong>Additional investigations:</strong></p>
+                            <ul>
+                                <li>Peripheral blood film (rouleaux formation)</li>
+                                <li>Renal & liver function (renal impairment, uric acid)</li>
+                                <li>X-rays of symptomatic areas (pathological fractures)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card diagnosis-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🏥</span>
+                                Secondary Care Investigations
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-caution">Haematologist referral</span>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Confirmatory Tests:</strong></p>
+                            <ul>
+                                <li>Immunofixation of serum & urine</li>
+                                <li>Bone marrow aspirate & trephine biopsy with plasma cell phenotyping</li>
+                                <li>Whole body MRI (diffusion-weighted if available)</li>
+                            </ul>
+
+                            <p><strong>Alternative Imaging:</strong></p>
+                            <ul>
+                                <li>Whole body low-dose CT (if MRI unsuitable)</li>
+                                <li>PET-CT (if available)</li>
+                            </ul>
+
+                            <p><strong>Prognostic Tests:</strong></p>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>FISH analysis</strong><br>
+                                    Bone marrow aspirate
+                                </div>
+                                <div class="info-item">
+                                    <strong>Beta-2 microglobulin</strong><br>
+                                    Tumor burden
+                                </div>
+                                <div class="info-item">
+                                    <strong>NGS/NFC</strong><br>
+                                    Genetic analysis
+                                </div>
+                                <div class="info-item">
+                                    <strong>LDH</strong><br>
+                                    Disease activity
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <strong>Referral Pathway:</strong><br>
+                                Urgent referral to haematologist (within 2 weeks, suspected cancer pathway) if serum/urine electrophoresis suggests myeloma
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card diagnosis-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🔍</span>
+                                Differential Diagnosis
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-caution badge">Consider alternatives</div>
+                        <div class="card-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Depression</strong><br>
+                                    Fatigue, weight loss
+                                </div>
+                                <div class="info-item">
+                                    <strong>Osteoarthritis</strong><br>
+                                    Joint stiffness/pain
+                                </div>
+                                <div class="info-item">
+                                    <strong>Diabetes Mellitus</strong><br>
+                                    Fatigue, recurrent infections
+                                </div>
+                                <div class="info-item">
+                                    <strong>Polymyalgia Rheumatica</strong><br>
+                                    ↑ESR, >50 years
+                                </div>
+                                <div class="info-item">
+                                    <strong>MGUS</strong><br>
+                                    M protein, 1%/year progression
+                                </div>
+                                <div class="info-item">
+                                    <strong>Waldenstrom's Macroglobulinaemia</strong><br>
+                                    Hyperviscosity, organomegaly
+                                </div>
+                                <div class="info-item">
+                                    <strong>POEMS Syndrome</strong><br>
+                                    Polyneuropathy, organomegaly
+                                </div>
+                                <div class="info-item">
+                                    <strong>AL Amyloidosis</strong><br>
+                                    Organ dysfunction, macroglossia
+                                </div>
+                            </div>
+
+                            <p><strong>Other considerations:</strong> Heavy chain disease, Non-Hodgkin's lymphoma, Plasma cell leukaemia</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="section" id="treatment">
+                <h2 class="section-title treatment-title">
+                    <span class="icon">💊</span> Treatment
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card treatment-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🚨</span>
+                                Suspected Multiple Myeloma
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-urgent">Urgent admission if red flags</span>
+                            <span class="badge badge-caution">2-week referral</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="warning-box">
+                                <strong>Immediate Admission Required:</strong><br>
+                                • Symptoms of spinal cord compression<br>
+                                • Moderate-severe hypercalcaemia (≥3.01 mmol/L)<br>
+                                • Acute kidney injury
+                            </div>
+
+                            <p><strong>Investigation Strategy:</strong></p>
+                            <ol>
+                                <li>Complete initial investigations (see Diagnosis section)</li>
+                                <li>If red flags present → Urgent hospital admission</li>
+                                <li>If electrophoresis suggests myeloma → Urgent haematology referral (within 2 weeks, suspected cancer pathway)</li>
+                                <li>Otherwise → Routine referral with investigations</li>
+                            </ol>
+
+                            <p><strong>Key Actions:</strong></p>
+                            <ul>
+                                <li>Treat infections promptly with broad-spectrum antibiotics (avoid aminoglycosides due to renal risk)</li>
+                                <li>Manage pain appropriately (see Follow-up)</li>
+                                <li> counsel about disease process and prognosis</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card treatment-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">🏥</span>
+                                Confirmed Multiple Myeloma
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-urgent">MDT Management</span>
+                            <span class="badge badge-stable">Regular Review</span>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Secondary Care Management:</strong></p>
+                            <ul>
+                                <li>Managed by haematologist + multidisciplinary team</li>
+                                <li>Symptomatic myeloma: review at least every 3 months</li>
+                                <li>Smouldering myeloma: review every 3 months for first 5 years, then based on stability</li>
+                            </ul>
+
+                            <p><strong>Primary Care Role:</strong></p>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Infection Management</strong><br>
+                                    Prompt antibiotics, avoid aminoglycosides
+                                </div>
+                                <div class="info-item">
+                                    <strong>Pain Control</strong><br>
+                                    Paracetamol/codeine; avoid NSAIDs
+                                </div>
+                                <div class="info-item">
+                                    <strong>Vaccinations</strong><br>
+                                    Annual influenza, one-off pneumococcal
+                                </div>
+                                <div class="info-item">
+                                    <strong>Mental Health</strong><br>
+                                    Screen for depression/anxiety
+                                </div>
+                            </div>
+
+                            <p><strong>Secondary Care Treatments:</strong></p>
+                            <ul>
+                                <li><strong>Bisphosphonates:</strong> Zolendronic acid, pamidronate, clodronate</li>
+                                <li><strong>Anaemia treatment:</strong> Erythropoietin analogues, transfusion</li>
+                                <li><strong>Chemotherapy:</strong> Cyclophosphamide, doxorubicin, melphalan</li>
+                                <li><strong>Corticosteroids:</strong> Dexamethasone, prednisolone</li>
+                                <li><strong>Proteasome inhibitors:</strong> Carfilzomib, bortezomib</li>
+                                <li><strong>Immunomodulators:</strong> Thalidomide, lenalidomide, pomalidomide</li>
+                                <li><strong>Monoclonal antibodies:</strong> Daratumumab</li>
+                                <li><strong>Stem cell transplant</strong></li>
+                                <li><strong>DVT prophylaxis:</strong> Aspirin, LMWH (with immunomodulators)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card treatment-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">⚰️</span>
+                                End-Stage Multiple Myeloma
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-urgent">Palliative Focus</span>
+                            <span class="badge badge-caution">End-of-life care</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="warning-box">
+                                <strong>Suspect end-stage when:</strong><br>
+                                • Symptoms refractory to treatment<br>
+                                • Multiple treatment lines exhausted<br>
+                                • Rapid deterioration<br>
+                                • Bone pain, renal failure, bone marrow failure<br>
+                                • Infection (common cause of death)<br>
+                                • Increasing fatigue, anorexia, weight loss
+                            </div>
+
+                            <p><strong>Management Approach:</strong></p>
+                            <ul>
+                                <li>Coordinate care with MDT, district nurses, palliative care team</li>
+                                <li>Early palliative care referral improves outcomes & reduces admissions</li>
+                                <li>Optimize symptom control (pain, breathlessness, secretions, insomnia)</li>
+                                <li>Adjust drug doses for deteriorating renal function</li>
+                                <li>Consider hospice admission if needed</li>
+                            </ul>
+
+                            <p><strong>Communication & Planning:</strong></p>
+                            <ul>
+                                <li>Discuss disease process and prognosis</li>
+                                <li>Explain what dying might be like and symptom management</li>
+                                <li>Advance care planning (if patient wishes)</li>
+                                <li>Review plans at clinical events or social changes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="section" id="followup">
+                <h2 class="section-title followup-title">
+                    <span class="icon">📋</span> Follow-up
+                </h2>
+                
+                <div class="cards-grid">
+                    <div class="card followup-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">📅</span>
+                                Monitoring Schedule
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-caution">Risk-stratified</span>
+                            <span class="badge badge-stable">3-12 month intervals</span>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Symptomatic (Active) Myeloma:</strong></p>
+                            <ul>
+                                <li>Review by haematologist at least every 3 months</li>
+                                <li>Frequency based on risk factors for progression</li>
+                            </ul>
+
+                            <p><strong>Asymptomatic (Smouldering) Myeloma:</strong></p>
+                            <ul>
+                                <li>Every 3 months for first 5 years</li>
+                                <li>Then frequency based on long-term stability</li>
+                            </ul>
+
+                            <p><strong>Primary Care Review:</strong></p>
+                            <ul>
+                                <li>Regular assessment of symptoms and complications</li>
+                                <li>Vaccination status check annually</li>
+                                <li>Pain assessment at each visit</li>
+                                <li>Mental health screening as needed</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card followup-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">💉</span>
+                                Primary Care Responsibilities
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-stable">Ongoing Support</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <strong>Infection Management</strong><br>
+                                    Prompt antibiotics for infections; avoid aminoglycosides
+                                </div>
+                                <div class="info-item">
+                                    <strong>Pain Management</strong><br>
+                                    Paracetamol ± codeine; NSAIDs contraindicated
+                                </div>
+                                <div class="info-item">
+                                    <strong>Vaccinations</strong><br>
+                                    Annual influenza, one-off pneumococcal
+                                </div>
+                                <div class="info-item">
+                                    <strong>Mental Health</strong><br>
+                                    Screen for depression/anxiety regularly
+                                </div>
+                                <div class="info-item">
+                                    <strong>Comorbidity Check</strong><br>
+                                    Consider OA, osteoporosis mimicking bone pain
+                                </div>
+                                <div class="info-item">
+                                    <strong>Referral for Pain</strong><br>
+                                    If persistent despite simple analgesia
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card followup-card fade-in" onclick="toggleCard(this)">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-icon">👨‍👩‍👧</span>
+                                Patient Education & Support
+                            </div>
+                            <span class="card-toggle">▼</span>
+                        </div>
+                        <div class="badge-container">
+                            <span class="badge badge-stable">Continuous</span>
+                        </div>
+                        <div class="card-content">
+                            <p><strong>Education Topics:</strong></p>
+                            <ul>
+                                <li>Disease process, relapse/remission cycles</li>
+                                <li>Overall prognosis and treatment goals</li>
+                                <li>Treatment-related adverse effects:
+                                    <ul>
+                                        <li>Corticosteroid side effects</li>
+                                        <li>Neuropathy</li>
+                                        <li>DVT risk</li>
+                                        <li>Bisphosphonate-related osteonecrosis of jaw</li>
+                                    </ul>
+                                </li>
+                                <li>Lifestyle measures:
+                                    <ul>
+                                        <li>Exercise for bone health</li>
+                                        <li>Adequate hydration for renal function</li>
+                                    </ul>
+                                </li>
+                                <li>Recognizing and reporting new symptoms</li>
+                                <li>Role of supportive and palliative care</li>
+                                <li>End-of-life issues when appropriate</li>
+                            </ul>
+
+                            <p><strong>Support Resources:</strong></p>
+                            <ul>
+                                <li>Myeloma UK, Macmillan Cancer Support</li>
+                                <li>Disability Living Allowance/Personal Independence Payment</li>
+                                <li>Social services referral</li>
+                                <li>Psychological support services</li>
+                                <li>Community nursing support</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Sticky Progress Sidebar -->
+        <aside class="sidebar">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="sidebar-item active" onclick="scrollToSection('assessment')">
+                <span class="sidebar-icon">🔍</span>
+                <span class="sidebar-text">Assessment</span>
+            </div>
+            <div class="sidebar-item" onclick="scrollToSection('diagnosis')">
+                <span class="sidebar-icon">🧪</span>
+                <span class="sidebar-text">Diagnosis</span>
+            </div>
+            <div class="sidebar-item" onclick="scrollToSection('treatment')">
+                <span class="sidebar-icon">💊</span>
+                <span class="sidebar-text">Treatment</span>
+            </div>
+            <div class="sidebar-item" onclick="scrollToSection('followup')">
+                <span class="sidebar-icon">📋</span>
+                <span class="sidebar-text">Follow-up</span>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(card) {
+            card.classList.toggle('expanded');
+        }
+
+        // Scroll to section and update active state
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            updateActiveSidebarItem(sectionId);
+        }
+
+        // Update active sidebar item based on scroll position
+        function updateActiveSidebarItem(activeId) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[onclick="scrollToSection('${activeId}')"]`).classList.add('active');
+        }
+
+        // Update progress bar
+        function updateProgressBar() {
+            const sections = document.querySelectorAll('.section');
+            const scrollPosition = window.scrollY + 100;
+            const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+            
+            let currentSection = 'assessment';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollPosition >= sectionTop) {
+                    currentSection = section.id;
+                }
+            });
+
+            const progressPercentage = (window.scrollY / totalHeight) * 100;
+            document.getElementById('progressFill').style.height = `${Math.min(progressPercentage, 100)}%`;
+            
+            updateActiveSidebarItem(currentSection);
+        }
+
+        // Add smooth scroll listener
+        window.addEventListener('scroll', updateProgressBar);
+
+        // Initialize cards as collapsed
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add fade-in animation to cards
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+
+            // Set initial progress
+            updateProgressBar();
+        });
+
+        // Add click outside to collapse functionality
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.card')) {
+                // Optional: collapse all cards when clicking outside
+                // document.querySelectorAll('.card').forEach(card => {
+                //     card.classList.remove('expanded');
+                // });
+            }
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.remove('expanded');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

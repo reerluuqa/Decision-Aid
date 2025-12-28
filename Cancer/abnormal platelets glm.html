@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Quick-Scan: Platelets & Cancer</title>
+    <style>
+        :root {
+            --primary-blue: #005eb8; /* NICE Blue */
+            --primary-dark: #003087;
+            --accent-cyan: #00a9ce;
+            --alert-red: #d32f2f;
+            --alert-bg: #ffebee;
+            --safe-green: #2e7d32;
+            --safe-bg: #e8f5e9;
+            --neutral-gray: #f0f4f5;
+            --text-dark: #212529;
+            --text-light: #6c757d;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --hover-shadow: 0 8px 15px rgba(0,0,0,0.15);
+            --radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--neutral-gray);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        /* --- Header & Hero Tool --- */
+        header {
+            background: white;
+            padding: 1.5rem 2rem;
+            border-bottom: 4px solid var(--primary-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--primary-dark); }
+        .subtitle { font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem; }
+
+        /* --- Quick Triage Tool --- */
+        .triage-tool {
+            background: white;
+            padding: 1.5rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .input-group label { display: block; font-weight: bold; margin-bottom: 0.5rem; }
+        .input-group input {
+            width: 100%;
+            padding: 0.8rem;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: var(--radius);
+            transition: border-color 0.3s;
+        }
+        .input-group input:focus { border-color: var(--primary-blue); outline: none; }
+
+        .result-box {
+            padding: 1rem;
+            border-radius: var(--radius);
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 80px;
+        }
+
+        /* States for Triage */
+        .state-normal { background: var(--safe-bg); color: var(--safe-green); border: 1px solid var(--safe-green); }
+        .state-warning { background: #fff3e0; color: #e65100; border: 1px solid #e65100; }
+        .state-danger { background: var(--alert-bg); color: var(--alert-red); border: 1px solid var(--alert-red); }
+        .state-info { background: #e3f2fd; color: var(--primary-dark); border: 1px solid var(--primary-blue); }
+
+        /* --- Urgent Alert Banner --- */
+        .urgent-alert {
+            background: var(--alert-red);
+            color: white;
+            padding: 1rem 2rem;
+            display: none; /* Hidden by default, triggered by JS */
+            animation: slideDown 0.5s ease-out;
+        }
+        .urgent-alert h3 { margin: 0; display: flex; align-items: center; gap: 0.5rem; }
+        .urgent-alert p { margin: 0.5rem 0 0; font-size: 0.95rem; }
+
+        /* --- Main Layout --- */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+        .card:hover { transform: translateY(-3px); box-shadow: var(--hover-shadow); }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h2 { margin: 0; font-size: 1.2rem; }
+        .icon-lg { width: 32px; height: 32px; }
+
+        .card-body { padding: 1.5rem; }
+
+        .tag {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .tag-red { background: var(--alert-bg); color: var(--alert-red); }
+        .tag-blue { background: #e3f2fd; color: var(--primary-dark); }
+
+        /* --- Tables & Lists --- */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .data-table th { text-align: left; color: var(--text-light); padding-bottom: 0.5rem; }
+        .data-table td { padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
+        
+        .checklist { list-style: none; padding: 0; margin: 0; }
+        .checklist li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f9f9f9;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+        .checklist li::before {
+            content: "•";
+            color: var(--primary-blue);
+            font-weight: bold;
+            font-size: 1.2rem;
+            line-height: 1.2;
+        }
+
+        /* --- Red Flag Section within Cards --- */
+        .red-flag-box {
+            background-color: var(--alert-bg);
+            border-left: 4px solid var(--alert-red);
+            padding: 0.75rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .red-flag-title {
+            color: var(--alert-red);
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* --- Tabs for Deep Dive --- */
+        .deep-dive {
+            grid-column: 1 / -1;
+            background: white;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+        .tabs { display: flex; border-bottom: 2px solid #eee; margin-bottom: 1.5rem; gap: 1rem; }
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { color: var(--primary-blue); }
+        .tab-btn.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
+
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+        
+        .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+
+        /* --- Footer --- */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            border-top: 1px solid #ddd;
+            margin-top: 2rem;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); } 100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); } }
+
+        .pulse-effect { animation: pulse 2s infinite; }
+
+        /* --- Utilities --- */
+        .text-bold { font-weight: bold; }
+        .text-red { color: var(--alert-red); }
+        .text-green { color: var(--safe-green); }
+        .hidden-mobile { display: block; }
+        @media (max-width: 768px) {
+            .triage-tool { grid-template-columns: 1fr; }
+            .grid-2-col { grid-template-columns: 1fr; }
+            header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div>
+        <h1>Platelets - Abnormal Counts & Cancer</h1>
+        <div class="subtitle">NICE CKS Quick Reference • Last Revised April 2025</div>
+    </div>
+    <div style="text-align: right;">
+        <div class="tag tag-blue">Clinical Tool</div>
+    </div>
+</header>
+
+<!-- Urgent Alert Banner (Dynamically shown) -->
+<div id="urgent-banner" class="urgent-alert">
+    <h3>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        High Cancer Risk Detected
+    </h3>
+    <p><strong>Thrombocytosis (>450) + Age > 40</strong> has a PPV of 11.6% (men) / 10.1% (women) for cancer. <br>Lung and Colorectal are common sites. 1/3 of patients may have NO other symptoms.</p>
+</div>
+
+<!-- Input Tool -->
+<section class="triage-tool">
+    <div class="input-group">
+        <label for="platelet-input">Enter Platelet Count (×10⁹/L)</label>
+        <input type="number" id="platelet-input" placeholder="e.g. 150" oninput="interpretPlatelets()">
+    </div>
+    <div id="result-display" class="result-box state-info">
+        <span style="font-size: 2rem;">—</span>
+        <span style="font-size: 1rem;">Enter value to triage</span>
+    </div>
+</section>
+
+<main>
+    <!-- Card 1: High Platelets -->
+    <article class="card">
+        <div class="card-header">
+            <h2>Thrombocytosis</h2>
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+        <div class="card-body">
+            <p><strong>Definition:</strong> Count > 450 × 10⁹/L</p>
+            
+            <div class="red-flag-box">
+                <div class="red-flag-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    Cancer Red Flags
+                </div>
+                <ul class="checklist" style="margin:0; font-size: 0.9rem;">
+                    <li><strong>Age > 40</strong> (High risk threshold)</li>
+                    <li>Unexplained cough or haemoptysis</li>
+                    <li>Change in bowel habit</li>
+                    <li>Rectal bleeding</li>
+                    <li>Unexplained weight loss</li>
+                    <li>Dysphagia</li>
+                    <li>Persistent dyspepsia (>55 yrs)</li>
+                    <li>Post-menopausal bleeding (>55 yrs)</li>
+                </ul>
+            </div>
+
+            <p class="text-bold" style="margin-bottom:0.5rem; color:var(--primary-dark);">Common Non-Cancer Causes:</p>
+            <table class="data-table">
+                <tr><td>Infection/Inflammation</td><td>Rheumatoid arthritis, SLE</td></tr>
+                <tr><td>Iron Deficiency</td><td><em>Most common cause</em></td></tr>
+                <tr><td>Drugs</td><td>Corticosteroids</td></tr>
+                <tr><td>Surgery/Trauma</td><td>Recent bleeding</td></tr>
+                <tr><td>Splenectomy</td><td>Hyposplenism</td></tr>
+            </table>
+        </div>
+    </article>
+
+    <!-- Card 2: Low Platelets -->
+    <article class="card">
+        <div class="card-header">
+            <h2>Thrombocytopenia</h2>
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        </div>
+        <div class="card-body">
+            <p><strong>Definition:</strong> Count < 150 × 10⁹/L</p>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:0.5rem; margin-bottom: 1rem;">
+                <div style="background:#e8f5e9; color:#2e7d32; padding:0.5rem; text-align:center; border-radius:4px; font-size:0.8rem;">
+                    <strong>Mild</strong><br>>100
+                </div>
+                <div style="background:#fff3e0; color:#e65100; padding:0.5rem; text-align:center; border-radius:4px; font-size:0.8rem;">
+                    <strong>Mod</strong><br>50-100
+                </div>
+                <div style="background:#ffebee; color:#c62828; padding:0.5rem; text-align:center; border-radius:4px; font-size:0.8rem;">
+                    <strong>Severe</strong><br><50
+                </div>
+            </div>
+
+            <div class="red-flag-box" style="background-color: #e3f2fd; border-left-color: #005eb8;">
+                <div class="red-flag-title" style="color: #005eb8;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Bleeding Risk Signs
+                </div>
+                <p style="font-size:0.9rem; margin:0;">Check for: Petechiae, ecchymoses, mucosal bleeding (gums, epistaxis), GI bleed, menorrhagia.</p>
+            </div>
+
+            <p class="text-bold" style="margin-bottom:0.5rem; color:var(--primary-dark);">Key Causes:</p>
+            <table class="data-table">
+                <tr><td>Reduced Production</td><td>Marrow infiltration, B12/Folate deficiency</td></tr>
+                <tr><td>Increased Destruction</td><td>ITP, DIC, TTP, Heparin, Quinine</td></tr>
+                <tr><td>Sequestration</td><td>Splenomegaly, Liver disease</td></tr>
+                <tr><td>Pseudo</td><td>EDTA-induced artifact (Check film)</td></tr>
+            </table>
+        </div>
+    </article>
+
+    <!-- Deep Dive Assessment Tabs -->
+    <section class="deep-dive">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab(event, 'assessment-high')">Assess: High Count</button>
+            <button class="tab-btn" onclick="openTab(event, 'assessment-low')">Assess: Low Count</button>
+            <button class="tab-btn" onclick="openTab(event, 'management')">Management & Referral</button>
+        </div>
+
+        <!-- Tab 1: Assess High -->
+        <div id="assessment-high" class="tab-content active">
+            <h3>How to assess Thrombocytosis</h3>
+            <div class="grid-2-col">
+                <div>
+                    <h4>History Taking</h4>
+                    <ul class="checklist">
+                        <li>Recent infection or inflammation</li>
+                        <li>History of cancer / family history of cancer</li>
+                        <li>Prior splenectomy</li>
+                        <li>Medications (e.g., steroids)</li>
+                        <li>Cardiovascular risk factors</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Investigations</h4>
+                    <ul class="checklist">
+                        <li>Repeat FBC (Trend?)</li>
+                        <li><strong>Blood Film</strong> (Reactive usually have small platelets; Primary may have large platelets)</li>
+                        <li>CRP / ESR (Inflammatory markers)</li>
+                        <li>Iron studies (Ferritin)</li>
+                        <li>JAK-2 test (if Essential Thrombocythaemia suspected)</li>
+                        <li>Chest X-ray (Age >40)</li>
+                        <li>FIT test (Colorectal rule out)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Assess Low -->
+        <div id="assessment-low" class="tab-content">
+            <h3>How to assess Thrombocytopenia</h3>
+            <div class="grid-2-col">
+                <div>
+                    <h4>History Taking</h4>
+                    <ul class="checklist">
+                        <li>Alcohol intake, dietary habits</li>
+                        <li>Medications: Quinine, Heparin, NSAIDs, Penicillins</li>
+                        <li>Recent infections / vaccinations</li>
+                        <li>Symptoms of autoimmune disease</li>
+                        <li>Travel history (Malaria)</li>
+                        <li><strong>Pregnancy status</strong> (Pre-eclampsia risk)</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Investigations</h4>
+                    <ul class="checklist">
+                        <li><strong>Review Blood Film</strong> (Exclude Pseudothrombocytopenia)</li>
+                        <li>Reticulocyte count</li>
+                        <li>Coagulation screen (PT/APTT)</li>
+                        <li>LFTs / Renal Function</li>
+                        <li>HIV / Hep C / EBV serology if indicated</li>
+                        <li>B12/Folate levels</li>
+                        <li>Autoimmune screen (ANA, Antiphospholipid)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Management -->
+        <div id="management" class="tab-content">
+            <h3>Management & Referral Principles</h3>
+            <div class="grid-2-col">
+                <div>
+                    <h4>Urgent Referral (Suspected Cancer)</h4>
+                    <p class="text-red text-bold">Refer urgently (within 2 weeks) if:</p>
+                    <ul class="checklist">
+                        <li>Thrombocytosis > 450 in patients aged >40.</li>
+                        <li>Accompanied by red flag symptoms (Cough, weight loss, change in bowel habit, dyspepsia).</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Immediate Actions</h4>
+                    <ul class="checklist">
+                        <li><strong>Severe Thrombocytopenia (<50):</strong> Seek specialist haematology advice immediately, especially if bleeding present.</li>
+                        <li><strong>Pregnant women >20wks:</strong> Rule out Pre-eclampsia / HELLP syndrome immediately.</li>
+                        <li>Stop potential culprit drugs if safe to do so.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <p>Based on NICE CKS Topic: Platelets - abnormal counts and cancer (Last revised April 2025).</p>
+    <p>This tool is for clinical reference only. Always use professional clinical judgment.</p>
+</footer>
+
+<script>
+    function interpretPlatelets() {
+        const input = document.getElementById('platelet-input');
+        const display = document.getElementById('result-display');
+        const banner = document.getElementById('urgent-banner');
+        
+        let value = parseFloat(input.value);
+
+        // Reset styling
+        display.className = 'result-box';
+        banner.style.display = 'none';
+        banner.classList.remove('pulse-effect');
+
+        if (isNaN(value)) {
+            display.innerHTML = '<span style="font-size: 2rem;">—</span><span style="font-size: 1rem;">Enter value to triage</span>';
+            display.classList.add('state-info');
+            return;
+        }
+
+        let html = '';
+        let subText = '';
+
+        if (value < 50) {
+            // Severe Thrombocytopenia
+            display.classList.add('state-danger');
+            display.classList.add('pulse-effect');
+            html = `<span style="font-size:2.5rem;">⚠️ SEVERE</span>`;
+            subText = `High Bleeding Risk (<50)`;
+        } else if (value >= 50 && value < 100) {
+            // Moderate Thrombocytopenia
+            display.classList.add('state-warning');
+            html = `<span style="font-size:2.5rem;">LOW</span>`;
+            subText = `Moderate (50-100)`;
+        } else if (value >= 100 && value < 150) {
+            // Mild Thrombocytopenia
+            display.classList.add('state-info');
+            html = `<span style="font-size:2.5rem;">MILD</span>`;
+            subText = `Mild (100-150)`;
+        } else if (value >= 150 && value <= 450) {
+            // Normal
+            display.classList.add('state-normal');
+            html = `<span style="font-size:2.5rem;">✔ NORMAL</span>`;
+            subText = `Within range (150-450)`;
+        } else if (value > 450) {
+            // Thrombocytosis
+            display.classList.add('state-info'); // Info color, handled by banner for urgency
+            display.style.borderColor = 'var(--primary-blue)';
+            display.style.color = 'var(--primary-dark)';
+            html = `<span style="font-size:2.5rem;">HIGH</span>`;
+            subText = `Thrombocytosis (>450)`;
+            
+            // Trigger Cancer Alert Banner
+            banner.style.display = 'block';
+            setTimeout(() => banner.classList.add('pulse-effect'), 100);
+        }
+
+        display.innerHTML = `${html}<span style="font-size: 1rem; margin-top:0.5rem;">${subText}</span>`;
+    }
+
+    function openTab(evt, tabName) {
+        // Hide all contents
+        const contents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < contents.length; i++) {
+            contents[i].classList.remove("active");
+        }
+
+        // Remove active class from buttons
+        const buttons = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < buttons.length; i++) {
+            buttons[i].classList.remove("active");
+        }
+
+        // Show current tab and activate button
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+</script>
+
+</body>
+</html>

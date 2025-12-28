@@ -1,0 +1,1805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type 1 Diabetes - Interactive Clinical Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            gap: 25px;
+        }
+
+        /* Sticky Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 280px;
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            height: fit-content;
+            border: 1px solid #eaeef5;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+            background: transparent;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: linear-gradient(135deg, #4da6ff 0%, #0066cc 100%);
+            color: white;
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,102,204,0.2);
+        }
+
+        .progress-item.completed {
+            opacity: 1;
+            background: linear-gradient(135deg, #27ae60 0%, #219653 100%);
+            color: white;
+        }
+
+        .progress-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .progress-text {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 0;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #1a2530 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.85;
+            max-width: 800px;
+            position: relative;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid #eaeef5;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1) rotate(5deg);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .card-title h2 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .card-title p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 24px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(4px);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 3000px;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        /* Sub-sections */
+        .sub-section {
+            margin-bottom: 25px;
+            border-left: 4px solid #e0e7ff;
+            padding-left: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .sub-section:hover {
+            border-left-color: #4da6ff;
+            transform: translateX(5px);
+        }
+
+        .sub-section h4 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sub-section-content {
+            background: #f8faff;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid #e0e7ff;
+        }
+
+        .sub-section:hover .sub-section-content {
+            background: #f0f5ff;
+            border-color: #c2d6ff;
+        }
+
+        /* Severity Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .badge-red {
+            background: linear-gradient(135deg, #ff6b6b 0%, #e74c3c 100%);
+            color: white;
+        }
+
+        .badge-amber {
+            background: linear-gradient(135deg, #feca57 0%, #f39c12 100%);
+            color: #2c3e50;
+        }
+
+        .badge-green {
+            background: linear-gradient(135deg, #1dd1a1 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .badge-icon {
+            font-size: 14px;
+        }
+
+        /* Lists */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f4f9;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .checklist li:hover {
+            background: rgba(77, 166, 255, 0.05);
+            border-radius: 6px;
+            padding-left: 10px;
+            padding-right: 10px;
+            margin-left: -10px;
+            margin-right: -10px;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist li i {
+            color: #4da6ff;
+            margin-top: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .checklist li:hover i {
+            transform: scale(1.2);
+            color: #0066cc;
+        }
+
+        /* Key Points */
+        .key-points {
+            background: linear-gradient(135deg, #e3f2fd 0%, #d5e8ff 100%);
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .key-points::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #4da6ff, #0066cc);
+        }
+
+        .key-points h4 {
+            color: #0066cc;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+        }
+
+        .key-points ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .key-points li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .key-points li::before {
+            content: '•';
+            position: absolute;
+            left: 10px;
+            color: #0066cc;
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        /* Grid Layout */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .grid-item {
+            background: #f8faff;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e0e7ff;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .grid-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+            border-color: #c2d6ff;
+        }
+
+        .grid-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: linear-gradient(to bottom, #4da6ff, #0066cc);
+        }
+
+        .grid-item h5 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .grid-item p {
+            font-size: 14px;
+            color: #5a6c7d;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+                margin-bottom: 30px;
+            }
+
+            .progress-item {
+                flex: 1;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .progress-text {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .card-header-content {
+                gap: 15px;
+            }
+
+            .card-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+
+            .card-title h2 {
+                font-size: 20px;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+
+        /* Highlight effect */
+        .highlight {
+            background: linear-gradient(120deg, #fff3cd 0%, #ffeaa7 100%);
+            border: 1px solid #fdcb6e;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .highlight::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #feca57, #f39c12);
+        }
+
+        .highlight p {
+            margin: 0;
+            font-size: 14px;
+            color: #5a4a00;
+        }
+
+        .highlight strong {
+            color: #2c3e50;
+        }
+
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            margin-left: 10px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #4da6ff;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            color: #5a6c7d;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <h3><i class="fas fa-tasks"></i> Algorithm Progress</h3>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <div class="progress-text">Assessment</div>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon">
+                    <i class="fas fa-microscope"></i>
+                </div>
+                <div class="progress-text">Diagnosis</div>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon">
+                    <i class="fas fa-syringe"></i>
+                </div>
+                <div class="progress-text">Treatment</div>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="progress-text">Follow-up</div>
+            </div>
+            
+            <div class="highlight" style="margin-top: 30px; font-size: 13px;">
+                <p><i class="fas fa-info-circle"></i> <strong>Key:</strong> Click on each section to expand. Use badges to identify urgency levels.</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-heartbeat"></i> Type 1 Diabetes Management</h1>
+                <p>Interactive clinical algorithm based on BMJ Best Practice guidelines (July 2021). This tool provides step-by-step guidance for assessment, diagnosis, treatment, and follow-up of patients with Type 1 Diabetes Mellitus.</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card" id="assessment">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <div class="card-icon">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Assessment</h2>
+                            <p>Initial evaluation and clinical presentation</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="key-points">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Red Flag Symptoms</h4>
+                            <ul>
+                                <li>Rapid weight loss with polyuria/polydipsia</li>
+                                <li>Nausea, vomiting, abdominal pain (possible DKA)</li>
+                                <li>Deep rapid respirations (Kussmaul breathing)</li>
+                                <li>Altered mental status or lethargy</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-user"></i> Key Diagnostic Factors</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-tint"></i> Polyuria & Polydipsia</h5>
+                                        <p>Classic presenting symptoms, especially nocturnal</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Common
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-weight"></i> Weight Loss</h5>
+                                        <p>Often rapid, particularly in adults</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Common
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-child"></i> Age Distribution</h5>
+                                        <p>Peak incidence 10-14 years, but can occur at any age</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Variable
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-eye"></i> Blurred Vision</h5>
+                                        <p>Due to high/fluctuating blood glucose</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Occasional
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-dna"></i> Risk Factors</h4>
+                            <div class="sub-section-content">
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-shield-alt"></i>
+                                        <div>
+                                            <strong>Genetic Predisposition:</strong> HLA-DR/DQ polymorphisms, family history (5% risk vs 0.3% general population)
+                                            <span class="badge badge-red">
+                                                <i class="fas fa-exclamation-triangle badge-icon"></i>
+                                                Strong
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-globe"></i>
+                                        <div>
+                                            <strong>Geographical Region:</strong> More common in Europeans (Finland 40.9/100,000) vs Asians (China 0.1/100,000)
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Weak
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-virus"></i>
+                                        <div>
+                                            <strong>Infectious Agents:</strong> Human enteroviruses show strongest association
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Possible
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-apple-alt"></i>
+                                        <div>
+                                            <strong>Dietary Factors:</strong> Vitamin D may be protective, cow's milk/cereals uncertain
+                                            <span class="badge badge-green">
+                                                <i class="fas fa-question-circle badge-icon"></i>
+                                                Uncertain
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-allergies"></i>
+                                        <div>
+                                            <strong>Autoimmune Diseases:</strong> Coeliac disease more common (shared HLA-DQ2)
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Association
+                                            </span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-flask"></i> Initial Investigations</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-vial"></i> Random Plasma Glucose</h5>
+                                        <p>≥11.1 mmol/L (≥200 mg/dL) with symptoms</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Diagnostic
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-clock"></i> Fasting Glucose</h5>
+                                        <p>≥7.0 mmol/L (≥126 mg/dL)</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Diagnostic
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-chart-line"></i> HbA1c</h5>
+                                        <p>≥6.5% (≥48 mmol/mol)</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Diagnostic
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-fire"></i> Ketones</h5>
+                                        <p>Blood or urine ketones (medium/high)</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            DKA Risk
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-search-plus"></i> C-Peptide</h5>
+                                        <p>Low/undetectable indicates insulin deficiency</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Selective
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-microscope"></i> Autoantibodies</h5>
+                                        <p>GAD, insulin, IA-2, ZnT8 antibodies</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Confirmatory
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="highlight">
+                                    <p><i class="fas fa-info-circle"></i> <strong>Note:</strong> NICE recommends clinical diagnosis in adults. C-peptide/autoantibodies only if atypical features or uncertainty about classification.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <div class="card-icon">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Diagnosis</h2>
+                            <p>Diagnostic criteria and differential diagnosis</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="key-points">
+                            <h4><i class="fas fa-check-circle"></i> WHO Diagnostic Criteria</h4>
+                            <ul>
+                                <li>Random plasma glucose ≥11.1 mmol/L (≥200 mg/dL) with symptoms</li>
+                                <li>Fasting plasma glucose ≥7.0 mmol/L (≥126 mg/dL)</li>
+                                <li>Plasma glucose ≥11.1 mmol/L 2 hours after 75g oral glucose</li>
+                                <li>HbA1c ≥6.5% (≥48 mmol/mol)</li>
+                            </ul>
+                            <p style="margin-top: 10px; font-style: italic;">Repeat confirmatory test required in most cases (except classic DKA presentation)</p>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-user-md"></i> Adult Presentation Features</h4>
+                            <div class="sub-section-content">
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-fire"></i>
+                                        <div>
+                                            <strong>Ketosis:</strong> Presence indicates absolute insulin deficiency
+                                            <span class="badge badge-red">
+                                                <i class="fas fa-exclamation-circle badge-icon"></i>
+                                                Strong indicator
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-weight"></i>
+                                        <div>
+                                            <strong>Rapid weight loss:</strong> Suggests insulin deficiency rather than resistance
+                                            <span class="badge badge-red">
+                                                <i class="fas fa-exclamation-circle badge-icon"></i>
+                                                Type 1 feature
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-calendar"></i>
+                                        <div>
+                                            <strong>Age <50 years:</strong> More likely type 1, but DO NOT discount if >50 years
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Guide only
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-ruler-vertical"></i>
+                                        <div>
+                                            <strong>BMI <25 kg/m²:</strong> Lean individuals more likely type 1, but obesity doesn't exclude it
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Guide only
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-shield-alt"></i>
+                                        <div>
+                                            <strong>Autoimmune disease:</strong> Personal/family history supports type 1
+                                            <span class="badge badge-green">
+                                                <i class="fas fa-check-circle badge-icon"></i>
+                                                Supporting feature
+                                            </span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-baby"></i> Children & Young People</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-exclamation-triangle"></i> Suspect Diabetes</h5>
+                                        <p>Random glucose ≥11.1 mmol/L with symptoms</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Immediate referral
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-hospital"></i> Same-Day Referral</h5>
+                                        <p>Refer to multidisciplinary paediatric diabetes team</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-ambulance badge-icon"></i>
+                                            Urgent
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-pills"></i> Initial Assumption</h5>
+                                        <p>Assume type 1 unless strong indications otherwise</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Default
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="highlight">
+                                    <p><i class="fas fa-info-circle"></i> <strong>Consider Type 2 if:</strong> Obese, strong family history, black/Asian origin, acanthosis nigricans</p>
+                                    <p><i class="fas fa-info-circle"></i> <strong>Consider Monogenic if:</strong> Diabetes in first year, syndromic features, neonatal diabetes</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-search"></i> Differential Diagnosis</h4>
+                            <div class="sub-section-content">
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-dna"></i>
+                                        <div>
+                                            <strong>Monogenic Diabetes (MODY):</strong> Non-ketotic, responds to oral agents, C-peptide present, autoantibodies absent
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Genetic test
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-baby"></i>
+                                        <div>
+                                            <strong>Neonatal Diabetes:</strong> Diagnosed <6 months, genetic testing required
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                KCNJ11/ABCC8
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-user-clock"></i>
+                                        <div>
+                                            <strong>LADA (Latent Autoimmune Diabetes in Adults):</strong> Age >30, initially non-obese, slow progression to insulin requirement
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                2+ of 4 criteria
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-weight"></i>
+                                        <div>
+                                            <strong>Type 2 Diabetes:</strong> Insulin resistance signs (acanthosis nigricas), older age, obesity, slow onset
+                                            <span class="badge badge-green">
+                                                <i class="fas fa-check-circle badge-icon"></i>
+                                                Differentiate
+                                            </span>
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="key-points">
+                                    <h4><i class="fas fa-lightbulb"></i> LADA Diagnostic Criteria (2+ needed)</h4>
+                                    <ul>
+                                        <li>Age of onset <50 years</li>
+                                        <li>Acute symptoms (polydipsia, polyuria, weight loss)</li>
+                                        <li>BMI <25 kg/m²</li>
+                                        <li>Personal/family history of autoimmune disease</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-times-circle"></i> Not Recommended</h4>
+                            <div class="sub-section-content">
+                                <p><i class="fas fa-ban"></i> <strong>Routine screening for type 1 diabetes:</strong> Low population prevalence</p>
+                                <p><i class="fas fa-ban"></i> <strong>Antibody screening:</strong> No proven preventive treatment available</p>
+                                <p><i class="fas fa-ban"></i> <strong>C-peptide at diagnosis:</strong> Only if difficulty distinguishing types</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <div class="card-icon">
+                            <i class="fas fa-syringe"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Treatment</h2>
+                            <p>Insulin therapy and management strategies</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="key-points">
+                            <h4><i class="fas fa-bullseye"></i> Treatment Goals</h4>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h5><i class="fas fa-bullseye"></i> HbA1c Target</h5>
+                                    <p>≤48 mmol/mol (6.5%) for most patients</p>
+                                    <span class="badge badge-green">
+                                        <i class="fas fa-target badge-icon"></i>
+                                        Individualize
+                                    </span>
+                                </div>
+                                <div class="grid-item">
+                                    <h5><i class="fas fa-child"></i> Children</h5>
+                                    <p>Compromise may be needed to avoid distress</p>
+                                    <span class="badge badge-amber">
+                                        <i class="fas fa-exclamation-circle badge-icon"></i>
+                                        Flexible
+                                    </span>
+                                </div>
+                                <div class="grid-item">
+                                    <h5><i class="fas fa-clock"></i> Monitoring</h5>
+                                    <p>Every 3 months (children), 3-6 months (adults)</p>
+                                    <span class="badge badge-green">
+                                        <i class="fas fa-calendar-check badge-icon"></i>
+                                            Routine
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-syringe"></i> Insulin Regimens</h4>
+                            <div class="sub-section-content">
+                                <div class="badge badge-red" style="margin-bottom: 15px;">
+                                    <i class="fas fa-exclamation-circle badge-icon"></i>
+                                    Multiple Daily Injections (MDI) from diagnosis
+                                </div>
+
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-thermometer-half"></i> Basal Insulin</h5>
+                                        <p>Twice-daily insulin detemir (NICE recommended)</p>
+                                        <p>OR once-daily glargine/degludec</p>
+                                        <p>Initial adult dose: 0.2-0.4 units/kg/day</p>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-bolt"></i> Bolus Insulin</h5>
+                                        <p>Rapid-acting analogues (lispro/aspart/glulisine)</p>
+                                        <p>Given before meals</p>
+                                        <p>Initial adult dose: 0.2-0.4 units/kg/day</p>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-balance-scale"></i> Split</h5>
+                                        <p>50% basal, 50% bolus (divided before meals)</p>
+                                        <p>Adjust every 2-3 days based on glucose</p>
+                                        <p>Children: 0.5-1.0 units/kg/day (up to 1.5 in puberty)</p>
+                                    </div>
+                                </div>
+
+                                <div class="highlight">
+                                    <p><i class="fas fa-info-circle"></i> <strong>Honeymoon Period:</strong> Early after diagnosis, insulin requirements may temporarily decrease (80-90% beta cell destruction needed for hyperglycaemia)</p>
+                                </div>
+
+                                <div class="sub-section" style="margin-top: 20px;">
+                                    <h4><i class="fas fa-pump-medical"></i> Insulin Pump (CSII)</h4>
+                                    <div class="sub-section-content">
+                                        <ul class="checklist">
+                                            <li>
+                                                <i class="fas fa-child"></i>
+                                                <div>
+                                                    <strong>Children <12 years:</strong> If MDI impractical/inappropriate
+                                                    <span class="badge badge-amber">
+                                                        <i class="fas fa-info-circle badge-icon"></i>
+                                                        Consider
+                                                    </span>
+                                                </div>
+                                            </li>
+                                            <li>
+                                                <i class="fas fa-user-injured"></i>
+                                                <div>
+                                                    <strong>Disabling hypoglycaemia:</strong> Despite optimized MDI
+                                                    <span class="badge badge-red">
+                                                        <i class="fas fa-exclamation-circle badge-icon"></i>
+                                                        Indication
+                                                    </span>
+                                                </div>
+                                            </li>
+                                            <li>
+                                                <i class="fas fa-chart-line"></i>
+                                                <div>
+                                                    <strong>Continue if:</strong> Sustained HbA1c fall or reduced hypoglycaemia
+                                                    <span class="badge badge-green">
+                                                        <i class="fas fa-check-circle badge-icon"></i>
+                                                        Success
+                                                    </span>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                        <p style="margin-top: 10px;"><i class="fas fa-mobile-alt"></i> Sensor-augmented pumps ("closed loop") reduce nocturnal hypoglycaemia and improve control</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-tint"></i> Glucose Monitoring</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-user"></i> Adults</h5>
+                                        <p>Minimum 4 times daily</p>
+                                        <p>Up to 10 times if targets not met</p>
+                                        <p>Legal requirement for driving: ≥5 mmol/L</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Standard
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-child"></i> Children</h5>
+                                        <p>Minimum 5 times daily</p>
+                                        <p>More frequent during illness/exercise</p>
+                                        <p>CGM with alarms if severe hypoglycaemia</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Enhanced
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-cogs"></i> CGM Criteria</h5>
+                                        <p>Severe hypoglycaemia (>1/year)</p>
+                                        <p>Impaired awareness</p>
+                                        <p>Asymptomatic hypoglycaemia (>2/week)</p>
+                                        <p>HbA1c ≥75 mmol/mol despite testing ≥10/day</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Selective
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="key-points">
+                                    <h4><i class="fas fa-target"></i> Adult Glucose Targets</h4>
+                                    <ul>
+                                        <li>On waking: 5-7 mmol/L (90-126 mg/dL)</li>
+                                        <li>Before meals: 4-7 mmol/L (72-126 mg/dL)</li>
+                                        <li>After meals (≥90 min): 5-9 mmol/L (90-162 mg/dL)</li>
+                                        <li>Bedtime: Individualized, consistent with fasting</li>
+                                    </ul>
+                                </div>
+
+                                <div class="key-points">
+                                    <h4><i class="fas fa-child"></i> Children & Young People Targets</h4>
+                                    <ul>
+                                        <li>On waking: 4-7 mmol/L (72-126 mg/dL)</li>
+                                        <li>Before meals: 4-7 mmol/L (72-126 mg/dL)</li>
+                                        <li>After meals: 5-9 mmol/L (90-162 mg/dL)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Hypoglycaemia Management</h4>
+                            <div class="sub-section-content">
+                                <div class="badge badge-red" style="margin-bottom: 15px;">
+                                    <i class="fas fa-exclamation-triangle badge-icon"></i>
+                                    Most common serious side effect of insulin
+                                </div>
+
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-ambulance"></i> Severe Hypoglycaemia</h5>
+                                        <p>Cognitive impairment requiring assistance</p>
+                                        <p>Treat with glucagon IM/IV</p>
+                                        <p>Monitor response at 10 minutes</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-ambulance badge-icon"></i>
+                                            Emergency
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-apple-alt"></i> Mild-Moderate</h5>
+                                        <p>10-20g fast-acting glucose orally</p>
+                                        <p>Recheck in 15 minutes</p>
+                                        <p>Follow with complex carbohydrate</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Self-treat
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-clock"></i> Risk Factors</h5>
+                                        <p>Missed meals, excess insulin</p>
+                                        <p>Exercise (up to 24h delay)</p>
+                                        <p>Alcohol (acute and delayed)</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Preventable
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="highlight">
+                                    <p><i class="fas fa-info-circle"></i> <strong>Nocturnal Hypoglycaemia:</strong> Check 3am glucose if concerned. Bedtime snack only if exercised afternoon/evening. Review regimen if recurrent.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-utensils"></i> Diet & Exercise</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-apple-alt"></i> Nutrition</h5>
+                                        <p>Individualized medical nutrition therapy</p>
+                                        <p>Carbohydrate counting for flexibility</p>
+                                        <p>Low glycaemic index (children)</p>
+                                        <p>Consistent timing/amount approach</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Essential
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-running"></i> Exercise</h5>
+                                        <p>Safe with glucose management</p>
+                                        <p>Pre-exercise carbs if <5 mmol/L</p>
+                                        <p>Hypoglycaemia risk up to 24h post</p>
+                                        <p>Reduce insulin on exercise days</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Manage carefully
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-pills"></i> Adjunct Therapies</h4>
+                            <div class="sub-section-content">
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-pills"></i>
+                                        <div>
+                                            <strong>Metformin:</strong> Consider if BMI ≥25 kg/m² (≥23 in South Asian) to improve control and reduce insulin dose
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Off-label in UK
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-ban"></i>
+                                        <div>
+                                            <strong>Dapagliflozin:</strong> No longer licensed for type 1 diabetes (withdrawn Oct 2021) due to DKA risk
+                                            <span class="badge badge-red">
+                                                <i class="fas fa-exclamation-triangle badge-icon"></i>
+                                                Contraindicated
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-times"></i>
+                                        <div>
+                                            <strong>GLP-1 agonists:</strong> Not routinely recommended. Liraglutide improved control but increased hypo/hyperglycaemia with ketosis
+                                            <span class="badge badge-red">
+                                                <i class="fas fa-times-circle badge-icon"></i>
+                                                Not advised
+                                            </span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-baby"></i> Pregnancy Considerations</h4>
+                            <div class="sub-section-content">
+                                <div class="badge badge-red" style="margin-bottom: 15px;">
+                                    <i class="fas fa-exclamation-triangle badge-icon"></i>
+                                    High-risk pregnancy - requires specialist care
+                                </div>
+
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-bullseye"></i> Pre-Conception</h5>
+                                        <p>HbA1c <48 mmol/mol if achievable</p>
+                                        <p>Monthly HbA1c monitoring</p>
+                                        <p>Folic acid 5mg daily until 12 weeks</p>
+                                        <p>Stop statins/ACEi/ARBs</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Critical
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-bullseye"></i> Pregnancy Targets</h5>
+                                        <p>Fasting: <5.3 mmol/L</p>
+                                        <p>1-hour post-meal: <7.8 mmol/L</p>
+                                        <p>2-hour post-meal: <6.4 mmol/L</p>
+                                        <p>Maintain >4 mmol/L</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Tight control
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-pills"></i> Insulin in Pregnancy</h5>
+                                        <p>Isophane (NPH) first choice (NICE)</p>
+                                        <p>Continue glargine/detemir if good control</p>
+                                        <p>Rapid analogues (lispro/aspart) preferred</p>
+                                        <p>Metformin may be added</p>
+                                        <p>Aspirin 75-150mg from 12 weeks</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Specialist choice
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-mobile-alt"></i> CGM in Pregnancy</h5>
+                                        <p>Offer to all pregnant women with type 1</p>
+                                        <p>Improves neonatal outcomes (CONCEPTT trial)</p>
+                                        <p>Flash monitoring if CGM unsuitable</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Recommended
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div class="card-header-content">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Follow-up</h2>
+                            <p>Monitoring, complications screening, and ongoing care</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="key-points">
+                            <h4><i class="fas fa-calendar-check"></i> Routine Monitoring Schedule</h4>
+                            <div class="grid">
+                                <div class="grid-item">
+                                    <h5><i class="fas fa-chart-line"></i> HbA1c</h5>
+                                    <p>Every 3 months (children)</p>
+                                    <p>Every 3-6 months (adults)</p>
+                                    <p>Target: ≤48 mmol/mol (6.5%)</p>
+                                    <span class="badge badge-green">
+                                        <i class="fas fa-calendar-check badge-icon"></i>
+                                        Essential
+                                    </span>
+                                </div>
+                                <div class="grid-item">
+                                    <h5><i class="fas fa-eye"></i> Eye Screening</h5>
+                                    <p>Annual from age 12 years</p>
+                                    <p>Digital retinal photography</p>
+                                    <p>Mydriasis with tropicamide</p>
+                                    <span class="badge badge-red">
+                                        <i class="fas fa-exclamation-circle badge-icon"></i>
+                                        Prevent blindness
+                                    </span>
+                                </div>
+                                <div class="grid-item">
+                                    <h5><i class="fas fa-kidneys"></i> Renal Screening</h5>
+                                    <p>Annual ACR from age 12</p>
+                                    <p>eGFR measurement</p>
+                                    <p>ACEi/ARB if ACR ≥3 mg/mmol</p>
+                                    <span class="badge badge-amber">
+                                        <i class="fas fa-info-circle badge-icon"></i>
+                                        Early detection
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-shield-alt"></i> Autoimmune Screening</h4>
+                            <div class="sub-section-content">
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-thyroid"></i>
+                                        <div>
+                                            <strong>Thyroid disease:</strong> At diagnosis and annually thereafter (TSH, free T4)
+                                            <span class="badge badge-green">
+                                                <i class="fas fa-check-circle badge-icon"></i>
+                                                Annual
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-allergies"></i>
+                                        <div>
+                                            <strong>Coeliac disease:</strong> At diagnosis, if symptomatic, or poor growth/control
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Selective
+                                            </span>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-adn"></i>
+                                        <div>
+                                            <strong>Addison's disease:</strong> If increased insulin sensitivity, fatigue, hyperpigmentation
+                                            <span class="badge badge-amber">
+                                                <i class="fas fa-info-circle badge-icon"></i>
+                                                Clinical suspicion
+                                            </span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-heartbeat"></i> Cardiovascular Risk Management</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-tachometer-alt"></i> Blood Pressure</h5>
+                                        <p>Target: 135/85 mmHg</p>
+                                        <p>130/80 if albuminuria or metabolic syndrome</p>
+                                        <p>ACEi/ARB first line, titrate to full dose</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Manage actively
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-heart"></i> Statins</h5>
+                                        <p>Age >40 years OR diabetes >10 years</p>
+                                        <p>Established nephropathy</p>
+                                        <p>High-intensity for secondary prevention</p>
+                                        <p>Consider for primary prevention</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Individualize
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-smoking"></i> Lifestyle</h5>
+                                        <p>Smoking cessation essential</p>
+                                        <p>Healthy diet and weight management</p>
+                                        <p>Regular physical activity</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Fundamental
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-pills"></i> Aspirin</h5>
+                                        <p>Secondary prevention: 75-162 mg/day</p>
+                                        <p>Not for primary prevention in type 1</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Specific indication
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Acute Complications</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-fire"></i> Diabetic Ketoacidosis</h5>
+                                        <p>Medical emergency - immediate hospitalization</p>
+                                        <p>IV fluids, insulin infusion, electrolyte monitoring</p>
+                                        <p>Identify and treat precipitant</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-ambulance badge-icon"></i>
+                                            Emergency
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-syringe"></i> Hypoglycaemia</h5>
+                                        <p>Most common insulin side effect</p>
+                                        <p>Assess awareness annually (Gold/Clarke score)</p>
+                                        <p>Has chronic impacts on cognition</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Common
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-clock"></i> Chronic Complications</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-eye"></i> Retinopathy</h5>
+                                        <p>Most common microvascular complication</p>
+                                        <p>20 years post-diagnosis: most have evidence</p>
+                                        <p>Strict glycaemic/BP/lipid control delays progression</p>
+                                        <p>Photocoagulation/vitrectomy for advanced disease</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            High risk
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-kidneys"></i> Nephropathy</h5>
+                                        <p>Most common cause of ESRD in developed countries</p>
+                                        <p>Annual incidence microalbuminuria: 1.3-3.8%</p>
+                                        <p>20-year cumulative ESRD risk: 2.2%</p>
+                                        <p>30-year cumulative ESRD risk: 7.0%</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            High risk
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-nerve"></i> Neuropathy</h5>
+                                        <p>>50% develop neuropathy</p>
+                                        <p>Distal symmetric polyneuropathy most common</p>
+                                        <p>Mononeuropathies, autonomic neuropathy possible</p>
+                                        <p>Pregabalin, duloxetine, tapentadol for pain</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            High risk
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-heartbeat"></i> Cardiovascular Disease</h5>
+                                        <p>Major cause of death >30 years</p>
+                                        <p>30-year follow-up: intensive control reduces risk</p>
+                                        <p>Modifiable risk factors essential</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Major risk
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-brain"></i> Psychosocial Aspects</h4>
+                            <div class="sub-section-content">
+                                <div class="grid">
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-sad-tear"></i> Depression</h5>
+                                        <p>3x higher risk than general population</p>
+                                        <p>28% in women, 18% in men</p>
+                                        <p>Screen regularly, refer to psychology</p>
+                                        <span class="badge badge-amber">
+                                            <i class="fas fa-info-circle badge-icon"></i>
+                                            Screen annually
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-utensils"></i> Eating Disorders</h5>
+                                        <p>Bulimia, anorexia, insulin manipulation</p>
+                                        <p>Over-concern with weight/shape</p>
+                                        <p>Low BMI, recurrent hypo, poor control</p>
+                                        <p>Early referral to eating disorder services</p>
+                                        <span class="badge badge-red">
+                                            <i class="fas fa-exclamation-circle badge-icon"></i>
+                                            Urgent referral
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-users"></i> Family Support</h5>
+                                        <p>Strong family support for children</p>
+                                        <p>Education tailored to age/maturity</p>
+                                        <p>Psychosocial screening annually</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Integral
+                                        </span>
+                                    </div>
+                                    <div class="grid-item">
+                                        <h5><i class="fas fa-graduation-cap"></i> Structured Education</h5>
+                                        <p>Offer 6-12 months post-diagnosis</p>
+                                        <p>Carbohydrate counting skills</p>
+                                        <p>Online programs available</p>
+                                        <span class="badge badge-green">
+                                            <i class="fas fa-check-circle badge-icon"></i>
+                                            Essential
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <h4><i class="fas fa-procedures"></i> Surgical/Procedure Considerations</h4>
+                            <div class="sub-section-content">
+                                <p><i class="fas fa-info-circle"></i> <strong>Before procedures:</strong> Discuss insulin requirements with diabetes team</p>
+                                <p><i class="fas fa-info-circle"></i> <strong>During illness:</strong> "Sick-day rules" - never stop insulin, monitor ketones, stay hydrated</p>
+                                <p><i class="fas fa-info-circle"></i> <strong>Foot care:</strong> Annual examination, podiatry referral if at risk</p>
+                                <p><i class="fas fa-info-circle"></i> <strong>Dental:</strong> Regular examinations, good oral hygiene</p>
+                            </div>
+                        </div>
+
+                        <div class="key-points">
+                            <h4><i class="fas fa-chart-line"></i> Prognosis</h4>
+                            <ul>
+                                <li>Untreated type 1 diabetes is fatal (DKA)</li>
+                                <li>Intensive control reduces microvascular and macrovascular complications</li>
+                                <li>DCCT/EDIC 30-year follow-up: benefits persist</li>
+                                <li>Leading cause of death <30 years: acute complications</li>
+                                <li>Leading cause of death >30 years: cardiovascular disease</li>
+                                <li>Successful pregnancy achievable with optimal control</li>
+                            </ul>
+                        </div>
+
+                        <div class="highlight">
+                            <p><i class="fas fa-lightbulb"></i> <strong>Key Message:</strong> Intensive glucose control for a few years translates to reduced complications 10 years later. Early optimal management has lifelong benefits.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            document.querySelectorAll('.progress-item').forEach(p => p.classList.remove('active'));
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                const cardId = card.id;
+                const progressItem = document.querySelector(`[data-step="${cardId}"]`);
+                if (progressItem) {
+                    progressItem.classList.add('active');
+                }
+            }
+            
+            // Scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand first card by default
+            const firstCard = document.querySelector('.card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+            }
+            
+            // Add click handlers to progress sidebar
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const step = this.dataset.step;
+                    const card = document.getElementById(step);
+                    const header = card.querySelector('.card-header');
+                    if (header) {
+                        toggleCard(header);
+                    }
+                });
+            });
+
+            // Add smooth transitions for all cards
+            document.querySelectorAll('.card').forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+
+            // Add hover effects to badges
+            document.querySelectorAll('.badge').forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-2px) scale(1.02)';
+                });
+                badge.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Add hover effects to grid items
+            document.querySelectorAll('.grid-item').forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px)';
+                });
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0)';
+                });
+            });
+        });
+
+        // Add intersection observer for progress tracking
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const card = entry.target;
+                    const cardId = card.id;
+                    document.querySelectorAll('.progress-item').forEach(p => p.classList.remove('active'));
+                    const progressItem = document.querySelector(`[data-step="${cardId}"]`);
+                    if (progressItem) {
+                        progressItem.classList.add('active');
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

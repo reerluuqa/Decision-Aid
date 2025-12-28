@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCAS Clinical Quick-Scan</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-body: #f4f7f9;
+            --bg-card: #ffffff;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            
+            /* Clinical Colors */
+            --urgent-red: #e53e3e;
+            --urgent-bg: #fff5f5;
+            --success-green: #38a169;
+            --success-bg: #f0fff4;
+            --info-blue: #3182ce;
+            --info-bg: #ebf8ff;
+            --warning-orange: #dd6b20;
+            
+            /* Spacing & Borders */
+            --radius: 8px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding-bottom: 40px;
+        }
+
+        /* --- Header --- */
+        header {
+            background: white;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a202c;
+        }
+
+        .brand span {
+            color: var(--info-blue);
+            font-weight: 300;
+        }
+
+        .meta {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: right;
+        }
+
+        /* --- Emergency Banner --- */
+        .emergency-banner {
+            background: var(--urgent-red);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: pulse 3s infinite;
+        }
+
+        .emergency-icon {
+            font-size: 1.5rem;
+            background: white;
+            color: var(--urgent-red);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(229, 62, 62, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(229, 62, 62, 0); }
+        }
+
+        /* --- Navigation Tabs --- */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            background: white;
+            padding: 1rem 2rem 0;
+            gap: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--info-blue);
+        }
+
+        .tab-btn.active {
+            color: var(--info-blue);
+            border-bottom-color: var(--info-blue);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .section-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .section-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Grid & Cards --- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border-left: 5px solid transparent;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-header {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Card Styles by Intent */
+        .card.info { border-left-color: var(--info-blue); }
+        .card.info .card-header { color: var(--info-blue); }
+
+        .card.action { border-left-color: var(--success-green); background-color: #f7fafc; }
+        .card.action .card-header { color: var(--success-green); }
+
+        .card.risk { border-left-color: var(--urgent-red); }
+        .card.risk .card-header { color: var(--urgent-red); }
+
+        .list-group li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            list-style: none;
+        }
+
+        .list-group li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* --- Calculator Tool --- */
+        .tool-box {
+            background: var(--info-bg);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid #bee3f8;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .input-item {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: var(--text-muted);
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button.calc-btn {
+            background: var(--info-blue);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button.calc-btn:hover {
+            background: #2b6cb0;
+        }
+
+        #calc-result {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 4px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .result-pass { background: var(--success-bg); color: var(--success-green); border: 1px solid #9ae6b4; }
+        .result-fail { background: var(--urgent-bg); color: var(--urgent-red); border: 1px solid #feb2b2; }
+
+        /* --- Tables --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: #edf2f7;
+            text-align: left;
+            padding: 0.75rem;
+            font-weight: 700;
+            color: #4a5568;
+        }
+
+        td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        /* --- Badges --- */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge.red { background: #fed7d7; color: #c53030; }
+        .badge.blue { background: #bee3f8; color: #2c5282; }
+        .badge.green { background: #c6f6d5; color: #276749; }
+
+        /* --- Mobile --- */
+        @media (max-width: 768px) {
+            .nav-tabs { padding: 1rem; }
+            .emergency-banner { flex-direction: column; text-align: center; }
+            header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .meta { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <h1>MCAS <span>Quick-Scan</span></h1>
+        </div>
+        <div class="meta">
+            Last Updated: Jun 21, 2023<br>
+            Based on BMJ Best Practice
+        </div>
+    </header>
+
+    <div class="emergency-banner">
+        <div class="emergency-icon">!</div>
+        <div>
+            <strong>ACUTE EPISODE:</strong> Manage as Anaphylaxis immediately.<br>
+            IM Adrenaline (Epinephrine) + ABCDE approach.
+        </div>
+    </div>
+
+    <nav class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('diagnosis')">Diagnosis & Criteria</button>
+        <button class="tab-btn" onclick="switchTab('treatment')">Management</button>
+        <button class="tab-btn" onclick="switchTab('background')">Pathophysiology & Types</button>
+        <button class="tab-btn" onclick="switchTab('cases')">Case Histories</button>
+    </nav>
+
+    <main>
+        <!-- DIAGNOSIS TAB -->
+        <div id="diagnosis" class="section-content active">
+            <div class="grid-3">
+                <div class="card info">
+                    <div class="card-header">1. Clinical Symptoms</div>
+                    <p class="badge red" style="margin-bottom:0.5rem">Required: 2+ Organ Systems</p>
+                    <ul class="list-group">
+                        <li><strong>Skin:</strong> Flushing, Urticaria, Angio-oedema</li>
+                        <li><strong>Resp:</strong> Wheeze, Stridor, Dyspnoea</li>
+                        <li><strong>CV:</strong> Hypotension, Tachycardia, Syncope</li>
+                        <li><strong>GI:</strong> Cramps, Nausea, Diarrhoea</li>
+                    </ul>
+                </div>
+                <div class="card info">
+                    <div class="card-header">2. Lab Evidence</div>
+                    <p class="badge red" style="margin-bottom:0.5rem">Required: Transient Rise</p>
+                    <p><strong>Serum Tryptase:</strong> Rise > (1.2 x Baseline) + 2 ng/ml</p>
+                    <p style="margin: 0.5rem 0; font-size: 0.9em; color: #718096;">OR Urinary histamine/PGD2/LTC4 metabolites rise.</p>
+                    <div class="tool-box">
+                        <label style="color: #2d3748;">Quick Validator</label>
+                        <div class="input-group">
+                            <div class="input-item">
+                                <label>Baseline (ng/ml)</label>
+                                <input type="number" id="baseTryptase" placeholder="e.g. 5">
+                            </div>
+                            <div class="input-item">
+                                <label>Acute (ng/ml)</label>
+                                <input type="number" id="acuteTryptase" placeholder="e.g. 8">
+                            </div>
+                        </div>
+                        <button class="calc-btn" onclick="checkTryptase()">Check Rise</button>
+                        <div id="calc-result"></div>
+                    </div>
+                </div>
+                <div class="card action">
+                    <div class="card-header">3. Response to Tx</div>
+                    <p class="badge green" style="margin-bottom:0.5rem">Required: Improvement</p>
+                    <p>Symptoms must improve with:</p>
+                    <ul class="list-group">
+                        <li>H1/H2 Antihistamines</li>
+                        <li>Leukotriene Receptor Antagonists</li>
+                        <li>Sodium Cromoglicate / Ketotifen</li>
+                        <li>Omalizumab (Anti-IgE)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card risk">
+                    <div class="card-header">🚩 Red Flags for Primary MCAS</div>
+                    <p style="margin-bottom: 1rem;">If present, investigate for <strong>Clonal Mast Cell Disorder (Mastocytosis)</strong>.</p>
+                    <ul class="list-group">
+                        <li><strong>Baseline Tryptase > 20 ng/ml</strong> (Highly suspicious for SM)</li>
+                        <li>Urticaria Pigmentosa (Maculopapular skin lesions)</li>
+                        <li>Hypotensive Syncope/Pre-syncope (Unprovoked)</li>
+                        <li>Recurrent unprovoked anaphylaxis</li>
+                    </ul>
+                </div>
+                <div class="card info">
+                    <div class="card-header">Investigations (If Suspected Primary)</div>
+                    <ul class="list-group">
+                        <li><strong>Peripheral Blood:</strong> KIT D816V mutation analysis (Highly sensitive PCR).</li>
+                        <li><strong>Bone Marrow Biopsy:</strong> Indicated if mutation found or tryptase >20.</li>
+                        <li><strong>Serum Tryptase:</strong> Use baseline >20ng/ml cut-off for systemic mastocytosis screening.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- TREATMENT TAB -->
+        <div id="treatment" class="section-content">
+            <div class="card info" style="margin-bottom: 1.5rem">
+                <div class="card-header">Stepwise Management Approach</div>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px; border-right: 1px solid #e2e8f0; padding-right: 1rem;">
+                        <strong>1. Trigger Avoidance</strong>
+                        <p class="text-muted">Identify and avoid IgE-dependent triggers (food, drugs, venoms) and physical stimuli (heat, pressure, exercise).</p>
+                    </div>
+                    <div style="flex: 2;">
+                        <strong>2. Pharmacotherapy (Step-up)</strong>
+                        <ul class="list-group">
+                            <li><strong>Baseline:</strong> H1 Antagonist + H2 Antagonist.</li>
+                            <li><strong>Add-on:</strong> Leukotriene Receptor Antagonist (e.g., Montelukast).</li>
+                            <li><strong>Add-on:</strong> Sodium Cromoglicate (Mast cell stabilizer).</li>
+                            <li><strong>Refractory:</strong> Omalizumab (Anti-IgE) or Cytoreductive therapy for clonal disease.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card action">
+                    <div class="card-header">Emergency Kit</div>
+                    <p>All patients should carry:</p>
+                    <ul class="list-group">
+                        <li>Adrenaline Autoinjector (x2)</li>
+                        <li>High-dose Non-sedating Antihistamine</li>
+                        <li>Corticosteroids (per protocol)</li>
+                    </ul>
+                </div>
+                <div class="card info">
+                    <div class="card-header">Long-term Specifics</div>
+                    <ul class="list-group">
+                        <li><strong>Venom Sensitivity:</strong> Lifelong immunotherapy recommended (e.g., Wasp/Bee).</li>
+                        <li><strong>Mixed MCAS:</strong> Treat both the allergy (secondary) and the clonal disease (primary).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- BACKGROUND TAB -->
+        <div id="background" class="section-content">
+            <div class="grid-2">
+                <div class="card info">
+                    <div class="card-header">Classification (Aetiology)</div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Cause</th>
+                                <th>Key Features</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Primary</strong></td>
+                                <td>Clonal Mast Cell Disease (e.g., Mastocytosis)</td>
+                                <td>KIT mutation, CD25+, often unprovoked.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Secondary</strong></td>
+                                <td>Normal Mast Cells + Trigger</td>
+                                <td>Most common. IgE-dependent allergy.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Idiopathic</strong></td>
+                                <td>Unknown cause</td>
+                                <td>Meets criteria, no clonality, no trigger found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card info">
+                    <div class="card-header">Pathophysiology</div>
+                    <p style="margin-bottom:1rem"><strong>Mechanism:</strong> Multi-organ systemic symptoms due to release of mediators from activated mast cells.</p>
+                    <ul class="list-group">
+                        <li><strong>Degranulation:</strong> Histamine, Tryptase.</li>
+                        <li><strong>Lipid Mediators:</strong> Leukotrienes, Prostaglandin D2.</li>
+                        <li><strong>Cytokines:</strong> IL-6, TNF.</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: #718096;">
+                        <strong>Note:</strong> Serum Tryptase is the most specific marker (Mast cells contain 500x more than basophils).
+                    </p>
+                </div>
+            </div>
+            
+            <div class="card risk">
+                <div class="card-header">Pitfalls & Overdiagnosis</div>
+                <p>MCAS is rare. Do not confuse with:</p>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                    <span class="badge blue">Chronic Urticaria</span>
+                    <span class="badge blue">Hereditary Alpha-Tryptasemia</span>
+                    <span class="badge blue">IBS</span>
+                    <span class="badge blue">Fibromyalgia</span>
+                    <span class="badge blue">Anxiety</span>
+                </div>
+                <p style="margin-top: 1rem; font-size: 0.9rem;">
+                    These conditions may have non-specific symptoms but do not meet the strict <em>Vienna Consensus</em> criteria (Recurrent systemic episodes + Lab rise + Treatment response).
+                </p>
+            </div>
+        </div>
+
+        <!-- CASES TAB -->
+        <div id="cases" class="section-content">
+            <div class="grid-2">
+                <div class="card info">
+                    <div class="card-header">Case #1: Mixed MCAS</div>
+                    <div style="font-size: 0.9rem; color: #4a5568;">
+                        <p><strong>Patient:</strong> 57-year-old man.</p>
+                        <p><strong>Event:</strong> Anaphylaxis to Wasp sting (Loss of consciousness, BP 65 mmHg).</p>
+                        <p><strong>Labs:</strong> Acute Tryptase 45, Baseline 16. Positive Wasp IgE.</p>
+                        <p><strong>Workup:</strong> KIT D816V mutation detected. Bone marrow confirmed Indolent Systemic Mastocytosis.</p>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: #ebf8ff; border-radius: 4px;">
+                            <strong>Diagnosis:</strong> Mixed Primary (Mastocytosis) + Secondary (Venom Allergy).<br>
+                            <strong>Action:</strong> Venom-specific immunotherapy.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card info">
+                    <div class="card-header">Case #2: Idiopathic MCAS</div>
+                    <div style="font-size: 0.9rem; color: #4a5568;">
+                        <p><strong>Patient:</strong> 33-year-old woman.</p>
+                        <p><strong>History:</strong> Recurrent anaphylaxis since age 8 (17 episodes total). 15 involved syncope.</p>
+                        <p><strong>Labs:</strong> Baseline Tryptase 2.5-3.5. Acute Episode Tryptase 11-12.</p>
+                        <p><strong>Workup:</strong> No IgE allergies found. Bone marrow negative for clonality.</p>
+                        <div style="margin-top: 1rem; padding: 0.5rem; background: #f0fff4; border-radius: 4px;">
+                            <strong>Diagnosis:</strong> Idiopathic MCAS.<br>
+                            <strong>Action:</strong> High-dose Desloratadine (No anaphylaxis in 4 years follow-up).
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            // Remove active class from all buttons and contents
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.section-content').forEach(content => content.classList.remove('active'));
+
+            // Add active class to clicked button and corresponding content
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(tabId));
+            if(activeBtn) activeBtn.classList.add('active');
+            
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // Tryptase Calculator Logic
+        function checkTryptase() {
+            const baseline = parseFloat(document.getElementById('baseTryptase').value);
+            const acute = parseFloat(document.getElementById('acuteTryptase').value);
+            const resultDiv = document.getElementById('calc-result');
+
+            if (isNaN(baseline) || isNaN(acute)) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result-fail';
+                resultDiv.innerText = "Please enter valid numbers for both baseline and acute levels.";
+                return;
+            }
+
+            // Vienna Formula: 20% above baseline + 2 ng/ml
+            // Calculation: (Baseline * 1.2) + 2
+            const threshold = (baseline * 1.2) + 2;
+            const rise = acute - baseline;
+
+            resultDiv.style.display = 'block';
+            
+            if (acute >= threshold) {
+                resultDiv.className = 'result-pass';
+                resultDiv.innerHTML = `✅ <strong>Criteria Met.</strong> Rise of ${rise.toFixed(1)} ng/ml meets the Vienna consensus threshold (> ${(baseline*1.2 + 2).toFixed(1)} ng/ml).`;
+            } else {
+                resultDiv.className = 'result-fail';
+                resultDiv.innerHTML = `❌ <strong>Criteria Not Met.</strong> Acute level must be > ${(threshold).toFixed(1)} ng/ml. Current difference is ${rise.toFixed(1)} ng/ml.`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pitted Keratolysis - Interactive Clinical Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            margin-left: 280px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 260px;
+            height: 100vh;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .progress-sidebar h3 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f7fafc;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #e2e8f0;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: #e6fffa;
+            border-left-color: #4fd1c7;
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            background: #f0fff4;
+            border-left-color: #48bb78;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 0.9em;
+            color: white;
+        }
+
+        .assessment-icon { background: #4299e1; }
+        .diagnosis-icon { background: #9f7aea; }
+        .treatment-icon { background: #f56565; }
+        .followup-icon { background: #48bb78; }
+
+        .section-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--section-color);
+        }
+
+        .section-card.assessment {
+            --section-color: #4299e1;
+            animation-delay: 0.1s;
+        }
+
+        .section-card.diagnosis {
+            --section-color: #9f7aea;
+            animation-delay: 0.2s;
+        }
+
+        .section-card.treatment {
+            --section-color: #f56565;
+            animation-delay: 0.3s;
+        }
+
+        .section-card.followup {
+            --section-color: #48bb78;
+            animation-delay: 0.4s;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .section-header:hover {
+            transform: translateX(10px);
+        }
+
+        .section-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            color: white;
+            margin-right: 20px;
+            background: var(--section-color);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            flex: 1;
+        }
+
+        .section-title h2 {
+            color: #2d3748;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .section-title p {
+            color: #718096;
+            font-size: 0.95em;
+        }
+
+        .expand-icon {
+            font-size: 1.2em;
+            color: #a0aec0;
+            transition: transform 0.3s ease;
+        }
+
+        .section-header.collapsed .expand-icon {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+            padding: 0 !important;
+        }
+
+        .subsection {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border-left: 4px solid #e2e8f0;
+        }
+
+        .subsection h3 {
+            color: #4a5568;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2em;
+        }
+
+        .subsection h3 i {
+            color: var(--section-color);
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .risk-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f56565;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .risk-item:hover {
+            transform: translateY(-2px);
+        }
+
+        .risk-item.occupation {
+            border-left-color: #ed8936;
+        }
+
+        .risk-item.clinical {
+            border-left-color: #38b2ac;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background: var(--section-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .badge-red {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .badge-amber {
+            background: #fef5e7;
+            color: #d69e2e;
+        }
+
+        .badge-green {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .diagnosis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .diagnosis-method {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .diagnosis-method:hover {
+            border-color: var(--section-color);
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .diagnosis-method h4 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .treatment-plan {
+            background: linear-gradient(135deg, #fff5f5 0%, #fff0f0 100%);
+            border: 2px solid #fed7d7;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .treatment-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .treatment-step {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #f56565;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .treatment-step h4 {
+            color: #c53030;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .medication-list {
+            list-style: none;
+            margin-top: 10px;
+        }
+
+        .medication-list li {
+            background: white;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border-left: 3px solid #e53e3e;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dosage {
+            font-size: 0.85em;
+            color: #718096;
+            background: #f7fafc;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .alert-box {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .alert-box i {
+            color: #e53e3e;
+            margin-top: 2px;
+        }
+
+        .alert-box.amber {
+            background: #fffaf0;
+            border-color: #fbd38d;
+        }
+
+        .alert-box.amber i {
+            color: #ed8936;
+        }
+
+        .alert-box.green {
+            background: #f0fff4;
+            border-color: #9ae6b4;
+        }
+
+        .alert-box.green i {
+            color: #48bb78;
+        }
+
+        .differential-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .differential-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-top: 3px solid #a0aec0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .differential-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .differential-item i {
+            font-size: 2em;
+            color: #718096;
+            margin-bottom: 10px;
+        }
+
+        .prognosis-box {
+            background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+            border: 2px solid #9ae6b4;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .prognosis-box h3 {
+            color: #276749;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .timeline {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .timeline-item {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .timeline-item .time {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #48bb78;
+            margin-bottom: 5px;
+        }
+
+        .timeline-item .label {
+            font-size: 0.9em;
+            color: #718096;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 15px;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+
+            .diagnosis-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .section-card {
+                padding: 20px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .section-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="progress-sidebar">
+            <h3><i class="fas fa-map-marked-alt"></i> Algorithm Progress</h3>
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon assessment-icon">1</div>
+                <div>
+                    <strong>Assessment</strong>
+                    <br><small>Clinical Features & Risks</small>
+                </div>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon diagnosis-icon">2</div>
+                <div>
+                    <strong>Diagnosis</strong>
+                    <br><small>Confirm & Differentiate</small>
+                </div>
+            </div>
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon treatment-icon">3</div>
+                <div>
+                    <strong>Treatment</strong>
+                    <br><small>Management Plan</small>
+                </div>
+            </div>
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon followup-icon">4</div>
+                <div>
+                    <strong>Follow-up</strong>
+                    <br><small>Prognosis & Prevention</small>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-user-md"></i> Pitted Keratolysis Clinical Algorithm</h1>
+                <p>Interactive decision support tool for diagnosis and management of pitted keratolysis</p>
+                <div style="margin-top: 15px;">
+                    <span class="badge badge-red"><i class="fas fa-exclamation-triangle"></i> Superficial bacterial infection</span>
+                    <span class="badge badge-amber"><i class="fas fa-shoe-prints"></i> Pressure-bearing areas</span>
+                    <span class="badge badge-green"><i class="fas fa-check-circle"></i> Excellent prognosis</span>
+                </div>
+            </div>
+
+            <!-- Assessment Section -->
+            <div class="section-card assessment" id="assessment-section">
+                <div class="section-header" data-target="assessment-content">
+                    <div class="section-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Clinical Assessment</h2>
+                        <p>Identify characteristic features and risk factors</p>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-up"></i>
+                    </div>
+                </div>
+                <div class="section-content" id="assessment-content">
+                    <div class="subsection">
+                        <h3><i class="fas fa-question-circle"></i> Key Clinical Features</h3>
+                        <div class="alert-box">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Classic Triad:</strong> Crater-like pits + malodour + hyperhidrosis on pressure-bearing areas of soles
+                            </div>
+                        </div>
+                        <ul class="feature-list">
+                            <li><strong>Pits on stratum corneum:</strong> 1–3mm diameter, may coalesce into irregular erosions/sulci</li>
+                            <li><strong>Appearance:</strong> Brown pits (dirty feet appearance), amplified when wet</li>
+                            <li><strong>Texture:</strong> Slimy skin surface</li>
+                            <li><strong>Odor:</strong> Characteristic malodour from sulfur compounds (thiols, sulphides, thioesters)</li>
+                            <li><strong>Symptoms:</strong> Often asymptomatic; may have pruritus or pain on walking when symptomatic</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-map-marker-alt"></i> Common Locations</h3>
+                        <div class="risk-grid">
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-shoe-prints"></i> Pressure-Bearing Areas</h4>
+                                <p>Ball of foot, heels (bilateral presentation)</p>
+                                <span class="badge badge-amber">Most Common</span>
+                            </div>
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-shoe-prints"></i> Interdigital Spaces</h4>
+                                <p>Between toes, toe surfaces</p>
+                                <span class="badge badge-green">Common</span>
+                            </div>
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-hand-paper"></i> Palms</h4>
+                                <p>Rare, reported in rice paddy farmers</p>
+                                <span class="badge badge-red">Rare</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-users"></i> At-Risk Populations</h3>
+                        <div class="risk-grid">
+                            <div class="risk-item occupation">
+                                <h4><i class="fas fa-running"></i> Athletes</h4>
+                                <p>Prolonged footwear use, sweating</p>
+                            </div>
+                            <div class="risk-item occupation">
+                                <h4><i class="fas fa-hard-hat"></i> Industrial Workers</h4>
+                                <p>Occlusive footwear, prolonged standing</p>
+                            </div>
+                            <div class="risk-item occupation">
+                                <h4><i class="fas fa-user-tie"></i> Military Personnel</h4>
+                                <p>Boots, hot environments</p>
+                            </div>
+                            <div class="risk-item occupation">
+                                <h4><i class="fas fa-anchor"></i> Sailors & Fishermen</h4>
+                                <p>Moist conditions, rubber boots</p>
+                            </div>
+                            <div class="risk-item occupation">
+                                <h4><i class="fas fa-seedling"></i> Farmers</h4>
+                                <p>Paddy field workers, constant moisture</p>
+                            </div>
+                            <div class="risk-item occupation">
+                                <h4><i class="fas fa-user-nurse"></i> Miners</h4>
+                                <p>Warm, humid underground conditions</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Risk Factors</h3>
+                        <div class="risk-grid">
+                            <div class="risk-item">
+                                <h4><i class="fas fa-tint"></i> Hyperhidrosis</h4>
+                                <p>Excessive sweating of hands/feet</p>
+                                <span class="badge badge-red">Major Factor</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-layer-group"></i> Keratoderma</h4>
+                                <p>Thickened palms/soles</p>
+                                <span class="badge badge-amber">Contributing</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-shoe-prints"></i> Occlusive Footwear</h4>
+                                <p>Vinyl, rubber boots</p>
+                                <span class="badge badge-amber">Environmental</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-tint"></i> Poor Foot Hygiene</h4>
+                                <p>Infrequent washing, damp socks</p>
+                                <span class="badge badge-red">Modifiable</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-thermometer-full"></i> Hot & Humid Climate</h4>
+                                <p>Seasonal variation</p>
+                                <span class="badge badge-amber">Environmental</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-weight"></i> Obesity</h4>
+                                <p>Increased pressure and sweating</p>
+                                <span class="badge badge-amber">Systemic</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-syringe"></i> Diabetes Mellitus</h4>
+                                <p>Immunocompromise, hyperhidrosis</p>
+                                <span class="badge badge-red">High Risk</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-shield-alt"></i> Immunodeficiency</h4>
+                                <p>Reduced bacterial clearance</p>
+                                <span class="badge badge-red">High Risk</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-bacteria"></i> Causative Organisms</h3>
+                        <div class="alert-box amber">
+                            <i class="fas fa-microscope"></i>
+                            <div>
+                                <strong>Pathophysiology:</strong> Bacteria produce protease enzymes that destroy stratum corneum, creating pits. Odor from sulfur compounds (thiols, sulphides, thioesters).
+                            </div>
+                        </div>
+                        <div class="risk-grid">
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-bug"></i> Corynebacteria</h4>
+                                <p>Most common causative genus</p>
+                                <span class="badge badge-red">Primary</span>
+                            </div>
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-bug"></i> Dermatophilus congolensis</h4>
+                                <p>Filamentous bacteria</p>
+                                <span class="badge badge-amber">Common</span>
+                            </div>
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-bug"></i> Kytococcus sedentarius</h4>
+                                <p>Formerly Micrococcus</p>
+                                <span class="badge badge-amber">Common</span>
+                            </div>
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-bug"></i> Actinomyces</h4>
+                                <p>Gram-positive filamentous</p>
+                                <span class="badge badge-green">Occasional</span>
+                            </div>
+                            <div class="risk-item clinical">
+                                <h4><i class="fas fa-bug"></i> Streptomyces</h4>
+                                <p>Soil bacteria</p>
+                                <span class="badge badge-green">Occasional</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Section -->
+            <div class="section-card diagnosis" id="diagnosis-section">
+                <div class="section-header collapsed" data-target="diagnosis-content">
+                    <div class="section-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Diagnosis & Differential</h2>
+                        <p>Confirm diagnosis and rule out mimics</p>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-up"></i>
+                    </div>
+                </div>
+                <div class="section-content collapsed" id="diagnosis-content">
+                    <div class="subsection">
+                        <h3><i class="fas fa-eye"></i> Clinical Diagnosis</h3>
+                        <div class="alert-box green">
+                            <i class="fas fa-check-circle"></i>
+                            <div>
+                                <strong>Primary Diagnostic Method:</strong> Clinical diagnosis based on distinctive appearance, location, and malodour. No mortality associated.
+                            </div>
+                        </div>
+                        <div class="diagnosis-grid">
+                            <div class="diagnosis-method">
+                                <h4><i class="fas fa-eye"></i> Visual Examination</h4>
+                                <ul class="feature-list">
+                                    <li>Characteristic pits (1-3mm)</li>
+                                    <li>Pressure-bearing areas</li>
+                                    <li>Bilateral presentation</li>
+                                    <li>Amplified when feet wet</li>
+                                </ul>
+                                <span class="badge badge-green">First-line</span>
+                            </div>
+                            <div class="diagnosis-method">
+                                <h4><i class="fas fa-wind"></i> Odor Assessment</h4>
+                                <ul class="feature-list">
+                                    <li>Characteristic malodour</li>
+                                    <li>Sulfur compounds (thiols)</li>
+                                    <li>Persistent despite washing</li>
+                                    <li>Guides diagnosis</li>
+                                </ul>
+                                <span class="badge badge-green">Supportive</span>
+                            </div>
+                            <div class="diagnosis-method">
+                                <h4><i class="fas fa-lightbulb"></i> Wood Lamp Examination</h4>
+                                <ul class="feature-list">
+                                    <li>Coral red fluorescence</li>
+                                    <li>Indicates co-existing erythrasma</li>
+                                    <li>Corynebacterial triad assessment</li>
+                                </ul>
+                                <span class="badge badge-amber">Adjunctive</span>
+                            </div>
+                            <div class="diagnosis-method">
+                                <h4><i class="fas fa-search"></i> Skin Scrapings</h4>
+                                <ul class="feature-list">
+                                    <li>Rule out fungal infection</li>
+                                    <li>KOH preparation</li>
+                                    <li>Exclude tinea pedis</li>
+                                </ul>
+                                <span class="badge badge-amber">Exclusion</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-vial"></i> Confirmatory Investigations</h3>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-microscope"></i> Skin Biopsy</h4>
+                                <p><strong>When:</strong> Diagnostic uncertainty only</p>
+                                <ul class="feature-list">
+                                    <li>Pits limited to stratum corneum</li>
+                                    <li>Coccoid or filamentous forms on stain</li>
+                                    <li>Microorganisms visible</li>
+                                </ul>
+                                <span class="badge badge-amber">Rarely needed</span>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-flask"></i> bacterial Culture</h4>
+                                <p><strong>When:</strong> Refractory cases, research</p>
+                                <ul class="feature-list">
+                                    <li>Identify causative organism</li>
+                                    <li>Guide antibiotic selection</li>
+                                    <li>Not routine</li>
+                                </ul>
+                                <span class="badge badge-green">Optional</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-search"></i> Differential Diagnosis</h3>
+                        <div class="differential-grid">
+                            <div class="differential-item">
+                                <i class="fas fa-viruses"></i>
+                                <h4>Tinea Pedis</h4>
+                                <p>Fungal infection, scaling, pruritus</p>
+                                <span class="badge badge-amber">Common Mimic</span>
+                            </div>
+                            <div class="differential-item">
+                                <i class="fas fa-dot-circle"></i>
+                                <h4>Plantar Warts</h4>
+                                <p>HPV, disrupted skin lines</p>
+                                <span class="badge badge-green">Differentiate</span>
+                            </div>
+                            <div class="differential-item">
+                                <i class="fas fa-layer-group"></i>
+                                <h4>Keratolysis Exfoliativa</h4>
+                                <p>Superficial peeling, no odor</p>
+                                <span class="badge badge-green">Benign</span>
+                            </div>
+                            <div class="differential-item">
+                                <i class="fas fa-dna"></i>
+                                <h4>Basal Cell Nevus Syndrome</h4>
+                                <p>Genetic, pits on palms/soles</p>
+                                <span class="badge badge-red">Systemic</span>
+                            </div>
+                            <div class="differential-item">
+                                <i class="fas fa-hand-paper"></i>
+                                <h4>Focal Acral Hyperkeratosis</h4>
+                                <p>Localized hyperkeratotic papules</p>
+                                <span class="badge badge-green">Rare</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Associated Conditions (Corynebacterial Triad)</h3>
+                        <div class="alert-box amber">
+                            <i class="fas fa-triangle-exclamation"></i>
+                            <div>
+                                <strong>Check Intertriginous Areas:</strong> Examine axilla and groin for co-existing corynebacterial infections (erythrasma, trichomycosis axillaris)
+                            </div>
+                        </div>
+                        <div class="risk-grid">
+                            <div class="risk-item">
+                                <h4><i class="fas fa-radiation"></i> Erythrasma</h4>
+                                <p>Coral red fluorescence on Wood lamp</p>
+                                <span class="badge badge-amber">Check Axilla/Groin</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-hair"></i> Trichomycosis Axillaris</h4>
+                                <p>Bacterial colonization of axillary hair</p>
+                                <span class="badge badge-amber">Check Axilla</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Section -->
+            <div class="section-card treatment" id="treatment-section">
+                <div class="section-header collapsed" data-target="treatment-content">
+                    <div class="section-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Treatment Management</h2>
+                        <p>Evidence-based therapeutic approach</p>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-up"></i>
+                    </div>
+                </div>
+                <div class="section-content collapsed" id="treatment-content">
+                    <div class="treatment-plan">
+                        <h3><i class="fas fa-cogs"></i> Comprehensive Treatment Strategy</h3>
+                        <p>Success depends on combination of <strong>foot hygiene + antibiotics/antiseptics + moisture control</strong></p>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-soap"></i> General Measures (Foundation of Treatment)</h3>
+                        <div class="alert-box green">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Essential First Step:</strong> Hygiene measures alone may resolve mild cases and prevent recurrence
+                            </div>
+                        </div>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-shoe-prints"></i> Footwear Modifications</h4>
+                                <ul class="feature-list">
+                                    <li>Avoid prolonged occlusive footwear (vinyl, rubber)</li>
+                                    <li>Wear properly fitted shoes to reduce friction</li>
+                                    <li>Rotate dry insoles daily</li>
+                                    <li>Never share footwear</li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-socks"></i> Sock Management</h4>
+                                <ul class="feature-list">
+                                    <li>Wear absorbent cotton socks</li>
+                                    <li>Change socks frequently (at least daily)</li>
+                                    <li>Wash socks at 60°C with soap to eliminate bacteria</li>
+                                    <li>Ensure feet are dry before wearing socks</li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-shower"></i> Foot Hygiene</h4>
+                                <ul class="feature-list">
+                                    <li>Wash feet twice daily with antiseptic cleanser</li>
+                                    <li>Dry thoroughly between toes</li>
+                                    <li>Apply antiperspirant to feet regularly</li>
+                                    <li>Consider antifungal powder for moisture control</li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-tint"></i> Hyperhidrosis Management</h4>
+                                <ul class="feature-list">
+                                    <li>Address underlying excessive sweating</li>
+                                    <li>Consider aluminum chloride antiperspirants</li>
+                                    <li>Botulinum toxin for severe cases (rarely needed)</li>
+                                    <li>Weight management if obesity-related</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-syringe"></i> Specific Treatment - Topical Antibiotics</h3>
+                        <div class="alert-box">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <strong>Duration:</strong> Apply twice daily for 2–4 weeks. Continue for at least 10 days after clearance.
+                            </div>
+                        </div>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-capsules"></i> First-Line Options</h4>
+                                <ul class="medication-list">
+                                    <li>
+                                        <span>Clindamycin 1% solution</span>
+                                        <span class="dosage">Twice daily</span>
+                                    </li>
+                                    <li>
+                                        <span>Erythromycin 2% solution</span>
+                                        <span class="dosage">Twice daily</span>
+                                    </li>
+                                    <li>
+                                        <span>Mupirocin 2% ointment</span>
+                                        <span class="dosage">Twice daily</span>
+                                    </li>
+                                    <li>
+                                        <span>Fusidic acid 2% cream</span>
+                                        <span class="dosage">Twice daily</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-flask"></i> Adjunctive Agents</h4>
+                                <ul class="feature-list">
+                                    <li><strong>Benzoyl peroxide 5-10%:</strong> Antimicrobial + keratolytic</li>
+                                    <li><strong>Can be used alone</strong> or combined with topical antibiotics</li>
+                                    <li><strong>May cause irritation</strong> - start with lower concentration</li>
+                                    <li><strong>Stains fabrics</strong> - caution with clothing</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-tablets"></i> Oral Antibiotics (Refractory Cases)</h3>
+                        <div class="alert-box amber">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div>
+                                <strong>Reserved for:</strong> Severe, extensive, or treatment-resistant cases despite optimal topical therapy and hygiene measures
+                            </div>
+                        </div>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-pills"></i> First-Line Oral Options</h4>
+                                <ul class="medication-list">
+                                    <li>
+                                        <span>Clindamycin</span>
+                                        <span class="dosage">150-300mg Q6H</span>
+                                    </li>
+                                    <li>
+                                        <span>Erythromycin</span>
+                                        <span class="dosage">250-500mg Q6H</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-pills"></i> Alternative Options</h4>
+                                <ul class="medication-list">
+                                    <li>
+                                        <span>Tetracyclines (doxycycline)</span>
+                                        <span class="dosage">100mg BID</span>
+                                    </li>
+                                    <li>
+                                        <span>Duration: 10-14 days minimum</span>
+                                        <span class="dosage">Extended if needed</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-triangle-exclamation"></i> Treatment Failure Considerations</h3>
+                        <div class="alert-box red">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <div>
+                                <strong>If no improvement after 2 weeks:</strong> Review diagnosis, check compliance with hygiene measures, consider resistance, evaluate for differential diagnoses
+                            </div>
+                        </div>
+                        <div class="risk-grid">
+                            <div class="risk-item">
+                                <h4><i class="fas fa-clipboard-check"></i> Compliance Check</h4>
+                                <p>Verify hygiene measures are being followed consistently</p>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-shoe-prints"></i> Footwear Review</h4>
+                                <p>Assess if occlusive shoes still being worn</p>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-bug"></i> Resistance Pattern</h4>
+                                <p>Consider culture and sensitivity testing</p>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-search"></i> Re-evaluate Diagnosis</h4>
+                                <p>Rule out tinea pedis, psoriasis</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Section -->
+            <div class="section-card followup" id="followup-section">
+                <div class="section-header collapsed" data-target="followup-content">
+                    <div class="section-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Follow-up & Prognosis</h2>
+                        <p>Expected outcomes and prevention strategies</p>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-up"></i>
+                    </div>
+                </div>
+                <div class="section-content collapsed" id="followup-content">
+                    <div class="prognosis-box">
+                        <h3><i class="fas fa-thumbs-up"></i> Excellent Prognosis</h3>
+                        <p>Pitted keratolysis is highly treatable with appropriate therapy</p>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-clock"></i> Expected Timeline</h3>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="time">2-4 weeks</div>
+                                <div class="label">Resolution with treatment</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="time">2-4 days</div>
+                                <div class="label">Odor improvement</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="time">1-2 weeks</div>
+                                <div class="label">Visible pit reduction</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="time">4-6 weeks</div>
+                                <div class="label">Complete clearance</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-route"></i> Disease Course Scenarios</h3>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-pills"></i> With Treatment</h4>
+                                <ul class="feature-list">
+                                    <li>Excellent response rate</li>
+                                    <li>Resolves in 2-4 weeks typically</li>
+                                    <li>Odor improves within days</li>
+                                    <li>Pits gradually flatten and disappear</li>
+                                </ul>
+                                <span class="badge badge-green">Expected Outcome</span>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-infinity"></i> Without Treatment</h4>
+                                <ul class="feature-list">
+                                    <li>May persist for years</li>
+                                    <li>Spontaneous remission possible</li>
+                                    <li>Exacerbations in hot/humid weather</li>
+                                    <li>Chronic malodour and discomfort</li>
+                                </ul>
+                                <span class="badge badge-amber">Chronic Course</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-heart-broken"></i> Potential Complications</h3>
+                        <div class="alert-box amber">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div>
+                                <strong>No Mortality:</strong> Pitted keratolysis is benign but can cause significant quality of life issues
+                            </div>
+                        </div>
+                        <div class="risk-grid">
+                            <div class="risk-item">
+                                <h4><i class="fas fa-brain"></i> Psychosocial Impact</h4>
+                                <p>Foot odor causing social embarrassment, anxiety</p>
+                                <span class="badge badge-amber">Common Issue</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-walking"></i> Functional Limitation</h4>
+                                <p>Pain on walking when symptomatic pits present</p>
+                                <span class="badge badge-green">Temporary</span>
+                            </div>
+                            <div class="risk-item">
+                                <h4><i class="fas fa-recycle"></i> Recurrence</h4>
+                                <p>Common if hygiene measures not maintained</p>
+                                <span class="badge badge-amber">Preventable</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-shield-alt"></i> Prevention Strategies</h3>
+                        <div class="treatment-steps">
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-soap"></i> Hygiene Maintenance</h4>
+                                <ul class="feature-list">
+                                    <li>Continue foot hygiene measures indefinitely</li>
+                                    <li>Regular antiperspirant use</li>
+                                    <li>Daily sock changes</li>
+                                    <li>Weekly shoe rotation and drying</li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-tint"></i> Moisture Control</h4>
+                                <ul class="feature-list">
+                                    <li>Manage hyperhidrosis proactively</li>
+                                    <li>Use moisture-wicking socks</li>
+                                    <li>Foot powder application</li>
+                                    <li>Shoe ventilation</li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-user-md"></i> Regular Monitoring</h4>
+                                <ul class="feature-list">
+                                    <li>Self-examination weekly</li>
+                                    <li>Early treatment of recurrence</li>
+                                    <li>Annual foot health check if high-risk</li>
+                                    <li>Prompt treatment of intercurrent infections</li>
+                                </ul>
+                            </div>
+                            <div class="treatment-step">
+                                <h4><i class="fas fa-shoe-prints"></i> Occupational Measures</h4>
+                                <ul class="feature-list">
+                                    <li>Minimize occlusive footwear duration</li>
+                                    <li>Use breathable work boots</li>
+                                    <li>Change socks during long shifts</li>
+                                    <li>Foot care education programs</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-stethoscope"></i> Follow-up Recommendations</h3>
+                        <div class="timeline">
+                            <div class="timeline-item">
+                                <div class="time">1 week</div>
+                                <div class="label">Initial review for treatment response</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="time">2-4 weeks</div>
+                                <div class="label">Treatment completion assessment</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="time">3 months</div>
+                                <div class="label">Recurrence check</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="time">6-12 months</div>
+                                <div class="label">Annual foot health review</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h3><i class="fas fa-user-friends"></i> Patient Education Points</h3>
+                        <div class="alert-box green">
+                            <i class="fas fa-info-circle"></i>
+                            <div>
+                                <strong>Key Messages:</strong> Benign condition, excellent prognosis, preventable with proper hygiene, not contagious under normal circumstances
+                            </div>
+                        </div>
+                        <ul class="feature-list">
+                            <li><strong>Reassurance:</strong> Condition is treatable and not serious</li>
+                            <li><strong>Hygiene importance:</strong> Prevention is better than cure</li>
+                            <li><strong>Patience:</strong> Takes 2-4 weeks to clear completely</li>
+                            <li><strong>Recurrence risk:</strong> Continue preventive measures long-term</li>
+                            <li><strong>When to return:</strong> If no improvement after 2 weeks, or early signs of recurrence</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Progress tracking and animation
+        class ClinicalAlgorithm {
+            constructor() {
+                this.sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                this.currentSection = 0;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.initProgressTracking();
+                this.initScrollAnimations();
+                this.updateProgressSidebar();
+            }
+
+            bindEvents() {
+                // Section expand/collapse
+                document.querySelectorAll('.section-header').forEach(header => {
+                    header.addEventListener('click', (e) => this.toggleSection(e));
+                });
+
+                // Progress sidebar navigation
+                document.querySelectorAll('.progress-item').forEach(item => {
+                    item.addEventListener('click', (e) => this.navigateToSection(e));
+                });
+
+                // Smooth scroll behavior
+                document.addEventListener('scroll', () => this.handleScroll());
+            }
+
+            toggleSection(e) {
+                const header = e.currentTarget;
+                const targetId = header.dataset.target;
+                const content = document.getElementById(targetId);
+                const icon = header.querySelector('.expand-icon i');
+
+                if (content.classList.contains('collapsed')) {
+                    // Expand section
+                    content.classList.remove('collapsed');
+                    header.classList.remove('collapsed');
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                    
+                    // Smooth scroll to section
+                    setTimeout(() => {
+                        header.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                } else {
+                    // Collapse section
+                    content.classList.add('collapsed');
+                    header.classList.add('collapsed');
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+
+                // Add animation effect
+                header.classList.add('pulse');
+                setTimeout(() => header.classList.remove('pulse'), 2000);
+            }
+
+            navigateToSection(e) {
+                const item = e.currentTarget;
+                const sectionName = item.dataset.section;
+                const section = document.getElementById(`${sectionName}-section`);
+                
+                if (section) {
+                    // Expand the target section if collapsed
+                    const content = section.querySelector('.section-content');
+                    const header = section.querySelector('.section-header');
+                    
+                    if (content.classList.contains('collapsed')) {
+                        this.toggleSection({ currentTarget: header });
+                    }
+                    
+                    // Smooth scroll to section
+                    setTimeout(() => {
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                    
+                    // Update active state
+                    this.currentSection = this.sections.indexOf(sectionName);
+                    this.updateProgressSidebar();
+                }
+            }
+
+            handleScroll() {
+                const scrollPosition = window.scrollY + 100;
+                let activeSection = 0;
+
+                this.sections.forEach((sectionName, index) => {
+                    const section = document.getElementById(`${sectionName}-section`);
+                    if (section) {
+                        const sectionTop = section.offsetTop;
+                        const sectionHeight = section.offsetHeight;
+                        
+                        if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                            activeSection = index;
+                        }
+                    }
+                });
+
+                if (activeSection !== this.currentSection) {
+                    this.currentSection = activeSection;
+                    this.updateProgressSidebar();
+                }
+            }
+
+            updateProgressSidebar() {
+                const progressItems = document.querySelectorAll('.progress-item');
+                
+                progressItems.forEach((item, index) => {
+                    item.classList.remove('active', 'completed');
+                    
+                    if (index < this.currentSection) {
+                        item.classList.add('completed');
+                    } else if (index === this.currentSection) {
+                        item.classList.add('active');
+                    }
+                });
+            }
+
+            initProgressTracking() {
+                // Mark first section as active
+                this.updateProgressSidebar();
+            }
+
+            initScrollAnimations() {
+                // Intersection Observer for fade-in animations
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('fade-in');
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                // Observe all subsections
+                document.querySelectorAll('.subsection').forEach(section => {
+                    observer.observe(section);
+                });
+            }
+
+            // Utility method to expand all sections
+            expandAll() {
+                document.querySelectorAll('.section-header.collapsed').forEach(header => {
+                    this.toggleSection({ currentTarget: header });
+                });
+            }
+
+            // Utility method to collapse all sections
+            collapseAll() {
+                document.querySelectorAll('.section-header:not(.collapsed)').forEach(header => {
+                    this.toggleSection({ currentTarget: header });
+                });
+            }
+
+            // Utility method to print algorithm
+            printAlgorithm() {
+                window.print();
+            }
+        }
+
+        // Initialize the algorithm when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            const algorithm = new ClinicalAlgorithm();
+            
+            // Add keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey) {
+                    switch(e.key) {
+                        case 'p':
+                            e.preventDefault();
+                            algorithm.printAlgorithm();
+                            break;
+                        case 'e':
+                            e.preventDefault();
+                            algorithm.expandAll();
+                            break;
+                        case 'c':
+                            e.preventDefault();
+                            algorithm.collapseAll();
+                            break;
+                    }
+                }
+            });
+
+            // Add hover effects to interactive elements
+            document.querySelectorAll('.risk-item, .differential-item, .treatment-step').forEach(item => {
+                item.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-3px) scale(1.02)';
+                });
+                
+                item.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Add tooltip functionality to badges
+            document.querySelectorAll('.badge').forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                });
+                
+                badge.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                    this.style.boxShadow = '0 2px 5px rgba(0,0,0,0.1)';
+                });
+            });
+
+            // Initialize tooltips for medication dosages
+            document.querySelectorAll('.dosage').forEach(dosage => {
+                dosage.addEventListener('click', function() {
+                    // Copy dosage to clipboard
+                    navigator.clipboard.writeText(this.textContent).then(() => {
+                        const originalText = this.textContent;
+                        this.textContent = 'Copied!';
+                        this.style.background = '#48bb78';
+                        this.style.color = 'white';
+                        
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                            this.style.background = '#f7fafc';
+                            this.style.color = '#718096';
+                        }, 1000);
+                    });
+                });
+            });
+
+            // Add swipe gestures for mobile navigation
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            document.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+            });
+
+            document.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const swipeThreshold = 50;
+                const diff = touchStartX - touchEndX;
+                
+                if (Math.abs(diff) > swipeThreshold) {
+                    if (diff > 0) {
+                        // Swipe left - next section
+                        if (algorithm.currentSection < algorithm.sections.length - 1) {
+                            const nextSection = document.getElementById(`${algorithm.sections[algorithm.currentSection + 1]}-section`);
+                            nextSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    } else {
+                        // Swipe right - previous section
+                        if (algorithm.currentSection > 0) {
+                            const prevSection = document.getElementById(`${algorithm.sections[algorithm.currentSection - 1]}-section`);
+                            prevSection.scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }
+                }
+            }
+
+            console.log('Pitted Keratolysis Clinical Algorithm initialized successfully');
+            console.log('Keyboard shortcuts: Ctrl+P (Print), Ctrl+E (Expand all), Ctrl+C (Collapse all)');
+        });
+
+        // Add print styles
+        const printStyles = `
+            @media print {
+                body { background: white; }
+                .container { flex-direction: column; }
+                .progress-sidebar { 
+                    position: relative; 
+                    width: 100%; 
+                    height: auto;
+                    background: white;
+                }
+                .main-content { margin-left: 0; }
+                .section-content { max-height: none !important; }
+                .section-header { page-break-inside: avoid; }
+                .section-card { page-break-inside: avoid; }
+                .expand-icon { display: none; }
+            }
+        `;
+        
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = printStyles;
+        document.head.appendChild(styleSheet);
+    </script>
+</body>
+</html>

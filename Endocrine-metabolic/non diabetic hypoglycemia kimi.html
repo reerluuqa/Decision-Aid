@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Non-Diabetic Hypoglycaemia - Clinical Decision Support</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Sticky Progress Sidebar */
+        .progress-sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .sidebar-header h2 {
+            color: #667eea;
+            font-size: 1.4rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header p {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border-left: 4px solid #ffd700;
+        }
+
+        .progress-item.completed {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .progress-icon {
+            font-size: 1.3rem;
+            margin-right: 0.75rem;
+            width: 24px;
+            text-align: center;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .progress-desc {
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .page-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        .page-header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .page-header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .severity-legend {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .severity-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .badge-red {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        .badge-amber {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffcc02;
+        }
+
+        .badge-green {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        /* Section Cards */
+        .section-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .section-header {
+            padding: 1.75rem 2rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .section-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .section-header.assessment {
+            background: linear-gradient(45deg, #42a5f5, #1e88e5);
+        }
+
+        .section-header.diagnosis {
+            background: linear-gradient(45deg, #ab47bc, #8e24aa);
+        }
+
+        .section-header.treatment {
+            background: linear-gradient(45deg, #66bb6a, #43a047);
+        }
+
+        .section-header.followup {
+            background: linear-gradient(45deg, #ffa726, #fb8c00);
+        }
+
+        .section-icon {
+            font-size: 2rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+
+        .section-title {
+            flex: 1;
+        }
+
+        .section-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .section-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .section-content.expanded {
+            max-height: 3000px;
+        }
+
+        .content-body {
+            padding: 2rem;
+        }
+
+        .subsection {
+            margin-bottom: 2rem;
+        }
+
+        .subsection h3 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.2rem;
+        }
+
+        .subsection h3 i {
+            font-size: 1.1rem;
+            color: #667eea;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-card h4 {
+            color: #667eea;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .info-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info-card li {
+            padding: 0.3rem 0;
+            border-bottom: 1px dashed #e0e0e0;
+            font-size: 0.9rem;
+        }
+
+        .info-card li:last-child {
+            border-bottom: none;
+        }
+
+        .info-card li i {
+            color: #667eea;
+            margin-right: 0.5rem;
+            width: 16px;
+        }
+
+        .algorithm-step {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .algorithm-step:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .step-title {
+            flex: 1;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .risk-factors-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .risk-column h4 {
+            color: #667eea;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .risk-column ul {
+            list-style: none;
+        }
+
+        .risk-column li {
+            padding: 0.4rem;
+            background: white;
+            margin-bottom: 0.5rem;
+            border-radius: 6px;
+            border-left: 3px solid;
+            font-size: 0.85rem;
+        }
+
+        .strong-risk li {
+            border-left-color: #c62828;
+            background: #ffebee;
+        }
+
+        .weak-risk li {
+            border-left-color: #ef6c00;
+            background: #fff3e0;
+        }
+
+        .diagnostic-criteria {
+            background: linear-gradient(45deg, #e3f2fd, #bbdefb);
+            border: 2px solid #90caf9;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .diagnostic-criteria h4 {
+            color: #1565c0;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .criteria-list {
+            list-style: none;
+            counter-reset: criteria-counter;
+        }
+
+        .criteria-list li {
+            counter-increment: criteria-counter;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            position: relative;
+            padding-left: 3rem;
+        }
+
+        .criteria-list li::before {
+            content: counter(criteria-counter);
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1565c0;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .expandable-item {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .expandable-header {
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s ease;
+        }
+
+        .expandable-header:hover {
+            background: #e3f2fd;
+        }
+
+        .expandable-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            padding: 0 1rem;
+        }
+
+        .expandable-content.expanded {
+            max-height: 500px;
+            padding: 0 1rem 1rem;
+        }
+
+        .treatment-algorithm {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .treatment-option {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .treatment-priority {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            height: fit-content;
+        }
+
+        .treatment-priority.first {
+            background: #4caf50;
+        }
+
+        .treatment-priority.second {
+            background: #ff9800;
+        }
+
+        .treatment-details {
+            flex: 1;
+            background: #f8f9fa;
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .complications-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .complication-card {
+            background: #f8f9fa;
+            padding: 1.25rem;
+            border-radius: 8px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .complication-card.seizure {
+            border-left-color: #c62828;
+        }
+
+        .complication-card.coma {
+            border-left-color: #c62828;
+        }
+
+        .complication-card.diabetes {
+            border-left-color: #4caf50;
+        }
+
+        .complication-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .likelihood-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .likelihood-low {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1.5rem;
+            }
+
+            .main-content {
+                padding: 1.5rem;
+            }
+
+            .risk-factors-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .severity-legend {
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-header h1 {
+                font-size: 1.8rem;
+                flex-direction: column;
+            }
+
+            .section-header {
+                padding: 1.25rem 1.5rem;
+            }
+
+            .content-body {
+                padding: 1.5rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <div class="sidebar-header">
+                <h2>Algorithm Progress</h2>
+                <p>BMJ Best Practice Guidelines<br>Sep 2024</p>
+            </div>
+            
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Assessment</div>
+                    <div class="progress-desc">History, examination & risk factors</div>
+                </div>
+            </div>
+
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon">
+                    <i class="fas fa-microscope"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Diagnosis</div>
+                    <div class="progress-desc">Investigations & differentials</div>
+                </div>
+            </div>
+
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon">
+                    <i class="fas fa-pills"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Treatment</div>
+                    <div class="progress-desc">Management algorithm</div>
+                </div>
+            </div>
+
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Follow-up</div>
+                    <div class="progress-desc">Monitoring & prognosis</div>
+                </div>
+            </div>
+
+            <div class="severity-legend" style="margin-top: 2rem; flex-direction: column; align-items: flex-start;">
+                <div class="legend-item">
+                    <span class="severity-badge badge-red">
+                        <i class="fas fa-exclamation-triangle"></i> Red
+                    </span>
+                    <span>Urgent referral/critical</span>
+                </div>
+                <div class="legend-item">
+                    <span class="severity-badge badge-amber">
+                        <i class="fas fa-exclamation-circle"></i> Amber
+                    </span>
+                    <span>Caution/intermediate</span>
+                </div>
+                <div class="legend-item">
+                    <span class="severity-badge badge-green">
+                        <i class="fas fa-check-circle"></i> Green
+                    </span>
+                    <span>Stable/routine</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <div class="page-header fade-in">
+                <h1>
+                    <i class="fas fa-notes-medical"></i>
+                    Non-Diabetic Hypoglycaemia
+                    <i class="fas fa-notes-medical"></i>
+                </h1>
+                <p class="subtitle">Interactive Clinical Decision Support Algorithm - BMJ Best Practice</p>
+                <p style="color: #666; font-size: 0.95rem;">Last updated: September 2024 | For adult patients without diabetes mellitus</p>
+            </div>
+
+            <!-- Assessment Section -->
+            <div class="section-card fade-in" id="assessment-section">
+                <div class="section-header assessment" onclick="toggleSection('assessment')">
+                    <div class="section-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Assessment</h2>
+                        <p>Comprehensive evaluation of symptoms, history, and risk factors</p>
+                    </div>
+                    <div class="expand-icon" id="assessment-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="section-content" id="assessment-content">
+                    <div class="content-body">
+                        <div class="subsection">
+                            <h3><i class="fas fa-stethoscope"></i> Whipple's Triad - Diagnostic Criteria</h3>
+                            <div class="diagnostic-criteria">
+                                <h4><i class="fas fa-clipboard-check"></i> True hypoglycaemia requires ALL three:</h4>
+                                <ol class="criteria-list">
+                                    <li>Hypoglycaemic symptoms present</li>
+                                    <li>Documented low serum glucose (&lt;3.3 mmol/L or &lt;60 mg/dL)</li>
+                                    <li>Symptoms resolve after raising glucose to normal</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-heartbeat"></i> Clinical Presentation</h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4><i class="fas fa-bolt"></i> Sympathoadrenal Symptoms</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Sweating (diaphoresis)</li>
+                                        <li><i class="fas fa-check"></i> Anxiety and tremor</li>
+                                        <li><i class="fas fa-check"></i> Nausea and palpitations</li>
+                                        <li><i class="fas fa-check"></i> Hunger sensation</li>
+                                        <li><i class="fas fa-check"></i> Generalised tingling</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Typically begins &lt;3.0 mmol/L
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-brain"></i> Neuroglycopenic Symptoms</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Blurred vision & dizziness</li>
+                                        <li><i class="fas fa-check"></i> Confusion & irritability</li>
+                                        <li><i class="fas fa-check"></i> Dysarthria & somnolence</li>
+                                        <li><i class="fas fa-check"></i> Seizures (severe)</li>
+                                        <li><i class="fas fa-check"></i> Focal neurological deficits</li>
+                                    </ul>
+                                    <span class="severity-badge badge-red">
+                                        <i class="fas fa-exclamation-triangle"></i> Typically occurs &lt;2.8 mmol/L
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-question-circle"></i> Key Diagnostic Factors</h3>
+                            <div class="expandable-item">
+                                <div class="expandable-header" onclick="toggleExpandable(this)">
+                                    <span><i class="fas fa-info-circle"></i> Important Clinical Clues</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="expandable-content">
+                                    <ul style="list-style: none; padding: 0;">
+                                        <li style="padding: 0.5rem; border-bottom: 1px dashed #e0e0e0;"><i class="fas fa-weight" style="color: #667eea; margin-right: 0.5rem;"></i> Unexplained weight gain may suggest insulinoma</li>
+                                        <li style="padding: 0.5rem; border-bottom: 1px dashed #e0e0e0;"><i class="fas fa-weight" style="color: #667eea; margin-right: 0.5rem;"></i> Weight loss may suggest adrenal insufficiency</li>
+                                        <li style="padding: 0.5rem; border-bottom: 1px dashed #e0e0e0;"><i class="fas fa-palette" style="color: #667eea; margin-right: 0.5rem;"></i> Hyperpigmentation suggests adrenal insufficiency</li>
+                                        <li style="padding: 0.5rem; border-bottom: 1px dashed #e0e0e0;"><i class="fas fa-ruler-vertical" style="color: #667eea; margin-right: 0.5rem;"></i> Short stature suggests growth hormone deficiency</li>
+                                        <li style="padding: 0.5rem;"><i class="fas fa-tint" style="color: #667eea; margin-right: 0.5rem;"></i> Hypotension suggests adrenal insufficiency</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Risk Factors</h3>
+                            <div class="risk-factors-grid">
+                                <div class="risk-column">
+                                    <h4><i class="fas fa-exclamation-triangle" style="color: #c62828;"></i> Strong Risk Factors</h4>
+                                    <ul class="strong-risk">
+                                        <li>Middle age (median 47 years)</li>
+                                        <li>Insulinoma (0.7-4 cases/million/year)</li>
+                                        <li>Exogenous insulin exposure</li>
+                                        <li>Sulfonylurea use</li>
+                                        <li>Bariatric surgery history</li>
+                                        <li>Critical illness/multi-organ failure</li>
+                                    </ul>
+                                </div>
+                                <div class="risk-column">
+                                    <h4><i class="fas fa-exclamation-circle" style="color: #ef6c00;"></i> Weak Risk Factors</h4>
+                                    <ul class="weak-risk">
+                                        <li>Female sex (59% predominance)</li>
+                                        <li>Heavy alcohol consumption</li>
+                                        <li>Liver or renal failure</li>
+                                        <li>Intense exercise</li>
+                                        <li>Mesenchymal tumors (sarcomas, fibromas)</li>
+                                        <li>Malnutrition/anorexia nervosa</li>
+                                        <li>Ackee fruit ingestion</li>
+                                        <li>Various medications (quinine, tramadol, PPIs, etc.)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-clock"></i> Temporal Relationships</h3>
+                            <div class="info-card">
+                                <h4><i class="fas fa-calendar-alt"></i> Timing of Symptoms</h4>
+                                <ul>
+                                    <li><i class="fas fa-sun"></i> <strong>Fasting state:</strong> Suggests insulinoma, IGF-II hypersecretion, or endocrine dysfunction</li>
+                                    <li><i class="fas fa-utensils"></i> <strong>Postprandial (1-2 hours):</strong> Suggests islet cell hypertrophy or nesidioblastosis</li>
+                                    <li><i class="fas fa-clock"></i> <strong>Late reactive (3-5 hours):</strong> May occur in prediabetes or pregnancy</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Section -->
+            <div class="section-card fade-in" id="diagnosis-section">
+                <div class="section-header diagnosis" onclick="toggleSection('diagnosis')">
+                    <div class="section-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Diagnosis</h2>
+                        <p>Investigation strategy and diagnostic confirmation</p>
+                    </div>
+                    <div class="expand-icon" id="diagnosis-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="section-content" id="diagnosis-content">
+                    <div class="content-body">
+                        <div class="subsection">
+                            <h3><i class="fas fa-tasks"></i> Immediate Investigations (When Symptoms Present)</h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4><i class="fas fa-vial"></i> Serum Glucose</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Laboratory measurement (NOT glucometer)</li>
+                                        <li><i class="fas fa-check"></i> Confirm &lt;3.3 mmol/L (&lt;60 mg/dL)</li>
+                                        <li><i class="fas fa-check"></i> If &lt;2.8 mmol/L, collect additional tests immediately</li>
+                                    </ul>
+                                    <span class="severity-badge badge-red">
+                                        <i class="fas fa-exclamation-triangle"></i> Critical
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-vial"></i> Serum Insulin & C-Peptide</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Insulin &gt;21 pmol/L (&gt;3 μU/mL)</li>
+                                        <li><i class="fas fa-check"></i> C-Peptide &gt;200 pmol/L</li>
+                                        <li><i class="fas fa-check"></i> Inappropriate elevation suggests insulinoma or sulfonylurea use</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Important
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-vial"></i> Beta-Hydroxybutyrate</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Excessive insulin inhibits ketogenesis</li>
+                                        <li><i class="fas fa-check"></i> Low levels (&lt;2.7 mmol/L) suggest insulinoma or IGF-II secretion</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Important
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-vial"></i> Additional Tests</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Sulfonylurea screen (urine or serum)</li>
+                                        <li><i class="fas fa-check"></i> Liver & renal function tests</li>
+                                        <li><i class="fas fa-check"></i> Cortisol, TSH (if endocrine suspected)</li>
+                                        <li><i class="fas fa-check"></i> Ethanol level (if indicated)</li>
+                                    </ul>
+                                    <span class="severity-badge badge-green">
+                                        <i class="fas fa-check-circle"></i> Standard
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-hourglass-half"></i> 48-72 Hour Fasting Test</h3>
+                            <div class="algorithm-step">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-title">Indication & Preparation</div>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Inpatient Only
+                                    </span>
+                                </div>
+                                <p><strong>Indicated when:</strong> Symptoms present but glucose &gt;2.8 mmol/L</p>
+                                <p><strong>Duration:</strong> Full 72-hour fast recommended (48-hour may miss insulinoma)</p>
+                                <p><strong>Preparation:</strong> Non-caloric, caffeine-free beverages allowed; encourage activity</p>
+                            </div>
+
+                            <div class="algorithm-step">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-title">Monitoring Protocol</div>
+                                </div>
+                                <ul>
+                                    <li>Check glucose every 6 hours initially</li>
+                                    <li>When fingerstick &lt;3.3 mmol/L: check hourly</li>
+                                    <li>Collect serum: glucose, insulin, C-peptide, proinsulin at each check</li>
+                                    <li>Test ends at: symptoms, glucose &lt;2.8 mmol/L, or 72 hours complete</li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-step">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-title">End-of-Test Actions</div>
+                                </div>
+                                <ul>
+                                    <li>Collect: sulfonylurea, beta-hydroxybutyrate, cortisol, HGH, ACTH</li>
+                                    <li>Administer glucagon 1 mg IM</li>
+                                    <li>Check glucose at 30 minutes</li>
+                                    <li>Allow patient to eat</li>
+                                    <li><strong>Positive test:</strong> Glucose increase &gt;1.4 mmol/L suggests insulin excess</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-search"></i> Imaging Studies</h3>
+                            <div class="expandable-item">
+                                <div class="expandable-header" onclick="toggleExpandable(this)">
+                                    <span><i class="fas fa-x-ray"></i> Imaging Sequence for Insulinoma</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="expandable-content">
+                                    <ol style="padding-left: 1.5rem; color: #667eea; font-weight: 600;">
+                                        <li style="margin-bottom: 0.75rem;"><span style="color: #333; font-weight: normal;">CT abdomen/pelvis with IV contrast</span></li>
+                                        <li style="margin-bottom: 0.75rem;"><span style="color: #333; font-weight: normal;">Transabdominal ultrasound (if CT negative)</span></li>
+                                        <li style="margin-bottom: 0.75rem;"><span style="color: #333; font-weight: normal;">Endoscopic ultrasound (if both negative)</span></li>
+                                        <li><span style="color: #333; font-weight: normal;">Octreotide nuclear scan (last resort)</span></li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <div class="expandable-item">
+                                <div class="expandable-header" onclick="toggleExpandable(this)">
+                                    <span><i class="fas fa-tumor"></i> IGF-II Secreting Tumors</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                                <div class="expandable-content">
+                                    <p>Large mesenchymal tumors are usually detectable on physical exam when they cause clinically significant hypoglycaemia.</p>
+                                    <p><strong>CT abdomen/pelvis with IV contrast:</strong> Primary imaging modality</p>
+                                    <p><strong>Tumor types:</strong> Sarcomas, fibromas, fibrosarcomas, renal cell carcinoma</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-not-equal"></i> Differential Diagnoses</h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4><i class="fas fa-utensils"></i> Idiopathic Postprandial Syndrome</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Symptoms after carbohydrate-rich meal</li>
+                                        <li><i class="fas fa-times"></i> Glucose &gt;3.3 mmol/L during symptoms</li>
+                                        <li><i class="fas fa-info"></i> 5-hour mixed meal test has poor sensitivity</li>
+                                    </ul>
+                                    <span class="severity-badge badge-green">
+                                        <i class="fas fa-check-circle"></i> Benign
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-atom"></i> Insulin Autoimmune Hypoglycaemia</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Extremely rare condition</li>
+                                        <li><i class="fas fa-check"></i> Usually spontaneously resolves</li>
+                                        <li><i class="fas fa-vial"></i> Test: Insulin antibodies & insulin receptor antibodies</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Rare
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-syringe"></i> Diabetic Hypoglycaemia</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> History of diabetes mellitus</li>
+                                        <li><i class="fas fa-vial"></i> OGTT: 2-hour glucose ≥11.1 mmol/L</li>
+                                        <li><i class="fas fa-info"></i> Clinical presentation similar to non-diabetic</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Exclude first
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-vial"></i> Alternative Tests</h3>
+                            <div class="info-card">
+                                <h4><i class="fas fa-flask"></i> Insulin Suppression Test</h4>
+                                <ul>
+                                    <li><i class="fas fa-check"></i> Administer insulin 0.4-0.6 units/kg IV after overnight fast</li>
+                                    <li><i class="fas fa-check"></i> Glucose should decline to &lt;3.3 mmol/L within 15-25 min</li>
+                                    <li><i class="fas fa-check"></i> Draw serum at intervals for glucose, C-peptide, cortisol, HGH</li>
+                                    <li><i class="fas fa-check"></i> Give 50 mL 50% dextrose IV at completion</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Section -->
+            <div class="section-card fade-in" id="treatment-section">
+                <div class="section-header treatment" onclick="toggleSection('treatment')">
+                    <div class="section-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Treatment</h2>
+                        <p>Management approach based on underlying aetiology</p>
+                    </div>
+                    <div class="expand-icon" id="treatment-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="section-content" id="treatment-content">
+                    <div class="content-body">
+                        <div class="subsection">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Universal Supportive Care</h3>
+                            <div class="diagnostic-criteria" style="background: linear-gradient(45deg, #fff3e0, #ffe0b2); border-color: #ffcc02;">
+                                <h4 style="color: #ef6c00;"><i class="fas fa-ambulance"></i> All Patients Require</h4>
+                                <p><strong>Glucose administration:</strong> D10 or D50 infusion, or glucagon injection</p>
+                                <p><strong>Monitoring:</strong> Frequent blood glucose checks until stable</p>
+                                <p><strong>Goal:</strong> Maintain glucose in normal range and prevent recurrence</p>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-route"></i> Treatment Algorithm by Aetiology</h3>
+                            
+                            <h4 style="color: #667eea; margin-bottom: 1rem;"><i class="fas fa-apple-alt"></i> Reactive Hypoglycaemia</h4>
+                            <div class="treatment-algorithm">
+                                <div class="treatment-option">
+                                    <div class="treatment-priority first">1st Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Dietary Changes</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>High protein, low carbohydrate diet</li>
+                                            <li>Frequent, smaller meals</li>
+                                            <li>High fiber diet or supplementation</li>
+                                        </ul>
+                                        <span class="severity-badge badge-green" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-check-circle"></i> Lifestyle Intervention
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-pills"></i> Medication/Toxin/Ethanol Exposure</h4>
+                            <div class="treatment-algorithm">
+                                <div class="treatment-option">
+                                    <div class="treatment-priority first">1st Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Supportive Care ± Psychiatric Evaluation</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Inpatient monitoring until substance cleared</li>
+                                            <li>Variable timeframe (prolonged with organ dysfunction)</li>
+                                            <li>Screen for intentional overdose</li>
+                                            <li>Psychiatric referral if suicidality present</li>
+                                        </ul>
+                                        <span class="severity-badge badge-red" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-exclamation-triangle"></i> May Require Commitment
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-weight"></i> Bariatric Surgery / Malnutrition</h4>
+                            <div class="treatment-algorithm">
+                                <div class="treatment-option">
+                                    <div class="treatment-priority first">1st Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Supportive Care + Specialist Referral</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Correct glucose deficiency</li>
+                                            <li>Endocrinology consultation</li>
+                                            <li>Gastrointestinal/dietary specialist</li>
+                                            <li>Eating disorder specialist if anorexia</li>
+                                        </ul>
+                                        <span class="severity-badge badge-amber" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-exclamation-circle"></i> Multidisciplinary
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-tumor"></i> Insulinoma</h4>
+                            <div class="treatment-algorithm">
+                                <div class="treatment-option">
+                                    <div class="treatment-priority first">1st Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Surgical Excision + Supportive Care</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Definitive treatment: surgical excision</li>
+                                            <li>Pre-op: Self-administered glucagon education</li>
+                                            <li>Post-op: Re-explore if events persist (missed lesion or metastases)</li>
+                                        </ul>
+                                        <span class="severity-badge badge-red" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-exclamation-triangle"></i> Urgent Surgical Referral
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="treatment-option">
+                                    <div class="treatment-priority second">2nd Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Medical Therapy (if surgery fails/contraindicated)</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li><strong>Diazoxide:</strong> 3-8 mg/kg/day PO in 2-3 doses (inhibits insulin secretion)</li>
+                                            <li><strong>Octreotide:</strong> 50 mcg SC 2-3 times daily (inhibits insulin secretion)</li>
+                                            <li><strong>Streptozocin:</strong> Consult for dosing (may destroy tumor)</li>
+                                        </ul>
+                                        <span class="severity-badge badge-amber" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-exclamation-circle"></i> Significant Side Effects
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="treatment-option">
+                                    <div class="treatment-priority" style="background: #e53935;">Metastatic</div>
+                                    <div class="treatment-details">
+                                        <strong>Focal Embolisation or Chemotherapy</strong>
+                                        <p style="margin-top: 0.5rem;">For rare malignant insulinoma with metastases</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-dna"></i> IGF-II Secreting Tumor</h4>
+                            <div class="treatment-algorithm">
+                                <div class="treatment-option">
+                                    <div class="treatment-priority first">1st Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Surgical Excision ± Chemotherapy/Radiotherapy</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Refer to surgeon for tumor excision</li>
+                                            <li>Pre-op: Glucose infusion or glucagon as needed</li>
+                                            <li>Consider tumor burden reduction therapies</li>
+                                        </ul>
+                                        <span class="severity-badge badge-red" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-exclamation-triangle"></i> Urgent Oncology Referral
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-organ"></i> Organ Failure / Sepsis / Endocrinopathy</h4>
+                            <div class="treatment-algorithm">
+                                <div class="treatment-option">
+                                    <div class="treatment-priority first">1st Line</div>
+                                    <div class="treatment-details">
+                                        <strong>Manage Underlying Condition + Supportive Care</strong>
+                                        <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                            <li>Focus on treating primary condition</li>
+                                            <li>Glucose infusion until condition resolves</li>
+                                            <li>Monitor organ function closely</li>
+                                        </ul>
+                                        <span class="severity-badge badge-red" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-exclamation-triangle"></i> ICU May Be Required
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-exclamation-circle"></i> Important Considerations</h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4><i class="fas fa-exclamation-triangle"></i> Medication Side Effects</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> <strong>Diazoxide:</strong> Oedema, hirsutism, hypotension with CCBs</li>
+                                        <li><i class="fas fa-check"></i> <strong>Octreotide:</strong> Inhibits TSH, GH, glucagon</li>
+                                        <li><i class="fas fa-check"></i> <strong>Streptozocin:</strong> May cause diabetes mellitus</li>
+                                    </ul>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-lightbulb"></i> Emerging Therapies</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> <strong>Verapamil:</strong> May inhibit insulin secretion (limited evidence)</li>
+                                        <li><i class="fas fa-check"></i> <strong>Phenytoin:</strong> May inhibit insulin secretion (limited evidence)</li>
+                                        <li><i class="fas fa-check"></i> <strong>Corticosteroids:</strong> Successful in some IGF-II tumor cases</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Limited Evidence
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-user"></i> Patient Education</h3>
+                            <div class="diagnostic-criteria" style="background: linear-gradient(45deg, #e8f5e9, #c8e6c9); border-color: #4caf50;">
+                                <h4 style="color: #2e7d32;"><i class="fas fa-comments"></i> Key Messages</h4>
+                                <ul style="list-style: none; padding: 0;">
+                                    <li style="padding: 0.5rem;"><i class="fas fa-check" style="color: #4caf50; margin-right: 0.5rem;"></i> Recognize early symptoms of hypoglycaemia</li>
+                                    <li style="padding: 0.5rem;"><i class="fas fa-check" style="color: #4caf50; margin-right: 0.5rem;"></i> Always carry fast-acting carbohydrates</li>
+                                    <li style="padding: 0.5rem;"><i class="fas fa-check" style="color: #4caf50; margin-right: 0.5rem;"></i> Seek prompt medical assessment if symptoms recur</li>
+                                    <li style="padding: 0.5rem;"><i class="fas fa-check" style="color: #4caf50; margin-right: 0.5rem;"></i> Wear medical alert identification</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Section -->
+            <div class="section-card fade-in" id="followup-section">
+                <div class="section-header followup" onclick="toggleSection('followup')">
+                    <div class="section-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Follow-up</h2>
+                        <p>Monitoring, complications, and long-term prognosis</p>
+                    </div>
+                    <div class="expand-icon" id="followup-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="section-content" id="followup-content">
+                    <div class="content-body">
+                        <div class="subsection">
+                            <h3><i class="fas fa-stethoscope"></i> Monitoring After Treatment</h3>
+                            <div class="info-grid">
+                                <div class="info-card">
+                                    <h4><i class="fas fa-user-md"></i> Post-Surgical Follow-up</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Wound healing assessment</li>
+                                        <li><i class="fas fa-check"></i> Monitor for postoperative complications</li>
+                                        <li><i class="fas fa-check"></i> Frequency per surgeon discretion</li>
+                                        <li><i class="fas fa-check"></i> Glucose monitoring until stable</li>
+                                    </ul>
+                                    <span class="severity-badge badge-green">
+                                        <i class="fas fa-check-circle"></i> Routine
+                                    </span>
+                                </div>
+                                <div class="info-card">
+                                    <h4><i class="fas fa-pills"></i> Medically Managed Cases</h4>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> Frequent follow-up for medication titration</li>
+                                        <li><i class="fas fa-check"></i> Monitor for side effects</li>
+                                        <li><i class="fas fa-check"></i> Assess symptom control</li>
+                                        <li><i class="fas fa-check"></i> Continue until hypoglycaemia resolves</li>
+                                    </ul>
+                                    <span class="severity-badge badge-amber">
+                                        <i class="fas fa-exclamation-circle"></i> Close Monitoring
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Potential Complications</h3>
+                            <div class="complications-grid">
+                                <div class="complication-card seizure">
+                                    <h4><i class="fas fa-bolt"></i> Seizure</h4>
+                                    <p>Central nervous system manifestation due to severe hypoglycaemia</p>
+                                    <p style="margin-top: 0.5rem;"><strong>Resolution:</strong> Correct glucose levels</p>
+                                    <span class="likelihood-badge likelihood-low">
+                                        <i class="fas fa-chart-bar"></i> Likelihood: Low
+                                    </span>
+                                    <p style="margin-top: 0.5rem; font-size: 0.85rem;"><strong>Timeframe:</strong> Short-term (during acute episode)</p>
+                                </div>
+                                <div class="complication-card coma">
+                                    <h4><i class="fas fa-bed"></i> Coma</h4>
+                                    <p>Extreme manifestation from insufficient brain glucose supply</p>
+                                    <p style="margin-top: 0.5rem;"><strong>Resolution:</strong> Requires immediate glucose correction</p>
+                                    <span class="likelihood-badge likelihood-low">
+                                        <i class="fas fa-chart-bar"></i> Likelihood: Low
+                                    </span>
+                                    <p style="margin-top: 0.5rem; font-size: 0.85rem;"><strong>Risk:</strong> Permanent neurological sequelae possible</p>
+                                </div>
+                                <div class="complication-card diabetes">
+                                    <h4><i class="fas fa-syringe"></i> Diabetes Mellitus</h4>
+                                    <p>Reported after repeat surgery for insulinoma</p>
+                                    <p style="margin-top: 0.5rem;"><strong>Mechanism:</strong> Destruction of normal islet cells</p>
+                                    <span class="likelihood-badge likelihood-low">
+                                        <i class="fas fa-chart-bar"></i> Likelihood: Low
+                                    </span>
+                                    <p style="margin-top: 0.5rem; font-size: 0.85rem;"><strong>Timeframe:</strong> Long-term complication</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-crystal-ball"></i> Prognosis</h3>
+                            
+                            <h4 style="color: #667eea; margin-bottom: 1rem;"><i class="fas fa-check-circle"></i> Post-Surgical Prognosis</h4>
+                            <div class="info-card">
+                                <ul>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Cure rate:</strong> Most patients cured if all tumors excised</li>
+                                    <li><i class="fas fa-check" style="color: #ff9800;"></i> <strong>Recurrence:</strong> Small portion may need repeat surgery for incomplete excision or metastases</li>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Long-term:</strong> Excellent prognosis with complete resection</li>
+                                </ul>
+                                <span class="severity-badge badge-green">
+                                    <i class="fas fa-check-circle"></i> Excellent Prognosis
+                                </span>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-pills"></i> Medically Managed Insulinoma</h4>
+                            <div class="info-card">
+                                <ul>
+                                    <li><i class="fas fa-check" style="color: #ff9800;"></i> <strong>Effectiveness:</strong> Limited and not as effective as surgery</li>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Best agent:</strong> Diazoxide most effective</li>
+                                    <li><i class="fas fa-check" style="color: #ef6c00;"></i> <strong>Complications:</strong> Common with medical therapy</li>
+                                </ul>
+                                <span class="severity-badge badge-amber">
+                                    <i class="fas fa-exclamation-circle"></i> Guarded Prognosis
+                                </span>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-dna"></i> Inoperable IGF-II Secreting Tumors</h4>
+                            <div class="info-card">
+                                <ul>
+                                    <li><i class="fas fa-check" style="color: #c62828;"></i> <strong>Glucagon refractoriness:</strong> Strong possibility of becoming refractory</li>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Alternative:</strong> Oral glucocorticoids may help (case studies)</li>
+                                    <li><i class="fas fa-check" style="color: #ef6c00;"></i> <strong>Prognosis:</strong> Poor with limited treatment options</li>
+                                </ul>
+                                <span class="severity-badge badge-red">
+                                    <i class="fas fa-exclamation-triangle"></i> Poor Prognosis
+                                </span>
+                            </div>
+
+                            <h4 style="color: #667eea; margin: 1.5rem 0 1rem;"><i class="fas fa-first-aid"></i> Exposure-Related Hypoglycaemia</h4>
+                            <div class="info-card">
+                                <ul>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Outlook:</strong> Favorable</li>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Recurrence:</strong> Should not recur if exposure avoided</li>
+                                    <li><i class="fas fa-check" style="color: #4caf50;"></i> <strong>Resolution:</strong> As toxin/medication is metabolized</li>
+                                </ul>
+                                <span class="severity-badge badge-green">
+                                    <i class="fas fa-check-circle"></i> Excellent Prognosis
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="subsection">
+                            <h3><i class="fas fa-calendar-check"></i> Follow-up Schedule Recommendations</h3>
+                            <div class="algorithm-step">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-title">Immediate Post-Treatment (1-4 weeks)</div>
+                                </div>
+                                <ul>
+                                    <li>Weekly glucose monitoring</li>
+                                    <li>Symptom assessment</li>
+                                    <li>Medication side effect monitoring</li>
+                                    <li>Surgical wound check (if applicable)</li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-step">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-title">Short-term (1-6 months)</div>
+                                </div>
+                                <ul>
+                                    <li>Monthly visits until stable</li>
+                                    <li>Gradually extend interval if asymptomatic</li>
+                                    <li>Annual glucose tolerance test (post-insulinoma surgery)</li>
+                                    <li>Screen for diabetes development</li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-step">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-title">Long-term (6+ months)</div>
+                                </div>
+                                <ul>
+                                    <li>Every 6-12 months for insulinoma patients</li>
+                                    <li>Annual screening for recurrence</li>
+                                    <li>Patient education reinforcement</li>
+                                    <li>Consider genetic counseling if hereditary syndrome suspected</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Section toggle functionality
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            const isExpanded = content.classList.contains('expanded');
+            
+            // Close all other sections
+            document.querySelectorAll('.section-content').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            document.querySelectorAll('.expand-icon i').forEach(i => {
+                i.classList.remove('fa-chevron-up');
+                i.classList.add('fa-chevron-down');
+            });
+            
+            // Toggle current section
+            if (!isExpanded) {
+                content.classList.add('expanded');
+                icon.querySelector('i').classList.remove('fa-chevron-down');
+                icon.querySelector('i').classList.add('fa-chevron-up');
+                
+                // Update progress sidebar
+                updateProgressSidebar(sectionId);
+                
+                // Smooth scroll to section
+                setTimeout(() => {
+                    document.getElementById(`${sectionId}-section`).scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            }
+        }
+
+        // Expandable item toggle
+        function toggleExpandable(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('i:last-child');
+            const isExpanded = content.classList.contains('expanded');
+            
+            if (isExpanded) {
+                content.classList.remove('expanded');
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                content.classList.add('expanded');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        }
+
+        // Progress sidebar update
+        function updateProgressSidebar(activeSection) {
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+                const section = item.dataset.section;
+                if (section === activeSection) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Smooth scroll to section on sidebar click
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.section;
+                const sectionElement = document.getElementById(`${section}-section`);
+                
+                // Open the section if not already open
+                const content = document.getElementById(`${section}-content`);
+                if (!content.classList.contains('expanded')) {
+                    toggleSection(section);
+                }
+                
+                // Scroll to section
+                setTimeout(() => {
+                    sectionElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 100);
+            });
+        });
+
+        // Intersection Observer for progress tracking
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -80% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sectionId = entry.target.id.replace('-section', '');
+                    updateProgressSidebar(sectionId);
+                    
+                    // Mark previous sections as completed
+                    const allSections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                    const currentIndex = allSections.indexOf(sectionId);
+                    allSections.forEach((section, index) => {
+                        const progressItem = document.querySelector(`[data-section="${section}"]`);
+                        if (index < currentIndex) {
+                            progressItem.classList.add('completed');
+                        } else if (index > currentIndex) {
+                            progressItem.classList.remove('completed');
+                        }
+                    });
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        document.querySelectorAll('.section-card').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Initialize - open assessment section by default
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleSection('assessment');
+            
+            // Add fade-in animation to cards with delay
+            const cards = document.querySelectorAll('.section-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const currentActive = document.querySelector('.progress-item.active');
+            const currentSection = currentActive ? currentActive.dataset.section : 'assessment';
+            const currentIndex = sections.indexOf(currentSection);
+            
+            if (e.key === 'ArrowDown' && currentIndex < sections.length - 1) {
+                e.preventDefault();
+                toggleSection(sections[currentIndex + 1]);
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                e.preventDefault();
+                toggleSection(sections[currentIndex - 1]);
+            }
+        });
+    </script>
+</body>
+</html>
