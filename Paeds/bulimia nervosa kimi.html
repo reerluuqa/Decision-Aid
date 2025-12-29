@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulimia Nervosa - Interactive Clinical Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            margin-left: 280px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-toggle {
+            position: fixed;
+            left: 280px;
+            top: 20px;
+            background: white;
+            border: none;
+            padding: 10px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            z-index: 101;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.2);
+            transition: left 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+
+        .sidebar.collapsed + .sidebar-toggle {
+            left: 0;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: 0;
+        }
+
+        .progress-section {
+            margin-bottom: 25px;
+        }
+
+        .progress-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 6px;
+            padding-left: 8px;
+        }
+
+        .progress-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .progress-item.active {
+            background: rgba(102, 126, 234, 0.15);
+            font-weight: 600;
+        }
+
+        .progress-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .progress-icon.assessment { background: #FF6B6B; }
+        .progress-icon.diagnosis { background: #4ECDC4; }
+        .progress-icon.treatment { background: #45B7D1; }
+        .progress-icon.followup { background: #96CEB4; }
+
+        .progress-text {
+            flex: 1;
+            font-size: 13px;
+        }
+
+        .progress-check {
+            font-size: 14px;
+            color: #4ECDC4;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-check.completed {
+            opacity: 1;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+
+        .header .guideline-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #555;
+            border-left: 4px solid #667eea;
+        }
+
+        .alert-box {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border: 1px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 25px;
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+
+        .alert-box.show {
+            display: block;
+        }
+
+        .alert-header {
+            font-weight: 600;
+            color: #d32f2f;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .alert-header::before {
+            content: "⚠️";
+            margin-right: 8px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border-left: 6px solid;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .card.assessment { border-left-color: #FF6B6B; }
+        .card.diagnosis { border-left-color: #4ECDC4; }
+        .card.treatment { border-left-color: #45B7D1; }
+        .card.followup { border-left-color: #96CEB4; }
+
+        .card-header {
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .assessment .card-icon { background: #FF6B6B; }
+        .diagnosis .card-icon { background: #4ECDC4; }
+        .treatment .card-icon { background: #45B7D1; }
+        .followup .card-icon { background: #96CEB4; }
+
+        .card-toggle {
+            font-size: 24px;
+            transition: transform 0.3s ease;
+            color: #666;
+        }
+
+        .card.expanded .card-toggle {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .sub-section {
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .sub-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .sub-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .sub-title::before {
+            content: "";
+            width: 4px;
+            height: 16px;
+            background: #667eea;
+            margin-right: 10px;
+            border-radius: 2px;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 8px;
+            margin: 12px 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #ffd166 0%, #ffe08e 100%);
+            color: #333;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #06d6a0 0%, #0be9b6 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #118ab2 0%, #0a9e6f 100%);
+            color: white;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .checklist-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            margin-right: 12px;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .checklist-checkbox.checked {
+            background: #667eea;
+            color: white;
+        }
+
+        .checklist-text {
+            flex: 1;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .danger-box {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border-left: 4px solid #f44336;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .criteria-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
+        .criteria-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.95em;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .criteria-item:last-child {
+            border-bottom: none;
+        }
+
+        .criteria-item::before {
+            content: "•";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .treatment-algorithm {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #4caf50;
+        }
+
+        .algorithm-step {
+            display: flex;
+            align-items: flex-start;
+            margin: 12px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .step-number {
+            background: #4caf50;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .step-content {
+            flex: 1;
+            font-size: 0.95em;
+        }
+
+        .medication-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 12px 0;
+            border: 1px solid #dee2e6;
+        }
+
+        .medication-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .medication-dose {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .search-box {
+            position: sticky;
+            top: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 50;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-results {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .highlight {
+            background: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                position: fixed;
+                transform: translateX(-280px);
+                height: 100vh;
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 15px;
+            }
+            
+            .sidebar-toggle {
+                left: 0;
+                top: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .card-header {
+                padding: 15px;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            
+            .sidebar, .search-box, .sidebar-toggle {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .card {
+                box-shadow: none;
+                border: 1px solid #ccc;
+                page-break-inside: avoid;
+            }
+            
+            .card-content {
+                max-height: none !important;
+            }
+            
+            .print-only {
+                display: block;
+            }
+            
+            .no-print {
+                display: none;
+            }
+        }
+
+        .theme-switcher {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 99;
+        }
+
+        .theme-switcher:hover {
+            transform: scale(1.1);
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+        }
+
+        body.dark-mode .header,
+        body.dark-mode .card,
+        body.dark-mode .search-box,
+        body.dark-mode .sidebar {
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        body.dark-mode .card-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        body.dark-mode .checklist-item {
+            background: #2c3e50;
+        }
+
+        body.dark-mode .criteria-list,
+        body.dark-mode .medication-box,
+        body.dark-mode .info-box,
+        body.dark-mode .warning-box,
+        body.dark-mode .danger-box,
+        body.dark-mode .treatment-algorithm {
+            background: #2c3e50;
+            border-color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <div class="search-box no-print">
+                <input type="text" class="search-input" id="searchInput" placeholder="Search algorithm...">
+                <div class="search-results" id="searchResults"></div>
+            </div>
+            
+            <div class="progress-section">
+                <div class="progress-title">Progress</div>
+                <div class="progress-item" data-section="assessment">
+                    <div class="progress-icon assessment">1</div>
+                    <div class="progress-text">Assessment</div>
+                    <div class="progress-check" id="check-assessment">✓</div>
+                </div>
+                <div class="progress-item" data-section="diagnosis">
+                    <div class="progress-icon diagnosis">2</div>
+                    <div class="progress-text">Diagnosis</div>
+                    <div class="progress-check" id="check-diagnosis">✓</div>
+                </div>
+                <div class="progress-item" data-section="treatment">
+                    <div class="progress-icon treatment">3</div>
+                    <div class="progress-text">Treatment</div>
+                    <div class="progress-check" id="check-treatment">✓</div>
+                </div>
+                <div class="progress-item" data-section="followup">
+                    <div class="progress-icon followup">4</div>
+                    <div class="progress-text">Follow-up</div>
+                    <div class="progress-check" id="check-followup">✓</div>
+                </div>
+            </div>
+
+            <div class="progress-section">
+                <div class="progress-title">Quick Stats</div>
+                <div style="font-size: 0.85em; color: #666;">
+                    <div style="margin: 8px 0;">⚠️ <strong id="urgentCount">0</strong> Urgent items</div>
+                    <div style="margin: 8px 0;">⚡ <strong id="cautionCount">0</strong> Caution items</div>
+                    <div style="margin: 8px 0;">✅ <strong id="completedCount">0</strong> Completed</div>
+                </div>
+            </div>
+
+            <div class="progress-section no-print">
+                <div class="progress-title">Actions</div>
+                <button onclick="resetChecklist()" style="width: 100%; padding: 10px; background: #ff6b6b; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">Reset Progress</button>
+                <button onclick="window.print()" style="width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Print Algorithm</button>
+            </div>
+        </aside>
+
+        <button class="sidebar-toggle no-print" id="sidebarToggle">☰</button>
+
+        <main class="main-content">
+            <div class="header">
+                <h1>Bulimia Nervosa</h1>
+                <div class="subtitle">Interactive Clinical Decision Support Algorithm</div>
+                <div class="guideline-info">
+                    <strong>Guideline:</strong> BMJ Best Practice (March 2025) | 
+                    <strong>NICE:</strong> NG69 (December 2020) | 
+                    <strong>Last Updated:</strong> December 2025
+                </div>
+            </div>
+
+            <div class="alert-box" id="urgentAlert">
+                <div class="alert-header">URGENT REFERRAL REQUIRED</div>
+                <div id="alertContent"></div>
+            </div>
+
+            <div class="card assessment" id="assessment-card">
+                <div class="card-header" onclick="toggleCard('assessment')">
+                    <div class="card-title">
+                        <div class="card-icon">📋</div>
+                        Assessment
+                    </div>
+                    <div class="card-toggle">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-title">Risk Factors</div>
+                            <p style="margin-bottom: 12px; font-size: 0.9em; color: #666;">Strong predictors of bulimia nervosa:</p>
+                            
+                            <div class="badge-container">
+                                <div class="badge badge-urgent">⚠️ Female Sex (90% of cases)</div>
+                                <div class="badge badge-caution">⚡ Perfectionism</div>
+                                <div class="badge badge-caution">⚡ Body Dissatisfaction</div>
+                                <div class="badge badge-caution">⚡ Impulsivity</div>
+                                <div class="badge badge-caution">⚡ History of Sexual Abuse</div>
+                                <div class="badge badge-caution">⚡ Family History of Eating Disorders</div>
+                                <div class="badge badge-caution">⚡ Childhood Overweight</div>
+                            </div>
+
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Female sex</strong> - Most common in women aged 20-35 years
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Perfectionism & Body Dissatisfaction</strong> - Undue influence of weight/shape on self-evaluation
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>History of Dieting</strong> - Marked shifts in weight
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Family History</strong> - Alcoholism, depression, or eating disorders in first-degree relatives
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Impulsivity</strong> - Self-injurious behavior, substance misuse
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Media Pressure</strong> - Exposure to idealized body shapes
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Key History & Exam Findings</div>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Recurrent Binge Eating</strong> - Discrete periods, loss of control, >1x/week for 3 months
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Compensatory Behaviors</strong> - Self-induced vomiting, laxatives, excessive exercise
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Dental Erosion</strong> - Permanent damage to enamel, sensitivity to hot/cold
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Parotid Hypertrophy</strong> - Bilateral enlargement of parotid glands
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Russell's Sign</strong> - Scarring over dorsum of hands from induced vomiting
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Cardiac Arrhythmias</strong> - Especially with hypokalaemia/hypomagnesaemia
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Screening Tools</div>
+                            
+                            <div class="info-box">
+                                <strong>SCOFF Questionnaire:</strong> Score ≥2 indicates likely eating disorder
+                            </div>
+
+                            <div class="criteria-list">
+                                <div class="criteria-item">Do you make yourself sick because you feel uncomfortably full?</div>
+                                <div class="criteria-item">Do you worry you have lost control over how much you eat?</div>
+                                <div class="criteria-item">Have you recently lost >1 stone (6kg) in a 3-month period?</div>
+                                <div class="criteria-item">Do you believe yourself to be fat when others say you are too thin?</div>
+                                <div class="criteria-item">Would you say that food dominates your life?</div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">High-Risk Groups</div>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Diabetes Mellitus</strong> - Poor glycaemic control, insulin misuse for weight control
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Pregnancy</strong> - May worsen in 1/3 of cases, risk of hyperemesis gravidarum
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Elite Athletes</strong> - Higher prevalence in weight-sensitive sports
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card diagnosis" id="diagnosis-card">
+                <div class="card-header" onclick="toggleCard('diagnosis')">
+                    <div class="card-title">
+                        <div class="card-icon">🔍</div>
+                        Diagnosis
+                    </div>
+                    <div class="card-toggle">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-title">DSM-5-TR Diagnostic Criteria</div>
+                            <p style="margin-bottom: 12px; font-size: 0.9em; color: #666;">All must be present for diagnosis:</p>
+                            
+                            <div class="criteria-list">
+                                <div class="criteria-item">Recurrent episodes of binge eating (discrete period, amount larger than most, lack of control)</div>
+                                <div class="criteria-item">Recurrent inappropriate compensatory behaviors (vomiting, laxatives, fasting, exercise)</div>
+                                <div class="criteria-item">Both occur ≥1x/week for 3 months, on average</div>
+                                <div class="criteria-item">Self-evaluation unduly influenced by body shape and weight</div>
+                                <div class="criteria-item">Disturbance does not occur exclusively during episodes of anorexia nervosa</div>
+                            </div>
+
+                            <div class="badge-container">
+                                <div class="badge badge-info">📊 Severity Specifier: Based on frequency/week</div>
+                                <div class="badge badge-stable">Mild: 1-3 episodes/week</div>
+                                <div class="badge badge-caution">Moderate: 4-7 episodes/week</div>
+                                <div class="badge badge-caution">Severe: 8-13 episodes/week</div>
+                                <div class="badge badge-urgent">Extreme: ≥14 episodes/week</div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">ICD-11 Diagnostic Criteria</div>
+                            
+                            <div class="criteria-list">
+                                <div class="criteria-item">Frequent, recurrent episodes of binge eating (≥1x/week for >1 month)</div>
+                                <div class="criteria-item">Loss of control over eating behavior</div>
+                                <div class="criteria-item">Compensatory behaviors to prevent weight gain (vomiting, laxatives)</div>
+                                <div class="criteria-item">Preoccupation with weight/shape</div>
+                                <div class="criteria-item">Does not meet criteria for anorexia nervosa</div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Differential Diagnoses</div>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Anorexia Nervosa (Binge-Purge Subtype)</strong> - Key difference: Significantly low BMI and body fat
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Binge-Eating Disorder</strong> - No compensatory behaviors, most patients are obese
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Rumination-Regurgitation Disorder</strong> - Food re-chewed/re-swallowed, not vomited
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Major Depressive Disorder</strong> - Overeating may occur but fewer compensatory behaviors
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Hyperemesis Gravidarum</strong> - Weight loss >5%, consider in pregnancy
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>OSFED/UFED</strong> - Symptoms cause distress but don't meet full criteria
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Investigations</div>
+                            <p style="margin-bottom: 12px; font-size: 0.9em; color: #666;">Screen for complications and establish baseline:</p>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Electrolytes</strong> - Hypokalaemia, alkalosis from vomiting
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Magnesium & Phosphate</strong> - Frequently depleted
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>ECG</strong> - QTc prolongation, arrhythmias if electrolyte imbalance
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Urine Pregnancy Test</strong> - Always consider in women of childbearing age
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>FBC & Ferritin</strong> - Anaemia from self-phlebotomy or nutritional deficiency
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>LFTs & CK</strong> - Elevated with drug overdose or excess exercise
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card treatment" id="treatment-card">
+                <div class="card-header" onclick="toggleCard('treatment')">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        Treatment
+                    </div>
+                    <div class="card-toggle">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-title">Non-Pregnant Adults - First Line</div>
+                            
+                            <div class="treatment-algorithm">
+                                <div class="algorithm-step">
+                                    <div class="step-number">1</div>
+                                    <div class="step-content">
+                                        <strong>Cognitive Behavioural Therapy (CBT)</strong> - Optimal primary treatment
+                                        <div class="badge-container" style="margin-top: 8px;">
+                                            <div class="badge badge-stable">Guided self-help (9 sessions/16 weeks)</div>
+                                            <div class="badge badge-caution">Switch to standard CBT if no response at 4 weeks</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="algorithm-step">
+                                    <div class="step-number">2</div>
+                                    <div class="step-content">
+                                        <strong>Nutritional & Meal Support</strong> - Supervised by registered dietitian
+                                        <div class="badge-container" style="margin-top: 8px;">
+                                            <div class="badge badge-stable">Normalize eating behavior</div>
+                                            <div class="badge badge-stable">Address concerns about eating</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Adjunctive Medications</div>
+                            
+                            <div class="medication-box">
+                                <div class="medication-name">Fluoxetine (First Choice)</div>
+                                <div class="medication-dose">20 mg once daily initially, increase by 20 mg every 1-2 weeks, max 60 mg/day</div>
+                                <div class="badge-container">
+                                    <div class="badge badge-stable">Lower dropout rates</div>
+                                    <div class="badge badge-caution">Assess for 60% reduction by week 3</div>
+                                    <div class="badge badge-caution">Monitor for overdose risk</div>
+                                </div>
+                            </div>
+
+                            <div class="medication-box">
+                                <div class="medication-name">Sertraline (Alternative)</div>
+                                <div class="medication-dose">25 mg once daily initially, increase by 25 mg weekly, max 200 mg/day</div>
+                                <div class="badge-container">
+                                    <div class="badge badge-stable">Fewer adverse effects</div>
+                                    <div class="badge badge-stable">Less withdrawal symptoms</div>
+                                </div>
+                            </div>
+
+                            <div class="medication-box">
+                                <div class="medication-name">Venlafaxine (Tertiary)</div>
+                                <div class="medication-dose">37.5 mg ER once daily initially, increase by 75 mg every 2-4 weeks, max 225 mg/day</div>
+                                <div class="badge-container">
+                                    <div class="badge badge-caution">Rapid onset (days)</div>
+                                    <div class="badge badge-caution">More side effects</div>
+                                </div>
+                            </div>
+
+                            <div class="danger-box">
+                                <strong>⚠️ CONTRAINDICATED:</strong> Bupropion (increased seizure risk in bulimia nervosa)
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Children & Adolescents</div>
+                            
+                            <div class="treatment-algorithm">
+                                <div class="algorithm-step">
+                                    <div class="step-number">1</div>
+                                    <div class="step-content">
+                                        <strong>CBT or Family-Based Therapy (FBT)</strong>
+                                        <div class="badge-container" style="margin-top: 8px;">
+                                            <div class="badge badge-stable">FBT may be more effective short-term</div>
+                                            <div class="badge badge-stable">No difference at 1-year follow-up</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="algorithm-step">
+                                    <div class="step-number">2</div>
+                                    <div class="step-content">
+                                        <strong>Fluoxetine (Adjunct)</strong> - Consult specialist for dosing
+                                        <div class="badge-container" style="margin-top: 8px;">
+                                            <div class="badge badge-caution">⚠️ Monitor for suicidality (black box warning)</div>
+                                            <div class="badge badge-caution">Not FDA-approved for pediatric bulimia</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Pregnancy</div>
+                            
+                            <div class="warning-box">
+                                <strong>High-Risk Pregnancy Management</strong>
+                            </div>
+
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Specialist Referral</strong> - Obstetrician + Psychiatrist
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>CBT First Line</strong> - Psychological treatment preferred
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Nutritional Counseling</strong> - Prepare for increased caloric needs
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Medication</strong> - Only in severe, refractory cases under expert supervision
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Emergency Situations - Immediate Referral</div>
+                            
+                            <div class="badge-container">
+                                <div class="badge badge-urgent">🚨 Suicidality</div>
+                                <div class="badge badge-urgent">🚨 Loss of Consciousness/Syncope</div>
+                                <div class="badge badge-urgent">🚨 Seizures</div>
+                                <div class="badge badge-urgent">🚨 Severe Electrolyte Imbalance</div>
+                                <div class="badge badge-urgent">🚨 Cardiac Arrhythmias</div>
+                                <div class="badge badge-urgent">🚨 Diabetic Ketoacidosis</div>
+                            </div>
+
+                            <div class="danger-box">
+                                <strong>Lifetime suicide attempt rate: 34%</strong> (OR 6.33 vs general population)
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Other Psychological Therapies</div>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Interpersonal Psychotherapy (IPT)</strong> - Effective for reducing binge-eating episodes
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Psychoanalytic Psychotherapy</strong> - Slower results, requires more sessions
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Dialectical Behavioral Therapy (DBT)</strong> - May benefit patients with borderline personality disorder
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Family Therapy</strong> - Useful in adolescents, enlist family support
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card followup" id="followup-card">
+                <div class="card-header" onclick="toggleCard('followup')">
+                    <div class="card-title">
+                        <div class="card-icon">📊</div>
+                        Follow-up & Monitoring
+                    </div>
+                    <div class="card-toggle">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="sub-section">
+                            <div class="sub-title">Monitoring Schedule</div>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Antidepressants</strong> - Continue for 6-12 months minimum
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>CBT Relapse Prevention</strong> - Monthly visits for 6-12 months
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Comorbid Conditions</strong> - Specific follow-up for depression, OCD, self-harm
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Complications</div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                                <div class="danger-box">
+                                    <strong>High Likelihood</strong>
+                                    <div style="margin-top: 8px; font-size: 0.9em;">
+                                        • Volume depletion<br>
+                                        • Hypokalaemia/hypomagnesaemia<br>
+                                        • Tooth erosion (long-term)
+                                    </div>
+                                </div>
+                                <div class="caution-box">
+                                    <strong>Medium Likelihood</strong>
+                                    <div style="margin-top: 8px; font-size: 0.9em;">
+                                        • Cardiac dysrhythmias<br>
+                                        • Menstrual irregularity<br>
+                                        • Gastrointestinal symptoms
+                                    </div>
+                                </div>
+                                <div class="warning-box">
+                                    <strong>Low Likelihood</strong>
+                                    <div style="margin-top: 8px; font-size: 0.9em;">
+                                        • Pancreatitis<br>
+                                        • Oesophageal rupture<br>
+                                        • Ipecac cardiomyopathy<br>
+                                        • Cardiovascular disease
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="danger-box" style="margin-top: 15px;">
+                                <strong>Standardized Mortality Ratio: 2.0</strong> - Twice the normal rate, primarily from suicide and medical complications
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Prognosis</div>
+                            
+                            <div class="info-box">
+                                <strong>Recovery Rates:</strong>
+                                <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                                    <div class="badge badge-stable">✅ 45-75% Full Recovery</div>
+                                    <div class="badge badge-caution">⚡ 27% Considerable Improvement</div>
+                                    <div class="badge badge-urgent">❌ 23% Chronic Course</div>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <strong>Key Prognostic Factors:</strong>
+                                <ul style="margin: 8px 0; padding-left: 20px;">
+                                    <li>Early diagnosis and treatment</li>
+                                    <li>Treatment of comorbid psychiatric disorders</li>
+                                    <li>Strong therapeutic alliance</li>
+                                    <li>Family support (especially adolescents)</li>
+                                    <li>Absence of personality disorders</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-section">
+                            <div class="sub-title">Patient Advice</div>
+                            
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Relapse Prevention</strong> - Return for care at first sign of relapse
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Dental Care</strong> - Regular reviews, avoid brushing after vomiting, use fluoride rinse
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Laxative Education</strong> - Do not reduce calorie absorption, gradually stop use
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Exercise Management</strong> - Address excessive exercise behaviors
+                                </div>
+                            </div>
+                            <div class="checklist-item" onclick="toggleCheckbox(this)">
+                                <div class="checklist-checkbox"></div>
+                                <div class="checklist-text">
+                                    <strong>Caffeine Regulation</strong> - May help reduce impulse dysregulation
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="print-only" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                <h3 style="color: #667eea; margin-bottom: 15px;">Print Summary</h3>
+                <p><strong>Algorithm Completed:</strong> <span id="printDate"></span></p>
+                <p><strong>Completed Items:</strong> <span id="printCompleted"></span></p>
+                <p><strong>Urgent Items Identified:</strong> <span id="printUrgent"></span></p>
+                <p style="margin-top: 15px; font-size: 0.85em; color: #666;">
+                    <strong>Disclaimer:</strong> This algorithm is for educational purposes only and does not replace clinical judgement. 
+                    Always consult current guidelines and specialist advice. For medical emergencies, contact emergency services immediately.
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <div class="theme-switcher no-print" id="themeToggle" title="Toggle dark mode">🌓</div>
+
+    <script>
+        // State management
+        let state = {
+            expandedCards: new Set(['assessment']),
+            completedItems: new Set(),
+            urgentAlerts: [],
+            searchTerm: '',
+            darkMode: localStorage.getItem('darkMode') === 'true'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadState();
+            initializeEventListeners();
+            updateProgress();
+            updateAlertBox();
+            updateStats();
+            
+            if (state.darkMode) {
+                document.body.classList.add('dark-mode');
+            }
+            
+            // Set print date
+            document.getElementById('printDate').textContent = new Date().toLocaleDateString();
+        });
+
+        // Event listeners
+        function initializeEventListeners() {
+            // Sidebar toggle
+            document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+            
+            // Progress item clicks
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const section = this.dataset.section;
+                    const cardId = `${section}-card`;
+                    document.getElementById(cardId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', handleSearch);
+            
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Close sidebar on mobile when clicking outside
+            document.addEventListener('click', function(e) {
+                const sidebar = document.getElementById('sidebar');
+                const toggle = document.getElementById('sidebarToggle');
+                
+                if (window.innerWidth <= 768 && 
+                    !sidebar.contains(e.target) && 
+                    !toggle.contains(e.target) &&
+                    sidebar.classList.contains('show')) {
+                    sidebar.classList.remove('show');
+                }
+            });
+        }
+
+        // Card toggle
+        function toggleCard(section) {
+            const card = document.getElementById(`${section}-card`);
+            const isExpanded = state.expandedCards.has(section);
+            
+            if (isExpanded) {
+                state.expandedCards.delete(section);
+                card.classList.remove('expanded');
+            } else {
+                state.expandedCards.add(section);
+                card.classList.add('expanded');
+            }
+            
+            // Update active progress item
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-section="${section}"]`).classList.add('active');
+            
+            saveState();
+        }
+
+        // Checkbox toggle
+        function toggleCheckbox(element) {
+            const checkbox = element.querySelector('.checklist-checkbox');
+            const isChecked = checkbox.classList.contains('checked');
+            const text = element.querySelector('.checklist-text').textContent;
+            
+            if (isChecked) {
+                checkbox.classList.remove('checked');
+                checkbox.textContent = '';
+                state.completedItems.delete(text);
+            } else {
+                checkbox.classList.add('checked');
+                checkbox.textContent = '✓';
+                state.completedItems.add(text);
+                
+                // Check for urgent items
+                if (text.includes('urgent') || text.includes('emergency') || text.includes('suicidality') || 
+                    text.includes('seizures') || text.includes('severe') || text.includes('emergency')) {
+                    addUrgentAlert(text);
+                }
+            }
+            
+            updateProgress();
+            updateStats();
+            saveState();
+        }
+
+        // Urgent alert management
+        function addUrgentAlert(text) {
+            if (!state.urgentAlerts.includes(text)) {
+                state.urgentAlerts.push(text);
+                updateAlertBox();
+            }
+        }
+
+        function updateAlertBox() {
+            const alertBox = document.getElementById('urgentAlert');
+            const alertContent = document.getElementById('alertContent');
+            
+            if (state.urgentAlerts.length > 0) {
+                alertBox.classList.add('show');
+                alertContent.innerHTML = state.urgentAlerts
+                    .map(alert => `<div style="margin: 5px 0;">• ${alert}</div>`)
+                    .join('');
+            } else {
+                alertBox.classList.remove('show');
+            }
+        }
+
+        // Progress tracking
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            
+            sections.forEach(section => {
+                const card = document.getElementById(`${section}-card`);
+                const checkboxes = card.querySelectorAll('.checklist-checkbox');
+                const completed = card.querySelectorAll('.checklist-checkbox.checked');
+                const checkmark = document.getElementById(`check-${section}`);
+                
+                if (checkboxes.length > 0 && checkboxes.length === completed.length) {
+                    checkmark.classList.add('completed');
+                } else {
+                    checkmark.classList.remove('completed');
+                }
+            });
+            
+            // Update print info
+            document.getElementById('printCompleted').textContent = state.completedItems.size;
+            document.getElementById('printUrgent').textContent = state.urgentAlerts.length;
+        }
+
+        // Stats update
+        function updateStats() {
+            // Count badges
+            const urgentBadges = document.querySelectorAll('.badge-urgent').length;
+            const cautionBadges = document.querySelectorAll('.badge-caution').length;
+            
+            document.getElementById('urgentCount').textContent = urgentBadges;
+            document.getElementById('cautionCount').textContent = cautionBadges;
+            document.getElementById('completedCount').textContent = state.completedItems.size;
+        }
+
+        // Search functionality
+        function handleSearch(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            state.searchTerm = searchTerm;
+            
+            if (searchTerm.length < 2) {
+                clearHighlights();
+                document.getElementById('searchResults').textContent = '';
+                return;
+            }
+            
+            const results = searchContent(searchTerm);
+            updateSearchResults(results, searchTerm);
+        }
+
+        function searchContent(term) {
+            const content = document.querySelectorAll('.card-body');
+            const results = [];
+            
+            content.forEach((section, index) => {
+                const text = section.textContent.toLowerCase();
+                if (text.includes(term)) {
+                    const sectionName = section.closest('.card').id.replace('-card', '');
+                    const matches = section.textContent.match(new RegExp(term, 'gi')) || [];
+                    results.push({
+                        section: sectionName,
+                        count: matches.length,
+                        element: section
+                    });
+                }
+            });
+            
+            return results;
+        }
+
+        function updateSearchResults(results, term) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                resultsDiv.textContent = 'No results found';
+                clearHighlights();
+                return;
+            }
+            
+            resultsDiv.textContent = `${results.length} section(s) found`;
+            
+            // Highlight matches
+            clearHighlights();
+            results.forEach(result => {
+                highlightText(result.element, term);
+            });
+            
+            // Scroll to first result
+            if (results.length > 0) {
+                const firstResult = results[0];
+                const card = document.getElementById(`${firstResult.section}-card`);
+                if (!state.expandedCards.has(firstResult.section)) {
+                    toggleCard(firstResult.section);
+                }
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function highlightText(element, term) {
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+            );
+            
+            const textNodes = [];
+            let node;
+            
+            while (node = walker.nextNode()) {
+                if (node.textContent.toLowerCase().includes(term)) {
+                    textNodes.push(node);
+                }
+            }
+            
+            textNodes.forEach(node => {
+                const span = document.createElement('span');
+                span.innerHTML = node.textContent.replace(
+                    new RegExp(`(${term})`, 'gi'),
+                    '<span class="highlight">$1</span>'
+                );
+                node.parentNode.replaceChild(span, node);
+            });
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.highlight').forEach(highlight => {
+                const parent = highlight.parentNode;
+                parent.replaceChild(document.createTextNode(highlight.textContent), highlight);
+                parent.normalize();
+            });
+        }
+
+        // Sidebar toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('collapsed');
+        }
+
+        // Theme toggle
+        function toggleTheme() {
+            state.darkMode = !state.darkMode;
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', state.darkMode);
+        }
+
+        // Reset functionality
+        function resetChecklist() {
+            if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
+                state.completedItems.clear();
+                state.urgentAlerts = [];
+                
+                // Clear all checkboxes
+                document.querySelectorAll('.checklist-checkbox').forEach(checkbox => {
+                    checkbox.classList.remove('checked');
+                    checkbox.textContent = '';
+                });
+                
+                // Clear search
+                document.getElementById('searchInput').value = '';
+                clearHighlights();
+                
+                updateProgress();
+                updateAlertBox();
+                updateStats();
+                saveState();
+            }
+        }
+
+        // State persistence
+        function saveState() {
+            localStorage.setItem('bulimiaState', JSON.stringify({
+                completedItems: Array.from(state.completedItems),
+                urgentAlerts: state.urgentAlerts,
+                expandedCards: Array.from(state.expandedCards)
+            }));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('bulimiaState');
+            if (saved) {
+                const data = JSON.parse(saved);
+                state.completedItems = new Set(data.completedItems || []);
+                state.urgentAlerts = data.urgentAlerts || [];
+                state.expandedCards = new Set(data.expandedCards || ['assessment']);
+                
+                // Restore checkbox states
+                document.querySelectorAll('.checklist-item').forEach(item => {
+                    const text = item.querySelector('.checklist-text').textContent;
+                    const checkbox = item.querySelector('.checklist-checkbox');
+                    
+                    if (state.completedItems.has(text)) {
+                        checkbox.classList.add('checked');
+                        checkbox.textContent = '✓';
+                    }
+                });
+                
+                // Restore expanded cards
+                state.expandedCards.forEach(section => {
+                    const card = document.getElementById(`${section}-card`);
+                    if (card) {
+                        card.classList.add('expanded');
+                    }
+                });
+            }
+        }
+
+        // Auto-save on page unload
+        window.addEventListener('beforeunload', saveState);
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            
+            // Escape to clear search
+            if (e.key === 'Escape') {
+                document.getElementById('searchInput').value = '';
+                clearHighlights();
+                document.getElementById('searchResults').textContent = '';
+            }
+        });
+
+        // Responsive sidebar
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('show');
+            }
+        });
+
+        // Initialize first card expanded
+        if (!localStorage.getItem('bulimiaState')) {
+            toggleCard('assessment');
+        }
+    </script>
+</body>
+</html>

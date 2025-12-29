@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faltering Growth - Clinical Quick Scan</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-blue: #005EB8; /* NHS Blue style */
+            --primary-dark: #003087;
+            --accent-bg: #f0f4f5;
+            --text-dark: #212b32;
+            --text-light: #4c6272;
+            
+            /* Status Colors */
+            --urgent-red: #d5281b; /* Emergency/Red Flag */
+            --urgent-bg: #fbe9e9;
+            --safe-green: #007f3b; /* Reassure/Safe */
+            --safe-bg: #e6f4ea;
+            --warning-orange: #b56b00;
+            --warning-bg: #fff4e5;
+
+            /* UI Elements */
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --border-radius: 8px;
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--accent-bg);
+            color: var(--text-dark);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .meta-tag {
+            font-size: 0.85rem;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        /* --- Navigation --- */
+        nav {
+            background: white;
+            padding: 0.5rem 1rem;
+            overflow-x: auto;
+            border-bottom: 1px solid #ddd;
+            white-space: nowrap;
+        }
+
+        .nav-container {
+            display: flex;
+            gap: 0.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            font-size: 1rem;
+            color: var(--text-light);
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .nav-btn:hover {
+            color: var(--primary-blue);
+            background-color: rgba(0, 94, 184, 0.05);
+        }
+
+        .nav-btn.active {
+            color: var(--primary-blue);
+            border-bottom-color: var(--primary-blue);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            max-width: 1200px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+            min-height: 80vh;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Components --- */
+        
+        /* Sections */
+        .section-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .section-header h2 {
+            font-size: 1.75rem;
+            color: var(--text-dark);
+        }
+
+        .section-desc {
+            color: var(--text-light);
+            font-size: 1rem;
+        }
+
+        /* Grid System */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid #e0e0e0;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-color: var(--primary-blue);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .card-content {
+            font-size: 0.95rem;
+            color: var(--text-dark);
+        }
+
+        /* Specific Card Styles */
+        .card.urgent {
+            border-left: 6px solid var(--urgent-red);
+        }
+
+        .card.urgent .card-header h3 {
+            color: var(--urgent-red);
+        }
+
+        .card.safe {
+            border-left: 6px solid var(--safe-green);
+        }
+
+        .card.safe .card-header h3 {
+            color: var(--safe-green);
+        }
+
+        .card.info {
+            border-left: 6px solid var(--primary-blue);
+        }
+
+        /* Badges & Icons */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge.urgent { background: var(--urgent-bg); color: var(--urgent-red); }
+        .badge.safe { background: var(--safe-bg); color: var(--safe-green); }
+        .badge.info { background: #e0f0ff; color: var(--primary-blue); }
+
+        .checklist li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .checklist li::before {
+            content: "•";
+            color: var(--primary-blue);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Visual Centile Charts (CSS Representation) */
+        .centile-viz {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .centile-line {
+            height: 8px;
+            flex-grow: 1;
+            background: #ddd;
+            margin: 0 5px;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .centile-drop {
+            position: absolute;
+            top: -4px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Alert Banners */
+        .alert-banner {
+            background-color: var(--urgent-bg);
+            color: #8b0000;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            border: 1px solid rgba(213, 40, 27, 0.2);
+        }
+
+        .alert-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            fill: var(--urgent-red);
+        }
+
+        /* Action Tables */
+        .action-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+        .action-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            color: var(--text-light);
+            font-weight: 600;
+            border-bottom: 2px solid #ddd;
+        }
+        .action-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+        .action-table tr:last-child td { border-bottom: none; }
+
+        /* Icons */
+        svg {
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+    <h1>
+        <!-- Icon: Pulse -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+        </svg>
+        Faltering Growth
+    </h1>
+    <span class="meta-tag">CKS Reference 2023</span>
+</header>
+
+<!-- Navigation -->
+<nav>
+    <div class="nav-container">
+        <button class="nav-btn active" onclick="switchTab('suspect')">When to Suspect</button>
+        <button class="nav-btn" onclick="switchTab('assess')">Assessment</button>
+        <button class="nav-btn" onclick="switchTab('manage-early')">Management &lt; 1 mo</button>
+        <button class="nav-btn" onclick="switchTab('manage-older')">Management &gt; 1 mo</button>
+    </div>
+</nav>
+
+<main>
+
+    <!-- TAB 1: When to Suspect -->
+    <section id="suspect" class="tab-content active">
+        <div class="section-header">
+            <h2>Recognition & Thresholds</h2>
+            <span class="badge info">0 - 18 Years</span>
+        </div>
+
+        <div class="alert-banner">
+            <svg class="alert-icon" viewBox="0 0 24 24">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+                <strong>Immediate Action:</strong> If current weight is below the 2nd centile for age, suspect faltering growth regardless of birth weight.
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- Early Days Card -->
+            <div class="card urgent">
+                <div class="card-header">
+                    <h3>Early Days (0 - 3 Weeks)</h3>
+                </div>
+                <div class="card-content">
+                    <p class="section-desc" style="margin-bottom: 1rem;">Common to lose up to 10% body weight (fluid adjustment). Regain expected by 3 weeks.</p>
+                    
+                    <div style="background: var(--urgent-bg); padding: 1rem; border-radius: 4px; border: 1px dashed var(--urgent-red);">
+                        <strong>Suspect Faltering if:</strong>
+                        <ul class="checklist" style="margin-top: 0.5rem;">
+                            <li>Weight loss is <strong>> 10%</strong> of birth weight.</li>
+                            <li>Weight has <strong>NOT returned</strong> to birth weight by <strong>3 weeks</strong> of age.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Older Children Logic -->
+            <div class="card info">
+                <div class="card-header">
+                    <h3>After Early Days</h3>
+                </div>
+                <div class="card-content">
+                    <p class="section-desc">A "centile space" is the gap between lines on the UK-WHO chart.</p>
+                    
+                    <div style="margin-top: 1rem;">
+                        <strong>Suspect if weight drops by:</strong>
+                        
+                        <div style="margin-top: 10px; padding: 10px; border-left: 4px solid var(--urgent-red); background: #fff;">
+                            <strong>1+ centile space</strong> (if birthweight < 9th)
+                        </div>
+                        <div style="margin-top: 10px; padding: 10px; border-left: 4px solid var(--urgent-red); background: #fff;">
+                            <strong>2+ centile spaces</strong> (if birthweight 9th - 91st)
+                        </div>
+                        <div style="margin-top: 10px; padding: 10px; border-left: 4px solid var(--urgent-red); background: #fff;">
+                            <strong>3+ centile spaces</strong> (if birthweight > 91st)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card safe" style="margin-top: 1.5rem;">
+            <div class="card-header">
+                <h3>Context: Is it Faltering or Constitution?</h3>
+            </div>
+            <div class="card-content">
+                <p>Not all small children are faltering. Consider <strong>"Small but Healthy"</strong> if:</p>
+                <div class="grid-2" style="margin-top: 0.5rem;">
+                    <ul class="checklist">
+                        <li>Growth trajectory is consistent.</li>
+                        <li>Thorough assessment reveals no concerns.</li>
+                    </ul>
+                    <ul class="checklist">
+                        <li>Small parents (genetic potential).</li>
+                        <li>Constitutional delay in growth.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 2: Assessment -->
+    <section id="assess" class="tab-content">
+        <div class="section-header">
+            <h2>Clinical Assessment</h2>
+            <span class="badge info">History & Exam</span>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Feeding History</h3>
+                </div>
+                <div class="card-content">
+                    <ul class="checklist">
+                        <li>What is eaten? How much? How often?</li>
+                        <li>Use a <strong>food diary</strong> to assess.</li>
+                        <li><strong>Fluids:</strong> Excessive water/juice/milk causing satiety?</li>
+                        <li><strong>Technique:</strong> Latch, suck, swallow, attachment?</li>
+                        <li><strong>Problems:</strong> Reflux, thrush, mastitis, aversion?</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Medical & Social</h3>
+                </div>
+                <div class="card-content">
+                    <ul class="checklist">
+                        <li><strong>Illness:</strong> Fever, pain, vomiting, diarrhoea?</li>
+                        <li><strong>Conditions:</strong> Constipation, UTI, Diabetes?</li>
+                        <li><strong>Pregnancy:</strong> Drugs, alcohol, illness?</li>
+                        <li><strong>Social:</strong> Housing, finances, stress?</li>
+                        <li><strong>Mental Health:</strong> Maternal PND/Anxiety?</li>
+                        <li><strong>Safeguarding:</strong> Check for injuries/hygiene.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Examination</h3>
+                </div>
+                <div class="card-content">
+                    <ul class="checklist">
+                        <li><strong>Vitals:</strong> Temp, HR, Capillary Refill.</li>
+                        <li><strong>Hydration:</strong> Skin turgor, fontanelle.</li>
+                        <li><strong>Dysmorphism:</strong> Signs of syndromes?</li>
+                        <li><strong>Stunting:</strong> Check length/height.</li>
+                        <li><strong>Red Flags:</strong> Signs of maltreatment.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem; background-color: #f8f9fa; border: 1px dashed #ccc;">
+            <div class="card-header" style="border-bottom: none; margin-bottom: 0;">
+                <h3>Suggested Investigations (Guided by Assessment)</h3>
+            </div>
+            <div class="card-content">
+                <table class="action-table">
+                    <tr>
+                        <th width="30%">Condition</th>
+                        <th>Test/Action</th>
+                    </tr>
+                    <tr>
+                        <td><strong>Urinary Tract Infection</strong></td>
+                        <td>Dipstick / Culture (Symptoms or unexplained faltering)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Coeliac Disease</strong></td>
+                        <td>Test if diet includes gluten (tTG IgA)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Undernutrition (Older)</strong></td>
+                        <td>BMI Centile: < 0.4th suggests probable undernutrition.</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 3: Management Early (< 1 Month) -->
+    <section id="manage-early" class="tab-content">
+        <div class="section-header">
+            <h2>Management: Early Days</h2>
+            <span class="badge urgent">0 - 1 Month</span>
+        </div>
+
+        <!-- Condition: Less than 10% -->
+        <div class="card safe" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--safe-green)" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <h3>Weight Loss < 10%</h3>
+            </div>
+            <div class="card-content">
+                <p><strong>Action:</strong> Reassure parents.</p>
+                <ul class="checklist">
+                    <li>Weight loss is common in first 3-4 days.</li>
+                    <li>Usually stops by day 3-4.</li>
+                    <li>Most infants return to birth weight by 3 weeks.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Condition: More than 10% -->
+        <div class="card urgent">
+            <div class="card-header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--urgent-red)" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <h3>Weight Loss > 10% OR No Regain by 3 Weeks</h3>
+            </div>
+            <div class="card-content">
+                <div class="grid-2">
+                    <div>
+                        <h4>Immediate Actions</h4>
+                        <ul class="checklist">
+                            <li>Assess for risk factors.</li>
+                            <li>Provide feeding support (Midwife/Health Visitor).</li>
+                            <li><strong>Observe feeding</strong> directly.</li>
+                            <li>Monitor weight: No more than <strong>daily</strong> in infants < 1 month.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Supplementation Advice</h4>
+                        <p>If supplementing breastmilk with formula:</p>
+                        <ul class="checklist">
+                            <li>Support continued breastfeeding.</li>
+                            <li>Advise expressing to maintain supply.</li>
+                            <li>Offer breast milk <strong>before</strong> formula.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral Criteria -->
+        <div class="alert-banner" style="margin-top: 2rem;">
+            <svg class="alert-icon" viewBox="0 0 24 24">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+            <div>
+                <strong>REFER TO PAEDIATRICS (Urgency dependent):</strong>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Symptoms/signs of underlying condition.</li>
+                    <li>Rapid weight loss or severe undernutrition.</li>
+                    <li>Slow linear growth or unexplained short stature.</li>
+                    <li>Safeguarding concerns.</li>
+                    <li>No response to primary care management.</li>
+                    <li>New clinical symptoms appear.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- TAB 4: Management Older (> 1 Month) -->
+    <section id="manage-older" class="tab-content">
+        <div class="section-header">
+            <h2>Management: Older Infants & Children</h2>
+            <span class="badge info">1 Month - 18 Years</span>
+        </div>
+
+        <div class="card info" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+                <h3>Core Management Plan</h3>
+            </div>
+            <div class="card-content">
+                <p>If faltering growth is confirmed:</p>
+                <div class="grid-2" style="margin-top: 1rem;">
+                    <ul class="checklist">
+                        <li><strong>Identify Risk Factors:</strong> Review medical, feeding, and social history.</li>
+                        <li><strong>Educate Parents:</strong> Explain concept of faltering growth.</li>
+                        <li><strong>Food Diary:</strong> Record intake and mealtime behavior.</li>
+                    </ul>
+                    <ul class="checklist">
+                        <li><strong>Support Feeding:</strong> Routine, environment, responsive feeding.</li>
+                        <li><strong>Monitor Growth:</strong> Plot measurements regularly.</li>
+                        <li><strong>Treat Causes:</strong> E.g., reflux, constipation.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card safe">
+                <div class="card-header">
+                    <h3>Nutritional Support</h3>
+                </div>
+                <div class="card-content">
+                    <p>In children with no specific cause, simple interventions to increase intake are often effective.</p>
+                    <ul class="checklist" style="margin-top: 0.5rem;">
+                        <li>Reduce excessive fluids (water/juice) before meals.</li>
+                        <li>Age-appropriate healthy foods.</li>
+                        <li>Address feeding aversion/behavior.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card urgent">
+                <div class="card-header">
+                    <h3>When to Refer</h3>
+                </div>
+                <div class="card-content">
+                    <ul class="checklist">
+                        <li>Underlying condition suspected (e.g., cardiac, metabolic).</li>
+                        <li><strong>BMI < 0.4th centile</strong> (Probable undernutrition).</li>
+                        <li>Safeguarding concerns.</li>
+                        <li>Failure to respond to primary care interventions.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+                <h3>Specialist Referrals</h3>
+            </div>
+            <div class="card-content">
+                <p>Depending on specific needs, consider referral to:</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                    <span class="badge info">Paediatric Dietitian</span>
+                    <span class="badge info">Infant Feeding Specialist</span>
+                    <span class="badge info">Speech & Language Therapist</span>
+                    <span class="badge info">Occupational Therapist</span>
+                    <span class="badge info">Clinical Psychologist</span>
+                    <span class="badge info">Social Services</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer>
+    <p>Based on NICE CKS Topic: Faltering Growth (Last revised September 2023).<br>
+    For healthcare professionals working within the NHS in the UK.</p>
+</footer>
+
+<script>
+    // Simple Tab Switching Logic
+    function switchTab(tabId) {
+        // 1. Remove 'active' class from all tab contents
+        const contents = document.querySelectorAll('.tab-content');
+        contents.forEach(content => {
+            content.classList.remove('active');
+        });
+
+        // 2. Remove 'active' class from all nav buttons
+        const navBtns = document.querySelectorAll('.nav-btn');
+        navBtns.forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // 3. Add 'active' class to specific tab content
+        const selectedContent = document.getElementById(tabId);
+        if (selectedContent) {
+            selectedContent.classList.add('active');
+        }
+
+        // 4. Add 'active' class to clicked button
+        // Note: We find the button by onclick attribute text matching for simplicity in this static demo,
+        // or pass 'this' in a real app. Here, we just iterate to match logic or trust user click.
+        // A more robust way involves event listeners, but this fits the single-file constraint well.
+        
+        // Let's map IDs to button index for visual feedback
+        const tabMap = {
+            'suspect': 0,
+            'assess': 1,
+            'manage-early': 2,
+            'manage-older': 3
+        };
+        
+        if (navBtns[tabMap[tabId]]) {
+            navBtns[tabMap[tabId]].classList.add('active');
+        }
+
+        // Scroll to top of main for better UX on mobile
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+
+</body>
+</html>

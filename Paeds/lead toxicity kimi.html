@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Toxicity Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --assessment-color: #3498db;
+            --diagnosis-color: #2ecc71;
+            --treatment-color: #f39c12;
+            --followup-color: #9b59b6;
+            --urgent-color: #e74c3c;
+            --caution-color: #f39c12;
+            --stable-color: #27ae60;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #e1e8ed;
+            --shadow: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-hover: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: var(--bg-primary);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            border-right: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .sidebar-header h3 {
+            color: var(--text-primary);
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: var(--bg-secondary);
+            transform: translateX(4px);
+        }
+
+        .progress-item.active {
+            background: var(--bg-secondary);
+            border-left-color: var(--assessment-color);
+        }
+
+        .progress-item.diagnosis.active {
+            border-left-color: var(--diagnosis-color);
+        }
+
+        .progress-item.treatment.active {
+            border-left-color: var(--treatment-color);
+        }
+
+        .progress-item.followup.active {
+            border-left-color: var(--followup-color);
+        }
+
+        .progress-icon {
+            font-size: 1.5rem;
+            margin-right: 1rem;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-title {
+            font-weight: 600;
+            display: block;
+        }
+
+        .progress-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1200px;
+        }
+
+        .header {
+            background: var(--bg-primary);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .section:nth-child(2) { animation-delay: 0.1s; }
+        .section:nth-child(3) { animation-delay: 0.2s; }
+        .section:nth-child(4) { animation-delay: 0.3s; }
+        .section:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-card {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .section-card:hover {
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .assessment-section .card-header {
+            background: var(--assessment-color);
+        }
+
+        .diagnosis-section .card-header {
+            background: var(--diagnosis-color);
+        }
+
+        .treatment-section .card-header {
+            background: var(--treatment-color);
+        }
+
+        .followup-section .card-header {
+            background: var(--followup-color);
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-right: 1.5rem;
+        }
+
+        .card-header h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .card-content {
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .card-content.expanded {
+            padding: 2rem;
+            max-height: 5000px;
+        }
+
+        .expandable-card {
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .expandable-card:last-child {
+            margin-bottom: 0;
+        }
+
+        .expandable-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .expandable-header:hover {
+            background: #e9ecef;
+        }
+
+        .expandable-title {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .expandable-icon {
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .expandable-arrow {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .expandable-arrow.rotated {
+            transform: rotate(180deg);
+        }
+
+        .expandable-content {
+            padding: 0 1.5rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease, padding 0.4s ease;
+        }
+
+        .expandable-content.expanded {
+            padding: 0 1.5rem 1.5rem;
+            max-height: 3000px;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 0.5rem;
+            color: white;
+        }
+
+        .badge-urgent {
+            background: var(--urgent-color);
+        }
+
+        .badge-caution {
+            background: var(--caution-color);
+        }
+
+        .badge-stable {
+            background: var(--stable-color);
+        }
+
+        .list-item {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-icon {
+            margin-right: 1rem;
+            color: var(--assessment-color);
+            font-size: 1.2rem;
+            margin-top: 0.2rem;
+        }
+
+        .diagnosis-section .list-icon {
+            color: var(--diagnosis-color);
+        }
+
+        .treatment-section .list-icon {
+            color: var(--treatment-color);
+        }
+
+        .followup-section .list-icon {
+            color: var(--followup-color);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .grid-item {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--assessment-color);
+        }
+
+        .diagnosis-section .grid-item {
+            border-left-color: var(--diagnosis-color);
+        }
+
+        .treatment-section .grid-item {
+            border-left-color: var(--treatment-color);
+        }
+
+        .grid-item h4 {
+            margin-bottom: 0.8rem;
+            color: var(--text-primary);
+        }
+
+        .grid-item ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .grid-item li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .grid-item li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--text-secondary);
+            font-weight: bold;
+        }
+
+        .algorithm-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin: 2rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .algorithm-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .algorithm-step {
+            background: rgba(255,255,255,0.1);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .algorithm-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: white;
+            color: #667eea;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .reference-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .reference-box h4 {
+            color: #856404;
+            margin-bottom: 0.8rem;
+        }
+
+        .reference-box p {
+            color: #856404;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .warning-box {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .warning-box h4 {
+            color: #721c24;
+            margin-bottom: 0.8rem;
+        }
+
+        .warning-box p {
+            color: #721c24;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border-top: 4px solid var(--assessment-color);
+        }
+
+        .diagnosis-section .stat-card {
+            border-top-color: var(--diagnosis-color);
+        }
+
+        .treatment-section .stat-card {
+            border-top-color: var(--treatment-color);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--text-primary);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h3>Algorithm Progress</h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">Click to navigate</p>
+        </div>
+        <div class="progress-item active" data-target="assessment">
+            <div class="progress-icon">📋</div>
+            <div class="progress-text">
+                <span class="progress-title">Assessment</span>
+                <span class="progress-desc">History, exam & risk factors</span>
+            </div>
+        </div>
+        <div class="progress-item" data-target="diagnosis">
+            <div class="progress-icon">🔬</div>
+            <div class="progress-text">
+                <span class="progress-title">Diagnosis</span>
+                <span class="progress-desc">Blood lead levels & investigations</span>
+            </div>
+        </div>
+        <div class="progress-item" data-target="treatment">
+            <div class="progress-icon">💊</div>
+            <div class="progress-text">
+                <span class="progress-title">Treatment</span>
+                <span class="progress-desc">Chelation & source removal</span>
+            </div>
+        </div>
+        <div class="progress-item" data-target="followup">
+            <div class="progress-icon">📈</div>
+            <div class="progress-text">
+                <span class="progress-title">Follow-up</span>
+                <span class="progress-desc">Monitoring & complications</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <h1>Lead Toxicity Management Algorithm</h1>
+            <p class="subtitle">Based on BMJ Best Practice Guidelines • Last updated: June 2023</p>
+        </header>
+
+        <!-- Assessment Section -->
+        <section class="section assessment-section" data-section="assessment">
+            <div class="section-card">
+                <div class="card-header" onclick="toggleSection('assessment')">
+                    <div class="card-icon">📋</div>
+                    <h2>Assessment</h2>
+                </div>
+                <div class="card-content" id="assessment-content">
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🎯</span>
+                                Key Diagnostic Factors
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="list-item">
+                                <span class="list-icon">👶</span>
+                                <div>
+                                    <strong>Presence of Risk Factors</strong> (Common)
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Age 9-36 months, lead hazards in housing, low socioeconomic status, occupational exposure</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">👨‍👩‍👧</span>
+                                <div>
+                                    <strong>Family History</strong> (Common)
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Lead poisoning or parental work with lead</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🧠</span>
+                                <div>
+                                    <strong>Cognitive Impairment (Children)</strong> (Common)
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Learning difficulties, developmental delays</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">⚠️</span>
+                                <div>
+                                    <strong>Neurological Symptoms</strong> (Uncommon but urgent)
+                                    <div class="severity-badge badge-urgent">URGENT</div>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Headaches, clumsiness, agitation, altered mental state → encephalopathy</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🤰</span>
+                                <div>
+                                    <strong>Abdominal Pain (Adults)</strong> (Common)
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Unexplained persistent colicky pain</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">⚠️</span>
+                                Strong Risk Factors
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="grid-2">
+                                <div class="grid-item">
+                                    <h4>🧒 Age 9-36 months</h4>
+                                    <ul>
+                                        <li>Hand-to-mouth activity period</li>
+                                        <li>Blood lead peaks at 18-24 months</li>
+                                        <li>Critical neurodevelopmental window</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🏠 Housing with Lead Hazards</h4>
+                                    <ul>
+                                        <li>Pre-1950 housing</li>
+                                        <li>Deteriorating paint surfaces</li>
+                                        <li>Contaminated dust/soil</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>💼 Occupational Exposure</h4>
+                                    <ul>
+                                        <li>Battery production, construction, mining</li>
+                                        <li>Automotive repair, metal recycling</li>
+                                        <li>Small business workers (painters, plumbers)</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🚰 Lead-Contaminated Water</h4>
+                                    <ul>
+                                        <li>Lead pipes or soldered copper pipes</li>
+                                        <li>Acidic water increases leaching</li>
+                                        <li>Running water reduces lead content</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">⚡</span>
+                                Weak Risk Factors
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="list-item">
+                                <span class="list-icon">🌿</span>
+                                <div>
+                                    <strong>Use of Folk Medications</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Ayurvedic remedies, Mexican folk remedies (azarcon, greta), Hmong remedies (pay-loo-ah)</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🤰</span>
+                                <div>
+                                    <strong>Fetal Exposure</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Maternal lead stores mobilize to fetus during pregnancy</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🍔</span>
+                                <div>
+                                    <strong>Mineral-Deficient & High-Fat Diets</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Low calcium/iron increases lead absorption</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🎯</span>
+                                <div>
+                                    <strong>Bullet Firing Ranges</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Inhalation of airborne lead, contamination of clothing</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reference-box">
+                        <h4>💡 Clinical Tip</h4>
+                        <p>Most patients with lead poisoning have NO specific symptoms, even with markedly elevated blood lead levels. Maintain a high index of suspicion in at-risk populations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Diagnosis Section -->
+        <section class="section diagnosis-section" data-section="diagnosis">
+            <div class="section-card">
+                <div class="card-header" onclick="toggleSection('diagnosis')">
+                    <div class="card-icon">🔬</div>
+                    <h2>Diagnosis</h2>
+                </div>
+                <div class="card-content" id="diagnosis-content">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <span class="stat-value">≥0.17</span>
+                            <span class="stat-label">µmol/L (3.5 µg/dL)<br>Children (CDC reference)</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">≥0.24</span>
+                            <span class="stat-label">µmol/L (5 µg/dL)<br>Adults (Case definition)</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">≥1.2</span>
+                            <span class="stat-label">µmol/L (25 µg/dL)<br>Adults - Serious (OSHA)</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-value">≥2.2</span>
+                            <span class="stat-label">µmol/L (45 µg/dL)<br>Chelation threshold (Children)</span>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🩸</span>
+                                Primary Diagnostic Test
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="warning-box">
+                                <h4>⚠️ Critical Information</h4>
+                                <p><strong>Whole-blood lead measurement</strong> is the PRIMARY method of diagnosis. <strong>There is NO 'normal' level.</strong> Interventions should begin at the first sign of increased exposure.</p>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">✅</span>
+                                <div>
+                                    <strong>Venous whole blood</strong> drawn using lead-free materials
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Anticoagulated as requested (usually heparin)</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">📊</span>
+                                <div>
+                                    <strong>IQ Impact:</strong> Rise from 0.1 to 0.5 µmol/L (2-3 to 10 µg/dL) causes significant IQ loss in children
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Loss is more pronounced at lower concentrations</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">❌</span>
+                                <div>
+                                    <strong>Spot/24-hour urine collections</strong> are NOT recommended for diagnosis
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">These tests do not add to diagnosis</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🔍</span>
+                                Other Investigations
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="grid-2">
+                                <div class="grid-item">
+                                    <h4>🔬 Full Blood Count & Ferritin</h4>
+                                    <ul>
+                                        <li>Iron deficiency anemia may co-exist</li>
+                                        <li>Microcytic anemia uncommon without iron deficiency</li>
+                                        <li>Iron supplementation decreases lead absorption</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>📷 Abdominal Radiographs</h4>
+                                    <ul>
+                                        <li>Indicated if lead ingestion suspected</li>
+                                        <li>Radio-opaque material indicates need for gut evacuation</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>⚡ Nerve Conduction Studies</h4>
+                                    <ul>
+                                        <li>Consider in peripheral neuropathy</li>
+                                        <li>Useful for monitoring disease progression</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🦴 X-ray Fluorescence of Long Bones</h4>
+                                    <ul>
+                                        <li>Estimates long-term exposure</li>
+                                        <li>Limited clinical use due to cost</li>
+                                        <li>Primarily a research tool</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🎯</span>
+                                Screening Recommendations
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="list-item">
+                                <span class="list-icon">👶</span>
+                                <div>
+                                    <strong>Children</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Medicaid requires screening at ages 1 & 2 years. Targeted screening for children 12-24 months in high-risk areas.</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🤰</span>
+                                <div>
+                                    <strong>Pregnant/Lactating Women</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Risk assessment at earliest contact; measure BLL if any risk factor identified</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">👷</span>
+                                <div>
+                                    <strong>Occupational Exposure</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Periodic testing for all adults in lead-hazardous occupations</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🏠</span>
+                                <div>
+                                    <strong>Renovation Activities</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Families in older housing during renovation should be screened</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Treatment Section -->
+        <section class="section treatment-section" data-section="treatment">
+            <div class="section-card">
+                <div class="card-header" onclick="toggleSection('treatment')">
+                    <div class="card-icon">💊</div>
+                    <h2>Treatment</h2>
+                </div>
+                <div class="card-content" id="treatment-content">
+                    <div class="warning-box">
+                        <h4>🚨 Medical Emergency</h4>
+                        <p><strong>Acute lead encephalopathy</strong> requires aggressive chelation therapy in ICU. Presents with altered sensorium, seizures, coma.</p>
+                    </div>
+
+                    <div class="algorithm-box">
+                        <div class="algorithm-title">Treatment Algorithm Overview</div>
+                        <div class="algorithm-step">
+                            <span class="step-number">1</span>
+                            <strong>Remove Source of Exposure</strong> - Primary intervention for ALL patients
+                        </div>
+                        <div class="algorithm-step">
+                            <span class="step-number">2</span>
+                            <strong>GI Decontamination</strong> - If solid lead objects ingested
+                        </div>
+                        <div class="algorithm-step">
+                            <span class="step-number">3</span>
+                            <strong>Chelation Therapy</strong> - Based on blood lead levels & symptoms
+                        </div>
+                        <div class="algorithm-step">
+                            <span class="step-number">4</span>
+                            <strong>ICU Support</strong> - If encephalopathy present
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🏠</span>
+                                Source Removal
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="list-item">
+                                <span class="list-icon">🎯</span>
+                                <div>
+                                    <strong>Primary Treatment</strong> - Remove source BEFORE chelation
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Chelation without removal may worsen toxicity by increasing absorption from ongoing exposure</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">🏡</span>
+                                <div>
+                                    <strong>Environmental Evaluation</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Deteriorating paint, contaminated dust/soil, water supply, folk medicines, hobbies</p>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <span class="list-icon">⚠️</span>
+                                <div>
+                                    <strong>Relocation</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">May be necessary in severe cases if source cannot be removed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">💊</span>
+                                Chelation Therapy Indications
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="grid-2">
+                                <div class="grid-item">
+                                    <h4>Children <span class="severity-badge badge-urgent">≥2.2 µmol/L</span></h4>
+                                    <ul>
+                                        <li>Asymptomatic: ≥2.2 µmol/L (≥45 µg/dL)</li>
+                                        <li>Symptomatic: Any level with symptoms</li>
+                                        <li>Encephalopathy: Emergency chelation</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>Adults <span class="severity-badge badge-urgent">>3.4 µmol/L</span></h4>
+                                    <ul>
+                                        <li>Non-pregnant: >3.4 µmol/L (>70 µg/dL)</li>
+                                        <li>Symptomatic: Any level with symptoms</li>
+                                        <li>Encephalopathy: Emergency chelation</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="reference-box" style="margin-top: 1rem;">
+                                <h4>💡 Important Note</h4>
+                                <p>Chelation therapy is CONTROVERSIAL in asymptomatic/mildly symptomatic patients. Consult clinicians experienced in lead poisoning management.</p>
+                            </div>
+
+                            <div class="list-item" style="margin-top: 1rem;">
+                                <span class="list-icon">🏥</span>
+                                <div>
+                                    <strong>Hospital Admission Required</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Usually required for chelation therapy administration and monitoring</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">💉</span>
+                                Chelation Agents
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="grid-2">
+                                <div class="grid-item">
+                                    <h4>First-Line Agents</h4>
+                                    <ul>
+                                        <li><strong>Succimer (oral)</strong> - Asymptomatic children & adults</li>
+                                        <li><strong>Sodium calcium edetate (IV)</strong> - Asymptomatic patients</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>Combined Therapy</h4>
+                                    <ul>
+                                        <li><strong>Dimercaprol + Sodium calcium edetate</strong></li>
+                                        <li>For blood lead ≥3.4 µmol/L or symptomatic patients</li>
+                                        <li>Required for encephalopathy</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>Third-Line</h4>
+                                    <ul>
+                                        <li><strong>Penicillamine</strong> - Non-pregnant adults only</li>
+                                        <li>Due to toxicity and limited effectiveness</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>Monitoring</h4>
+                                    <ul>
+                                        <li>24-hour urine lead-to-chelant ratio >1 µg/mg indicates effective chelation</li>
+                                        <li>Recheck blood lead 2-4 weeks after completion</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <h4>🤰 Pregnancy Considerations</h4>
+                                <p>Chelation is usually CONTRAINDICATED in pregnancy due to teratogenic risk (succimer) and increased fetal exposure risk. Only consider if life-threatening encephalopathy.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Follow-up Section -->
+        <section class="section followup-section" data-section="followup">
+            <div class="section-card">
+                <div class="card-header" onclick="toggleSection('followup')">
+                    <div class="card-icon">📈</div>
+                    <h2>Follow-up</h2>
+                </div>
+                <div class="card-content" id="followup-content">
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🔄</span>
+                                Monitoring Protocol
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="grid-2">
+                                <div class="grid-item">
+                                    <h4>👶 Children</h4>
+                                    <ul>
+                                        <li>Monthly testing if near chelation levels</li>
+                                        <li>Quarterly until BLL <0.2 µmol/L (<4 µg/dL)</li>
+                                        <li>Intensive neurodevelopmental evaluation</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>👨‍🦱 Adults</h4>
+                                    <ul>
+                                        <li>Regular testing until BLL <0.5 µmol/L (10 µg/dL)</li>
+                                        <li>Monitor for complications</li>
+                                        <li>Continued source control assessment</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="list-item" style="margin-top: 1rem;">
+                                <span class="list-icon">⏰</span>
+                                <div>
+                                    <strong>Post-Chelation Testing</strong>
+                                    <p style="color: var(--text-secondary); font-size: 0.9rem;">Blood lead level at 2-4 weeks after chelation to evaluate for rebound and need for additional therapy</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">⚠️</span>
+                                Long-term Complications
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <span class="stat-value" style="color: var(--urgent-color);">HIGH</span>
+                                    <span class="stat-label">Neurodevelopmental Delay<br>Children</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-value" style="color: var(--caution-color);">MEDIUM</span>
+                                    <span class="stat-label">Hypertension<br>Adults</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-value" style="color: var(--caution-color);">MEDIUM</span>
+                                    <span class="stat-label">Cardiovascular Disease</span>
+                                </div>
+                                <div class="stat-card">
+                                    <span class="stat-value" style="color: var(--caution-color);">MEDIUM</span>
+                                    <span class="stat-label">Cognitive Dysfunction</span>
+                                </div>
+                            </div>
+
+                            <div class="grid-2" style="margin-top: 1.5rem;">
+                                <div class="grid-item">
+                                    <h4>🧠 Neurological <span class="severity-badge badge-urgent">Not Reversible</span></h4>
+                                    <ul>
+                                        <li>Neurodevelopmental delay in children - NO improvement with chelation</li>
+                                        <li>Cognitive impairment persists into adulthood</li>
+                                        <li>Lower IQ, psychopathology, low socioeconomic status</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>❤️ Cardiovascular <span class="severity-badge badge-urgent">Not Reversed by Chelation</span></h4>
+                                    <ul>
+                                        <li>Hypertension - key toxicity in adults</li>
+                                        <li>Coronary artery disease</li>
+                                        <li>Increased stroke mortality</li>
+                                        <li>Peripheral vascular disease</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🩸 Hematological</h4>
+                                    <ul>
+                                        <li>Anemia - resolves with decreased exposure</li>
+                                        <li>Iron supplementation treats co-existing deficiency</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🫘 Renal</h4>
+                                    <ul>
+                                        <li>Fanconi's syndrome (phosphaturia, glucosuria, aminoaciduria)</li>
+                                        <li>Responds to decreased exposure and chelation</li>
+                                        <li>Chronic renal failure may persist in some patients</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="expandable-card">
+                        <div class="expandable-header" onclick="toggleCard(this)">
+                            <div class="expandable-title">
+                                <span class="expandable-icon">🔮</span>
+                                Prognosis
+                            </div>
+                            <span class="expandable-arrow">▼</span>
+                        </div>
+                        <div class="expandable-content">
+                            <div class="reference-box">
+                                <h4>💡 Key Principle</h4>
+                                <p>Much of lead toxicity is <strong>NOT reversible</strong> by medical therapy. Lead resides in bone for decades after exposure ceases. Lead poisoning is a <strong>chronic illness</strong> requiring long-term management.</p>
+                            </div>
+
+                            <div class="grid-2">
+                                <div class="grid-item">
+                                    <h4>✅ Readily Reversed</h4>
+                                    <ul>
+                                        <li>Acute symptoms (abdominal pain)</li>
+                                        <li>Lead colic responds to chelation</li>
+                                        <li>Anemia with appropriate treatment</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>❌ Poorly Reversible</h4>
+                                    <ul>
+                                        <li>Neurological impairments (CNS & PNS)</li>
+                                        <li>Cardiovascular toxicity</li>
+                                        <li>Neurodevelopmental delay in children</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>🧒 Encephalopathy</h4>
+                                    <ul>
+                                        <li>Survival is good with ICU care</li>
+                                        <li>Most survivors have residual neurological deficits</li>
+                                    </ul>
+                                </div>
+                                <div class="grid-item">
+                                    <h4>📊 Long-term Outlook</h4>
+                                    <ul>
+                                        <li>Lifetime lead exposure expressed later in life</li>
+                                        <li>May accelerate cognitive decline in older adults</li>
+                                        <li>Requires lifelong monitoring</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="reference-box">
+                        <h4>📚 Additional Resources</h4>
+                        <p>• CDC Childhood Lead Poisoning Prevention Program<br>
+                        • WHO Guideline for Clinical Management of Lead Exposure (2021)<br>
+                        • CDC Adult Blood Lead Epidemiology and Surveillance (ABLES)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand first section by default
+            document.getElementById('assessment-content').classList.add('expanded');
+            
+            // Set up scroll spy
+            setupScrollSpy();
+            
+            // Set up navigation
+            setupNavigation();
+        });
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById(sectionId + '-content');
+            content.classList.toggle('expanded');
+        }
+
+        function toggleCard(headerElement) {
+            const content = headerElement.nextElementSibling;
+            const arrow = headerElement.querySelector('.expandable-arrow');
+            
+            content.classList.toggle('expanded');
+            arrow.classList.toggle('rotated');
+        }
+
+        function setupScrollSpy() {
+            const sections = document.querySelectorAll('.section');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const sectionId = entry.target.dataset.section;
+                        
+                        progressItems.forEach(item => {
+                            item.classList.remove('active');
+                            if (item.dataset.target === sectionId) {
+                                item.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, {
+                threshold: 0.5,
+                rootMargin: '-100px 0px -100px 0px'
+            });
+            
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        }
+
+        function setupNavigation() {
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            progressItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const targetId = item.dataset.target;
+                    const targetSection = document.querySelector(`[data-section="${targetId}"]`);
+                    
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Expand the section after navigation
+                    setTimeout(() => {
+                        const content = document.getElementById(targetId + '-content');
+                        if (!content.classList.contains('expanded')) {
+                            content.classList.add('expanded');
+                        }
+                    }, 300);
+                });
+            });
+        }
+
+        // Add smooth scrolling for all internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                const sections = Array.from(document.querySelectorAll('.section'));
+                const currentSection = sections.findIndex(section => {
+                    const rect = section.getBoundingClientRect();
+                    return rect.top >= 0 && rect.top < window.innerHeight / 2;
+                });
+                
+                if (currentSection !== -1) {
+                    let nextSection;
+                    if (e.key === 'ArrowDown' && currentSection < sections.length - 1) {
+                        nextSection = sections[currentSection + 1];
+                    } else if (e.key === 'ArrowUp' && currentSection > 0) {
+                        nextSection = sections[currentSection - 1];
+                    }
+                    
+                    if (nextSection) {
+                        nextSection.scrollIntoView({ behavior: 'smooth' });
+                        const sectionId = nextSection.dataset.section;
+                        const content = document.getElementById(sectionId + '-content');
+                        if (!content.classList.contains('expanded')) {
+                            setTimeout(() => {
+                                content.classList.add('expanded');
+                            }, 300);
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

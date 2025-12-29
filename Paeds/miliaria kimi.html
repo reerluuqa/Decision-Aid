@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Miliaria - Interactive Clinical Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #e9ecef;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --accent-blue: #4b6cb7;
+            --accent-green: #11998e;
+            --accent-orange: #ff8c42;
+            --accent-teal: #14a2b8;
+            --red-badge: #dc3545;
+            --amber-badge: #ffc107;
+            --green-badge: #28a745;
+            --purple-accent: #6f42c1;
+            --hover-shadow: rgba(0, 0, 0, 0.12);
+        }
+
+        [data-theme="dark"] {
+            --primary-bg: #121212;
+            --card-bg: #1e1e1e;
+            --text-primary: #e9ecef;
+            --text-secondary: #adb5bd;
+            --border-color: #343a40;
+            --shadow: rgba(255, 255, 255, 0.05);
+            --accent-blue: #5a7fd0;
+            --accent-green: #17c3b2;
+            --accent-orange: #ffaa5a;
+            --accent-teal: #20c9e0;
+            --red-badge: #e74c3c;
+            --amber-badge: #ffcd39;
+            --green-badge: #2ecc71;
+            --purple-accent: #8c68e0;
+            --hover-shadow: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--accent-blue), #182848);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 12px var(--shadow);
+            position: relative;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px var(--shadow);
+            min-width: 280px;
+            transition: all 0.3s ease;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .progress-item:hover {
+            background: var(--primary-bg);
+            transform: translateX(4px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, var(--accent-blue), #182848);
+            color: white;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .progress-item.completed {
+            color: var(--green-badge);
+        }
+
+        .progress-item.completed .progress-icon {
+            background: var(--green-badge);
+            color: white;
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-content {
+            flex: 1;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.1s; }
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.3s; }
+        .section:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px var(--shadow);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px var(--hover-shadow);
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header i {
+            font-size: 1.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card-header.expanded i {
+            transform: rotate(90deg);
+        }
+
+        .card-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .card-content.expanded {
+            max-height: 2000px;
+            padding: 1.5rem 2rem;
+        }
+
+        .assessment .card-header {
+            background: linear-gradient(135deg, var(--accent-blue), #182848);
+        }
+
+        .diagnosis .card-header {
+            background: linear-gradient(135deg, var(--accent-green), #0c6e65);
+        }
+
+        .treatment .card-header {
+            background: linear-gradient(135deg, var(--accent-orange), #cc6b33);
+        }
+
+        .followup .card-header {
+            background: linear-gradient(135deg, var(--accent-teal), #0c7d8c);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .badge:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .badge-red {
+            background: var(--red-badge);
+            color: white;
+        }
+
+        .badge-amber {
+            background: var(--amber-badge);
+            color: var(--text-primary);
+        }
+
+        .badge-green {
+            background: var(--green-badge);
+            color: white;
+        }
+
+        .badge-purple {
+            background: var(--purple-accent);
+            color: white;
+        }
+
+        .sub-card {
+            background: var(--primary-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .sub-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--shadow);
+        }
+
+        .sub-card h4 {
+            color: var(--accent-blue);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .sub-card.diagnosis .sub-card h4 {
+            color: var(--accent-green);
+        }
+
+        .sub-card.treatment .sub-card h4 {
+            color: var(--accent-orange);
+        }
+
+        .sub-card.followup .sub-card h4 {
+            color: var(--accent-teal);
+        }
+
+        .list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .list-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            margin-top: 0.1rem;
+        }
+
+        .diagnosis .list-icon {
+            background: var(--accent-green);
+        }
+
+        .treatment .list-icon {
+            background: var(--accent-orange);
+        }
+
+        .followup .list-icon {
+            background: var(--accent-teal);
+        }
+
+        .risk-factors {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .risk-factor-item {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-orange);
+            transition: all 0.3s ease;
+        }
+
+        .risk-factor-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .risk-factor-item.strong {
+            border-left-color: var(--red-badge);
+        }
+
+        .risk-factor-item.weak {
+            border-left-color: var(--amber-badge);
+        }
+
+        .treatment-algorithm {
+            background: linear-gradient(135deg, #f8f9ff, #e9ecef);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        [data-theme="dark"] .treatment-algorithm {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+        }
+
+        .treatment-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            box-shadow: 0 2px 6px var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .treatment-step:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px var(--hover-shadow);
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--accent-orange);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .differential-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .differential-item {
+            background: var(--primary-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .differential-item:hover {
+            background: var(--card-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow);
+        }
+
+        .badge-container {
+            margin: 1rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: var(--text-primary);
+            color: var(--card-bg);
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .print-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), #182848);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .print-btn:hover {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 6px 20px var(--hover-shadow);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 6rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) translateY(-2px);
+            box-shadow: 0 6px 20px var(--hover-shadow);
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                top: 0;
+                min-width: auto;
+                margin-bottom: 1.5rem;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                padding: 1.25rem 1.5rem;
+            }
+
+            .card-content.expanded {
+                padding: 1.25rem 1.5rem;
+            }
+        }
+
+        @media print {
+            .progress-sidebar,
+            .print-btn,
+            .theme-toggle {
+                display: none;
+            }
+
+            .card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .card-content {
+                max-height: none !important;
+                padding: 1.5rem 2rem !important;
+            }
+
+            body {
+                background: white;
+                color: black;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1><i class="fas fa-heartbeat"></i> Miliaria Management Algorithm</h1>
+        <p>Interactive Clinical Decision Support Tool | BMJ Best Practice Guidelines</p>
+    </header>
+
+    <div class="container">
+        <aside class="progress-sidebar">
+            <h3><i class="fas fa-route"></i> Algorithm Progress</h3>
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon">4</div>
+                <span>Follow-up</span>
+            </div>
+            <div class="badge-container" style="margin-top: 2rem;">
+                <span class="badge badge-red" data-tooltip="Requires urgent referral or immediate action">
+                    <i class="fas fa-exclamation-triangle"></i> Urgent
+                </span>
+                <span class="badge badge-amber" data-tooltip="Requires caution or specialist input">
+                    <i class="fas fa-exclamation-circle"></i> Caution
+                </span>
+                <span class="badge badge-green" data-tooltip="Stable or routine management">
+                    <i class="fas fa-check-circle"></i> Stable
+                </span>
+                <span class="badge badge-purple" data-tooltip="Special considerations apply">
+                    <i class="fas fa-star"></i> Note
+                </span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Section -->
+            <section class="section assessment" id="assessment">
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <i class="fas fa-stethoscope"></i>
+                        <div class="card-title">Assessment</div>
+                        <i class="fas fa-chevron-right" style="margin-left: auto;"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card">
+                            <h4><i class="fas fa-clipboard-list"></i> History & Examination</h4>
+                            <p>Miliaria is diagnosed clinically based on characteristic history and physical examination findings. Key features vary by type:</p>
+                            
+                            <div class="badge-container">
+                                <span class="badge badge-green">Miliaria Crystallina</span>
+                                <span class="badge badge-amber">Miliaria Rubra</span>
+                                <span class="badge badge-red">Miliaria Profunda</span>
+                            </div>
+
+                            <div class="list-item">
+                                <div class="list-icon">🌡️</div>
+                                <div>
+                                    <strong>Environmental Exposure:</strong> Hot/humid conditions, occlusive clothing, febrile illness
+                                </div>
+                            </div>
+
+                            <div class="list-item">
+                                <div class="list-icon">🔥</div>
+                                <div>
+                                    <strong>Miliaria Rubra Symptoms:</strong> Paroxysmal pruritus, stinging, burning, or tingling exacerbated by sweating
+                                </div>
+                            </div>
+
+                            <div class="list-item">
+                                <div class="list-icon">💧</div>
+                                <div>
+                                    <strong>Miliaria Profunda Symptoms:</strong> Anhidrosis, compensatory hyperhidrosis on face/hands/feet, weakness, dyspnea
+                                </div>
+                            </div>
+
+                            <div class="list-item">
+                                <div class="list-icon">👶</div>
+                                <div>
+                                    <strong>Neonatal Considerations:</strong> Common in infants (1.3-4.5% for crystallina, 4-9% for rubra)
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-eye"></i> Physical Examination Findings</h4>
+                            
+                            <div class="risk-factors">
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Crystallina:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Clear, non-inflammatory vesicles on non-erythematous base</li>
+                                        <li>Fragile vesicles that rupture easily with friction</li>
+                                        <li>Typically on trunk and proximal extremities</li>
+                                        <li>Spontaneous resolution with "branny" desquamation</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Rubra:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Erythematous, non-follicular papules with central vesicle</li>
+                                        <li>Sites of friction and occlusion</li>
+                                        <li>Face spared in adults, may involve face in neonates</li>
+                                        <li>May develop pustules (miliaria pustulosa)</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Profunda:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Flesh-colored, deep-seated papules</li>
+                                        <li>Associated anhidrosis of affected areas</li>
+                                        <li>Compensatory hyperhidrosis of face, axillae, hands, feet</li>
+                                        <li>Usually follows repeated episodes of miliaria rubra</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Risk Factors</h4>
+                            <p>Identify predisposing factors to guide prevention strategies:</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                <div>
+                                    <h5 style="color: var(--red-badge); margin-bottom: 0.5rem;">
+                                        <i class="fas fa-fire"></i> Strong Risk Factors
+                                    </h5>
+                                    <div class="risk-factor-item strong">
+                                        <div class="list-item">
+                                            <div class="list-icon">💧</div>
+                                            <div>Profuse sweating (primary pathogenic factor)</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">🌡️</div>
+                                            <div>Excessive heat and humidity</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">👕</div>
+                                            <div>Occlusive clothing or dressings</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">🤒</div>
+                                            <div>Febrile illness</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">🔄</div>
+                                            <div>Repeat episodes of miliaria rubra (for profunda)</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">☀️</div>
+                                            <div>Ultraviolet light exposure/sunburn</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h5 style="color: var(--amber-badge); margin-bottom: 0.5rem;">
+                                        <i class="fas fa-info-circle"></i> Weak/Contributory Factors
+                                    </h5>
+                                    <div class="risk-factor-item weak">
+                                        <div class="list-item">
+                                            <div class="list-icon">👶</div>
+                                            <div>Neonatal age (immature sweat ducts)</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">💊</div>
+                                            <div>Cholinergic medications (e.g., bethanechol)</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">🧴</div>
+                                            <div>Isotretinoin (also used as treatment)</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">💉</div>
+                                            <div>Doxorubicin chemotherapy</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">🦠</div>
+                                            <div>Staphylococcal scalded skin syndrome</div>
+                                        </div>
+                                        <div class="list-item">
+                                            <div class="list-icon">🔬</div>
+                                            <div>Atopic dermatitis</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-key"></i> Key Diagnostic Factors</h4>
+                            <div class="list-item">
+                                <div class="list-icon">✓</div>
+                                <div>
+                                    <strong>Presence of Risk Factors:</strong> Excessive sweating, heat/humidity, occlusive clothing
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-icon">✓</div>
+                                <div>
+                                    <strong>Non-follicular Lesions:</strong> All forms involve eccrine ducts, not hair follicles
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-icon">💧</div>
+                                <div>
+                                    <strong>Asymptomatic Eruption:</strong> Characteristic of miliaria crystallina
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-icon">🔴</div>
+                                <div>
+                                    <strong>Paroxysmal Pruritus:</strong> Key symptom of miliaria rubra ("prickly heat")
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="list-icon">❄️</div>
+                                <div>
+                                    <strong>Anhidrosis:</strong> Hallmark of miliaria profunda (tropical anhidrotic asthenia)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="section diagnosis" id="diagnosis">
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <i class="fas fa-microscope"></i>
+                        <div class="card-title">Diagnosis</div>
+                        <i class="fas fa-chevron-right" style="margin-left: auto;"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card">
+                            <h4><i class="fas fa-check-circle"></i> Clinical Diagnosis</h4>
+                            <p><strong>Primary diagnostic method:</strong> Characteristic history and physical examination findings are usually sufficient for diagnosis. Laboratory testing is typically not required.</p>
+                            
+                            <div class="badge-container">
+                                <span class="badge badge-green">
+                                    <i class="fas fa-user-md"></i> Clinical Diagnosis Sufficient
+                                </span>
+                                <span class="badge badge-purple">
+                                    <i class="fas fa-vial"></i> Tests Only for Atypical Cases
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-flask"></i> Investigations (If Needed)</h4>
+                            <p>Consider these tests only if clinical presentation is atypical or differential diagnosis needs exclusion:</p>
+                            
+                            <div class="risk-factors">
+                                <div class="risk-factor-item">
+                                    <strong>Microbiology Tests:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li><strong>Tzanck Smear:</strong> Rules out herpetic infection (HSV/VZV) - no multinucleated giant cells in miliaria</li>
+                                        <li><strong>Viral DFA/Culture/PCR:</strong> Differentiate from varicella or HSV infection</li>
+                                        <li><strong>Bacterial Culture:</strong> Rules out impetigo or S. aureus infection</li>
+                                        <li><strong>Fungal Culture/KOH Prep:</strong> Rules out candidiasis (important in neonates)</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Histopathology:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li><strong>Skin Biopsy:</strong> Rarely needed, confirms diagnosis and rules out differentials</li>
+                                        <li><strong>Miliaria Crystallina:</strong> Sub-corneal vesicle over acrosyringeal duct, no inflammation</li>
+                                        <li><strong>Miliaria Rubra:</strong> Spongiosis of intra-epidermal sweat duct with lymphocytic infiltrate</li>
+                                        <li><strong>Miliaria Profunda:</strong> Intra-epidermal spongiotic vesicle with denser inflammatory infiltrate</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-columns"></i> Differential Diagnosis</h4>
+                            <p>Important conditions to consider and differentiate:</p>
+                            
+                            <div class="differential-grid">
+                                <div class="differential-item">
+                                    <strong>Fox-Fordyce Disease</strong>
+                                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                        <span class="badge badge-amber">Apocrine Miliaria</span>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Intensely pruritic papules in adult women</li>
+                                            <li>Axillae, groin, pubic region, areola</li>
+                                            <li>Folliculocentric (vs. non-follicular in miliaria)</li>
+                                            <li>No relationship to heat/humidity</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="differential-item">
+                                    <strong>Varicella/Zoster Infection</strong>
+                                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                        <span class="badge badge-red">Viral Infection</span>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Vesicles on inflammatory base, all stages simultaneously</li>
+                                            <li>Highly contagious, often epidemic</li>
+                                            <li>Multinucleated giant cells on Tzanck smear</li>
+                                            <li>Positive viral PCR/culture</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="differential-item">
+                                    <strong>Acne Vulgaris</strong>
+                                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                        <span class="badge badge-amber">Follicular Disorder</span>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Folliculocentric papules, pustules, comedones</li>
+                                            <li>May involve face, chest, back</li>
+                                            <li>Not related to heat/sweating</li>
+                                            <li>Chronic course vs. transient miliaria</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="differential-item">
+                                    <strong>Folliculitis</strong>
+                                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                        <span class="badge badge-amber">Infectious</span>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Folliculocentric pustules</li>
+                                            <li>May be associated with occlusion</li>
+                                            <li>Bacterial culture may isolate S. aureus</li>
+                                            <li>Lesions centered on hair follicles</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="differential-item">
+                                    <strong>Transient Acantholytic Dermatosis (Grover's Disease)</strong>
+                                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                        <span class="badge badge-amber">Pruritic Eruption</span>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Pruritic erythematous papulovesicles on trunk</li>
+                                            <li>Adult males, more persistent</li>
+                                            <li>Related to heat/sweating but no anhidrosis</li>
+                                            <li>Biopsy shows acantholysis with dyskeratosis</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="differential-item">
+                                    <strong>Neonatal Considerations</strong>
+                                    <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                                        <span class="badge badge-purple">Pediatric</span>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li><strong>Erythema Toxicum Neonatorum:</strong> Folliculocentric pustules with eosinophils</li>
+                                            <li><strong>Transient Neonatal Pustular Melanosis:</strong> Non-follicular pustules with neutrophils</li>
+                                            <li><strong>Congenital Candidiasis:</strong> Pustules, not vesicles; KOH positive</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="section treatment" id="treatment">
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <i class="fas fa-pills"></i>
+                        <div class="card-title">Treatment</div>
+                        <i class="fas fa-chevron-right" style="margin-left: auto;"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card">
+                            <h4><i class="fas fa-lightbulb"></i> Core Management Principle</h4>
+                            <div style="background: linear-gradient(135deg, #fff3cd, #ffeaa7); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--amber-badge);">
+                                <strong>Primary treatment for all forms:</strong> Placement in a cool environment to reduce sweating. 
+                                <strong>"The only effective treatment and prevention is to avoid further sweating."</strong>
+                            </div>
+                        </div>
+
+                        <div class="treatment-algorithm">
+                            <h4 style="margin-bottom: 1rem; color: var(--accent-orange);">
+                                <i class="fas fa-sitemap"></i> Treatment Algorithm Overview
+                            </h4>
+                            
+                            <div class="treatment-step">
+                                <div class="step-number">1</div>
+                                <div>
+                                    <strong>All Patients:</strong> Cool environment + Supportive care (moisturizing ointment, absorbent powder, cleansing)
+                                    <span class="badge badge-green">First Line</span>
+                                </div>
+                            </div>
+                            
+                            <div class="treatment-step">
+                                <div class="step-number">2</div>
+                                <div>
+                                    <strong>Adjunct:</strong> Antibacterial agents (topical chlorhexidine, bacitracin, erythromycin)
+                                    <span class="badge badge-amber">Prophylaxis</span>
+                                </div>
+                            </div>
+                            
+                            <div class="treatment-step">
+                                <div class="step-number">3</div>
+                                <div>
+                                    <strong>Febrile Patients:</strong> Add antipyretics (paracetamol or ibuprofen)
+                                    <span class="badge badge-purple">Symptomatic</span>
+                                </div>
+                            </div>
+                            
+                            <div class="treatment-step">
+                                <div class="step-number">4</div>
+                                <div>
+                                    <strong>With Pruritus:</strong> Add antipruritic agents (calamine, menthol, pramoxine, or mid-potency topical steroid)
+                                    <span class="badge badge-amber">Symptom Control</span>
+                                </div>
+                            </div>
+                            
+                            <div class="treatment-step">
+                                <div class="step-number">5</div>
+                                <div>
+                                    <strong>Miliaria Profunda:</strong> Consider isotretinoin (adults: 0.5 mg/kg/day for 2 months)
+                                    <span class="badge badge-purple">Specialist Use</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-snowflake"></i> Supportive Care Measures</h4>
+                            
+                            <div class="risk-factors">
+                                <div class="risk-factor-item">
+                                    <strong>Environmental Control:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Cool environment (few hours for crystallina, weeks-months for profunda)</li>
+                                        <li>Cooling fans for febrile patients</li>
+                                        <li>Cool soothing baths with colloidal oatmeal</li>
+                                        <li>Avoid heat and humidity whenever possible</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Skin Care:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Regular washing to remove salt and bacteria</li>
+                                        <li>Topical absorbent powders (cornstarch)</li>
+                                        <li>Moisturizing ointments (anhydrous lanolin)</li>
+                                        <li>Apply before exercise or at onset of eruption</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Pharmacological Adjuncts:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li><strong>Ascorbic Acid:</strong> 1g orally once daily (prevention and treatment)</li>
+                                        <li><strong>Antipyretics:</strong> Paracetamol or ibuprofen for febrile patients</li>
+                                        <li><strong>Topical Antibacterials:</strong> Chlorhexidine 2-4% rinse, bacitracin, erythromycin</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-allergies"></i> Antipruritic Therapy</h4>
+                            <p>For miliaria rubra with significant pruritus:</p>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">🧴</div>
+                                <div>
+                                    <strong>First Line:</strong> Calamine lotion, menthol/petrolatum, or pramoxine 1% lotion
+                                    <span class="badge badge-green">Safe & Effective</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">💊</div>
+                                <div>
+                                    <strong>Second Line:</strong> Mid-potency topical corticosteroid (e.g., triamcinolone 0.1% twice daily)
+                                    <span class="badge badge-amber">Moderate Potency</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">⚠️</div>
+                                <div>
+                                    <strong>Mechanism:</strong> Topical agents depress cutaneous sensory receptors
+                                    <span class="badge badge-purple">Symptomatic Relief</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-capsules"></i> Isotretinoin for Miliaria Profunda</h4>
+                            <div style="background: linear-gradient(135deg, #fff5f5, #fed7d7); padding: 1rem; border-radius: 8px; border-left: 4px solid var(--red-badge);">
+                                <strong>Paradoxical Use:</strong> Although isotretinoin can cause miliaria crystallina, short courses are effective for miliaria profunda.
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">💊</div>
+                                <div>
+                                    <strong>Dosing:</strong> Adults 0.5 mg/kg/day orally for 2 months
+                                    <span class="badge badge-amber">Specialist Supervision</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">🚫</div>
+                                <div>
+                                    <strong>Contraindications:</strong> Pregnancy (teratogenic), requires monitoring
+                                    <span class="badge badge-red">High Risk</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">🩺</div>
+                                <div>
+                                    <strong>Monitoring:</strong> FBC, lipid panel, LFTs regularly; monthly pregnancy tests for women
+                                    <span class="badge badge-purple">Essential Monitoring</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-clock"></i> Treatment Timeline Expectations</h4>
+                            <div class="risk-factors">
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Crystallina:</strong>
+                                    <span class="badge badge-green">Rapid Resolution</span>
+                                    <p>Quick relief within a few hours in cool environment; spontaneous resolution with desquamation</p>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Rubra:</strong>
+                                    <span class="badge badge-amber">Gradual Improvement</span>
+                                    <p>Improvement after several days in cooler environment; complete resolution may take 2-3 weeks</p>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Profunda:</strong>
+                                    <span class="badge badge-red">Prolonged Course</span>
+                                    <p>Requires weeks to months of heat avoidance; eruption phase transient (&lt;1 hour after overheating)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="section followup" id="followup">
+                <div class="card">
+                    <div class="card-header" onclick="toggleCard(this)">
+                        <i class="fas fa-user-check"></i>
+                        <div class="card-title">Follow-up</div>
+                        <i class="fas fa-chevron-right" style="margin-left: auto;"></i>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card">
+                            <h4><i class="fas fa-eye"></i> Monitoring Requirements</h4>
+                            <div class="list-item">
+                                <div class="list-icon">👁️</div>
+                                <div>
+                                    <strong>General Monitoring:</strong> Clinical improvement should be evident within expected timeframe based on type
+                                    <span class="badge badge-green">Clinical Assessment</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">💊</div>
+                                <div>
+                                    <strong>Isotretinoin Patients:</strong> Regular monitoring of FBC, lipid panel, and liver function tests
+                                    <span class="badge badge-red">Essential</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">👩</div>
+                                <div>
+                                    <strong>Women of Childbearing Potential:</strong> Monthly pregnancy tests while on isotretinoin
+                                    <span class="badge badge-red">Mandatory</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Complications</h4>
+                            <div class="risk-factors">
+                                <div class="risk-factor-item strong">
+                                    <strong>Heat Exhaustion (Tropical Anhidrotic Asthenia):</strong>
+                                    <span class="badge badge-red">High Risk</span>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Associated with miliaria profunda</li>
+                                        <li>Symptoms: Weakness, fatigue, dizziness, collapse, hyperpyrexia</li>
+                                        <li>Most common in soldiers stationed in tropical climates</li>
+                                        <li>Risk reduction through patient education about occlusive clothing and UV exposure</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Hypohydrosis/Anhidrosis:</strong>
+                                    <span class="badge badge-amber">Medium Risk</span>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Can persist for up to 3 weeks after clinical resolution</li>
+                                        <li>More severe and profound in miliaria profunda</li>
+                                        <li>Episodic in miliaria rubra (less severe)</li>
+                                        <li>Compensatory hyperhidrosis in unaffected areas</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-chart-line"></i> Prognosis</h4>
+                            <p>Varies significantly by type:</p>
+                            
+                            <div class="risk-factors">
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Crystallina:</strong>
+                                    <span class="badge badge-green">Excellent</span>
+                                    <p>Transient condition with prompt spontaneous resolution; no long-term sequelae</p>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Rubra:</strong>
+                                    <span class="badge badge-green">Good</span>
+                                    <p>Transient condition; improvement within days, complete resolution in 2-3 weeks; no sequelae</p>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Miliaria Profunda:</strong>
+                                    <span class="badge badge-amber">Variable</span>
+                                    <p>Less common, slower to resolve; may have transient sequelae (anhidrosis, heat intolerance); eruption phase brief (&lt;1 hour) but underlying dysfunction persists</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-shield-alt"></i> Prevention Strategies</h4>
+                            <p><strong>No primary prevention other than avoidance:</strong> Control heat and humidity to avoid stimulating sweating.</p>
+                            
+                            <div class="badge-container">
+                                <span class="badge badge-green">Primary Prevention</span>
+                                <span class="badge badge-amber">Secondary Prevention</span>
+                                <span class="badge badge-purple">Patient Education</span>
+                            </div>
+                            
+                            <div class="risk-factors">
+                                <div class="risk-factor-item">
+                                    <strong>Environmental Modifications:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li>Avoid conditions of high heat or humidity</li>
+                                        <li>Limit activity in hot environments</li>
+                                        <li>Wear light, loose-fitting clothing</li>
+                                        <li>Practice good hygiene with cooling showers/baths</li>
+                                        <li>Use appropriate sunscreen and reapply every 2 hours</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Pharmacological Prophylaxis:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li><strong>Topical Anhydrous Lanolin:</strong> Apply before exercise to prevent new lesions</li>
+                                        <li><strong>Topical Antibacterials:</strong> May be effective prophylactically (chlorhexidine, bacitracin)</li>
+                                        <li><strong>Ascorbic Acid:</strong> 1g orally daily for prevention</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="risk-factor-item">
+                                    <strong>Special Populations:</strong>
+                                    <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                        <li><strong>Infants:</strong> Avoid heavy bundling; keep cool and dry</li>
+                                        <li><strong>Tropical Travelers:</strong> Gradual acclimatization before heavy exercise</li>
+                                        <li><strong>Outdoor Workers:</strong> Regular cooling breaks, hydration, protective clothing</li>
+                                        <li><strong>Military Personnel:</strong> Education on tropical anhidrotic asthenia prevention</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-user-friends"></i> Patient Education & Counseling</h4>
+                            <p>Key discussion points for patients and parents:</p>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">📚</div>
+                                <div>
+                                    <strong>Explain Etiology:</strong> Sweat duct occlusion due to excessive sweating in hot/humid conditions
+                                    <span class="badge badge-purple">Understanding</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">❄️</div>
+                                <div>
+                                    <strong>Emphasize Cooling:</strong> Primary treatment is cooling and avoiding further sweating
+                                    <span class="badge badge-green">Essential Action</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">🚫</div>
+                                <div>
+                                    <strong>Warning Signs:</strong> Seek medical attention for signs of heat exhaustion or if no improvement
+                                    <span class="badge badge-red">Safety Net</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">📅</div>
+                                <div>
+                                    <strong>Follow-up Expectations:</strong> Timeline for resolution varies by type; profunda requires prolonged avoidance
+                                    <span class="badge badge-amber">Expectation Setting</span>
+                                </div>
+                            </div>
+                            
+                            <div class="list-item">
+                                <div class="list-icon">🛡️</div>
+                                <div>
+                                    <strong>Prevention:</strong> Loose clothing, hygiene, sunscreen, gradual acclimatization, prophylactic lanolin
+                                    <span class="badge badge-green">Prevention Focus</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <button class="print-btn" onclick="window.print()" title="Print Algorithm">
+        <i class="fas fa-print"></i>
+    </button>
+
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="tooltip"></div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.fa-chevron-right');
+            
+            content.classList.toggle('expanded');
+            header.classList.toggle('expanded');
+            
+            // Update progress tracking
+            updateProgress();
+        }
+
+        // Smooth scroll to section
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Auto-expand the target section
+            const card = element.querySelector('.card-header');
+            if (!card.classList.contains('expanded')) {
+                toggleCard(card);
+            }
+        }
+
+        // Progress tracking
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            sections.forEach((sectionId, index) => {
+                const section = document.getElementById(sectionId);
+                const card = section.querySelector('.card-header');
+                const progressItem = progressItems[index];
+                
+                if (card.classList.contains('expanded')) {
+                    progressItem.classList.add('completed');
+                } else {
+                    progressItem.classList.remove('completed');
+                }
+            });
+        }
+
+        // Progress item click handlers
+        document.querySelectorAll('.progress-item').forEach((item, index) => {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            item.addEventListener('click', () => {
+                scrollToSection(sections[index]);
+                
+                // Update active state
+                document.querySelectorAll('.progress-item').forEach(p => p.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Intersection observer for active section tracking
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sectionId = entry.target.id;
+                    const progressItems = document.querySelectorAll('.progress-item');
+                    
+                    progressItems.forEach(item => item.classList.remove('active'));
+                    
+                    const sectionMap = {
+                        'assessment': 0,
+                        'diagnosis': 1,
+                        'treatment': 2,
+                        'followup': 3
+                    };
+                    
+                    if (sectionMap[sectionId] !== undefined) {
+                        progressItems[sectionMap[sectionId]].classList.add('active');
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+
+        // Observe all sections
+        document.querySelectorAll('.section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Theme toggle
+        function toggleTheme() {
+            const body = document.body;
+            const icon = document.querySelector('.theme-toggle i');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                icon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.querySelector('.theme-toggle i').className = 'fas fa-sun';
+            }
+            
+            // Initialize progress
+            updateProgress();
+            
+            // Auto-expand first section
+            const firstCard = document.querySelector('#assessment .card-header');
+            if (firstCard && !firstCard.classList.contains('expanded')) {
+                toggleCard(firstCard);
+            }
+        });
+
+        // Tooltip functionality
+        const tooltip = document.querySelector('.tooltip');
+        const badges = document.querySelectorAll('.badge[data-tooltip]');
+
+        badges.forEach(badge => {
+            badge.addEventListener('mouseenter', (e) => {
+                const text = badge.getAttribute('data-tooltip');
+                tooltip.textContent = text;
+                tooltip.classList.add('show');
+            });
+
+            badge.addEventListener('mousemove', (e) => {
+                const x = e.clientX;
+                const y = e.clientY;
+                // Position the tooltip above the cursor
+                const offsetY = 30;
+                const offsetX = tooltip.offsetWidth / 2;
+                const left = x - offsetX;
+                const top = y - offsetY;
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+            });
+
+            badge.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('show');
+            });
+        });
+
+        // Hide tooltip on scroll
+        window.addEventListener('scroll', () => {
+            tooltip.classList.remove('show');
+        });
+    </script>
+</body>
+</html>

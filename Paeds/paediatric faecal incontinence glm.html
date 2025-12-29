@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PedsGI: Faecal Incontinence Quick-Scan</title>
+    <style>
+        :root {
+            --primary-blue: #0d47a1;
+            --light-blue: #e3f2fd;
+            --action-green: #2e7d32;
+            --light-green: #e8f5e9;
+            --alert-red: #c62828;
+            --light-red: #ffebee;
+            --caution-yellow: #f9a825;
+            --text-dark: #263238;
+            --text-light: #546e7a;
+            --bg-gray: #f4f6f8;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            --hover-shadow: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            line-height: 1.5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* App-like feel */
+        }
+
+        /* --- Header --- */
+        header {
+            background: #fff;
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid var(--primary-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            color: var(--primary-blue);
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            fill: var(--primary-blue);
+        }
+
+        .header-meta {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            text-align: right;
+        }
+
+        /* --- Layout --- */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar Navigation --- */
+        .sidebar {
+            width: 240px;
+            background: #fff;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid transparent;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-btn:hover {
+            background-color: var(--light-blue);
+            color: var(--primary-blue);
+        }
+
+        .nav-btn.active {
+            background-color: var(--light-blue);
+            color: var(--primary-blue);
+            border-left-color: var(--primary-blue);
+            font-weight: 700;
+        }
+
+        /* --- Main Content Area --- */
+        .main-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .view-section.active {
+            display: grid;
+            gap: 1.5rem;
+            /* Grid layout varies by view */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Cards & Utilities --- */
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: var(--card-shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid #eee;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .card h2, .card h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card.red-alert {
+            border-left: 6px solid var(--alert-red);
+            background: linear-gradient(to right, #fff, var(--light-red));
+        }
+
+        .card.green-action {
+            border-left: 6px solid var(--action-green);
+            background: linear-gradient(to right, #fff, var(--light-green));
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.urgent { background: var(--alert-red); color: white; }
+        .badge.safe { background: var(--action-green); color: white; }
+        .badge.info { background: var(--primary-blue); color: white; }
+
+        .text-b { font-weight: 700; }
+        .text-red { color: var(--alert-red); }
+        .text-green { color: var(--action-green); }
+        .text-blue { color: var(--primary-blue); }
+
+        /* --- Dashboard Specifics --- */
+        .dashboard-grid {
+            grid-template-columns: 2fr 1.5fr;
+        }
+
+        /* Red Flag Section */
+        .red-flags-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .flag-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(198, 40, 40, 0.1);
+            border-radius: 6px;
+            font-weight: 600;
+            color: #b71c1c;
+            font-size: 0.9rem;
+        }
+
+        /* Treatment Algorithm Interactive */
+        .algo-path {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .decision-node {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .decision-option {
+            flex: 1;
+            padding: 1rem;
+            background: #fff;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .decision-option:hover {
+            border-color: var(--primary-blue);
+            background: var(--light-blue);
+        }
+
+        .decision-option.selected {
+            border-color: var(--primary-blue);
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .treatment-steps {
+            display: none; /* Hidden until selection */
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+            animation: fadeIn 0.3s;
+        }
+
+        .treatment-steps.active {
+            display: flex;
+        }
+
+        .step-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 12px;
+            border-left: 4px solid #ccc;
+            background: #f9f9f9;
+        }
+
+        .step-number {
+            background: #555;
+            color: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+
+        .step-card.step-1 { border-color: var(--primary-blue); }
+        .step-card.step-1 .step-number { background: var(--primary-blue); }
+        
+        .step-card.step-2 { border-color: var(--action-green); }
+        .step-card.step-2 .step-number { background: var(--action-green); }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: var(--light-blue);
+            color: var(--primary-blue);
+            font-weight: 700;
+        }
+
+        tr:hover td {
+            background-color: #fafafa;
+        }
+
+        /* Tools */
+        .calc-box {
+            background: var(--light-blue);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .calc-input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 80px;
+            font-size: 1rem;
+            margin: 0 5px;
+        }
+
+        .calc-btn {
+            padding: 8px 16px;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .calc-result {
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--action-green);
+            min-height: 1.5em;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .app-container { flex-direction: column; overflow-y: auto; }
+            .sidebar { width: 100%; flex-direction: row; overflow-x: auto; border-bottom: 1px solid #ccc; border-right: none;}
+            .nav-btn { padding: 10px; font-size: 0.85rem; white-space: nowrap; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .main-content { overflow: visible; }
+            body { overflow: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <svg class="brand-icon" viewBox="0 0 24 24">
+                <path d="M19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H19C20.1 21 21 20.1 21 19V5C21 3.9 20.1 3 19 3M18 11H14V15H10V11H6V9H10V5H14V9H18V11Z" />
+            </svg>
+            <h1>PedsGI: Faecal Incontinence</h1>
+        </div>
+        <div class="header-meta">
+            Based on BMJ Best Practice (2022)<br>
+            <span style="color:var(--action-green)">● Clinical Decision Support</span>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <button class="nav-btn active" onclick="switchTab('dashboard', this)">
+                <span>⚡</span> Triage & Plan
+            </button>
+            <button class="nav-btn" onclick="switchTab('diagnostics', this)">
+                <span>🔍</span> Diagnostics
+            </button>
+            <button class="nav-btn" onclick="switchTab('details', this)">
+                <span>📖</span> Reference
+            </button>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- VIEW 1: DASHBOARD (TRIAGE & PLAN) -->
+            <section id="dashboard" class="view-section dashboard-grid active">
+                
+                <!-- Column 1: Assessment & Red Flags -->
+                <div class="col-left" style="display:flex; flex-direction:column; gap:1.5rem;">
+                    
+                    <!-- RED FLAGS CARD -->
+                    <div class="card red-alert">
+                        <h2>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="#c62828"><path d="M13 14h-2V9h2m0 9h-2v-2h2M1 21h22L12 2 1 21z"/></svg>
+                            ORGANIC CAUSES (RED FLAGS)
+                        </h2>
+                        <p style="margin-bottom:1rem; font-size:0.9rem; color:#555;">If present, consider Hirschsprung's, Spinal issues, or Anatomical malformations. Refer to Specialist.</p>
+                        <div class="red-flags-container">
+                            <div class="flag-item">Delayed Meconium (>48h)</div>
+                            <div class="flag-item">Spinal Abnormalities</div>
+                            <div class="flag-item">Anteriorly Displaced Anus</div>
+                            <div class="flag-item">Perianal Fistulae</div>
+                            <div class="flag-item">Neurological Deficits</div>
+                            <div class="flag-item">Failure to Thrive</div>
+                        </div>
+                    </div>
+
+                    <!-- CLASSIFICATION -->
+                    <div class="card">
+                        <h2>Common Classification</h2>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            <div style="padding:10px; background:#e3f2fd; border-radius:4px;">
+                                <strong class="text-blue">Functional Retentive</strong><br>
+                                <span style="font-size:0.85rem;">Overflow soiling. History of large painful stools, withholding. Rectal mass on exam.</span>
+                            </div>
+                            <div style="padding:10px; background:#e8f5e9; border-radius:4px;">
+                                <strong class="text-green">Non-Retentive</strong><br>
+                                <span style="font-size:0.85rem;">Normal stool frequency. No constipation. Often psychological/behavioral.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QUICK CALCULATOR -->
+                    <div class="card">
+                        <h2>Fiber Intake Calculator</h2>
+                        <p style="font-size:0.85rem; margin-bottom:10px;">Recommended Daily Fiber = Age (yrs) + 5g</p>
+                        <div class="calc-box">
+                            <label>Age: </label>
+                            <input type="number" id="ageInput" class="calc-input" placeholder="e.g. 7">
+                            <button class="calc-btn" onclick="calcFiber()">Calculate Target</button>
+                            <div id="fiberResult" class="calc-result">-- g/day</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Column 2: Management Algorithm -->
+                <div class="col-right">
+                    <div class="card">
+                        <h2>Treatment Algorithm</h2>
+                        <p style="margin-bottom:1rem; font-size:0.9rem;">Select patient presentation:</p>
+                        
+                        <!-- Decision Nodes -->
+                        <div class="decision-node">
+                            <div class="decision-option" id="optConstipation" onclick="showPath('constipation')">
+                                With Constipation<br>
+                                <span style="font-size:0.8rem; font-weight:400; opacity:0.8">(Overflow Soiling)</span>
+                            </div>
+                            <div class="decision-option" id="optNoConstipation" onclick="showPath('no-constipation')">
+                                Without Constipation<br>
+                                <span style="font-size:0.8rem; font-weight:400; opacity:0.8">(Normal Stool Freq)</span>
+                            </div>
+                        </div>
+
+                        <!-- Path 1: Constipation -->
+                        <div id="path-constipation" class="treatment-steps">
+                            <div class="step-card step-1">
+                                <div class="step-number">1</div>
+                                <div>
+                                    <strong class="text-blue">Disimpaction (Acute Phase)</strong><br>
+                                    <span style="font-size:0.9rem;">1st Line: Oral Laxative (PEG).<br>
+                                    2nd Line: Enema.<br>
+                                    3rd Line: Oral + Enema.</span>
+                                </div>
+                            </div>
+                            <div class="step-card step-2">
+                                <div class="step-number">2</div>
+                                <div>
+                                    <strong class="text-green">Maintenance (Ongoing)</strong><br>
+                                    <span style="font-size:0.9rem;">
+                                    • Daily Laxatives<br>
+                                    • Diet: Fiber + Water<br>
+                                    • Bowel Habits: Toilet 5-10min after meals</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Path 2: No Constipation -->
+                        <div id="path-no-constipation" class="treatment-steps">
+                            <div class="step-card step-1">
+                                <div class="step-number">1</div>
+                                <div>
+                                    <strong class="text-blue">Bowel Re-Training</strong><br>
+                                    <span style="font-size:0.9rem;">Sit on toilet 5-10min, 2-3x/day. Knees bent on stool.</span>
+                                </div>
+                            </div>
+                            <div class="step-card step-2">
+                                <div class="step-number">2</div>
+                                <div>
+                                    <strong class="text-green">Adjuncts</strong><br>
+                                    <span style="font-size:0.9rem;">
+                                    • Increase Fiber<br>
+                                    • Behavioral Medicine Eval<br>
+                                    • Biofeedback (Specialist)<br>
+                                    • Loperamide (Last resort)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 2: DIAGNOSTICS -->
+            <section id="diagnostics" class="view-section">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
+                    
+                    <div class="card">
+                        <h2>Key History Points</h2>
+                        <ul style="padding-left:20px; font-size:0.95rem;">
+                            <li>Age of onset & toilet training history</li>
+                            <li>Frequency of soiling (Home vs School)</li>
+                            <li>Stool withholding behaviors (buttock tightening)</li>
+                            <li>Painful bowel movements</li>
+                            <li>Associated bladder dysfunction / enuresis</li>
+                            <li>Dietary fiber/fluid intake</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h2>Physical Exam Focus</h2>
+                        <ul style="padding-left:20px; font-size:0.95rem;">
+                            <li><strong>Abdomen:</strong> Palpate for fecal mass</li>
+                            <li><strong>Perianal:</strong> Inspect for soiling, fissures, fistulae</li>
+                            <li><strong>Rectal:</strong> Tone, impacted stool (distinguish retentive vs non-retentive)</li>
+                            <li><strong>Spine:</strong> Inspect for sacral dimple, hair tuft (dysraphism)</li>
+                            <li><strong>Neuro:</strong> Lower extremity reflexes</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h2>Laboratory & Radiology</h2>
+                        <table>
+                            <tr>
+                                <th>Test</th>
+                                <th>Indication</th>
+                            </tr>
+                            <tr>
+                                <td>Abdominal X-Ray</td>
+                                <td>Baseline evidence of retention if rectal exam refused/inconclusive</td>
+                            </tr>
+                            <tr>
+                                <td>TSH / Free T4</td>
+                                <td>If signs of hypothyroidism</td>
+                            </tr>
+                            <tr>
+                                <td>Sweat Chloride</td>
+                                <td>If cystic fibrosis suspected (esp. with rectal prolapse)</td>
+                            </tr>
+                            <tr>
+                                <td>tTG IgA</td>
+                                <td>If celiac disease suspected</td>
+                            </tr>
+                            <tr>
+                                <td>Barium Enema</td>
+                                <td>Suspected Hirschsprung's (transition zone)</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 3: REFERENCE (DOSES) -->
+            <section id="details" class="view-section">
+                <div class="card" style="margin-bottom:1.5rem;">
+                    <h2>Medication Dosages</h2>
+                    <div style="overflow-x:auto;">
+                        <table style="font-size:0.9rem;">
+                            <thead>
+                                <tr>
+                                    <th style="width:25%">Medication</th>
+                                    <th style="width:25%">Indication</th>
+                                    <th style="width:50%">Dose / Regimen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>PEG (Oral)</strong></td>
+                                    <td>1st Line Disimpaction & Maintenance</td>
+                                    <td>Consult product literature. Generally tasteless, high compliance.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Magnesium Citrate</strong></td>
+                                    <td>1st Line Disimpaction (Oral)</td>
+                                    <td>Consult product literature. Equally effective to PEG.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Liquid Paraffin (Mineral Oil)</strong></td>
+                                    <td>Oral (1st/3rd Line) or Enema</td>
+                                    <td>Oral: 5-45mL daily (Age dependent). <span class="text-red">Avoid in <5yrs or reflux/neuro issues.</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sodium Phosphate Enema</strong></td>
+                                    <td>2nd Line Disimpaction</td>
+                                    <td>Consult product literature. Risk of rectal irritation/bleeding.</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Loperamide</strong></td>
+                                    <td>Non-retentive (Last Resort)</td>
+                                    <td>Age based. <strong>Use only if</strong> incontinence interferes with social activities and other measures fail.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Rome IV Criteria</h2>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2rem; margin-top:10px;">
+                        <div>
+                            <strong class="text-blue">Functional Constipation</strong><br>
+                            <span style="font-size:0.9rem;">≥2 of the following for ≥1 month:</span>
+                            <ul style="padding-left:20px; font-size:0.9rem; margin-top:5px;">
+                                <li>≤2 defecations/week in toilet (≥4yrs old)</li>
+                                <li>≥1 episode of fecal incontinence/week</li>
+                                <li>History of retentive posturing</li>
+                                <li>Painful/hard bowel movements</li>
+                                <li>Large fecal mass in rectum</li>
+                                <li>History of large-diameter stool</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong class="text-green">Non-Retentive Fecal Incontinence</strong><br>
+                            <span style="font-size:0.9rem;">Inappropriate defecation (≥1 month) in children ≥4yrs:</span>
+                            <ul style="padding-left:20px; font-size:0.9rem; margin-top:5px;">
+                                <li>Defecation into inappropriate places</li>
+                                <li>No evidence of fecal retention</li>
+                                <li>Not explained by other medical condition</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        // Tab Switching Logic
+        function switchTab(viewId, btn) {
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            btn.classList.add('active');
+
+            // Hide all sections
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            // Show target section
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // Treatment Algorithm Interaction
+        function showPath(pathType) {
+            // Reset styling
+            document.getElementById('optConstipation').classList.remove('selected');
+            document.getElementById('optNoConstipation').classList.remove('selected');
+            
+            // Hide all paths
+            document.getElementById('path-constipation').classList.remove('active');
+            document.getElementById('path-no-constipation').classList.remove('active');
+
+            // Activate selected
+            if (pathType === 'constipation') {
+                document.getElementById('optConstipation').classList.add('selected');
+                document.getElementById('path-constipation').classList.add('active');
+            } else {
+                document.getElementById('optNoConstipation').classList.add('selected');
+                document.getElementById('path-no-constipation').classList.add('active');
+            }
+        }
+
+        // Fiber Calculator
+        function calcFiber() {
+            const age = parseFloat(document.getElementById('ageInput').value);
+            const resultDiv = document.getElementById('fiberResult');
+            
+            if (isNaN(age) || age <= 0) {
+                resultDiv.textContent = "Invalid Age";
+                resultDiv.style.color = "var(--alert-red)";
+                return;
+            }
+
+            const target = age + 5;
+            resultDiv.textContent = `${target} g/day`;
+            resultDiv.style.color = "var(--action-green)";
+        }
+
+        // Initialize with default view selection visual state
+        // (Optional) Auto-select constipation as it's most common per text
+        // showPath('constipation'); 
+    </script>
+</body>
+</html>

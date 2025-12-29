@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSV Infection Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --assessment-color: #3498db;
+            --diagnosis-color: #9b59b6;
+            --treatment-color: #e67e22;
+            --followup-color: #27ae60;
+            --urgent-color: #e74c3c;
+            --caution-color: #f39c12;
+            --stable-color: #2ecc71;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --hover-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            --border-radius: 12px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            padding: 2rem 1rem;
+            z-index: 100;
+            transition: var(--transition);
+            border-right: 1px solid #eaeaea;
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--bg-color);
+        }
+
+        .sidebar-header h2 {
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar-header p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .progress-nav {
+            list-style: none;
+        }
+
+        .progress-nav li {
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+
+        .progress-nav a {
+            display: flex;
+            align-items: center;
+            padding: 0.875rem 1rem;
+            text-decoration: none;
+            color: var(--text-secondary);
+            border-radius: var(--border-radius);
+            transition: var(--transition);
+            font-weight: 500;
+            gap: 0.75rem;
+            background: var(--bg-color);
+        }
+
+        .progress-nav a:hover {
+            background: rgba(52, 152, 219, 0.1);
+            transform: translateX(4px);
+        }
+
+        .progress-nav a.active {
+            background: linear-gradient(135deg, var(--assessment-color), var(--diagnosis-color));
+            color: white;
+            box-shadow: var(--hover-shadow);
+        }
+
+        .progress-nav a.active i {
+            color: white;
+        }
+
+        .progress-nav a.completed {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--stable-color);
+        }
+
+        .progress-nav a.completed i {
+            color: var(--stable-color);
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .nav-text {
+            flex: 1;
+        }
+
+        .progress-indicator {
+            position: absolute;
+            left: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 0;
+            background: linear-gradient(135deg, var(--assessment-color), var(--diagnosis-color));
+            border-radius: 2px;
+            transition: height 0.3s ease;
+        }
+
+        .progress-nav li.active .progress-indicator {
+            height: 80%;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            margin-left: 280px;
+        }
+
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--assessment-color), var(--diagnosis-color), var(--treatment-color), var(--followup-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 1.5rem;
+        }
+
+        .card:hover {
+            box-shadow: var(--hover-shadow);
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover .card-header::before {
+            opacity: 1;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, var(--assessment-color), #5dade2);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, var(--diagnosis-color), #bb8fce);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, var(--treatment-color), #f8c471);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, var(--followup-color), #58d68d);
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+
+        .card-icon {
+            font-size: 1.75rem;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            backdrop-filter: blur(4px);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+            padding: 0 1.5rem;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+            padding: 1.5rem;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--urgent-color);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+
+        .badge-caution {
+            background: rgba(243, 156, 18, 0.15);
+            color: var(--caution-color);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+        }
+
+        .badge-stable {
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--stable-color);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+
+        .sub-card {
+            background: var(--bg-color);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--assessment-color);
+            transition: var(--transition);
+        }
+
+        .sub-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .sub-card.diagnostic {
+            border-left-color: var(--diagnosis-color);
+        }
+
+        .sub-card.treatment {
+            border-left-color: var(--treatment-color);
+        }
+
+        .sub-card.followup {
+            border-left-color: var(--followup-color);
+        }
+
+        .sub-card h4 {
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sub-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .sub-card li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .sub-card li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: var(--assessment-color);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .sub-card.diagnostic li::before {
+            color: var(--diagnosis-color);
+        }
+
+        .sub-card.treatment li::before {
+            color: var(--treatment-color);
+        }
+
+        .sub-card.followup li::before {
+            color: var(--followup-color);
+        }
+
+        .severity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .severity-item {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--stable-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: var(--transition);
+        }
+
+        .severity-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .severity-item.moderate {
+            border-left-color: var(--caution-color);
+        }
+
+        .severity-item.severe {
+            border-left-color: var(--urgent-color);
+        }
+
+        .severity-item h5 {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .severity-item i {
+            font-size: 1.1rem;
+        }
+
+        .severity-item.moderate i {
+            color: var(--caution-color);
+        }
+
+        .severity-item.severe i {
+            color: var(--urgent-color);
+        }
+
+        .algorithm-step {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--treatment-color);
+            position: relative;
+        }
+
+        .algorithm-step h5 {
+            color: var(--treatment-color);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-number {
+            background: var(--treatment-color);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: bold;
+        }
+
+        .risk-factors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .risk-category {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .risk-category strong {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+
+        .risk-category ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .risk-category li {
+            padding: 0.35rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.9rem;
+        }
+
+        .risk-category li::before {
+            content: '⚠️';
+            position: absolute;
+            left: 0;
+        }
+
+        .risk-category.strong li::before {
+            content: '🔴';
+        }
+
+        .risk-category.weak li::before {
+            content: '🟡';
+        }
+
+        .treatment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .treatment-option {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            border-left: 4px solid var(--treatment-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            transition: var(--transition);
+        }
+
+        .treatment-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .treatment-option h5 {
+            color: var(--treatment-color);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .treatment-option .badge {
+            margin: 0.25rem 0.25rem 0.25rem 0;
+        }
+
+        .print-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, var(--treatment-color), var(--followup-color));
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 100;
+        }
+
+        .print-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            
+            .main-content {
+                margin-left: 240px;
+                padding: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            
+            .progress-nav {
+                display: flex;
+                overflow-x: auto;
+                gap: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+            
+            .progress-nav li {
+                min-width: 160px;
+                margin-bottom: 0;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .severity-grid,
+            .risk-factors-grid,
+            .treatment-options {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            .sidebar,
+            .print-button {
+                display: none;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 0;
+            }
+            
+            .card {
+                page-break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            .card-content {
+                max-height: none !important;
+                padding: 1rem !important;
+            }
+
+            .badge {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Progress Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-lungs-virus"></i> RSV Algorithm</h2>
+                <p>Interactive Clinical Decision Support</p>
+            </div>
+            <nav>
+                <ul class="progress-nav">
+                    <li>
+                        <a href="#assessment" class="active" data-section="assessment">
+                            <div class="nav-icon"><i class="fas fa-stethoscope"></i></div>
+                            <span class="nav-text">Assessment</span>
+                            <div class="progress-indicator"></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#diagnosis" data-section="diagnosis">
+                            <div class="nav-icon"><i class="fas fa-microscope"></i></div>
+                            <span class="nav-text">Diagnosis</span>
+                            <div class="progress-indicator"></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#treatment" data-section="treatment">
+                            <div class="nav-icon"><i class="fas fa-prescription-bottle-medical"></i></div>
+                            <span class="nav-text">Treatment</span>
+                            <div class="progress-indicator"></div>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#followup" data-section="followup">
+                            <div class="nav-icon"><i class="fas fa-chart-line"></i></div>
+                            <span class="nav-text">Follow-up</span>
+                            <div class="progress-indicator"></div>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1><i class="fas fa-lungs-virus"></i> RSV Infection Management</h1>
+                <p>Evidence-based clinical algorithm for respiratory syncytial virus infection management based on BMJ Best Practice guidelines (July 2025)</p>
+            </header>
+
+            <!-- Assessment Section -->
+            <section id="assessment" class="section">
+                <div class="card">
+                    <div class="card-header assessment" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon"><i class="fas fa-stethoscope"></i></div>
+                            <div class="card-title">Assessment</div>
+                        </div>
+                        <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card">
+                            <h4><i class="fas fa-exclamation-triangle"></i> High-Risk Groups</h4>
+                            <span class="badge badge-urgent">Urgent Attention Required</span>
+                            <div class="risk-factors-grid">
+                                <div class="risk-category strong">
+                                    <strong>Strong Risk Factors</strong>
+                                    <ul>
+                                        <li>History of prematurity (&lt;35 weeks)</li>
+                                        <li>Age &lt;6 months at start of RSV season</li>
+                                        <li>Chronic lung disease (e.g., BPD)</li>
+                                        <li>Complex congenital heart disease</li>
+                                        <li>Immune deficiency</li>
+                                        <li>Indigenous/American-Indian/Alaska Native infants</li>
+                                        <li>Down's syndrome</li>
+                                    </ul>
+                                </div>
+                                <div class="risk-category weak">
+                                    <strong>Additional Risk Factors</strong>
+                                    <ul>
+                                        <li>Smoke exposure</li>
+                                        <li>Family history of asthma</li>
+                                        <li>Multiple siblings/daycare exposure</li>
+                                        <li>Birth during first half of RSV season</li>
+                                        <li>Older adult age (&gt;65 years)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-calendar-alt"></i> Seasonal Patterns</h4>
+                            <p>RSV outbreaks occur worldwide during winter months:</p>
+                            <ul>
+                                <li><strong>Northern Hemisphere:</strong> November - February (peak January/February)</li>
+                                <li><strong>Southern Hemisphere:</strong> May - September</li>
+                                <li><strong>Tropical Regions:</strong> Prolonged circulation with rainy season</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-child"></i> Clinical Features in Infants</h4>
+                            <ul>
+                                <li><strong>Early signs:</strong> Rhinorrhoea, congestion, cough</li>
+                                <li><strong>Progression (2-4 days):</strong> Tachypnoea, wheeze, respiratory distress</li>
+                                <li><strong>Signs of severity:</strong> 
+                                    <span class="badge badge-urgent">Apnoea</span>
+                                    <span class="badge badge-caution">Poor feeding</span>
+                                    <span class="badge badge-caution">Increased work of breathing</span>
+                                    <span class="badge badge-urgent">Cyanosis</span>
+                                </li>
+                                <li><strong>Apnoea risk:</strong> 20% in infants &lt;6 months, especially &lt;1 month</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-user"></i> Clinical Features in Adults</h4>
+                            <ul>
+                                <li><strong>Healthy adults:</strong> Usually upper respiratory tract infection, self-limiting</li>
+                                <li><strong>High-risk adults:</strong> Lower respiratory tract disease, pneumonia</li>
+                                <li><strong>High-risk groups:</strong> Elderly, immunocompromised, chronic cardiopulmonary disease, transplant recipients</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card">
+                            <h4><i class="fas fa-clipboard-check"></i> Key Assessment Points</h4>
+                            <ul>
+                                <li>Determine vaccination/immunoprophylaxis status</li>
+                                <li>Assess hydration and feeding adequacy</li>
+                                <li>Measure respiratory rate and work of breathing</li>
+                                <li>Check oxygen saturation (critical for severity assessment)</li>
+                                <li>Identify underlying chronic conditions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section id="diagnosis" class="section">
+                <div class="card">
+                    <div class="card-header diagnosis" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon"><i class="fas fa-microscope"></i></div>
+                            <div class="card-title">Diagnosis</div>
+                        </div>
+                        <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card diagnostic">
+                            <h4><i class="fas fa-stethoscope"></i> Clinical Diagnosis</h4>
+                            <p>RSV diagnosis is primarily clinical based on:</p>
+                            <ul>
+                                <li>Seasonal presentation (winter months)</li>
+                                <li>Characteristic symptoms (cough, wheeze, respiratory distress)</li>
+                                <li>Physical examination findings</li>
+                                <li>Risk factor assessment</li>
+                            </ul>
+                            <p><strong>Note:</strong> Routine laboratory testing is NOT required for most patients according to AAP guidelines.</p>
+                        </div>
+
+                        <div class="sub-card diagnostic">
+                            <h4><i class="fas fa-vial"></i> Diagnostic Testing (Consider if needed)</h4>
+                            <div class="treatment-options">
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-tint"></i> Pulse Oximetry</h5>
+                                    <span class="badge badge-urgent">Essential</span>
+                                    <p>Rapid assessment of hypoxaemia. Recommended for all infants in secondary care.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-syringe"></i> Viral Testing</h5>
+                                    <span class="badge badge-caution">Selective</span>
+                                    <p><strong>Rapid antigen test:</strong> 75% sensitivity, 99% specificity</p>
+                                    <p><strong>RT-PCR:</strong> Preferred method, higher sensitivity</p>
+                                    <p>Use for cohorting/isolation decisions.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-lungs"></i> Chest X-ray</h5>
+                                    <span class="badge badge-stable">Limited Use</span>
+                                    <p>Reserve for severe disease or failure to improve. May show atelectasis, hyperinflation, peribronchial cuffing.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-flask"></i> Blood Tests</h5>
+                                    <span class="badge badge-stable">Not Routine</span>
+                                    <p>Consider in severe disease. Blood cultures if bacterial infection suspected.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card diagnostic">
+                            <h4><i class="fas fa-layer-group"></i> Differential Diagnoses</h4>
+                            <div class="treatment-options">
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-virus"></i> Human Metapneumovirus</h5>
+                                    <p>Clinically indistinguishable from RSV. Requires PCR testing.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-thermometer-full"></i> Influenza Virus</h5>
+                                    <p>Higher fevers (&gt;38.9°C), more pneumonia and bacterial superinfection.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-head-side-cough"></i> Parainfluenza Virus</h5>
+                                    <p>10-30% of bronchiolitis. Type III mimics RSV. Often occurs in late spring.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-bacteria"></i> Bacterial Pneumonia</h5>
+                                    <p>No wheeze, higher fevers, lobar infiltrate on CXR.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card diagnostic">
+                            <h4><i class="fas fa-chart-bar"></i> Severity Classification</h4>
+                            <div class="severity-grid">
+                                <div class="severity-item">
+                                    <h5><i class="fas fa-check-circle"></i> Mild Illness</h5>
+                                    <span class="badge badge-stable">Stable</span>
+                                    <ul>
+                                        <li>No hypoxaemia</li>
+                                        <li>Mildly increased respiratory rate</li>
+                                        <li>Adequate feeding</li>
+                                        <li>Safe for outpatient management</li>
+                                    </ul>
+                                </div>
+                                <div class="severity-item moderate">
+                                    <h5><i class="fas fa-exclamation-triangle"></i> Moderate Illness</h5>
+                                    <span class="badge badge-caution">Admit</span>
+                                    <ul>
+                                        <li>Oxygen saturations &lt;90-92%</li>
+                                        <li>Tachypnoea</li>
+                                        <li>Increased work of breathing</li>
+                                        <li>Inadequate feeding/dehydration</li>
+                                    </ul>
+                                </div>
+                                <div class="severity-item severe">
+                                    <h5><i class="fas fa-ambulance"></i> Severe Illness</h5>
+                                    <span class="badge badge-urgent">ICU Referral</span>
+                                    <ul>
+                                        <li>Refractory hypoxaemia</li>
+                                        <li>Progressive respiratory distress</li>
+                                        <li>Frank respiratory failure</li>
+                                        <li>Apnoea episodes</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section id="treatment" class="section">
+                <div class="card">
+                    <div class="card-header treatment" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon"><i class="fas fa-prescription-bottle-medical"></i></div>
+                            <div class="card-title">Treatment</div>
+                        </div>
+                        <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card treatment">
+                            <h4><i class="fas fa-stethoscope"></i> Core Principle</h4>
+                            <p>Treatment is primarily <strong>supportive</strong>. No therapy shortens disease course or hastens symptom resolution.</p>
+                            <span class="badge badge-stable">Supportive Care Focus</span>
+                        </div>
+
+                        <div class="sub-card treatment">
+                            <h4><i class="fas fa-heartbeat"></i> Treatment by Severity</h4>
+                            
+                            <div class="algorithm-step">
+                                <h5><div class="step-number">1</div> Mild or Self-limiting Illness</h5>
+                                <span class="badge badge-stable">Outpatient Management</span>
+                                <ul>
+                                    <li>Home care with diligent follow-up</li>
+                                    <li>Nasal toilet with saline drops/suction</li>
+                                    <li>Adequate hydration and nutrition</li>
+                                    <li>Monitor for deterioration</li>
+                                </ul>
+                                <p><strong>High-risk infants</strong> (prematurity, chronic lung disease, CHD, immunodeficiency) may require hospital admission despite mild presentation.</p>
+                            </div>
+
+                            <div class="algorithm-step">
+                                <h5><div class="step-number">2</div> Moderate Illness (Hospital Admission)</h5>
+                                <span class="badge badge-caution">Inpatient Care</span>
+                                <ul>
+                                    <li><strong>Oxygen therapy:</strong> Warm, humidified O₂ via nasal cannula/mask</li>
+                                    <li><strong>High-flow nasal cannula:</strong> Consider if standard O₂ fails</li>
+                                    <li><strong>Nutrition:</strong> NG/NJ feeding or IV fluids if poor intake</li>
+                                    <li><strong>Monitoring:</strong> Continuous pulse oximetry, respiratory rate</li>
+                                    <li><strong>Positioning:</strong> Head elevated, frequent suctioning</li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-step">
+                                <h5><div class="step-number">3</div> Severe Illness (ICU Care)</h5>
+                                <span class="badge badge-urgent">Critical Care</span>
+                                <ul>
+                                    <li><strong>Respiratory support:</strong> Non-invasive ventilation (CPAP/BiPAP) or intubation</li>
+                                    <li><strong>Mechanical ventilation:</strong> If respiratory failure</li>
+                                    <li><strong>Rehydration:</strong> IV fluids or enteral nutrition</li>
+                                    <li><strong>Continuous monitoring:</strong> Cardiorespiratory monitoring</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="sub-card treatment">
+                            <h4><i class="fas fa-pills"></i> Adjunctive Therapies</h4>
+                            <div class="treatment-options">
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-inhaler"></i> Bronchodilators</h5>
+                                    <span class="badge badge-caution">Selective Use</span>
+                                    <p><strong>NOT recommended routinely.</strong> May be tried in patients with:</p>
+                                    <ul>
+                                        <li>Asthma</li>
+                                        <li>COPD</li>
+                                        <li>Severe disease</li>
+                                    </ul>
+                                    <p>No evidence for reduced admissions or length of stay.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-atom"></i> Nebulised Hypertonic Saline</h5>
+                                    <span class="badge badge-stable">Hospital Use</span>
+                                    <p>Potential benefit in mild-moderate bronchiolitis in hospital setting. Requires prolonged use, not for ED.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-syringe"></i> Ribavirin ± IVIG</h5>
+                                    <span class="badge badge-caution">Immunocompromised Only</span>
+                                    <p>Consider in severe immunodeficiency (HSCT, transplant recipients). Not for routine use in children.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-pills"></i> Corticosteroids</h5>
+                                    <span class="badge badge-caution">Not Routine</span>
+                                    <p><strong>NOT effective</strong> for RSV bronchiolitis. May benefit patients with:</p>
+                                    <ul>
+                                        <li>Asthma</li>
+                                        <li>COPD</li>
+                                        <li>Atopy</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-bacteria"></i> Antibiotics</h5>
+                                    <span class="badge badge-stable">Limited Indications</span>
+                                    <p><strong>Routine use NOT recommended.</strong> Risk of bacterial coinfection only 0.2%.</p>
+                                    <p>Consider if:
+                                        <ul>
+                                            <li>Severe disease requiring intubation (26% risk)</li>
+                                            <li>Confirmed/suspected bacterial infection</li>
+                                        </ul>
+                                    </p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-times-circle"></i> Ineffective Therapies</h5>
+                                    <span class="badge badge-urgent">Do Not Use</span>
+                                    <ul>
+                                        <li>Chest physiotherapy (no benefit)</li>
+                                        <li>Mucolytics (DNase, acetylcysteine)</li>
+                                        <li>Surfactant (no benefit)</li>
+                                        <li>Heliox mixtures (no benefit)</li>
+                                        <li>Montelukast (no benefit)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card treatment">
+                            <h4><i class="fas fa-ambulance"></i> Admission Criteria (NICE Guidelines)</h4>
+                            <span class="badge badge-urgent">Immediate Admission</span>
+                            <ul>
+                                <li>Apnoea (observed or reported)</li>
+                                <li>Persistent O₂ saturation &lt;90% (≥6 weeks) or &lt;92% (&lt;6 weeks or high-risk)</li>
+                                <li>Inadequate oral fluid intake (50-75% usual volume)</li>
+                                <li>Persisting severe respiratory distress (RR &gt;70, marked recession)</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card treatment">
+                            <h4><i class="fas fa-user-md"></i> Adult Treatment</h4>
+                            <span class="badge badge-stable">Supportive Care</span>
+                            <ul>
+                                <li>Supplemental oxygen as needed</li>
+                                <li>Bronchodilators for underlying COPD/asthma</li>
+                                <li>IV fluids if dehydrated</li>
+                                <li>Antipyretics for fever</li>
+                                <li>Consider ribavirin in severe immunocompromised patients</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section id="followup" class="section">
+                <div class="card">
+                    <div class="card-header followup" onclick="toggleCard(this)">
+                        <div class="card-header-content">
+                            <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                            <div class="card-title">Follow-up & Prevention</div>
+                        </div>
+                        <div class="expand-icon"><i class="fas fa-chevron-down"></i></div>
+                    </div>
+                    <div class="card-content">
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-search"></i> Monitoring</h4>
+                            <span class="badge badge-stable">Essential</span>
+                            <ul>
+                                <li><strong>Outpatients:</strong> Daily monitoring for deterioration</li>
+                                <li><strong>Inpatients:</strong> Continuous monitoring until stable</li>
+                                <li><strong>Discharge criteria:</strong> Stable O₂ saturation, adequate feeding, improving symptoms</li>
+                                <li><strong>Follow-up:</strong> Arrange GP/primary care review within 48 hours</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-exclamation-triangle"></i> Complications</h4>
+                            <div class="treatment-options">
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-lungs"></i> Bronchiolitis</h5>
+                                    <span class="badge badge-urgent">Common</span>
+                                    <p>The primary manifestation of RSV in infants.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-lungs-virus"></i> Pneumonia</h5>
+                                    <span class="badge badge-urgent">Common</span>
+                                    <p>Viral pneumonia is common in severe disease.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-allergies"></i> Recurrent Wheeze/Asthma</h5>
+                                    <span class="badge badge-caution">Long-term Risk</span>
+                                    <p>Infants with severe RSV LRTI have increased risk of developing asthma later in life.</p>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-circle-pause"></i> Apnoea</h5>
+                                    <span class="badge badge-urgent">20% in &lt;6 months</span>
+                                    <p>May be sole presentation in very young infants (&lt;1 month).</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-prognosis"></i> Prognosis</h4>
+                            <ul>
+                                <li><strong>Previously healthy infants:</strong> Generally self-limiting, 10-14 days</li>
+                                <li><strong>Hospitalized infants:</strong> 2-3 days average stay, 2-5% require mechanical ventilation</li>
+                                <li><strong>Mortality:</strong> &lt;0.1% in developed countries, ~1% in developing countries</li>
+                                <li><strong>Worldwide burden:</strong> 33.1 million episodes annually in children &lt;5 years, 59,600 in-hospital deaths</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-shield-alt"></i> Primary Prevention - Vaccination</h4>
+                            <span class="badge badge-stable">Highly Effective</span>
+                            <div class="treatment-options">
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-syringe"></i> Abrysvo® (Pfizer)</h5>
+                                    <ul>
+                                        <li><strong>Adults ≥18 years:</strong> Single dose</li>
+                                        <li><strong>Pregnant women:</strong> 32-36 weeks gestation (seasonal)</li>
+                                        <li><strong>Efficacy:</strong> 70% against infection, 90% against severe disease</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-syringe"></i> Arexvy® (GSK)</h5>
+                                    <ul>
+                                        <li><strong>Adults ≥60 years:</strong> Single dose</li>
+                                        <li><strong>High-risk 50-59 years:</strong> Single dose</li>
+                                        <li><strong>Adjuvanted:</strong> AS01E adjuvant system</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-syringe"></i> Mresvia® (Moderna)</h5>
+                                    <ul>
+                                        <li><strong>Adults ≥60 years:</strong> Single dose</li>
+                                        <li><strong>High-risk 18-59 years:</strong> Single dose</li>
+                                        <li><strong>mRNA vaccine:</strong> Encodes prefusion F protein</li>
+                                        <li><strong>Efficacy:</strong> 83.7% against RSV-LRTD</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-baby"></i> Immunoprophylaxis for Infants</h4>
+                            <span class="badge badge-stable">Passive Immunisation</span>
+                            <div class="treatment-options">
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-shield-virus"></i> Nirsevimab (Beyfortus®)</h5>
+                                    <span class="badge badge-stable">First Choice</span>
+                                    <ul>
+                                        <li><strong>All infants &lt;8 months:</strong> Single IM dose entering first RSV season</li>
+                                        <li><strong>High-risk 8-19 months:</strong> Single dose entering second season</li>
+                                        <li><strong>Duration:</strong> ~5 months protection</li>
+                                        <li><strong>Efficacy:</strong> Reduces hospitalisation by ~70-80%</li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-shield-virus"></i> Palivizumab (Synagis®)</h5>
+                                    <span class="badge badge-caution">Alternative</span>
+                                    <ul>
+                                        <li><strong>High-risk infants:</strong> Monthly IM injections × 5 doses</li>
+                                        <li><strong>Efficacy:</strong> Reduces hospitalisation by 45-55%</li>
+                                        <li><strong>Use only if nirsevimab unavailable</strong></li>
+                                    </ul>
+                                </div>
+                                <div class="treatment-option">
+                                    <h5><i class="fas fa-shield-virus"></i> Clesrovimab</h5>
+                                    <span class="badge badge-stable">New Option</span>
+                                    <ul>
+                                        <li><strong>Infants up to 12 months:</strong> Single IM dose</li>
+                                        <li><strong>Duration:</strong> Full RSV season protection</li>
+                                        <li><strong>Status:</strong> Approved in US, pending in EU</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-hands-wash"></i> Secondary Prevention</h4>
+                            <span class="badge badge-stable">Infection Control</span>
+                            <ul>
+                                <li><strong>Hand hygiene:</strong> Strict hand washing in clinical and home settings</li>
+                                <li><strong>Contact precautions:</strong> Gowns, gloves, masks for healthcare workers</li>
+                                <li><strong>Isolation:</strong> Cohort patients with confirmed RSV</li>
+                                <li><strong>Environmental:</strong> Clean toys, surfaces regularly</li>
+                                <li><strong>Visitor restrictions:</strong> Limit visitors during outbreaks</li>
+                            </ul>
+                        </div>
+
+                        <div class="sub-card followup">
+                            <h4><i class="fas fa-comments"></i> Patient & Parent Education</h4>
+                            <span class="badge badge-stable">Critical</span>
+                            <ul>
+                                <li><strong>Warning signs:</strong> Worsening breathing, poor feeding, cyanosis, lethargy</li>
+                                <li><strong>When to seek care:</strong> Immediate medical attention if apnoea, severe distress</li>
+                                <li><strong>Home care:</strong> Nasal suctioning, adequate fluids, fever control</li>
+                                <li><strong>Prevention:</strong> Avoid smoke exposure, good hand hygiene</li>
+                                <li><strong>Vaccination:</strong> Ensure eligible family members vaccinated</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Print Button -->
+    <button class="print-button" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Algorithm
+    </button>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update navigation completion status
+            const sectionId = card.closest('section').id;
+            const navLink = document.querySelector(`a[data-section="${sectionId}"]`);
+            if (card.classList.contains('expanded')) {
+                navLink.classList.add('completed');
+            } else {
+                navLink.classList.remove('completed');
+            }
+        }
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('.progress-nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                // Update active states
+                document.querySelectorAll('.progress-nav a').forEach(a => a.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Smooth scroll to section
+                targetSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
+        });
+
+        // Scroll spy functionality
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.progress-nav a');
+        
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -60% 0px',
+            threshold: 0
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const sectionId = entry.target.id;
+                    
+                    // Update navigation active state
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('data-section') === sectionId) {
+                            link.classList.add('active');
+                        }
+                    });
+                    
+                    // Update sidebar progress indicator
+                    document.querySelectorAll('.progress-nav li').forEach(li => li.classList.remove('active'));
+                    const activeLi = document.querySelector(`a[data-section="${sectionId}"]`).parentElement;
+                    activeLi.classList.add('active');
+                }
+            });
+        }, observerOptions);
+        
+        sections.forEach(section => observer.observe(section));
+
+        // Auto-expand first cards on load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-expand the first card in each section
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.add('expanded');
+            });
+            
+            // Mark all sections as completed initially
+            document.querySelectorAll('.progress-nav a').forEach(link => {
+                link.classList.add('completed');
+            });
+        });
+
+        // Progress tracking
+        let progress = {
+            assessment: true,
+            diagnosis: true,
+            treatment: true,
+            followup: true
+        };
+
+        // Add subtle animations to badges on hover
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                const currentActive = document.querySelector('.progress-nav a.active');
+                const nextLink = currentActive.parentElement.nextElementSibling;
+                if (nextLink && nextLink.querySelector('a')) {
+                    nextLink.querySelector('a').click();
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                const currentActive = document.querySelector('.progress-nav a.active');
+                const prevLink = currentActive.parentElement.previousElementSibling;
+                if (prevLink && prevLink.querySelector('a')) {
+                    prevLink.querySelector('a').click();
+                }
+            }
+        });
+
+        // Add subtle pulse animation to urgent badges
+        setInterval(() => {
+            document.querySelectorAll('.badge-urgent').forEach((badge, index) => {
+                setTimeout(() => {
+                    badge.style.animation = 'pulse 2s infinite';
+                }, index * 200);
+            });
+        }, 5000);
+
+        // Add pulse animation CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+                70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('RSV Management Algorithm loaded successfully');
+        console.log('Features: Card-based layout, expandable sections, severity badges, sticky progress sidebar, smooth transitions');
+        console.log('Guidelines based on BMJ Best Practice (July 2025)');
+    </script>
+</body>
+</html>
