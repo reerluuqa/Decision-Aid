@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMARDs Clinical Reference Tool</title>
+    <style>
+        :root {
+            /* Palette */
+            --color-bg: #f4f7f6;
+            --color-card: #ffffff;
+            --color-text-main: #2c3e50;
+            --color-text-muted: #546e7a;
+            --color-primary: #0288d1; /* Blue - Info */
+            --color-primary-light: #e1f5fe;
+            --color-danger: #d32f2f; /* Red - Emergency */
+            --color-danger-light: #ffebee;
+            --color-success: #2e7d32; /* Green - Safe/Action */
+            --color-success-light: #e8f5e9;
+            --color-border: #cfd8dc;
+            
+            /* Spacing & Radius */
+            --radius: 8px;
+            --shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * { box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        /* --- Layout Structure --- */
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        /* --- Header --- */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--color-card);
+            padding: 15px 25px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-left: 6px solid var(--color-primary);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; color: var(--color-text-main); }
+        .subtitle { margin: 0; font-size: 0.9rem; color: var(--color-text-muted); }
+        .last-updated { font-size: 0.8rem; background: var(--color-primary-light); padding: 4px 8px; border-radius: 4px; color: var(--color-primary); font-weight: 600;}
+
+        /* --- Section: Emergency (Red Flags) --- */
+        .emergency-section {
+            background-color: var(--color-danger);
+            color: white;
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: 0 8px 15px rgba(211, 47, 47, 0.25);
+            animation: slideDown 0.5s ease;
+        }
+        
+        @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .emergency-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            padding-bottom: 10px;
+        }
+
+        .emergency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .emergency-card {
+            background: rgba(0,0,0,0.15);
+            border-radius: var(--radius);
+            padding: 15px;
+        }
+        
+        .emergency-card h3 { margin-top: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;}
+        .danger-list { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; }
+        .danger-list li { margin-bottom: 6px; padding-left: 20px; position: relative; }
+        .danger-list li::before {
+            content: "⚠️"; position: absolute; left: 0; top: 0; font-size: 0.8rem;
+        }
+
+        /* --- Section: General Principles --- */
+        .principles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--color-card);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border-top: 4px solid transparent;
+        }
+
+        .card.green { border-top-color: var(--color-success); }
+        .card.blue { border-top-color: var(--color-primary); }
+
+        .card h3 { margin-top: 0; color: var(--color-text-main); display: flex; align-items: center; gap: 10px;}
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .tag.green { background: var(--color-success-light); color: var(--color-success); }
+        .tag.blue { background: var(--color-primary-light); color: var(--color-primary); }
+
+        /* --- Main Interactive Tool --- */
+        .tool-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 20px;
+            height: 800px; /* Fixed height for scrollable area */
+        }
+
+        /* Drug Sidebar */
+        .sidebar {
+            background: var(--color-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .sidebar-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--color-text-main);
+            transition: var(--transition);
+        }
+
+        .sidebar-btn:hover {
+            background: var(--color-bg);
+            border-color: var(--color-border);
+        }
+
+        .sidebar-btn.active {
+            background: var(--color-primary-light);
+            color: var(--color-primary);
+            border-color: var(--color-primary);
+            font-weight: 700;
+        }
+
+        /* Detail View */
+        .detail-view {
+            background: var(--color-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 30px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .drug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-bg);
+            padding-bottom: 15px;
+        }
+
+        .drug-title { margin: 0; font-size: 1.8rem; color: var(--color-primary); }
+        .drug-type { font-size: 0.9rem; color: var(--color-text-muted); background: var(--color-bg); padding: 4px 8px; border-radius: 4px; }
+
+        .note-box {
+            background: #fff8e1; /* Yellow tint for notes */
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+
+        /* Monitoring Table */
+        .monitor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .monitor-table th {
+            text-align: left;
+            padding: 12px;
+            background: var(--color-bg);
+            color: var(--color-text-muted);
+            font-weight: 600;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .monitor-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--color-border);
+            vertical-align: top;
+        }
+
+        .monitor-table tr:hover { background-color: #fafafa; }
+
+        .freq-highlight {
+            font-weight: 600;
+            color: var(--color-text-main);
+        }
+        
+        .freq-routine { color: var(--color-text-muted); font-size: 0.9em; }
+
+        /* Special visual cues */
+        .badge-stop {
+            background: var(--color-danger); color: white;
+            font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .tool-layout { grid-template-columns: 1fr; height: auto; }
+            .sidebar { display: flex; overflow-x: auto; padding-bottom: 10px; flex-wrap: wrap; }
+            .sidebar-btn { width: auto; white-space: nowrap; margin-right: 10px; margin-bottom: 5px; }
+            .detail-view { min-height: 500px; }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- Header -->
+    <header>
+        <div>
+            <h1>DMARDs Clinical Reference</h1>
+            <p class="subtitle">Monitoring & Safety Guidelines for Adults (Primary Care)</p>
+        </div>
+        <div class="last-updated">Rev: Dec 2023</div>
+    </header>
+
+    <!-- RED FLAGS SECTION -->
+    <section class="emergency-section" id="red-flags">
+        <div class="emergency-header">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <h2 style="margin:0; font-size: 1.4rem;">STOP TREATMENT & REFER URGENTLY</h2>
+        </div>
+        <div class="emergency-grid">
+            <div class="emergency-card">
+                <h3>Laboratory Results</h3>
+                <ul class="danger-list">
+                    <li>WCC < 3.5 x 10⁹/L</li>
+                    <li>Neutrophils < 1.6 x 10⁹/L</li>
+                    <li>Platelets < 140 x 10⁹/L</li>
+                    <li>ALT/AST > 100 U/L</li>
+                    <li>Albumin < 30 g/L</li>
+                    <li>Creatinine ↑ >30% (or GFR < 60)</li>
+                    <li>Unexplained eosinophils > 0.5</li>
+                    <li>MCV > 105 fL</li>
+                    <li>Urinary Protein 2+ or more</li>
+                </ul>
+            </div>
+            <div class="emergency-card">
+                <h3>Symptoms & Signs</h3>
+                <ul class="danger-list">
+                    <li>Sore throat or fever</li>
+                    <li>Rash, pruritus, mucosal ulceration</li>
+                    <li>Unexplained bruising/bleeding</li>
+                    <li>Nausea, vomiting, diarrhea, weight loss</li>
+                    <li>Diffuse alopecia</li>
+                    <li>Breathlessness, infection, cough</li>
+                    <li>Peripheral neuropathy</li>
+                    <li class="highlight-biologics">Biologics only: TB symptoms, Heart failure, ILD</li>
+                </ul>
+            </div>
+        </div>
+        <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.9;">
+            <strong>Note for Ciclosporin:</strong> Stop if BP > 140/90 mmHg. For other DMARDs, manage per hypertension guidelines.
+        </div>
+    </section>
+
+    <!-- GENERAL PRINCIPLES -->
+    <section class="principles-grid">
+        <div class="card green">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Vaccinations
+            </h3>
+            <p><strong>Influenza:</strong> Annual vaccine.</p>
+            <p><strong>Pneumococcal:</strong> Single dose (unless asplenic/renal disease).</p>
+            <p><strong>COVID-19:</strong> As per national guidelines.</p>
+            <p style="margin-bottom:0;"><strong>LIVE VACCINES:</strong> Avoid. Seek specialist advice.</p>
+        </div>
+        <div class="card blue">
+            <h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                General Actions
+            </h3>
+            <p><strong>Exposure:</strong> Avoid contact with shingles/chickenpox. Seek urgent advice if exposed.</p>
+            <p><strong>Drug Interactions:</strong> Check BNF/eMC for interactions.</p>
+            <p><strong>Trends:</strong> Watch for rapid changes in lab trends, not just absolute values.</p>
+        </div>
+    </section>
+
+    <!-- INTERACTIVE TOOL -->
+    <div class="tool-layout">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="drugList">
+            <!-- Buttons injected by JS -->
+        </nav>
+
+        <!-- Detail View -->
+        <main class="detail-view" id="detailContainer">
+            <!-- Content injected by JS -->
+        </main>
+    </div>
+
+</div>
+
+<script>
+    // Data extracted from NICE CKS Document
+    const drugs = {
+        azathioprine: {
+            name: "Azathioprine",
+            type: "Conventional DMARD",
+            notes: "Monitor more frequently in people at higher risk of toxicity.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose is stable for 6 weeks, then monthly for 3 months. Thereafter, at least every 12 weeks." },
+                { test: "Renal Function (Cr/GFR)", freq: "Every 12 weeks" },
+                { test: "LFTs (ALT/AST/Albumin)", freq: "Every 12 weeks" }
+            ]
+        },
+        ciclosporin: {
+            name: "Ciclosporin",
+            type: "Conventional DMARD",
+            notes: "Check Blood Pressure and Blood Glucose regularly. Monitor more frequently in high risk toxicity.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly. Consider every 3 months if stable for 12 months." },
+                { test: "Renal Function", freq: "Monthly (or every 3 months if stable)" },
+                { test: "LFTs", freq: "Monthly (or every 3 months if stable)" },
+                { test: "Blood Glucose", freq: "Monthly" },
+                { test: "Blood Pressure", freq: "Monthly" }
+            ]
+        },
+        cyclophosphamide: {
+            name: "Cyclophosphamide",
+            type: "Conventional DMARD",
+            notes: "Primary care usually monitors pulse therapy only.",
+            monitoring: [
+                { test: "FBC", freq: "10 days after each pulse therapy, and immediately prior to next pulse." },
+                { test: "LFTs", freq: "Prior to next pulse." },
+                { test: "Urinalysis", freq: "Prior to next pulse." }
+            ]
+        },
+        hydroxychloroquine: {
+            name: "Hydroxychloroquine",
+            type: "Conventional DMARD",
+            notes: "<strong>Retinal Toxicity Risk:</strong> Annual eye assessment (including OCT) after 5 years of use. Start earlier if high risk (tamoxifen, renal impairment, high dose >5mg/kg).",
+            monitoring: [
+                { test: "Renal Function", freq: "Annually (if >70 years old or has renal impairment/HTN/Diabetes)" },
+                { test: "Eye Assessment", freq: "Annually after 5 years use (or earlier if high risk)." }
+            ]
+        },
+        leflunomide: {
+            name: "Leflunomide",
+            type: "Conventional DMARD",
+            notes: "Check BP and Weight. If combined with Methotrexate, continue monthly monitoring until stable for 12 months.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months. Thereafter, at least every 12 weeks." },
+                { test: "Renal Function", freq: "Every 12 weeks" },
+                { test: "LFTs", freq: "Every 12 weeks" },
+                { test: "Blood Pressure", freq: "Every 12 weeks" },
+                { test: "Weight", freq: "Every 12 weeks" }
+            ]
+        },
+        methotrexate: {
+            name: "Methotrexate",
+            type: "Conventional DMARD",
+            notes: "<strong>WARNING:</strong> Once-weekly treatment ONLY. Co-prescribe Folic Acid 5mg once weekly (different day). If combined with Leflunomide, continue monthly until stable 12 months.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months. Thereafter, at least every 12 weeks." },
+                { test: "Renal Function", freq: "Every 12 weeks" },
+                { test: "LFTs", freq: "Every 12 weeks" }
+            ]
+        },
+        mycophenolate: {
+            name: "Mycophenolate Mofetil",
+            type: "Conventional DMARD",
+            notes: "Monitor more frequently in higher risk toxicity.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months. Thereafter, at least every 12 weeks." },
+                { test: "Renal Function", freq: "Every 12 weeks" },
+                { test: "LFTs", freq: "Every 12 weeks" }
+            ]
+        },
+        penicillamine: {
+            name: "Penicillamine",
+            type: "Conventional DMARD",
+            notes: "Monitor Urinalysis for blood and protein.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly. Consider 3-monthly if stable for 12 months." },
+                { test: "Renal Function", freq: "Monthly" },
+                { test: "LFTs", freq: "Monthly" },
+                { test: "Urinalysis (Blood/Protein)", freq: "Monthly" }
+            ]
+        },
+        sulfasalazine: {
+            name: "Sulfasalazine",
+            type: "Conventional DMARD",
+            notes: "Monitoring may be stopped after 12 months (depending on local protocol).",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly for 3 months. Thereafter, at least every 12 weeks." },
+                { test: "Renal Function", freq: "Every 12 weeks" },
+                { test: "LFTs", freq: "Every 12 weeks" }
+            ]
+        },
+        tacrolimus: {
+            name: "Tacrolimus",
+            type: "Conventional DMARD",
+            notes: "Check Blood Pressure and Blood Glucose regularly.",
+            monitoring: [
+                { test: "FBC", freq: "Every 2 weeks until dose stable for 6 weeks, then monthly. Consider 3-monthly if stable for 12 months." },
+                { test: "Renal Function", freq: "Monthly (or 3-monthly)" },
+                { test: "LFTs", freq: "Monthly (or 3-monthly)" },
+                { test: "Blood Glucose", freq: "Monthly (or 3-monthly)" },
+                { test: "Blood Pressure", freq: "Monthly (or 3-monthly)" }
+            ]
+        },
+        biologics: {
+            name: "Biologic DMARDs",
+            type: "Biologic",
+            notes: "Usually managed in secondary care (prescribing). Monitor for signs of infection (TB) before each injection/infusion. Screening for Hep B/C/HIV if high risk.",
+            monitoring: [
+                { test: "FBC", freq: "At 3-4 months, then every 6 months" },
+                { test: "U&E/Creatinine", freq: "Every 6 months" },
+                { test: "LFTs", freq: "Every 6 months" },
+                { test: "Lipid Profile", freq: "4-8 weeks after start, then manage hyperlipidaemia" },
+                { test: "Signs of infection (Chickenpox)", freq: "Before each injection/infusion" },
+                { test: "Hepatitis B/C & HIV", freq: "If clinically indicated or annually in high risk" },
+                { test: "Tuberculosis (IGRA/CXR)", freq: "If clinically indicated" }
+            ]
+        },
+        targeted_synthetics: {
+            name: "Targeted Synthetics",
+            type: "Targeted (e.g., Tofacitinib)",
+            notes: "Includes Baricitinib, Tofacitinib, Apremilast. Be aware of increased infection risk.",
+            monitoring: [
+                { test: "FBC", freq: "As per specific drug protocol (usually every 3 months initially)" },
+                { test: "LFTs", freq: "As per specific drug protocol" },
+                { test: "Lipids", freq: "As per specific drug protocol" }
+            ]
+        }
+    };
+
+    const drugListEl = document.getElementById('drugList');
+    const detailContainerEl = document.getElementById('detailContainer');
+    
+    // Initialize Sidebar
+    function initSidebar() {
+        Object.keys(drugs).forEach(key => {
+            const btn = document.createElement('button');
+            btn.className = 'sidebar-btn';
+            btn.innerText = drugs[key].name;
+            btn.onclick = () => selectDrug(key, btn);
+            drugListEl.appendChild(btn);
+        });
+    }
+
+    // Select Drug Logic
+    function selectDrug(key, btnElement) {
+        // Update active state
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        // Render Data
+        const data = drugs[key];
+        
+        // Build Table Rows
+        let tableRows = data.monitoring.map(item => `
+            <tr>
+                <td><strong>${item.test}</strong></td>
+                <td>${item.freq}</td>
+            </tr>
+        `).join('');
+
+        const html = `
+            <div class="fade-in">
+                <div class="drug-header">
+                    <div>
+                        <h2 class="drug-title">${data.name}</h2>
+                        <span class="drug-type">${data.type}</span>
+                    </div>
+                    <div style="text-align:right">
+                         <span class="tag blue">Monitoring Protocol</span>
+                    </div>
+                </div>
+
+                ${data.notes ? `
+                <div class="note-box">
+                    <strong>⚠️ Clinical Note:</strong><br>
+                    ${data.notes}
+                </div>` : ''}
+
+                <table class="monitor-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40%">Parameter</th>
+                            <th style="width: 60%">Frequency & Schedule</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+
+                <div style="font-size: 0.85rem; color: var(--color-text-muted); border-top: 1px solid #eee; padding-top: 15px;">
+                    <p><strong>General Advice:</strong> Withhold treatment and discuss with specialist if any significant adverse reaction occurs. Always consult local shared-care guidelines.</p>
+                </div>
+            </div>
+        `;
+
+        detailContainerEl.innerHTML = html;
+    }
+
+    // Initialize App
+    initSidebar();
+    // Select Methotrexate by default as it's the most common
+    const firstBtn = drugListEl.querySelector('button'); 
+    // Actually let's find methotrexate specifically for better UX
+    const mtBtn = Array.from(drugListEl.querySelectorAll('button')).find(b => b.innerText === "Methotrexate");
+    if(mtBtn) selectDrug('methotrexate', mtBtn);
+    else selectDrug(Object.keys(drugs)[0], firstBtn);
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hidradenitis Suppurativa Clinical Tool</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f4f6f8;
+            --red: #d32f2f;
+            --red-bg: #ffebee;
+            --amber: #f57c00;
+            --amber-bg: #fff3e0;
+            --green: #388e3c;
+            --green-bg: #e8f5e9;
+            --text: #333;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main);
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* BUSY MODE STYLES */
+        body.busy-mode {
+            font-size: 1.2rem;
+        }
+        body.busy-mode .detailed-info {
+            display: none !important;
+        }
+        body.busy-mode .card {
+            padding: 20px;
+            border-left-width: 10px;
+        }
+        body.busy-mode h2 {
+            font-size: 1.5rem;
+        }
+
+        /* HEADER */
+        header {
+            background: #fff;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 100;
+        }
+
+        .header-title { font-weight: 700; font-size: 1.2rem; color: var(--primary); }
+
+        .search-container {
+            flex-grow: 1;
+            max-width: 500px;
+            margin: 0 20px;
+            position: relative;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 20px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        #searchInput:focus { outline: none; border-color: var(--accent); }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* SWITCH TOGGLE */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* MAIN LAYOUT */
+        .main-container {
+            display: grid;
+            grid-template-columns: 200px 1fr 280px; /* Left Nav, Content, Right Actions */
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+
+        /* LEFT SIDEBAR */
+        .sidebar-nav {
+            background: #fff;
+            border-right: 1px solid #ddd;
+            padding: 20px 10px;
+            overflow-y: auto;
+        }
+        .nav-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px;
+            margin-bottom: 5px;
+            background: none;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: 500;
+        }
+        .nav-btn:hover { background: #f0f4f8; }
+
+        /* CENTER CONTENT */
+        .content-area {
+            padding: 20px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 5px solid var(--accent);
+            transition: all 0.2s;
+        }
+
+        .card.red-flag { border-left-color: var(--red); background: var(--red-bg); }
+        .card.amber-flag { border-left-color: var(--amber); background: var(--amber-bg); }
+        .card.green-flag { border-left-color: var(--green); background: var(--green-bg); }
+
+        .card h2 { margin-top: 0; margin-bottom: 10px; font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+        .card h2::after { content: '▼'; font-size: 0.8em; opacity: 0.5; }
+        .card.collapsed .card-content { display: none; }
+        .card.collapsed h2::after { content: '◀'; }
+
+        .card ul { margin: 0; padding-left: 20px; }
+        .card li { margin-bottom: 5px; line-height: 1.4; }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 5px;
+            color: white;
+        }
+        .bg-red { background: var(--red); }
+        .bg-amber { background: var(--amber); }
+        .bg-green { background: var(--green); }
+
+        /* RIGHT SIDEBAR - QUICK ACTIONS */
+        .quick-actions {
+            background: #fff;
+            border-left: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .qa-card {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .qa-title { font-weight: 700; margin-bottom: 8px; font-size: 0.9rem; color: var(--primary); }
+        .dose-box { font-family: monospace; background: #eee; padding: 5px; border-radius: 4px; font-size: 0.85rem; }
+
+        cite { display: none; } /* Force hide any stray citations */
+        
+        /* RESPONSIVE */
+        @media (max-width: 1024px) {
+            .main-container { grid-template-columns: 1fr 300px; }
+            .sidebar-nav { display: none; }
+        }
+        @media (max-width: 768px) {
+            .main-container { grid-template-columns: 1fr; }
+            .quick-actions { display: none; } /* Hide QA on mobile, move to bottom if needed */
+            header { flex-direction: column; gap: 10px; }
+            .search-container { width: 100%; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">HS Clinical Ref</div>
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search (e.g., 'doxycycline', 'hurley', 'referral')...">
+    </div>
+    <div class="toggle-container">
+        <span>Busy Clinic Mode</span>
+        <label class="switch">
+            <input type="checkbox" id="busyModeToggle">
+            <span class="slider"></span>
+        </label>
+    </div>
+</header>
+
+<div class="main-container">
+    
+    <nav class="sidebar-nav">
+        <button class="nav-btn" onclick="scrollToId('diagnosis')">Diagnosis & Signs</button>
+        <button class="nav-btn" onclick="scrollToId('staging')">Staging (Hurley)</button>
+        <button class="nav-btn" onclick="scrollToId('management')">Management</button>
+        <button class="nav-btn" onclick="scrollToId('procedures')">Procedures</button>
+        <button class="nav-btn" onclick="scrollToId('comorbidities')">Comorbidities</button>
+        <button class="nav-btn" onclick="scrollToId('referral')">Referral Criteria</button>
+    </nav>
+
+    <main class="content-area" id="contentArea">
+
+        <div class="card red-flag" id="referral">
+            <h2><span class="badge bg-red">URGENT</span> Referral & Red Flags</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>Immediate/Urgent Referral:</strong> Severe pain, signs of infection/sepsis, or severe suicidal ideation.</li>
+                    <li class="essential"><strong>Routine Referral (Dermatology):</strong> Hurley Stage II or III disease.</li>
+                    <li class="detailed">Uncertain diagnosis or failure to respond to primary care treatments.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card green-flag" id="diagnosis">
+            <h2>Diagnosis (Dessau Criteria)</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>1. Typical Lesions:</strong> Nodules, abscesses, sinus tracts (tunnels), fibrotic scars, double-ended comedones.</li>
+                    <li class="essential"><strong>2. Typical Distribution:</strong> Axillae, groin, breasts, buttocks, perineum (intertriginous areas).</li>
+                    <li class="essential"><strong>3. Chronicity:</strong> Recurrence ≥2 episodes in 6 months.</li>
+                    <li class="detailed">Swabs are usually negative (sterile abscesses) but can rule out secondary staph infection.</li>
+                    <li class="detailed">Misdiagnosis as simple "boils" or "folliculitis" is common.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card amber-flag" id="staging">
+            <h2>Hurley Staging (Severity)</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>Stage I (Mild):</strong> Single/multiple abscesses. <strong>NO</strong> sinus tracts or scarring.</li>
+                    <li class="essential"><strong>Stage II (Moderate):</strong> Recurrent abscesses with sinus tracts and scarring. Separated by normal skin.</li>
+                    <li class="essential"><strong>Stage III (Severe):</strong> Diffuse involvement, multiple interconnected tracts and abscesses.</li>
+                    <li class="detailed">Staging determines treatment intensity (Topical vs Systemic vs Biologic).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card green-flag" id="management">
+            <h2>General & Lifestyle Management</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>Smoking Cessation:</strong> Crucial. Up to 60% of patients smoke.</li>
+                    <li class="essential"><strong>Weight Loss:</strong> Obesity is a major risk factor. Consider GLP-1 agonists if eligible.</li>
+                    <li class="essential"><strong>Wound Care:</strong> Non-adhesive absorbent dressings. Avoid tight clothing.</li>
+                    <li class="detailed">Pain Management: NSAIDs are first-line. Opioids use with caution.</li>
+                    <li class="detailed">Hygiene: Reassure patient it is <strong>not</strong> due to poor hygiene. Not contagious.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card amber-flag" id="meds">
+            <h2>Medical Therapy Steps</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>Step 1 (Mild/Localized):</strong> Topical Clindamycin 1% BD or Chlorhexidine 4% wash.</li>
+                    <li class="essential"><strong>Step 2 (Moderate/Stage I-II):</strong> Oral Tetracyclines (Lymecycline/Doxycycline) for <strong>12 weeks</strong>.</li>
+                    <li class="essential"><strong>Step 3 (Refractory/Severe):</strong> Clindamycin + Rifampicin combination (Specialist initiation often required).</li>
+                    <li class="detailed"><strong>Step 4 (Biologics):</strong> Adalimumab, Secukinumab, Bimekizumab (Secondary Care).</li>
+                    <li class="detailed">Others: Metformin (insulin resistance), Spironolactone (anti-androgen).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card green-flag" id="procedures">
+            <h2>Acute & Surgical Options</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>Acute Flare:</strong> Incision & Drainage (I&D) provides relief but recurrence is ~100%. Intralesional steroids (Triamcinolone) may reduce inflammation.</li>
+                    <li class="essential"><strong>Deroofing:</strong> "Unroofing" sinus tracts. Used for persistent nodules/tracts. Allows secondary healing.</li>
+                    <li class="detailed">Wide Excision: For extensive disease. Higher success but longer healing.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card amber-flag" id="comorbidities">
+            <h2>Associated Comorbidities</h2>
+            <div class="card-content">
+                <ul>
+                    <li class="essential"><strong>Metabolic:</strong> Diabetes T2, High Cholesterol, Obesity, PCOS. Screen BP/Hba1c/Lipids.</li>
+                    <li class="essential"><strong>Mental Health:</strong> Depression, Anxiety, Suicide risk.</li>
+                    <li class="detailed">Autoimmune: IBD (Crohn's/Colitis), Inflammatory Arthritis.</li>
+                    <li class="detailed">Other: Acne, Pilonidal Sinus, Dissecting Scalp Cellulitis (Follicular Occlusion Tetrad).</li>
+                </ul>
+            </div>
+        </div>
+
+    </main>
+
+    <aside class="quick-actions">
+        
+        <div class="qa-card" style="border-left: 4px solid var(--primary);">
+            <div class="qa-title">Antibiotic Dosing</div>
+            <div class="dose-box">
+                <strong>Lymecycline:</strong><br>408mg OD or BD<br>
+                <em>Duration: 12 weeks</em>
+            </div>
+            <div class="dose-box" style="margin-top:5px;">
+                <strong>Doxycycline:</strong><br>100mg OD or BD<br>
+                <em>Duration: 12 weeks</em>
+            </div>
+            <div class="dose-box" style="margin-top:5px; border:1px solid var(--amber);">
+                <strong>Clindamycin + Rifampicin:</strong><br>
+                Clinda 300mg BD + Rifamp 300mg BD<br>
+                <em>Duration: 10-12 wks</em><br>
+                <small class="text-red">Watch: Orange tears/urine, Contraceptive failure</small>
+            </div>
+        </div>
+
+        <div class="qa-card" style="border-left: 4px solid var(--green);">
+            <div class="qa-title">Patient Advice</div>
+            <ul style="padding-left:15px; margin:0; font-size:0.85rem;">
+                <li>Not infectious</li>
+                <li>Not due to poor hygiene</li>
+                <li>Warm compresses for flares</li>
+                <li>Avoid shaving affected area</li>
+            </ul>
+        </div>
+
+        <div class="qa-card" style="border-left: 4px solid var(--amber);">
+            <div class="qa-title">Screening Checklist</div>
+            <ul style="padding-left:15px; margin:0; font-size:0.85rem;">
+                <li>Smoking status</li>
+                <li>BMI / Waist circumference</li>
+                <li>Depression/Anxiety (PHQ9)</li>
+                <li>HbA1c & Lipids</li>
+                <li>PCOS symptoms (females)</li>
+            </ul>
+        </div>
+
+    </aside>
+
+</div>
+
+<script>
+    // Elements
+    const searchInput = document.getElementById('searchInput');
+    const cards = document.querySelectorAll('.card');
+    const busyToggle = document.getElementById('busyModeToggle');
+    const body = document.body;
+
+    // Search Logic
+    searchInput.addEventListener('input', function(e) {
+        const term = e.target.value.toLowerCase();
+        
+        cards.forEach(card => {
+            const text = card.textContent.toLowerCase();
+            if(text.includes(term)) {
+                card.style.display = 'block';
+                // Automatically expand matches in search
+                if(term.length > 2) card.classList.remove('collapsed');
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // Busy Mode Toggle
+    busyToggle.addEventListener('change', function() {
+        if(this.checked) {
+            body.classList.add('busy-mode');
+        } else {
+            body.classList.remove('busy-mode');
+        }
+    });
+
+    // Scroll to ID
+    function scrollToId(id) {
+        const element = document.getElementById(id);
+        if(element) {
+            // Un-collapse if collapsed
+            element.classList.remove('collapsed');
+            // Scroll logic
+            element.scrollIntoView({behavior: "smooth", block: "start"});
+            // Flash effect
+            element.style.backgroundColor = "#fff3cd";
+            setTimeout(() => {
+                element.style.backgroundColor = ""; // revert
+            }, 1000);
+        }
+    }
+
+    // Accordion Logic
+    cards.forEach(card => {
+        const header = card.querySelector('h2');
+        header.addEventListener('click', () => {
+            card.classList.toggle('collapsed');
+        });
+    });
+
+    // Initialize: Start with cards expanded for scannability
+</script>
+
+</body>
+</html>

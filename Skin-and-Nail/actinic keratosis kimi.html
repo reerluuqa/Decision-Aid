@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actinic Keratosis - Interactive Clinical Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e6eef7 100%);
+            color: #2d3748;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f2c6d 100%);
+            color: white;
+            padding: 30px 0;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 600;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.85;
+            max-width: 600px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .algorithm-container {
+            flex: 1;
+            display: grid;
+            gap: 25px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(30px);
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--header-color);
+            opacity: 0.7;
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background: var(--header-color);
+            color: white;
+            padding: 20px 25px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .card:hover .card-header::after {
+            transform: translateX(100%);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .card-title h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 3px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-title p {
+            font-size: 0.95em;
+            opacity: 0.85;
+            position: relative;
+            z-index: 1;
+        }
+
+        .expand-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .subsection {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--header-color);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        }
+
+        .subsection:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .subsection h3 {
+            color: var(--header-color);
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .badge.urgent {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #b91c1c;
+            border-color: #fca5a5;
+        }
+
+        .badge.caution {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #b45309;
+            border-color: #fbbf24;
+        }
+
+        .badge.stable {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            color: #065f46;
+            border-color: #6ee7b7;
+        }
+
+        .badge.info {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            border-color: #93c5fd;
+        }
+
+        .treatment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .treatment-option {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+
+        .treatment-option:hover {
+            border-color: var(--header-color);
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .treatment-option h4 {
+            color: var(--header-color);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .treatment-option p {
+            font-size: 0.9em;
+            color: #4b5563;
+        }
+
+        .algorithm-path {
+            background: rgba(219, 234, 254, 0.4);
+            border: 1px solid rgba(147, 197, 253, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            position: relative;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .algorithm-path:hover {
+            background: rgba(219, 234, 254, 0.6);
+            transform: translateX(5px);
+        }
+
+        .algorithm-path::before {
+            content: '→';
+            position: absolute;
+            left: -10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #3b82f6;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sidebar {
+            width: 300px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+
+        .progress-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.4s ease;
+        }
+
+        .progress-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.12);
+        }
+
+        .progress-header {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+            font-weight: 500;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: #3b82f6;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .quick-links {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+            padding: 20px;
+        }
+
+        .quick-links h3 {
+            margin-bottom: 15px;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1em;
+        }
+
+        .quick-link {
+            display: block;
+            padding: 10px 15px;
+            background: rgba(219, 234, 254, 0.4);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            color: #1e40af;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+            border: 1px solid rgba(147, 197, 253, 0.3);
+        }
+
+        .quick-link:hover {
+            background: rgba(219, 234, 254, 0.7);
+            transform: translateX(5px);
+            border-color: #93c5fd;
+        }
+
+        .risk-factors {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fbbf24;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .risk-factors:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .risk-factors h4 {
+            color: #b45309;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .risk-factors ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .risk-factors li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .risk-factors li::before {
+            content: '⚠️';
+            position: absolute;
+            left: 0;
+        }
+
+        .diagnosis-criteria {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border: 1px solid #a5b4fc;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .diagnosis-criteria:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .diagnosis-criteria h4 {
+            color: #4338ca;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .treatment-algorithm {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 1px solid #6ee7b7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .treatment-algorithm:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .treatment-algorithm h4 {
+            color: #065f46;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .step {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #10b981;
+            transition: all 0.3s ease;
+        }
+
+        .step:hover {
+            transform: translateX(5px);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .step strong {
+            color: #065f46;
+        }
+
+        .follow-up-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .follow-up-item {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.05);
+            backdrop-filter: blur(5px);
+        }
+
+        .follow-up-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+        }
+
+        .follow-up-item .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: var(--header-color);
+            margin-bottom: 5px;
+        }
+
+        .follow-up-item .label {
+            font-size: 0.9em;
+            color: #4b5563;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            
+            .section-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .treatment-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 2em;
+            }
+            
+            .card-header {
+                padding: 15px 20px;
+            }
+            
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2em;
+            }
+            
+            .card-title h2 {
+                font-size: 1.3em;
+            }
+
+            .card-body {
+                padding: 20px;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #fef3c7 0%, #fde68a 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .highlight:hover {
+            background: linear-gradient(120deg, #fde68a 0%, #fbbf24 100%);
+            transform: scale(1.05);
+        }
+
+        .tooltip {
+            position: fixed;
+            background: rgba(30, 58, 138, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            max-width: 250px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: rgba(30, 58, 138, 0.9) transparent transparent transparent;
+        }
+
+        .severity-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85em;
+            font-weight: 500;
+            margin-left: 10px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .severity-indicator.high {
+            background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+            color: #b91c1c;
+            border: 1px solid #f87171;
+        }
+
+        .severity-indicator.medium {
+            background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+            color: #b45309;
+            border: 1px solid #f59e0b;
+        }
+
+        .severity-indicator.low {
+            background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%);
+            color: #065f46;
+            border: 1px solid #34d399;
+        }
+
+        .severity-indicator:hover {
+            transform: scale(1.05);
+        }
+
+        .interactive-element {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .interactive-element:hover {
+            transform: translateY(-2px);
+        }
+
+        .interactive-element::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--header-color);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+            transform-origin: left;
+        }
+
+        .interactive-element:hover::after {
+            transform: scaleX(1);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🩺 Actinic Keratosis Management</h1>
+        <p>Interactive Clinical Decision Support Algorithm</p>
+    </header>
+
+    <div class="container">
+        <div class="main-content">
+            <div class="algorithm-container" id="algorithmContainer">
+                <!-- Cards will be dynamically inserted here -->
+            </div>
+
+            <div class="sidebar">
+                <div class="progress-card">
+                    <div class="progress-header">
+                        📊 Progress Tracker
+                    </div>
+                    <div id="progressContainer">
+                        <!-- Progress items will be dynamically inserted -->
+                    </div>
+                </div>
+
+                <div class="quick-links">
+                    <h3>🔍 Quick Navigation</h3>
+                    <a href="#assessment" class="quick-link" data-section="assessment">Assessment & History</a>
+                    <a href="#diagnosis" class="quick-link" data-section="diagnosis">Diagnostic Criteria</a>
+                    <a href="#treatment" class="quick-link" data-section="treatment">Treatment Options</a>
+                    <a href="#followup" class="quick-link" data-section="followup">Follow-up Protocol</a>
+                    <a href="#algorithm" class="quick-link" data-section="algorithm">Treatment Algorithm</a>
+                    <a href="#risk" class="quick-link" data-section="risk">Risk Factors</a>
+                </div>
+
+                <div class="progress-card">
+                    <div class="progress-header">
+                        ⚠️ Risk Alerts
+                    </div>
+                    <div id="alertContainer">
+                        <div class="badge urgent" style="margin-bottom: 10px; width: 100%; justify-content: center;">
+                            🚨 Malignant Potential
+                        </div>
+                        <div style="font-size: 0.85em; color: #666;">
+                            <strong>Progression Risk:</strong> 0.025-16% per year to SCC
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // Medical data structure
+        const medicalData = {
+            assessment: {
+                title: "Assessment & History",
+                subtitle: "Initial patient evaluation and risk assessment",
+                icon: "📋",
+                color: "#3b82f6",
+                sections: [
+                    {
+                        title: "Clinical Presentation",
+                        content: `
+                            <div class="subsection">
+                                <h3>👤 Typical Patient Profile</h3>
+                                <ul>
+                                    <li>Men >40 years old with light-colored skin (Fitzpatrick I-II)</li>
+                                    <li>History of chronic sun exposure (outdoor work/recreation)</li>
+                                    <li>Residing in lower latitudes or high UV areas</li>
+                                    <li>Previous history of AKs or skin cancer</li>
+                                </ul>
+                                <div class="badge-container">
+                                    <span class="badge caution interactive-element" data-tooltip="6x higher risk than darker skin types">Light Skin Risk</span>
+                                    <span class="badge info interactive-element" data-tooltip="Prevalence increases with age">Age Factor</span>
+                                </div>
+                            </div>
+                            <div class="subsection">
+                                <h3>🔍 Key Clinical Features</h3>
+                                <ul>
+                                    <li><strong>Appearance:</strong> Skin-colored, yellowish, or erythematous rough scaly macules/plaques</li>
+                                    <li><strong>Size:</strong> Typically 1-5mm in diameter</li>
+                                    <li><strong>Surface:</strong> Rough, scaly, hyperkeratotic surface</li>
+                                    <li><strong>Location:</strong> Sun-exposed areas (face, scalp, ears, dorsal hands/forearms)</li>
+                                    <li><strong>Symptoms:</strong> Usually asymptomatic, may have mild pruritus or bleeding</li>
+                                </ul>
+                                <div class="badge-container">
+                                    <span class="badge urgent interactive-element" data-tooltip="Tender, thickened, ulcerated, or enlarging lesions suspicious for SCC transformation">⚠️ Red Flags</span>
+                                    <span class="badge caution interactive-element" data-tooltip="Ill-defined borders make clinical assessment challenging">Border Assessment</span>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Classification Grades",
+                        content: `
+                            <div class="subsection">
+                                <h3>📊 Lesion Grading System</h3>
+                                <div class="treatment-grid">
+                                    <div class="treatment-option">
+                                        <h4>Grade 1: Mild</h4>
+                                        <p>Pink or grey marks with slight scale, gritty to touch</p>
+                                        <span class="severity-indicator low">Low Risk</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Grade 2: Moderate</h4>
+                                        <p>Thicker hyperkeratosis, easily detected</p>
+                                        <span class="severity-indicator medium">Medium Risk</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Grade 3: Severe</h4>
+                                        <p>Hyperkeratotic thick keratin, very rough</p>
+                                        <span class="severity-indicator high">High Risk</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Grade 4: Confluent</h4>
+                                        <p>Several centimeter areas with mixed grades</p>
+                                        <span class="severity-indicator high">High Risk</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            diagnosis: {
+                title: "Diagnosis",
+                subtitle: "Clinical examination and diagnostic procedures",
+                icon: "🔬",
+                color: "#8b5cf6",
+                sections: [
+                    {
+                        title: "Diagnostic Approach",
+                        content: `
+                            <div class="diagnosis-criteria">
+                                <h4>✅ Clinical Diagnosis Criteria</h4>
+                                <p>Characteristic history and examination findings are often sufficient for diagnosis. Key diagnostic factors include:</p>
+                                <ul>
+                                    <li>Presence of risk factors (chronic UV exposure, light skin, age >40)</li>
+                                    <li>Single or multiple scaly macules/plaques on sun-exposed areas</li>
+                                    <li>Scaly lesions with hyperkeratotic surface</li>
+                                    <li>Evidence of sun damage to surrounding skin</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h3>🔍 Dermoscopy Features</h3>
+                                <p>AK lesions show a characteristic <strong>"strawberry pattern"</strong> on dermoscopy:</p>
+                                <ul>
+                                    <li>Erythematous background with pink-to-red pseudo-network</li>
+                                    <li>Thin undulated vessels surrounding hair follicles</li>
+                                    <li>White-to-yellow scale</li>
+                                    <li>Hair follicles filled with yellowish keratotic plugs surrounded by white halo</li>
+                                </ul>
+                                <div class="badge-container">
+                                    <span class="badge info interactive-element" data-tooltip="Helps differentiate from other lesions">Diagnostic Aid</span>
+                                    <span class="badge caution interactive-element" data-tooltip="Dotted vessels, starburst pattern may indicate progression to SCC">Progression Signs</span>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Differential Diagnosis",
+                        content: `
+                            <div class="subsection">
+                                <h3>🎯 Key Differential Diagnoses</h3>
+                                <div class="treatment-grid">
+                                    <div class="treatment-option">
+                                        <h4>Squamous Cell Carcinoma (SCC)</h4>
+                                        <p>Larger, indurated, inflamed, may be ulcerated or bleeding. Requires biopsy for confirmation.</p>
+                                        <span class="badge urgent">Urgent Referral</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>SCC In Situ (Bowen's Disease)</h4>
+                                        <p>Similar distribution but usually solitary, can occur on covered areas</p>
+                                        <span class="badge caution">Biopsy Needed</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Seborrheic Keratosis</h4>
+                                        <p>Well-defined, velvety plaques with verrucous surface</p>
+                                        <span class="badge stable">Benign</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Basal Cell Carcinoma</h4>
+                                        <p>Translucent pearly nodule with telangiectasia</p>
+                                        <span class="badge caution">Biopsy Needed</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Pigmented Lesions</h4>
+                                        <p>Solar lentigo, melanocytic nevus, or melanoma</p>
+                                        <span class="badge urgent">Rule Out Melanoma</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>Lichen Planus</h4>
+                                        <p>Violaceous papules with fine white lines (Wickham's striae)</p>
+                                        <span class="badge stable">Benign</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="subsection">
+                                <h3>🧪 When to Biopsy</h3>
+                                <ul>
+                                    <li>Atypical clinical or dermoscopic features</li>
+                                    <li>Suspicion of progression to SCC</li>
+                                    <li>Lesion not responding to appropriate therapy</li>
+                                    <li>Diagnostic uncertainty</li>
+                                </ul>
+                                <span class="badge urgent interactive-element" data-tooltip="Major criteria: induration, >1cm, rapid enlargement, bleeding, ulceration">Biopsy Criteria</span>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            treatment: {
+                title: "Treatment",
+                subtitle: "Comprehensive treatment options and algorithms",
+                icon: "💊",
+                color: "#10b981",
+                sections: [
+                    {
+                        title: "Treatment Approach",
+                        content: `
+                            <div class="treatment-algorithm">
+                                <h4>🎯 Treatment Selection Factors</h4>
+                                <div class="step"><strong>Number & Size:</strong> Few/single vs. multiple/field lesions</div>
+                                <div class="step"><strong>Location:</strong> Face/scalp vs. extremities, periorbital, actinic cheilitis</div>
+                                <div class="step"><strong>Thickness:</strong> Thin vs. thick hyperkeratotic lesions</div>
+                                <div class="step"><strong>Patient Factors:</strong> Tolerability, adherence, prior treatments</div>
+                                <div class="step"><strong>Clinical Suspicion:</strong> Concern for SCC transformation</div>
+                                <div class="step"><strong>Cosmetic Concerns:</strong> Especially for facial lesions</div>
+                            </div>
+                            <div class="subsection">
+                                <h3>🔄 Treatment Goals</h3>
+                                <ul>
+                                    <li>Total destruction of clinically visible and subclinical AKs</li>
+                                    <li>Minimize risk of progression to invasive SCC</li>
+                                    <li>Best cosmetically acceptable outcome</li>
+                                    <li>Patient-centered shared decision-making</li>
+                                </ul>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Treatment Options",
+                        content: `
+                            <div class="subsection">
+                                <h3>🔧 Physical Treatments (Individual Lesions)</h3>
+                                <div class="treatment-grid">
+                                    <div class="treatment-option">
+                                        <h4>❄️ Cryotherapy</h4>
+                                        <p>Liquid nitrogen spray. Preferred for thick/thin lesions. Healing: 5-10 days (face), 3-6 weeks (extremities)</p>
+                                        <span class="badge stable">First-line</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🥄 Curettage ± Electrodessication</h4>
+                                        <p>Mechanical scraping with or without cautery. Provides histology sample.</p>
+                                        <span class="badge caution">Scarring Risk</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>✂️ Excision</h4>
+                                        <p>Complete surgical excision with sutures. Confirms complete removal.</p>
+                                        <span class="badge caution">Permanent Scar</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🔪 Dermabrasion</h4>
+                                        <p>Mechanical abrasion for numerous thick lesions. Requires expertise.</p>
+                                        <span class="badge caution">Second-line</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="subsection">
+                                <h3>💧 Field Treatments (Multiple Lesions)</h3>
+                                <div class="treatment-grid">
+                                    <div class="treatment-option">
+                                        <h4>💊 5-Fluorouracil (5-FU)</h4>
+                                        <p>Cytotoxic cream (0.5% or 5%). Applied 1-2x daily for 2-4 weeks. High efficacy (75% clearance at 12 months)</p>
+                                        <span class="badge stable">High Efficacy</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🛡️ Imiquimod</h4>
+                                        <p>Immune response modifier (3.75% or 5%). Various regimens. 41% mean clearance rate.</p>
+                                        <span class="badge stable">Good Response</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>💉 Diclofenac 3%</h4>
+                                        <p>NSAID in hyaluronic acid gel. Twice daily for 12 weeks. 42% clearance, well-tolerated.</p>
+                                        <span class="badge stable">Well Tolerated</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>💡 Photodynamic Therapy (PDT)</h4>
+                                        <p>Light activation after photosensitizer. Highly effective for face/scalp lesions.</p>
+                                        <span class="badge stable">Cosmetically Excellent</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🧪 Chemical Peels</h4>
+                                        <p>TCA, glycolic acid, salicylic acid, or Jessner's solution. For thin, numerous lesions.</p>
+                                        <span class="badge caution">Medium Depth</span>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🎯 Tirbanibulin 1%</h4>
+                                        <p>Microtubule inhibitor. Once daily for 5 days. New FDA-approved option.</p>
+                                        <span class="badge info">New Agent</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Special Considerations",
+                        content: `
+                            <div class="subsection">
+                                <h3>👄 Actinic Cheilitis Treatment</h3>
+                                <div class="treatment-grid">
+                                    <div class="treatment-option">
+                                        <h4>❄️ Cryosurgery</h4>
+                                        <p>Commonly used but limited evidence. Recurrence rate ~4%</p>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>💊 Topical Therapies</h4>
+                                        <p>5-FU (75% response), diclofenac (45% response), imiquimod (73% response)</p>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>💡 PDT</h4>
+                                        <p>80% complete response with ALA-PDT. Daylight PDT well-tolerated.</p>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🔫 Laser Surgery</h4>
+                                        <p>CO2 or Er:YAG laser. High efficacy, minimal scarring, excellent cosmesis.</p>
+                                        <span class="badge stable">Preferred Method</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="subsection">
+                                <h3>🦵 Below-the-Knee Lesions</h3>
+                                <p>All treatment modalities can lead to poor healing and ulceration. <strong>Combine with leg compression and elevation.</strong></p>
+                                <span class="badge caution">Healing Risk</span>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            algorithm: {
+                title: "Treatment Algorithm",
+                subtitle: "Step-by-step treatment selection guide",
+                icon: "🔄",
+                color: "#f59e0b",
+                sections: [
+                    {
+                        title: "Facial/Scalp Lesions (non-periorbital)",
+                        content: `
+                            <div class="treatment-algorithm">
+                                <h4>🎯 Head & Face Lesions (excluding periorbital, cheilitis, confluent scalp)</h4>
+                                <div class="step"><strong>Thin lesions, few:</strong> Cryotherapy (first-line) → Topical therapy (5-FU, imiquimod, diclofenac, tirbanibulin)</div>
+                                <div class="step"><strong>Thin lesions, numerous:</strong> Chemical peels → PDT → Topical diclofenac</div>
+                                <div class="step"><strong>Thick lesions, few:</strong> Cryotherapy → Curettage ± electrodessication</div>
+                                <div class="step"><strong>Thick lesions, numerous:</strong> Cryotherapy → Curettage ± electrodessication → Dermabrasion</div>
+                                <div class="step"><strong>Actinic cheilitis:</strong> Cryotherapy → Topical therapy → PDT → Laser surgery → Surgical vermilionectomy</div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Periorbital Lesions",
+                        content: `
+                            <div class="treatment-algorithm">
+                                <h4>👁️ Periorbital Area</h4>
+                                <div class="step"><strong>Thin lesions, few:</strong> Cryotherapy</div>
+                                <div class="step"><strong>Thin lesions, numerous:</strong> Curettage ± electrodessication</div>
+                                <div class="step"><strong>Thick lesions:</strong> Cryotherapy → Curettage ± electrodessication</div>
+                                <p style="margin-top: 15px; font-style: italic;">⚠️ Extra caution due to sensitive anatomical location</p>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Hand & Forearm Lesions",
+                        content: `
+                            <div class="treatment-algorithm">
+                                <h4>🤚 Dorsal Hands & Forearms</h4>
+                                <div class="step"><strong>Thin lesions, few:</strong> Cryotherapy → Topical 5-FU</div>
+                                <div class="step"><strong>Thin lesions, numerous:</strong> Cryotherapy → Chemical peels → Topical 5-FU → Curettage ± electrodessication</div>
+                                <div class="step"><strong>Thick lesions:</strong> Cryotherapy → Curettage ± electrodessication</div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Lower Extremity Lesions",
+                        content: `
+                            <div class="treatment-algorithm">
+                                <h4>🦵 Below-the-Knee Lesions</h4>
+                                <div class="step"><strong>All lesions:</strong> Combine with leg compression and elevation</div>
+                                <div class="step"><strong>Thick/thin, few:</strong> Cryotherapy + compression → Curettage + compression</div>
+                                <div class="step"><strong>Thin, numerous:</strong> Chemical peels + compression</div>
+                                <div class="step"><strong>Thick, numerous:</strong> Cryotherapy + compression → PDT + compression</div>
+                                <span class="badge urgent" style="margin-top: 15px;">⚠️ High risk of poor healing</span>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            followup: {
+                title: "Follow-up",
+                subtitle: "Monitoring and long-term management",
+                icon: "📅",
+                color: "#ef4444",
+                sections: [
+                    {
+                        title: "Monitoring Protocol",
+                        content: `
+                            <div class="subsection">
+                                <h3>👁️ Surveillance Schedule</h3>
+                                <div class="follow-up-grid">
+                                    <div class="follow-up-item">
+                                        <div class="number">6-12</div>
+                                        <div class="label">Months between reviews</div>
+                                    </div>
+                                    <div class="follow-up-item">
+                                        <div class="number">3-5%</div>
+                                        <div class="label">Bowen's disease progression risk</div>
+                                    </div>
+                                    <div class="follow-up-item">
+                                        <div class="number">0.025-16%</div>
+                                        <div class="label">Annual SCC progression rate</div>
+                                    </div>
+                                    <div class="follow-up-item">
+                                        <div class="number">95%</div>
+                                        <div class="label">Lip SCC from actinic cheilitis</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="risk-factors">
+                                <h4>🔴 High-Risk Patients (More Frequent Monitoring)</h4>
+                                <ul>
+                                    <li>Immunosuppressed/organ transplant recipients</li>
+                                    <li>Xeroderma pigmentosum patients</li>
+                                    <li>Albinism patients</li>
+                                    <li>Outdoor workers with chronic exposure</li>
+                                    <li>Patients with >10 AK lesions</li>
+                                    <li>History of multiple keratinocyte carcinomas</li>
+                                </ul>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Prognosis & Outcomes",
+                        content: `
+                            <div class="subsection">
+                                <h3>📈 Prognostic Factors</h3>
+                                <div class="treatment-grid">
+                                    <div class="treatment-option">
+                                        <h4>✅ Treatment Success Rates</h4>
+                                        <p>Cryotherapy: 99% clearance with >20s freeze time<br>
+                                        5-FU: 75% lesion-free at 12 months<br>
+                                        Imiquimod: 41% clearance, <30% recurrence at 18-24 months</p>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>⚠️ Recurrence Rates</h4>
+                                        <p>Superficial peels: 25% recurrence<br>
+                                        New AKs may develop in 15% over 12 months<br>
+                                        60% of SCCs arise from previous AKs</p>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🎯 Cosmetic Outcomes</h4>
+                                        <p>94-97% good to excellent cosmetic results<br>
+                                        Cryotherapy: hypopigmentation risk with long freeze times<br>
+                                        Laser/PBT: Excellent cosmetic outcomes</p>
+                                    </div>
+                                    <div class="treatment-option">
+                                        <h4>🔬 Misdiagnosis Rate</h4>
+                                        <p>36% of clinically diagnosed AKs were SCC on histology<br>
+                                        4% of dermatologist-diagnosed AKs were SCC<br>
+                                        14% occult early-stage malignancy</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="subsection">
+                                <h3>🛡️ Prevention Strategies</h3>
+                                <div class="algorithm-path">
+                                    <div class="step"><strong>☀️ Sun Protection:</strong> SPF 15+ broad-spectrum sunscreen, protective clothing, avoid 11am-2pm sun</div>
+                                    <div class="step"><strong>💊 Nicotinamide:</strong> 500mg twice daily reduces new AKs in high-risk patients</div>
+                                    <div class="step"><strong>🥗 Low-Fat Diet:</strong> May decrease AK incidence</div>
+                                    <div class="step"><strong>💉 HPV Vaccination:</strong> May reduce AKs in immunocompetent individuals</div>
+                                    <div class="step"><strong>🏃 Lifestyle:</strong> Avoid excessive sun, regular self-examination</div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Patient Education",
+                        content: `
+                            <div class="subsection">
+                                <h3>👨‍⚕️ Patient Counseling Points</h3>
+                                <ul>
+                                    <li><strong>Condition Explanation:</strong> AKs are precancerous lesions with malignant potential</li>
+                                    <li><strong>Risk Communication:</strong> 10-15% risk of SCC in patients with >10 AKs</li>
+                                    <li><strong>Treatment Expectations:</strong> Explain benefits, adverse effects, and need for multiple treatments</li>
+                                    <li><strong>Sun Protection:</strong> Emphasize strict photoprotection to prevent new lesions</li>
+                                    <li><strong>Self-Monitoring:</strong> Teach patients to recognize concerning changes</li>
+                                    <li><strong>Follow-up Importance:</strong> Regular skin examinations for early detection</li>
+                                </ul>
+                                <div class="badge-container">
+                                    <span class="badge urgent">Urgent: Rapid growth, bleeding, ulceration</span>
+                                    <span class="badge caution">Caution: Persistent pain, new pigmentation</span>
+                                    <span class="badge stable">Stable: No change in appearance</span>
+                                </div>
+                            </div>
+                        `
+                    }
+                ]
+            },
+            risk: {
+                title: "Risk Factors",
+                subtitle: "Identification and risk stratification",
+                icon: "⚠️",
+                color: "#f97316",
+                sections: [
+                    {
+                        title: "Strong Risk Factors",
+                        content: `
+                            <div class="risk-factors">
+                                <h4>🔴 Strong Risk Factors</h4>
+                                <ul>
+                                    <li>Chronic UVB exposure (>80% on head/neck, dorsal forearms/hands)</li>
+                                    <li>Light-colored skin (Fitzpatrick I-II): 6x higher risk than darker skin</li>
+                                    <li>Age >40 years: 90% of >80-year-olds have at least one AK</li>
+                                    <li>Male sex: Higher prevalence in all populations</li>
+                                    <li>Immunocompromise: 250-fold higher risk in organ transplant recipients</li>
+                                    <li>Xeroderma pigmentosum: Early onset of AKs</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h3>📊 Risk Stratification</h3>
+                                <div class="follow-up-grid">
+                                    <div class="follow-up-item">
+                                        <div class="number">6x</div>
+                                        <div class="label">Light vs dark skin risk</div>
+                                    </div>
+                                    <div class="follow-up-item">
+                                        <div class="number">250x</div>
+                                        <div class="label">Transplant recipients risk</div>
+                                    </div>
+                                    <div class="follow-up-item">
+                                        <div class="number">91%</div>
+                                        <div class="label">Albinism patients >20 years</div>
+                                    </div>
+                                    <div class="follow-up-item">
+                                        <div class="number">70%</div>
+                                        <div class="label">Skin cancer after 20 years immunosuppression</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Moderate Risk Factors",
+                        content: `
+                            <div class="subsection">
+                                <h3>🟡 Moderate Risk Factors</h3>
+                                <ul>
+                                    <li>Childhood freckling and history of sunburns</li>
+                                    <li>Chronic exposure to UVA, X-rays, radioisotopes</li>
+                                    <li>Arsenic exposure</li>
+                                    <li>Human papillomavirus infection (immunocompromised)</li>
+                                    <li>Genetic diseases: albinism, xeroderma pigmentosum</li>
+                                    <li>Outdoor occupation or recreation</li>
+                                    <li>Living in lower latitudes (closer to equator)</li>
+                                </ul>
+                                <div class="badge-container">
+                                    <span class="badge caution">Geographic Risk</span>
+                                    <span class="badge caution">Occupational Risk</span>
+                                    <span class="badge info">Genetic Predisposition</span>
+                                </div>
+                            </div>
+                        `
+                    },
+                    {
+                        title: "Risk Reduction",
+                        content: `
+                            <div class="subsection">
+                                <h3>🛡️ Risk Reduction Strategies</h3>
+                                <div class="algorithm-path">
+                                    <div class="step"><strong>🧴 Sunscreen:</strong> SPF 50+ broad-spectrum, daily application</div>
+                                    <div class="step"><strong>👕 Protective Clothing:</strong> Hats, long sleeves, UV-blocking fabrics</div>
+                                    <div class="step"><strong>⏰ Timing:</strong> Avoid 11am-2pm sun exposure</div>
+                                    <div class="step"><strong>💊 Nicotinamide:</strong> 500mg twice daily (vitamin B3)</div>
+                                    <div class="step"><strong>💉 HPV Vaccination:</strong> May reduce AKs in immunocompetent</div>
+                                    <div class="step"><strong>🏥 Regular Screening:</strong> 5-minute skin examination</div>
+                                </div>
+                                <div class="badge-container">
+                                    <span class="badge stable">Primary Prevention</span>
+                                    <span class="badge stable">Chemoprevention</span>
+                                    <span class="badge stable">Early Detection</span>
+                                </div>
+                            </div>
+                        `
+                    }
+                ]
+            }
+        };
+
+        // Card rendering function
+        function renderCard(id, data) {
+            const card = document.createElement('div');
+            card.className = 'card fade-in';
+            card.id = id;
+            card.style.setProperty('--header-color', data.color);
+            
+            const sectionsHtml = data.sections.map(section => `
+                <div class="subsection">
+                    <h3>${section.title}</h3>
+                    ${section.content}
+                </div>
+            `).join('');
+            
+            card.innerHTML = `
+                <div class="card-header" onclick="toggleCard('${id}')">
+                    <div class="card-header-left">
+                        <div class="card-icon">${data.icon}</div>
+                        <div class="card-title">
+                            <h2>${data.title}</h2>
+                            <p>${data.subtitle}</p>
+                        </div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        ${sectionsHtml}
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Progress tracking
+        function updateProgress() {
+            const progressContainer = document.getElementById('progressContainer');
+            const cards = document.querySelectorAll('.card');
+            
+            progressContainer.innerHTML = '';
+            cards.forEach((card, index) => {
+                const isActive = card.classList.contains('expanded');
+                const cardId = card.id;
+                const data = medicalData[cardId];
+                
+                const progressItem = document.createElement('div');
+                progressItem.className = `progress-item ${isActive ? 'active' : ''}`;
+                progressItem.onclick = () => scrollToCard(cardId);
+                
+                progressItem.innerHTML = `
+                    <div class="progress-icon">${data.icon}</div>
+                    <div>
+                        <div style="font-weight: 500;">${data.title}</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">${data.subtitle}</div>
+                    </div>
+                `;
+                
+                progressContainer.appendChild(progressItem);
+            });
+        }
+
+        // Card toggle
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId);
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+            }
+            
+            updateProgress();
+        }
+
+        // Scroll to card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            toggleCard(cardId);
+        }
+
+        // Initialize
+        function initialize() {
+            const container = document.getElementById('algorithmContainer');
+            
+            // Render cards in order
+            const cardOrder = ['assessment', 'diagnosis', 'treatment', 'algorithm', 'followup', 'risk'];
+            cardOrder.forEach((key, index) => {
+                if (medicalData[key]) {
+                    const card = renderCard(key, medicalData[key]);
+                    container.appendChild(card);
+                    
+                    // Stagger animation
+                    setTimeout(() => {
+                        card.classList.add('visible');
+                    }, index * 150);
+                }
+            });
+            
+            updateProgress();
+            
+            // Add click handlers for badges and interactive elements
+            document.addEventListener('click', handleInteractiveClick);
+            
+            // Add hover tooltips
+            document.addEventListener('mouseover', handleTooltipShow);
+            document.addEventListener('mouseout', handleTooltipHide);
+            
+            // Handle quick navigation
+            document.querySelectorAll('.quick-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = link.dataset.section;
+                    scrollToCard(section);
+                });
+            });
+            
+            // Expand first card by default
+            setTimeout(() => {
+                toggleCard('assessment');
+            }, 500);
+        }
+
+        // Interactive element handler
+        function handleInteractiveClick(e) {
+            const element = e.target.closest('.interactive-element');
+            if (element) {
+                const tooltip = element.dataset.tooltip;
+                if (tooltip) {
+                    showAlert(tooltip);
+                }
+            }
+            
+            // Badge filtering
+            const badge = e.target.closest('.badge');
+            if (badge) {
+                const badgeType = badge.className.split(' ').find(c => ['urgent', 'caution', 'stable', 'info'].includes(c));
+                if (badgeType) {
+                    filterContentBySeverity(badgeType);
+                }
+            }
+        }
+
+        // Tooltip handlers
+        function handleTooltipShow(e) {
+            const element = e.target.closest('.interactive-element');
+            if (element) {
+                const tooltip = document.getElementById('tooltip');
+                const text = element.dataset.tooltip;
+                if (text) {
+                    tooltip.textContent = text;
+                    tooltip.classList.add('show');
+                    
+                    // Position tooltip above cursor
+                    const x = e.clientX;
+                    const y = e.clientY;
+                    tooltip.style.left = (x - tooltip.offsetWidth / 2) + 'px';
+                    tooltip.style.top = (y - tooltip.offsetHeight - 10) + 'px';
+                }
+            }
+        }
+
+        function handleTooltipHide(e) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        // Alert system
+        function showAlert(message) {
+            const alert = document.createElement('div');
+            alert.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                border-left: 4px solid #3b82f6;
+                border-radius: 8px;
+                padding: 15px 20px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 1000;
+                max-width: 300px;
+                animation: slideIn 0.3s ease;
+            `;
+            alert.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="font-size: 1.5em;">💡</div>
+                    <div>
+                        <div style="font-weight: 500; margin-bottom: 5px;">Clinical Tip</div>
+                        <div style="font-size: 0.9em; color: #666;">${message}</div>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 1.2em; cursor: pointer; margin-left: auto;">×</button>
+                </div>
+            `;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 4000);
+        }
+
+        // Severity filtering
+        function filterContentBySeverity(severity) {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                const badges = card.querySelectorAll(`.badge.${severity}`);
+                if (badges.length > 0) {
+                    card.style.border = '2px solid #3b82f6';
+                    card.style.transform = 'scale(1.02)';
+                    setTimeout(() => {
+                        card.style.border = '';
+                        card.style.transform = '';
+                    }, 2000);
+                }
+            });
+            
+            const severityNames = {
+                urgent: 'Urgent/Red Flags',
+                caution: 'Caution/Attention',
+                stable: 'Stable/Standard',
+                info: 'Informational'
+            };
+            
+            showAlert(`Highlighted content marked as "${severityNames[severity]}"`);
+        }
+
+        // Scroll spy for active section
+        function handleScroll() {
+            const cards = document.querySelectorAll('.card');
+            const scrollPosition = window.scrollY + 100;
+            
+            let currentCard = null;
+            cards.forEach(card => {
+                const cardTop = card.offsetTop;
+                const cardHeight = card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition < cardTop + cardHeight) {
+                    currentCard = card.id;
+                }
+            });
+            
+            // Update active progress item
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent.includes(medicalData[currentCard]?.title)) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Add scroll listener
+        window.addEventListener('scroll', handleScroll);
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', initialize);
+
+        // Add slide-in animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
