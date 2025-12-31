@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myocarditis Clinical Assistant</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary: #2563eb;       /* Medical Blue */
+            --primary-dark: #1e40af;
+            --danger: #dc2626;        /* Red for Urgent/Red Flags */
+            --danger-bg: #fef2f2;
+            --success: #16a34a;       /* Green for Safe/Recovery */
+            --success-bg: #f0fdf4;
+            --neutral: #64748b;       /* Slate for text */
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+            --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-body);
+            color: #1e293b;
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* --- Layout --- */
+        .app-container {
+            display: flex;
+            width: 100%;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .nav-btn {
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--neutral);
+            font-weight: 600;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-btn:hover {
+            background-color: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .nav-btn.active {
+            background-color: #eff6ff;
+            color: var(--primary);
+            box-shadow: inset 3px 0 0 var(--primary);
+        }
+
+        /* Search in Sidebar */
+        .search-box {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--neutral);
+            font-size: 1.1rem;
+        }
+
+        /* Sections */
+        section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Cards & Grid --- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        /* --- Visual Cues --- */
+        .border-l-red { border-left: 5px solid var(--danger); }
+        .border-l-green { border-left: 5px solid var(--success); }
+        .border-l-blue { border-left: 5px solid var(--primary); }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-red { background: var(--danger-bg); color: var(--danger); }
+        .badge-green { background: var(--success-bg); color: var(--success); }
+        .badge-blue { background: #eff6ff; color: var(--primary); }
+
+        /* Red Banner / Alert Box */
+        .alert-box {
+            background-color: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .alert-icon {
+            color: var(--danger);
+            flex-shrink: 0;
+        }
+
+        .alert-content h3 {
+            color: #991b1b;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Lists and Text */
+        ul.check-list {
+            list-style: none;
+        }
+        ul.check-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            color: #475569;
+        }
+        ul.check-list li::before {
+            content: "•";
+            color: var(--primary);
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-table th {
+            text-align: left;
+            padding: 0.75rem;
+            background-color: #f8fafc;
+            color: var(--neutral);
+            font-weight: 600;
+            border-bottom: 2px solid var(--border);
+        }
+        .data-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            margin: 0.25rem;
+            padding: 0.2rem 0.6rem;
+            background: #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #334155;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 900px) {
+            .app-container { flex-direction: column; }
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                position: relative; 
+                padding: 1rem;
+                border-bottom: 1px solid var(--border);
+                border-right: none;
+            }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .nav-menu { flex-direction: row; overflow-x: auto; padding-bottom: 0.5rem; }
+            .nav-btn { white-space: nowrap; }
+            .search-box { display: none; /* Hide search on mobile to save space or move it */ }
+        }
+
+        /* Utility Icons (SVG) */
+        .icon { width: 20px; height: 20px; stroke-width: 2; stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="brand">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 7.65l.77.78 7.65 7.65 7.65-7.65.77-.78a5.4 5.4 0 0 0 0-7.65z"></path></svg>
+            Myocarditis
+        </div>
+        <ul class="nav-menu">
+            <li><button class="nav-btn active" onclick="showSection('overview', this)">Overview & Red Flags</button></li>
+            <li><button class="nav-btn" onclick="showSection('diagnosis', this)">Diagnostics</button></li>
+            <li><button class="nav-btn" onclick="showSection('aetiology', this)">Aetiology</button></li>
+            <li><button class="nav-btn" onclick="showSection('management', this)">Management</button></li>
+        </ul>
+        
+        <div class="search-box">
+            <label style="font-size:0.8rem; font-weight:600; color:var(--neutral); display:block; margin-bottom:0.5rem;">Quick Find</label>
+            <input type="text" class="search-input" id="searchInput" placeholder="e.g. Troponin, Fulminant..." onkeyup="filterContent()">
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        
+        <!-- Header -->
+        <header>
+            <h1>Clinical Reference</h1>
+            <div class="subtitle">Last Updated: Nov 04, 2025 | BMJ Best Practice Based</div>
+        </header>
+
+        <!-- SECTION: OVERVIEW -->
+        <section id="overview" class="active">
+            
+            <!-- RED FLAGS BANNER -->
+            <div class="alert-box">
+                <div class="alert-icon">
+                    <svg class="icon" style="width:32px; height:32px;" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div class="alert-content">
+                    <h3>Adverse Prognosis & Emergency Indicators</h3>
+                    <p style="margin-bottom: 0.5rem;">Watch for these critical risk factors requiring immediate escalation:</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+                        <span class="badge badge-red">Cardiogenic Shock</span>
+                        <span class="badge badge-red">Ventricular Arrhythmias</span>
+                        <span class="badge badge-red">Biventricular Dysfunction</span>
+                        <span class="badge badge-red">Late Gadolinium Enhancement (MRI)</span>
+                        <span class="badge badge-red">Giant Cell Myocarditis</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid-3">
+                <!-- Definition Card -->
+                <div class="card border-l-blue">
+                    <div class="card-header">
+                        <div class="card-title">Definition</div>
+                        <span class="badge badge-blue">Core</span>
+                    </div>
+                    <p style="font-size:0.95rem; color:#475569;">
+                        Inflammation of the myocardium <strong>without predominant acute/chronic ischaemia</strong>.
+                    </p>
+                    <ul class="check-list" style="margin-top:1rem;">
+                        <li>Non-ischaemic myocardial inflammation</li>
+                        <li>Heterogeneous group of disorders</li>
+                        <li>Inflammatory cellular infiltrate ± myocyte injury</li>
+                    </ul>
+                </div>
+
+                <!-- Classification Card -->
+                <div class="card border-l-blue">
+                    <div class="card-header">
+                        <div class="card-title">Classification</div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Type</th><th>Presentation</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong style="color:var(--danger)">Fulminant</strong></td>
+                                <td>Acute viral illness, severe compromise, rapid deterioration. High risk, but good recovery if supported.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Acute</strong></td>
+                                <td>Insidious onset, established ventricular dysfunction. May progress to DCM.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chronic Active</strong></td>
+                                <td>Relapsing, LV dysfunction, inflammation.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Epidemiology Card -->
+                <div class="card border-l-blue">
+                    <div class="card-header">
+                        <div class="card-title">Epidemiology</div>
+                    </div>
+                    <ul class="check-list">
+                        <li><strong>True incidence:</strong> Difficult to determine (insidious).</li>
+                        <li><strong>Autopsy studies:</strong> 1%–9% of routine exams.</li>
+                        <li><strong>Sudden Cardiac Death:</strong> ~10% in young adults; up to 6% in young athletes.</li>
+                        <li><strong>Children:</strong> Annual incidence ~2/100,000. Males > Females (58% vs 42%).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <!-- Case History 1 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Case History #1 (Adult)</div>
+                        <span class="badge badge-blue">Example</span>
+                    </div>
+                    <p><strong>43M, No PMH.</strong> 3 days progressive fatigue, dyspnoea on exertion & supine, lower-extremity swelling.</p>
+                    <p style="margin-top:0.5rem; font-size:0.9rem; color:var(--neutral);">
+                        <strong>Context:</strong> Viral prodrome (fevers, myalgias, respiratory symptoms) 2 weeks prior.
+                    </p>
+                    <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #f1f5f9;">
+                        <strong>Exam:</strong> JVD elevation, bilateral rales, HR 104, audible S3 gallop.
+                    </div>
+                </div>
+
+                <!-- Case History 2 -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Case History #2 (Child)</div>
+                        <span class="badge badge-blue">Example</span>
+                    </div>
+                    <p><strong>4M, Previously healthy.</strong> 4-day history: abd pain, vomiting, low-grade fever. Now lethargic.</p>
+                    <p style="margin-top:0.5rem; font-size:0.9rem; color:var(--neutral);">
+                        <strong>Key:</strong> Children often mimic common illness (abd pain, vomiting). Respiratory symptoms are late.
+                    </p>
+                    <div style="margin-top:1rem; padding-top:1rem; border-top:1px solid #f1f5f9;">
+                        <strong>Exam:</strong> Tachycardia (130), laboured breathing, poor tone, poor capillary refill, S3 gallop.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: DIAGNOSTICS -->
+        <section id="diagnosis">
+            <h2 style="margin-bottom:1.5rem; color:var(--primary);">Diagnostic Algorithm</h2>
+
+            <div class="grid-2">
+                <!-- 1st Line Tests -->
+                <div class="card border-l-green">
+                    <div class="card-header">
+                        <div class="card-title">1st Line Tests (Order All)</div>
+                        <span class="badge badge-green">Routine</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Test</th><th>Expected Findings in Myocarditis</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>12-lead ECG</strong></td>
+                                <td>Non-specific ST/T-wave changes. ST elevation/depression frequent. Arrhythmias (esp. in children).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chest X-Ray</strong></td>
+                                <td>Pulmonary congestion/oedema. Cardiomegaly (suggests pericardial effusion or chronic DCM).</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Troponin (I/T)</strong></td>
+                                <td>Elevated (More reliable than CK/CK-MB). <em>Note: May be normal in some cases.</em></td>
+                            </tr>
+                            <tr>
+                                <td><strong>BNP / NT-proBNP</strong></td>
+                                <td>Elevated due to ventricular distension/CHF.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>2D Echocardiogram</strong></td>
+                                <td>Global/regional wall motion abnormalities. Dilatation. Systolic/Diastolic dysfunction. Look for clots.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Advanced Imaging -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Advanced Imaging</div>
+                        <span class="badge badge-blue">Specific</span>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4 style="color:var(--primary); margin-bottom:0.5rem;">Cardiac MRI</h4>
+                        <ul class="check-list">
+                            <li><strong>Indication:</strong> Distinguish from acute MI, tissue characterization.</li>
+                            <li><strong>Pediatrics:</strong> Preferred non-invasive modality.</li>
+                            <li><strong>Criteria:</strong> Lake Louise Criteria (2018) - presence of both T2 and T1 findings indicates inflammation.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color:var(--primary); margin-bottom:0.5rem;">FDG PET-CT</h4>
+                        <ul class="check-list">
+                            <li>Useful in chronic myocarditis (where MRI less accurate).</li>
+                            <li>Helps differentiate Cardiac Sarcoidosis vs Giant Cell Myocarditis.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biopsy Section -->
+            <div class="card border-l-blue">
+                <div class="card-header">
+                    <div class="card-title">Endomyocardial Biopsy (EMB)</div>
+                    <span class="badge badge-blue">High Risk / Specific</span>
+                </div>
+                <div style="display:flex; gap:2rem; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:300px;">
+                        <h4 style="margin-bottom:0.5rem;">ACC Recommendations (Adults):</h4>
+                        <ul class="check-list">
+                            <li><strong>DO:</strong> Immune checkpoint inhibitor myocarditis (any stage).</li>
+                            <li><strong>DO:</strong> Symptomatic (Stage C) + LV dysfunction, arrhythmias, eosinophilia, or if MRI unavailable.</li>
+                            <li><strong>DO:</strong> Advanced (Stage D) myocarditis.</li>
+                            <li><strong>DO NOT:</strong> Low-risk Stage C (Normal EF, stable, no LGE on MRI).</li>
+                        </ul>
+                    </div>
+                    <div style="flex:1; min-width:300px;">
+                        <h4 style="margin-bottom:0.5rem;">When it helps:</h4>
+                        <ul class="check-list">
+                            <li>Giant Cell Myocarditis (needs aggressive immunosuppression).</li>
+                            <li>Hypersensitivity Myocarditis.</li>
+                            <li>Viral PCR detection.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: AETIOLOGY -->
+        <section id="aetiology">
+            <h2 style="margin-bottom:1.5rem; color:var(--primary);">Causes & Triggers</h2>
+            
+            <div class="grid-2">
+                <!-- Infectious -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Infectious (Most Common)</div>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <span class="badge badge-blue">Viral</span>
+                        <div style="display:flex; flex-wrap:wrap; margin-top:0.5rem;">
+                            <span class="tag">Coxsackie B</span>
+                            <span class="tag">Adenovirus</span>
+                            <span class="tag">Parvovirus B19</span>
+                            <span class="tag">HHV-6</span>
+                            <span class="tag">EBV</span>
+                            <span class="tag">CMV</span>
+                            <span class="tag">Influenza A/B</span>
+                            <span class="tag">SARS-CoV-2</span>
+                            <span class="tag">Hepatitis C</span>
+                            <span class="tag">HIV-1</span>
+                        </div>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <span class="badge badge-blue">Bacterial</span>
+                        <div style="display:flex; flex-wrap:wrap; margin-top:0.5rem;">
+                            <span class="tag">Streptococcus</span>
+                            <span class="tag">Mycoplasma</span>
+                            <span class="tag">Corynebacterium</span>
+                            <span class="tag">Staphylococcus</span>
+                            <span class="tag">Borrelia (Lyme)</span>
+                            <span class="tag">TB</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge badge-blue">Parasitic/Fungal</span>
+                        <div style="display:flex; flex-wrap:wrap; margin-top:0.5rem;">
+                            <span class="tag" style="border:1px solid var(--danger); color:var(--danger); font-weight:bold;">Trypanosoma cruzi (Chagas)</span>
+                            <span class="tag">Toxoplasmosis</span>
+                            <span class="tag">Schistosomiasis</span>
+                            <span class="tag">Candida</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Non-Infectious -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Non-Infectious</div>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <span class="badge badge-red">Drugs & Toxins</span>
+                        <ul class="check-list">
+                            <li><strong>Anthracyclines:</strong> Doxorubicin, Daunorubicin.</li>
+                            <li><strong>Immunotherapies:</strong> Checkpoint inhibitors (Nivolumab, Ipilimumab, Pembrolizumab).</li>
+                            <li><strong>COVID Vaccines:</strong> mRNA vaccines (rare).</li>
+                            <li><strong>Others:</strong> Cocaine, Amphetamines, Ethanol, Carbon Monoxide, Penicillins, Clozapine.</li>
+                        </ul>
+                    </div>
+                    <div style="margin-bottom:1rem;">
+                        <span class="badge badge-blue">Systemic Disorders</span>
+                        <ul class="check-list">
+                            <li><strong>Autoimmune:</strong> SLE, Rheumatoid Arthritis, IBD.</li>
+                            <li><strong>Giant Cell Myocarditis</strong> (Idiopathic).</li>
+                            <li><strong>Sarcoidosis</strong> (Granulomatous).</li>
+                            <li>Thyrotoxicosis, Wegener's Granulomatosis.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pathophysiology Note -->
+            <div class="card border-l-neutral" style="border-left-color: var(--neutral);">
+                <div class="card-title">Pathophysiology (Three-Phase Model)</div>
+                <div style="display:flex; gap:1rem; margin-top:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; background:#f8fafc; padding:1rem; border-radius:8px;">
+                        <strong>Phase 1:</strong> Virus invades myocytes (viraemia).
+                    </div>
+                    <div style="flex:1; background:#f8fafc; padding:1rem; border-radius:8px;">
+                        <strong>Phase 2:</strong> Immunological activation (Macrophages, NK cells).
+                    </div>
+                    <div style="flex:1; background:#f8fafc; padding:1rem; border-radius:8px;">
+                        <strong>Phase 3:</strong> Cellular/Humoral activation → Myonecrosis & Auto-antibodies.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: MANAGEMENT -->
+        <section id="management">
+            <h2 style="margin-bottom:1.5rem; color:var(--primary);">Management Strategy</h2>
+
+            <!-- Immediate Actions -->
+            <div class="grid-2">
+                <div class="card border-l-green">
+                    <div class="card-header">
+                        <div class="card-title">Standard Care</div>
+                        <span class="badge badge-green">Most Patients</span>
+                    </div>
+                    <ul class="check-list">
+                        <li><strong>Supportive Care:</strong> Rest, activity restriction.</li>
+                        <li><strong>Heart Failure Therapy:</strong> Conventional HF guidelines (Beta-blockers, ACEi/ARBs, Diuretics).</li>
+                        <li><strong>Arrhythmia Management:</strong> Treat symptomatic arrhythmias.</li>
+                        <li><strong>Anticoagulation:</strong> Consider if LV dysfunction or clots detected.</li>
+                    </ul>
+                </div>
+
+                <div class="card border-l-red">
+                    <div class="card-header">
+                        <div class="card-title">Aggressive/Severe</div>
+                        <span class="badge badge-red">Fulminant or Shock</span>
+                    </div>
+                    <ul class="check-list">
+                        <li><strong>Inotropes:</strong> Hemodynamic support.</li>
+                        <li><strong>Mechanical Circulatory Support (MCS):</strong> IABP, VA-ECMO, VAD.</li>
+                        <li><strong>Transplantation:</strong> If refractory to therapy.</li>
+                        <li><strong>Immunosuppression:</strong>
+                            <br>- <strong>Giant Cell:</strong> High dose steroids + Cyclosporine/Azathioprine.
+                            <br>- <strong>Hypersensitivity:</strong> Stop drug + Corticosteroids.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Monitoring -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Follow-up & Monitoring</div>
+                </div>
+                <div class="grid-3">
+                    <div>
+                        <h4 style="color:var(--primary);">Activity Restriction</h4>
+                        <p style="font-size:0.9rem; color:#475569; margin-top:0.5rem;">
+                            Recommend restriction from competitive sports for 3-6 months (or until normalization of LV function, ambulatory ECG, and biomarkers).
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="color:var(--primary);">Prognosis</h4>
+                        <p style="font-size:0.9rem; color:#475569; margin-top:0.5rem;">
+                            <strong>Variable.</strong> Most viral cases resolve spontaneously. Mild-moderate HF usually improves. Fulminant has high risk but good recovery if supported.
+                        </p>
+                    </div>
+                    <div>
+                        <h4 style="color:var(--primary);">Key Risk Markers</h4>
+                        <p style="font-size:0.9rem; color:#475569; margin-top:0.5rem;">
+                            Electrical instability, low EF, Late Gadolinium Enhancement, Giant Cell histology.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<!-- JavaScript for Interactivity -->
+<script>
+    // Tab Switching Logic
+    function showSection(sectionId, btn) {
+        // Hide all sections
+        document.querySelectorAll('section').forEach(sec => {
+            sec.classList.remove('active');
+        });
+        
+        // Remove active class from all buttons
+        document.querySelectorAll('.nav-btn').forEach(navBtn => {
+            navBtn.classList.remove('active');
+        });
+
+        // Show selected section and activate button
+        document.getElementById(sectionId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    // Search/Filter Logic
+    function filterContent() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const cards = document.querySelectorAll('.card, .alert-box');
+        
+        // Helper to check if element has text matching input
+        const matchesText = (element) => {
+            return element.textContent.toLowerCase().includes(input);
+        };
+
+        cards.forEach(card => {
+            if (input === "") {
+                // Reset if empty
+                card.style.opacity = "1";
+                card.style.transform = "scale(1)";
+                card.style.pointerEvents = "auto";
+                return;
+            }
+
+            if (matchesText(card)) {
+                card.style.opacity = "1";
+                card.style.transform = "scale(1)";
+                card.style.pointerEvents = "auto";
+                card.style.border = "2px solid var(--primary)"; // Highlight matches
+            } else {
+                card.style.opacity = "0.2";
+                card.style.transform = "scale(0.95)";
+                card.style.pointerEvents = "none";
+                card.style.border = "1px solid var(--border)";
+            }
+        });
+    }
+</script>
+
+</body>
+</html>

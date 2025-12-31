@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Syncope Assessment Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            height: fit-content;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 8px solid;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .assessment-card {
+            border-left-color: #e74c3c;
+        }
+
+        .diagnosis-card {
+            border-left-color: #f39c12;
+        }
+
+        .treatment-card {
+            border-left-color: #27ae60;
+        }
+
+        .followup-card {
+            border-left-color: #3498db;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+            color: white;
+        }
+
+        .assessment-card .card-icon {
+            background: #e74c3c;
+        }
+
+        .diagnosis-card .card-icon {
+            background: #f39c12;
+        }
+
+        .treatment-card .card-icon {
+            background: #27ae60;
+        }
+
+        .followup-card .card-icon {
+            background: #3498db;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 1000px;
+        }
+
+        .step-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .step-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .badge-urgent {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-stable {
+            background: #27ae60;
+            color: white;
+        }
+
+        .step-content {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-sidebar">
+            <div class="progress-title">Algorithm Progress</div>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon">4</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card assessment-card expanded" id="assessment">
+                <div class="card-header">
+                    <div class="card-icon">🩺</div>
+                    <div class="card-title">Initial Assessment</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Immediate Evaluation</span>
+                            <span class="badge badge-urgent">Urgent</span>
+                        </div>
+                        <div class="step-content">
+                            Check airway, breathing, circulation. Obtain vital signs immediately. 
+                            Look for signs of trauma, active bleeding, or acute distress.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">History Taking</span>
+                            <span class="badge badge-caution">Caution</span>
+                        </div>
+                        <div class="step-content">
+                            Detailed history of the event including prodrome, triggers, duration, 
+                            and recovery. Ask about cardiac history, medications, and family history.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Physical Examination</span>
+                            <span class="badge badge-stable">Standard</span>
+                        </div>
+                        <div class="step-content">
+                            Complete cardiovascular and neurological exam. Check orthostatic vitals. 
+                            Look for murmurs, neurological deficits, or signs of dehydration.
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="nextStep('diagnosis')">Proceed to Diagnosis</button>
+                        <button class="btn btn-secondary" onclick="toggleCard('assessment')">Collapse</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card diagnosis-card" id="diagnosis">
+                <div class="card-header">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">Diagnostic Workup</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">ECG Evaluation</span>
+                            <span class="badge badge-urgent">Critical</span>
+                        </div>
+                        <div class="step-content">
+                            12-lead ECG within 10 minutes. Look for arrhythmias, conduction blocks, 
+                            QT prolongation, or signs of ischemia. Continuous monitoring if abnormal.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Risk Stratification</span>
+                            <span class="badge badge-caution">Important</span>
+                        </div>
+                        <div class="step-content">
+                            Use validated risk scores (e.g., OESIL, SFSR). High-risk features include age >65, 
+                            cardiac history, abnormal ECG, or syncope without prodrome.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Selective Testing</span>
+                            <span class="badge badge-stable">As Needed</span>
+                        </div>
+                        <div class="step-content">
+                            Consider echocardiogram, lab tests, or imaging based on clinical suspicion. 
+                            Avoid routine comprehensive testing in low-risk patients.
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="nextStep('treatment')">Proceed to Treatment</button>
+                        <button class="btn btn-secondary" onclick="toggleCard('diagnosis')">Collapse</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card treatment-card" id="treatment">
+                <div class="card-header">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">Treatment & Management</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">High-Risk Patients</span>
+                            <span class="badge badge-urgent">Admit</span>
+                        </div>
+                        <div class="step-content">
+                            Immediate admission for monitoring. Consider cardiology consultation. 
+                            Treat underlying cause (e.g., pacemaker for bradyarrhythmias).
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Low-Risk Patients</span>
+                            <span class="badge badge-stable">Discharge</span>
+                        </div>
+                        <div class="step-content">
+                            Safe for discharge with precautions. Provide syncope education, 
+                            hydration advice, and clear return instructions.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Vasovagal Syncope</span>
+                            <span class="badge badge-stable">Conservative</span>
+                        </div>
+                        <div class="step-content">
+                            Lifestyle modifications: adequate hydration, salt intake, avoiding triggers. 
+                            Consider tilt training or compression stockings if recurrent.
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="nextStep('followup')">Proceed to Follow-up</button>
+                        <button class="btn btn-secondary" onclick="toggleCard('treatment')">Collapse</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card followup-card" id="followup">
+                <div class="card-header">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">Follow-up Care</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Discharge Instructions</span>
+                            <span class="badge badge-caution">Important</span>
+                        </div>
+                        <div class="step-content">
+                            Clear written instructions about warning signs, activity restrictions, 
+                            medication compliance, and when to seek immediate care.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Primary Care Follow-up</span>
+                            <span class="badge badge-stable">Routine</span>
+                        </div>
+                        <div class="step-content">
+                            Schedule follow-up within 1-2 weeks. Review test results, reassess symptoms, 
+                            and adjust treatment plan as needed.
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-header">
+                            <span class="step-title">Specialist Referral</span>
+                            <span class="badge badge-caution">Selective</span>
+                        </div>
+                        <div class="step-content">
+                            Consider cardiology, neurology, or electrophysiology referral based on 
+                            underlying cause and risk stratification.
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="resetAlgorithm()">Start Over</button>
+                        <button class="btn btn-secondary" onclick="toggleCard('followup')">Collapse</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.classList.toggle('expanded');
+        }
+
+        function nextStep(nextCardId) {
+            // Close current expanded cards
+            document.querySelectorAll('.card.expanded').forEach(card => {
+                card.classList.remove('expanded');
+            });
+            
+            // Open target card
+            const nextCard = document.getElementById(nextCardId);
+            nextCard.classList.add('expanded');
+            
+            // Update progress sidebar
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            const progressItem = document.querySelector(`[data-step="${nextCardId}"]`);
+            if (progressItem) {
+                progressItem.classList.add('active');
+            }
+            
+            // Smooth scroll to next card
+            nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function resetAlgorithm() {
+            // Close all expanded cards
+            document.querySelectorAll('.card.expanded').forEach(card => {
+                card.classList.remove('expanded');
+            });
+            
+            // Reset progress
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Activate first step
+            document.querySelector('[data-step="assessment"]').classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add click handlers for card headers
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const card = this.closest('.card');
+                toggleCard(card.id);
+            });
+        });
+
+        // Add click handlers for progress items
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const step = this.dataset.step;
+                nextStep(step);
+            });
+        });
+
+        // Initialize with assessment expanded
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('assessment').classList.add('expanded');
+        });
+    </script>
+</body>
+</html>

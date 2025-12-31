@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chest Pain Assessment - Interactive Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: none;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 1rem;
+            font-weight: bold;
+            background: rgba(102, 126, 234, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .progress-text {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            position: absolute;
+            left: 16px;
+            top: 48px;
+            bottom: -8px;
+            width: 2px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            z-index: -1;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            margin-left: 280px;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .section:nth-child(1) { animation-delay: 0.1s; }
+        .section:nth-child(2) { animation-delay: 0.2s; }
+        .section:nth-child(3) { animation-delay: 0.3s; }
+        .section:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            padding: 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .section-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .section-header {
+            padding: 1.5rem 2rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .section-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .section-header.assessment {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .section-header.diagnosis {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+
+        .section-header.treatment {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .section-header.followup {
+            background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .section-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .section-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .section-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .section-card.expanded .section-content {
+            max-height: 5000px;
+        }
+
+        .content-inner {
+            padding: 2rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .info-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .info-card.urgent {
+            border-left-color: #e74c3c;
+            background: linear-gradient(135deg, #fff5f5 0%, #ffecec 100%);
+        }
+
+        .info-card.caution {
+            border-left-color: #f39c12;
+            background: linear-gradient(135deg, #fffaf0 0%, #fef5e7 100%);
+        }
+
+        .info-card.stable {
+            border-left-color: #2ecc71;
+            background: linear-gradient(135deg, #f0fff4 0%, #e8f8f5 100%);
+        }
+
+        .severity-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            color: white;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #2c3e50;
+            padding-right: 5rem;
+        }
+
+        .card-list {
+            list-style: none;
+            margin: 0.5rem 0;
+        }
+
+        .card-list li {
+            padding: 0.4rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .card-list li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #ebf4ff 0%, #e6f2ff 100%);
+            border: 1px solid #bee3f8;
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid #3498db;
+        }
+
+        .highlight-title {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .differential-table {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        .differential-table table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .differential-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .differential-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        .differential-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .score-item {
+            background: white;
+            padding: 1.25rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid #edf2f7;
+            transition: all 0.3s ease;
+        }
+
+        .score-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        .score-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 0.25rem;
+        }
+
+        .score-label {
+            font-size: 0.875rem;
+            color: #718096;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1rem;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header {
+                display: block;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 Chest Pain Assessment Algorithm</h1>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar">
+            <h2>📋 Progress</h2>
+            <div class="progress-bar"></div>
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon">1</div>
+                <div class="progress-text">Assessment</div>
+            </div>
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon">2</div>
+                <div class="progress-text">Diagnosis</div>
+            </div>
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon">3</div>
+                <div class="progress-text">Treatment</div>
+            </div>
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon">4</div>
+                <div class="progress-text">Follow-up</div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Section -->
+            <section class="section" id="assessment">
+                <div class="section-card expanded" data-section="assessment">
+                    <div class="section-header assessment">
+                        <div class="section-title">
+                            <div class="section-icon">🩺</div>
+                            <div class="section-name">Assessment</div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="content-inner">
+                            <div class="highlight-box">
+                                <div class="highlight-title">⚠️ Urgent Red Flags</div>
+                                <p>Acute chest pain warrants rapid clinical assessment with continuous monitoring of pulse, BP, and SpO₂. Use C-A-B approach.</p>
+                            </div>
+
+                            <div class="card-grid">
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Urgent</span>
+                                    <div class="card-title">Immediate Actions</div>
+                                    <ul class="card-list">
+                                        <li>Continuous monitoring (HR, BP, SpO₂)</li>
+                                        <li>12-lead ECG within 10 minutes</li>
+                                        <li>IV access</li>
+                                        <li>Oxygen only if SpO₂ &lt; 90%</li>
+                                        <li>Morphine for severe pain</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Caution</span>
+                                    <div class="card-title">Critical Diagnoses to Exclude</div>
+                                    <ul class="card-list">
+                                        <li>Acute coronary syndrome (ACS)</li>
+                                        <li>Aortic dissection</li>
+                                        <li>Pulmonary embolism</li>
+                                        <li>Tension pneumothorax</li>
+                                        <li>Cardiac tamponade</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h3>History Taking</h3>
+                            <div class="card-grid">
+                                <div class="info-card">
+                                    <div class="card-title">Pain Characteristics</div>
+                                    <ul class="card-list">
+                                        <li><strong>Quality:</strong> Pressure, squeezing, sharp, pleuritic</li>
+                                        <li><strong>Location:</strong> Central, radiation to jaw/arm/back</li>
+                                        <li><strong>Duration:</strong> &gt;15 min suggests ACS</li>
+                                        <li><strong>Radiation:</strong> Jaw/arms suggests cardiac</li>
+                                        <li><strong>Tearing:</strong> Radiating to back suggests aortic dissection</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <div class="card-title">Associated Symptoms</div>
+                                    <ul class="card-list">
+                                        <li>Nausea, vomiting, diaphoresis (ACS)</li>
+                                        <li>Dyspnoea (cardiac, PE, pneumothorax)</li>
+                                        <li>Syncope (aortic stenosis, PE, tamponade)</li>
+                                        <li>Fever (pneumonia, pericarditis)</li>
+                                        <li>Haemoptysis (PE, pneumonia)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <div class="card-title">Risk Factors</div>
+                                    <ul class="card-list">
+                                        <li>Cardiac: Smoking, HTN, DM, hyperlipidaemia</li>
+                                        <li>FH of premature CAD</li>
+                                        <li>Cocaine use (cardiac ischaemia)</li>
+                                        <li>Immobilisation, recent surgery (PE)</li>
+                                        <li>Connective tissue disorders (aortic dissection)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <div class="card-title">Atypical Presentations</div>
+                                    <ul class="card-list">
+                                        <li>Women, elderly, diabetics may lack typical pain</li>
+                                        <li>May present with dyspnoea only</li>
+                                        <li>Nausea/vomiting without chest pain</li>
+                                        <li>Syncope or pre-syncope</li>
+                                        <li>Unexplained fatigue or weakness</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h3>Physical Examination</h3>
+                            <div class="card-grid">
+                                <div class="info-card">
+                                    <div class="card-title">Cardiovascular</div>
+                                    <ul class="card-list">
+                                        <li>Pulse, BP (both arms)</li>
+                                        <li>JVP, heart sounds, murmurs</li>
+                                        <li>Signs of heart failure (rales, oedema)</li>
+                                        <li>Pulsus paradoxus (tamponade)</li>
+                                        <li>Inter-arm BP difference &gt;20 mmHg (aortic dissection)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <div class="card-title">Respiratory</div>
+                                    <ul class="card-list">
+                                        <li>Respiratory rate, SpO₂</li>
+                                        <li>Breath sounds (reduced = pneumothorax)</li>
+                                        <li>Crepitations/rales (pulmonary oedema)</li>
+                                        <li>Pleural rub (pleuritis, PE)</li>
+                                        <li>Tracheal deviation (tension pneumothorax)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <div class="card-title">Other Systems</div>
+                                    <ul class="card-list">
+                                        <li>Chest wall tenderness (musculoskeletal)</li>
+                                        <li>Abdominal exam (GI causes)</li>
+                                        <li>Unilateral leg swelling (DVT/PE)</li>
+                                        <li>Skin rash/herpes zoster</li>
+                                        <li>Marfanoid features (aortic dissection)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h3>Initial Investigations</h3>
+                            <div class="card-grid">
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Within 10 min</span>
+                                    <div class="card-title">ECG</div>
+                                    <ul class="card-list">
+                                        <li>ST elevation/depression</li>
+                                        <li>Q waves (previous MI)</li>
+                                        <li>New LBBB (consider STEMI)</li>
+                                        <li>T-wave inversion (ischemia)</li>
+                                        <li>Pericarditis: diffuse ST elevation</li>
+                                        <li>PE: S1Q3T3 pattern</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Urgent</span>
+                                    <div class="card-title">Chest X-ray</div>
+                                    <ul class="card-list">
+                                        <li>Pneumothorax, pneumonia</li>
+                                        <li>Widened mediastinum (aortic dissection)</li>
+                                        <li>Globular heart (tamponade)</li>
+                                        <li>Pulmonary oedema</li>
+                                        <li>Usually normal in ACS</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Serial</span>
+                                    <div class="card-title">Cardiac Biomarkers</div>
+                                    <ul class="card-list">
+                                        <li>High-sensitivity troponin (preferred)</li>
+                                        <li>Repeat at 1-3 hour intervals</li>
+                                        <li>Negative &gt;3 hrs after pain: low risk</li>
+                                        <li>CK only if troponin unavailable</li>
+                                        <li>Biotin can cause false negatives</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card stable">
+                                    <span class="severity-badge badge-stable">Baseline</span>
+                                    <div class="card-title">Other Blood Tests</div>
+                                    <ul class="card-list">
+                                        <li>FBC (anaemia, infection)</li>
+                                        <li>Renal profile (baseline, troponin interpretation)</li>
+                                        <li>Lipase/amylase (pancreatitis)</li>
+                                        <li>D-dimer (PE workup)</li>
+                                        <li>LFT (cholecystitis)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="section" id="diagnosis">
+                <div class="section-card" data-section="diagnosis">
+                    <div class="section-header diagnosis">
+                        <div class="section-title">
+                            <div class="section-icon">🔬</div>
+                            <div class="section-name">Diagnosis</div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="content-inner">
+                            <h3>Differential Diagnoses</h3>
+                            
+                            <div class="differential-table">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Condition</th>
+                                            <th>Key Features</th>
+                                            <th>Initial Test</th>
+                                            <th>Severity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td rowspan="7"><strong>Common</strong></td>
+                                            <td>Acute Coronary Syndrome</td>
+                                            <td>Central pressure, radiation, nausea, diaphoresis</td>
+                                            <td>ECG + Troponin</td>
+                                            <td><span class="badge-urgent">Urgent</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Stable Angina</td>
+                                            <td>Exertional discomfort, relieved by rest</td>
+                                            <td>Exercise ECG/stress test</td>
+                                            <td><span class="badge-stable">Stable</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pneumonia</td>
+                                            <td>Fever, productive cough, pleuritic pain</td>
+                                            <td>Chest X-ray</td>
+                                            <td><span class="badge-caution">Caution</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Viral Pleuritis</td>
+                                            <td>Viral prodrome, pleuritic pain, friction rub</td>
+                                            <td>Clinical diagnosis</td>
+                                            <td><span class="badge-stable">Stable</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>GORD</td>
+                                            <td>Burning retrosternal, postprandial, relieved by antacids</td>
+                                            <td>PPI trial</td>
+                                            <td><span class="badge-stable">Stable</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Costochondritis</td>
+                                            <td>Reproducible chest wall tenderness</td>
+                                            <td>Clinical diagnosis</td>
+                                            <td><span class="badge-stable">Stable</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Anxiety/Panic Disorder</td>
+                                            <td>Sharp pain, hyperventilation, tachycardia</td>
+                                            <td>Clinical diagnosis</td>
+                                            <td><span class="badge-stable">Stable</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td rowspan="8"><strong>Uncommon</strong></td>
+                                            <td>Pulmonary Embolism</td>
+                                            <td>Pleuritic pain, dyspnoea, tachycardia</td>
+                                            <td>CTPA or V/Q scan</td>
+                                            <td><span class="badge-urgent">Urgent</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Aortic Dissection</td>
+                                            <td>Sudden tearing pain, radiating to back</td>
+                                            <td>CT chest with contrast</td>
+                                            <td><span class="badge-urgent">Urgent</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Cardiac Tamponade</td>
+                                            <td>Hypotension, JVD, muffled heart sounds</td>
+                                            <td>Echocardiography</td>
+                                            <td><span class="badge-urgent">Urgent</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pericarditis</td>
+                                            <td>Sharp pain, relieved by sitting up</td>
+                                            <td>ECG (diffuse ST elevation)</td>
+                                            <td><span class="badge-caution">Caution</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Tension Pneumothorax</td>
+                                            <td>Unilateral absent breath sounds, hypotension</td>
+                                            <td>Clinical diagnosis</td>
+                                            <td><span class="badge-urgent">Urgent</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Acute Cholecystitis</td>
+                                            <td>RUQ pain, positive Murphy's sign, fever</td>
+                                            <td>Abdominal ultrasound</td>
+                                            <td><span class="badge-caution">Caution</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Acute Pancreatitis</td>
+                                            <td>Epigastric pain radiating to back</td>
+                                            <td>Lipase/amylase</td>
+                                            <td><span class="badge-caution">Caution</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Herpes Zoster</td>
+                                            <td>Unilateral dermatomal pain before rash</td>
+                                            <td>Clinical diagnosis</td>
+                                            <td><span class="badge-stable">Stable</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <h3>Risk Stratification - HEART Score</h3>
+                            <div class="score-grid">
+                                <div class="score-item">
+                                    <div class="score-value">0-3</div>
+                                    <div class="score-label">Low Risk<br>&lt;2% MACE</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-value">4-6</div>
+                                    <div class="score-label">Moderate Risk<br>15-20% MACE</div>
+                                </div>
+                                <div class="score-item">
+                                    <div class="score-value">7-10</div>
+                                    <div class="score-label">High Risk<br>&gt;50% MACE</div>
+                                </div>
+                            </div>
+
+                            <div class="card-grid">
+                                <div class="info-card">
+                                    <div class="card-title">HEART Score Components</div>
+                                    <ul class="card-list">
+                                        <li><strong>History:</strong> Highly suspicious (2), Moderate (1), Slightly (0)</li>
+                                        <li><strong>ECG:</strong> Significant ST depression (2), Non-specific changes (1), Normal (0)</li>
+                                        <li><strong>Age:</strong> ≥65 years (2), 45-64 years (1), ≤45 years (0)</li>
+                                        <li><strong>Risk Factors:</strong> ≥3 risk factors (2), 1-2 risk factors (1), No risk factors (0)</li>
+                                        <li><strong>Troponin:</strong> ≥3x normal (2), 1-3x normal (1), ≤normal (0)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <div class="card-title">Probability Assessment</div>
+                                    <ul class="card-list">
+                                        <li><strong>Low (&lt;10%):</strong> Exercise ECG if able</li>
+                                        <li><strong>Intermediate (10-90%):</strong> Stress test with imaging or CT coronary angiography</li>
+                                        <li><strong>High (&gt;90%):</strong> Invasive coronary angiography</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h3>Key Diagnostic Algorithms</h3>
+                            <div class="card-grid">
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">STEMI</span>
+                                    <div class="card-title">ST-Elevation MI Criteria</div>
+                                    <ul class="card-list">
+                                        <li>ST elevation >1mm in ≥2 contiguous leads</li>
+                                        <li>New LBBB with ischemic symptoms</li>
+                                        <li>Immediate reperfusion therapy indicated</li>
+                                        <li>Door-to-balloon &lt;90 minutes or fibrinolysis &lt;30 minutes</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">NSTEMI</span>
+                                    <div class="card-title">Non-ST-Elevation ACS</div>
+                                    <ul class="card-list">
+                                        <li>ST depression or T-wave inversion</li>
+                                        <li>Elevated troponin</li>
+                                        <li>Urgent invasive strategy if high-risk features</li>
+                                        <li>Dual antiplatelet therapy</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">PE</span>
+                                    <div class="card-title">Pulmonary Embolism Workup</div>
+                                    <ul class="card-list">
+                                        <li>Wells Score &gt;4: PE likely → CTPA</li>
+                                        <li>Wells Score ≤4: D-dimer → if negative, exclude PE</li>
+                                        <li>PERC rule can be used in low-risk patients</li>
+                                        <li>High-risk PE: hypotension, shock, RV dysfunction</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Aortic Dissection</span>
+                                    <div class="card-title">Aortic Dissection Features</div>
+                                    <ul class="card-list">
+                                        <li>Sudden tearing pain radiating to back</li>
+                                        <li>Pulse deficits or inter-arm BP difference</li>
+                                        <li>Widened mediastinum on CXR</li>
+                                        <li>CT angiography is imaging modality of choice</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="section" id="treatment">
+                <div class="section-card" data-section="treatment">
+                    <div class="section-header treatment">
+                        <div class="section-title">
+                            <div class="section-icon">💊</div>
+                            <div class="section-name">Treatment</div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="content-inner">
+                            <h3>Management by Condition</h3>
+                            
+                            <div class="card-grid">
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Emergency</span>
+                                    <div class="card-title">STEMI Management</div>
+                                    <ul class="card-list">
+                                        <li><strong>Time-critical:</strong> Door-to-balloon &lt;90 minutes</li>
+                                        <li>Dual antiplatelet therapy (aspirin + ticagrelor/prasugrel)</li>
+                                        <li>Anticoagulation (heparin)</li>
+                                        <li>Primary PCI is preferred reperfusion strategy</li>
+                                        <li>If PCI delayed &gt;2h: fibrinolytics (if no contraindications)</li>
+                                        <li>Beta-blocker, ACE inhibitor, statin</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Urgent</span>
+                                    <div class="card-title">NSTEMI/Unstable Angina</div>
+                                    <ul class="card-list">
+                                        <li>Dual antiplatelet therapy</li>
+                                        <li>Anticoagulation (LMWH or fondaparinux)</li>
+                                        <li>High-risk: invasive strategy within 24 hours</li>
+                                        <li>Anti-anginal therapy (nitrates, beta-blockers)</li>
+                                        <li>Statin therapy</li>
+                                        <li>Consider GP IIb/IIIa inhibitors if high-risk</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Specialist</span>
+                                    <div class="card-title">Spontaneous Coronary Artery Dissection (SCAD)</div>
+                                    <ul class="card-list">
+                                        <li>Usually managed medically (different from atherosclerotic ACS)</li>
+                                        <li>Dual antiplatelet therapy for 1 year</li>
+                                        <li>Beta-blockers for prevention</li>
+                                        <li>Avoid thrombolytics</li>
+                                        <li>PCI may worsen outcomes</li>
+                                        <li>Specialist cardiology referral</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Emergency</span>
+                                    <div class="card-title">Aortic Dissection</div>
+                                    <ul class="card-list">
+                                        <li><strong>Immediate:</strong> Beta-blockade (IV esmolol/labetalol)</li>
+                                        <li>Systolic BP target: 100-120 mmHg</li>
+                                        <li>Add vasodilator if needed</li>
+                                        <li><strong>Stanford A:</strong> Urgent surgical repair</li>
+                                        <li><strong>Stanford B:</strong> Medical management (unless complications)</li>
+                                        <li>CT angiography for diagnosis</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Emergency</span>
+                                    <div class="card-title">Tension Pneumothorax</div>
+                                    <ul class="card-list">
+                                        <li><strong>Immediate needle decompression:</strong> 2nd ICS MCL</li>
+                                        <li>Followed by chest tube insertion</li>
+                                        <li>Do not wait for imaging</li>
+                                        <li>Clinical diagnosis based on hypotension, JVD, absent breath sounds</li>
+                                        <li>Consider surgical consult if recurrent</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">High-Risk</span>
+                                    <div class="card-title">Massive Pulmonary Embolism</div>
+                                    <ul class="card-list">
+                                        <li>Hemodynamic support (fluids, inotropes)</li>
+                                        <li>Thrombolysis if no contraindications</li>
+                                        <li>Surgical embolectomy or catheter-directed therapy</li>
+                                        <li>IVC filter if anticoagulation contraindicated</li>
+                                        <li>ICU admission</li>
+                                        <li>Anticoagulation with heparin</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Standard</span>
+                                    <div class="card-title">Submassive PE</div>
+                                    <ul class="card-list">
+                                        <li>Anticoagulation (LMWH, fondaparinux, DOAC)</li>
+                                        <li>Consider thrombolysis if RV dysfunction</li>
+                                        <li>Oxygen if hypoxic</li>
+                                        <li>Analgesia for pleuritic pain</li>
+                                        <li>Hospital admission for monitoring</li>
+                                        <li>Long-term anticoagulation (minimum 3 months)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Emergency</span>
+                                    <div class="card-title">Cardiac Tamponade</div>
+                                    <ul class="card-list">
+                                        <li><strong>Urgent pericardiocentesis</strong> if hemodynamic compromise</li>
+                                        <li>Emergency echo-guided drainage</li>
+                                        <li>Fluid bolus may temporize</li>
+                                        <li>Treat underlying cause</li>
+                                        <li>Surgical consult for recurrent cases</li>
+                                        <li>Pericardial window if needed</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Medical</span>
+                                    <div class="card-title">Pericarditis</div>
+                                    <ul class="card-list">
+                                        <li>NSAIDs (avoid in MI)</li>
+                                        <li>Colchicine to prevent recurrence</li>
+                                        <li>Treat underlying cause</li>
+                                        <li>Avoid anticoagulation if risk of tamponade</li>
+                                        <li>Monitor for tamponade</li>
+                                        <li>Outpatient follow-up if stable</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <span class="severity-badge badge-stable">Supportive</span>
+                                    <div class="card-title">Stable Angina</div>
+                                    <ul class="card-list">
+                                        <li>Anti-anginal therapy (nitrates, beta-blockers, CCB)</li>
+                                        <li>Secondary prevention (aspirin, statin, ACEi)</li>
+                                        <li>Risk factor modification</li>
+                                        <li>Cardiac rehabilitation referral</li>
+                                        <li>Consider revascularization if symptomatic</li>
+                                        <li>Lifestyle modifications</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <span class="severity-badge badge-stable">Medical</span>
+                                    <div class="card-title">GORD/Peptic Ulcer Disease</div>
+                                        <ul class="card-list">
+                                            <li>PPI therapy (omeprazole 20-40mg daily)</li>
+                                            <li>H. pylori testing and treatment if positive</li>
+                                            <li>Lifestyle modifications</li>
+                                            <li>Avoid NSAIDs</li>
+                                            <li>Consider endoscopy if alarm features</li>
+                                            <li>Cardiac workup first if any uncertainty</li>
+                                        </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <span class="severity-badge badge-stable">Supportive</span>
+                                    <div class="card-title">Musculoskeletal Pain</div>
+                                    <ul class="card-list">
+                                        <li>NSAIDs or acetaminophen</li>
+                                        <li>Local heat or ice</li>
+                                        <li>Physical therapy if recurrent</li>
+                                        <li>Avoid provoking activities</li>
+                                        <li>Topical NSAIDs</li>
+                                        <li>Reassurance and follow-up if no red flags</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <span class="severity-badge badge-stable">Medical</span>
+                                    <div class="card-title">Anxiety/Panic Disorder</div>
+                                    <ul class="card-list">
+                                        <li>Reassurance after excluding organic causes</li>
+                                        <li>Counseling/CBT referral</li>
+                                        <li>SSRIs if recurrent</li>
+                                        <li>Breathing exercises</li>
+                                        <li>Consider beta-blocker for somatic symptoms</li>
+                                        <li>Follow-up with primary care</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h3>General Management Principles</h3>
+                            <div class="highlight-box">
+                                <div class="card-grid">
+                                    <div class="info-card">
+                                        <div class="card-title">Oxygen Therapy</div>
+                                        <ul class="card-list">
+                                            <li>Target SpO₂ 94-98% (88-92% if COPD risk)</li>
+                                            <li>Do NOT give oxygen routinely in normoxic ACS patients</li>
+                                            <li>Liberal oxygen may increase mortality in acute illness</li>
+                                        </ul>
+                                    </div>
+
+                                    <div class="info-card">
+                                        <div class="card-title">Pain Management</div>
+                                        <ul class="card-list">
+                                            <li>Morphine for severe pain (ACS, PE, dissection)</li>
+                                            <li>Nitrates for cardiac ischemia (avoid if hypotensive)</li>
+                                            <li>NSAIDs for musculoskeletal pain (avoid in cardiac patients)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="section" id="followup">
+                <div class="section-card" data-section="followup">
+                    <div class="section-header followup">
+                        <div class="section-title">
+                            <div class="section-icon">📅</div>
+                            <div class="section-name">Follow-up</div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="section-content">
+                        <div class="content-inner">
+                            <h3>Disposition and Follow-up Planning</h3>
+
+                            <div class="card-grid">
+                                <div class="info-card urgent">
+                                    <span class="severity-badge badge-urgent">Admit</span>
+                                    <div class="card-title">Admit to CCU/ICU</div>
+                                    <ul class="card-list">
+                                        <li>STEMI, NSTEMI with high-risk features</li>
+                                        <li>Unstable angina with ongoing pain</li>
+                                        <li>Aortic dissection (Type A or complicated Type B)</li>
+                                        <li>Massive PE (hemodynamic instability)</li>
+                                        <li>Cardiac tamponade</li>
+                                        <li>Tension pneumothorax (post-decompression)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <span class="severity-badge badge-caution">Admit</span>
+                                    <div class="card-title">Admit to Ward</div>
+                                    <ul class="card-list">
+                                        <li>NSTEMI (stable)</li>
+                                        <li>Submassive PE requiring monitoring</li>
+                                        <li>Pericarditis (initial evaluation)</li>
+                                        <li>Severe pneumonia</li>
+                                        <li>Pancreatitis, cholecystitis</li>
+                                        <li>SCAD (initial management)</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card stable">
+                                    <span class="severity-badge badge-stable">Discharge</span>
+                                    <div class="card-title">Discharge Home</div>
+                                    <ul class="card-list">
+                                        <li>Stable angina (risk-stratified)</li>
+                                        <li>Costochondritis</li>
+                                        <li>GORD (after cardiac exclusion)</li>
+                                        <li>Anxiety/panic disorder (after exclusion)</li>
+                                        <li>Viral pleuritis</li>
+                                        <li>Mild musculoskeletal pain</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card">
+                                    <span class="severity-badge badge-caution">Specialist</span>
+                                    <div class="card-title">Specialist Follow-up</div>
+                                    <ul class="card-list">
+                                        <li>Cardiology: All ACS, SCAD, stable angina</li>
+                                        <li>Cardiothoracic surgery: Aortic dissection</li>
+                                        <li>Respiratory: PE, severe pneumonia</li>
+                                        <li>Gastroenterology: Pancreatitis, cholecystitis</li>
+                                        <li>Rheumatology: Connective tissue disorders</li>
+                                        <li>Psychiatry: Recurrent anxiety disorders</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <h3>Specific Follow-up Recommendations</h3>
+                            <div class="card-grid">
+                                <div class="info-card urgent">
+                                    <div class="card-title">Post-PCI/MI Follow-up</div>
+                                    <ul class="card-list">
+                                        <li>Cardiology clinic within 2-4 weeks</li>
+                                        <li>Medication optimization</li>
+                                        <li>Cardiac rehabilitation referral</li>
+                                        <li>Echo at 6-12 weeks (LV function)</li>
+                                        <li>Lipid profile at 4-12 weeks</li>
+                                        <li>Continued dual antiplatelet therapy</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <div class="card-title">PE Follow-up</div>
+                                    <ul class="card-list">
+                                        <li>Repeat imaging if persistent symptoms</li>
+                                        <li>Anticoagulation for minimum 3 months</li>
+                                        <li>Thrombophilia testing if unprovoked</li>
+                                        <li>Consider IVC filter if recurrent</li>
+                                        <li>Doppler legs for DVT</li>
+                                        <li>Cardiology review if RV dysfunction</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card caution">
+                                    <div class="card-title">Aortic Dissection Follow-up</div>
+                                    <ul class="card-list">
+                                        <li>Regular imaging (CT/MRI) at 1, 3, 6, 12 months</li>
+                                        <li>Blood pressure control (target &lt;120/80)</li>
+                                        <li>Beta-blocker therapy</li>
+                                        <li>Avoid heavy lifting/straining</li>
+                                        <li>Genetic testing if connective tissue disease suspected</li>
+                                        <li>Lifelong surveillance for aneurysm formation</li>
+                                    </ul>
+                                </div>
+
+                                <div class="info-card stable">
+                                    <div class="card-title">Stable Angina Follow-up</div>
+                                    <ul class="card-list">
+                                        <li>Primary care review annually</li>
+                                        <li>Cardiology if symptoms worsen</li>
+                                        <li>Risk factor modification</li>
+                                        <li>Repea

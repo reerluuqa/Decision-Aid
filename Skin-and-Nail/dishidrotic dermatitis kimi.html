@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dyshidrotic Dermatitis Interactive Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 80px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .progress-step {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            bottom: -20px;
+            width: 2px;
+            height: 20px;
+            background: #ddd;
+        }
+
+        .progress-step:last-child::after {
+            display: none;
+        }
+
+        .progress-step.active {
+            background: #4CAF50;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .progress-step.completed {
+            background: #2196F3;
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 100px;
+            padding: 40px;
+            width: calc(100% - 100px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-icon {
+            font-size: 2em;
+            margin-right: 15px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: white;
+        }
+
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            flex-grow: 1;
+        }
+
+        .expand-icon {
+            font-size: 1.5em;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        /* Assessment Card - Blue */
+        .assessment-card .card-icon {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+
+        .assessment-card .card-title {
+            color: #1976D2;
+        }
+
+        /* Diagnosis Card - Purple */
+        .diagnosis-card .card-icon {
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        }
+
+        .diagnosis-card .card-title {
+            color: #7B1FA2;
+        }
+
+        /* Treatment Card - Green */
+        .treatment-card .card-icon {
+            background: linear-gradient(135deg, #4CAF50, #388E3C);
+        }
+
+        .treatment-card .card-title {
+            color: #388E3C;
+        }
+
+        /* Follow-up Card - Orange */
+        .followup-card .card-icon {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+        }
+
+        .followup-card .card-title {
+            color: #F57C00;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .badge-red {
+            background: #f44336;
+            color: white;
+        }
+
+        .badge-amber {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-green {
+            background: #4caf50;
+            color: white;
+        }
+
+        /* Content Styles */
+        .content-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+
+        .content-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .content-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .content-section li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .content-section li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .treatment-option {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .treatment-option h4 {
+            color: #388E3C;
+            margin-bottom: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .progress-sidebar {
+                width: 60px;
+            }
+            
+            .main-content {
+                margin-left: 80px;
+                width: calc(100% - 80px);
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-sidebar">
+            <div class="progress-step active" data-step="1" title="Assessment">
+                📋
+            </div>
+            <div class="progress-step" data-step="2" title="Diagnosis">
+                🔍
+            </div>
+            <div class="progress-step" data-step="3" title="Treatment">
+                💊
+            </div>
+            <div class="progress-step" data-step="4" title="Follow-up">
+                📈
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <h1>Dyshidrotic Dermatitis</h1>
+                <p>Interactive Clinical Management Algorithm</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card assessment-card" data-step="1">
+                <div class="card-header">
+                    <div class="card-icon">📋</div>
+                    <h2 class="card-title">Assessment</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>Clinical Presentation</h3>
+                        <ul>
+                            <li>Pruritic vesicles on palms/soles</li>
+                            <li>1-2mm vesicles on non-inflammatory base</li>
+                            <li>Recurrent crops lasting weeks</li>
+                            <li>May have prodrome of itching</li>
+                        </ul>
+                    </div>
+                    <div class="content-section">
+                        <h3>Risk Factors</h3>
+                        <span class="badge badge-amber">Hyperhidrosis</span>
+                        <span class="badge badge-amber">Irritant exposure</span>
+                        <span class="badge badge-red">Nickel allergy</span>
+                        <span class="badge badge-amber">Emotional stress</span>
+                    </div>
+                    <div class="content-section">
+                        <h3>History Taking</h3>
+                        <ul>
+                            <li>Occupational exposure history</li>
+                            <li>Atopic background</li>
+                            <li>Trigger identification</li>
+                            <li>Previous treatments</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis-card" data-step="2">
+                <div class="card-header">
+                    <div class="card-icon">🔍</div>
+                    <h2 class="card-title">Diagnosis</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>Clinical Diagnosis</h3>
+                        <p><strong>Primary Criteria:</strong></p>
+                        <ul>
+                            <li>Characteristic vesicular eruption</li>
+                            <li>Palms/soles involvement</li>
+                            <li>Pruritus</li>
+                            <li>Recurrent pattern</li>
+                        </ul>
+                    </div>
+                    <div class="content-section">
+                        <h3>Differential Diagnosis</h3>
+                        <span class="badge badge-red">Tinea manuum/pedis</span>
+                        <span class="badge badge-red">Contact dermatitis</span>
+                        <span class="badge badge-red">Palmoplantar psoriasis</span>
+                        <span class="badge badge-red">Scabies</span>
+                    </div>
+                    <div class="content-section">
+                        <h3>Investigations (if needed)</h3>
+                        <ul>
+                            <li>KOH prep for fungal infection</li>
+                            <li>Patch testing for allergies</li>
+                            <li>Skin biopsy for atypical cases</li>
+                            <li>Microscopic examination</li>
+                        </ul>
+                    </div>
+                    <div class="content-section">
+                        <h3>Severity Assessment</h3>
+                        <p>Use DASI (Dyshidrotic Eczema Area and Severity Index):</p>
+                        <span class="badge badge-green">Mild: 0-15</span>
+                        <span class="badge badge-amber">Moderate: 16-30</span>
+                        <span class="badge badge-red">Severe: 31-60</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment-card" data-step="3">
+                <div class="card-header">
+                    <div class="card-icon">💊</div>
+                    <h2 class="card-title">Treatment</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>First-Line: Lifestyle Measures</h3>
+                        <ul>
+                            <li>Avoid identified triggers</li>
+                            <li>Frequent emollient use</li>
+                            <li>Protective gloves for wet work</li>
+                            <li>Mild cleansers only</li>
+                        </ul>
+                    </div>
+                    <div class="treatment-option">
+                        <h4>Topical Corticosteroids</h4>
+                        <p>High-potency for 2 weeks, then taper to medium potency</p>
+                        <span class="badge badge-green">Clobetasol 0.05%</span>
+                        <span class="badge badge-green">Fluocinonide 0.05%</span>
+                    </div>
+                    <div class="treatment-option">
+                        <h4>Topical Immunomodulators</h4>
+                        <p>For maintenance or steroid-sparing</p>
+                        <span class="badge badge-green">Tacrolimus 0.1%</span>
+                        <span class="badge badge-green">Pimecrolimus 1%</span>
+                    </div>
+                    <div class="treatment-option">
+                        <h4>Adjunct Therapies</h4>
+                        <ul>
+                            <li>Oral antihistamines for pruritus</li>
+                            <li>Hyperhidrosis treatment if indicated</li>
+                            <li>Nickel avoidance for allergic patients</li>
+                        </ul>
+                    </div>
+                    <div class="treatment-option">
+                        <h4>Severe/Resistant Cases</h4>
+                        <span class="badge badge-amber">Short oral prednisolone</span>
+                        <span class="badge badge-amber">Phototherapy (PUVA/NB-UVB)</span>
+                        <span class="badge badge-red">Systemic immunosuppressants</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup-card" data-step="4">
+                <div class="card-header">
+                    <div class="card-icon">📈</div>
+                    <h2 class="card-title">Follow-up</h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>Monitoring</h3>
+                        <ul>
+                            <li>Response to treatment</li>
+                            <li>Adverse effects of medications</li>
+                            <li>Need for treatment adjustment</li>
+                            <li>Patient adherence</li>
+                        </ul>
+                    </div>
+                    <div class="content-section">
+                        <h3>Complications</h3>
+                        <span class="badge badge-red">Secondary infection</span>
+                        <span class="badge badge-amber">Skin atrophy</span>
+                        <span class="badge badge-amber">Treatment resistance</span>
+                    </div>
+                    <div class="content-section">
+                        <h3>Prognosis</h3>
+                        <p>Chronic relapsing-remitting course. Most achieve remission with treatment, but recurrence is common. Emphasize:</p>
+                        <ul>
+                            <li>Trigger avoidance</li>
+                            <li>Continued skin care</li>
+                            <li>Early treatment of flares</li>
+                            <li>Regular follow-up</li>
+                        </ul>
+                    </div>
+                    <div class="content-section">
+                        <h3>Patient Education</h3>
+                        <ul>
+                            <li>Excellent hand/foot care routine</li>
+                            <li>Importance of moisturization</li>
+                            <li>When to seek medical attention</li>
+                            <li>Stress management techniques</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        document.querySelectorAll('.card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.parentElement;
+                const isExpanded = card.classList.contains('expanded');
+                
+                // Close all cards
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('expanded');
+                });
+                
+                // Open clicked card if it wasn't expanded
+                if (!isExpanded) {
+                    card.classList.add('expanded');
+                }
+            });
+        });
+
+        // Progress sidebar functionality
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', () => {
+                const stepNumber = step.getAttribute('data-step');
+                const targetCard = document.querySelector(`.card[data-step="${stepNumber}"]`);
+                
+                if (targetCard) {
+                    // Update active step
+                    document.querySelectorAll('.progress-step').forEach(s => {
+                        s.classList.remove('active');
+                    });
+                    step.classList.add('active');
+                    
+                    // Scroll to card
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Expand the card
+                    document.querySelectorAll('.card').forEach(c => {
+                        c.classList.remove('expanded');
+                    });
+                    targetCard.classList.add('expanded');
+                }
+            });
+        });
+
+        // Auto-update progress based on scroll
+        window.addEventListener('scroll', () => {
+            const cards = document.querySelectorAll('.card');
+            const scrollPosition = window.scrollY + window.innerHeight / 2;
+            
+            cards.forEach((card, index) => {
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition <= cardBottom) {
+                    document.querySelectorAll('.progress-step').forEach(s => {
+                        s.classList.remove('active');
+                        if (s.getAttribute('data-step') <= index + 1) {
+                            s.classList.add('completed');
+                        }
+                    });
+                    
+                    const activeStep = document.querySelector(`.progress-step[data-step="${index + 1}"]`);
+                    if (activeStep) {
+                        activeStep.classList.add('active');
+                    }
+                }
+            });
+        });
+
+        // Initialize with first card expanded
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.assessment-card').classList.add('expanded');
+        });
+
+        // Add smooth reveal animation for badges
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.style.opacity = '0';
+            badge.style.transform = 'translateY(10px)';
+            badge.style.transition = 'all 0.3s ease';
+            observer.observe(badge);
+        });
+    </script>
+</body>
+</html>

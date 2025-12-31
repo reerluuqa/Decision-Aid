@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keloid Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step:hover {
+            background: #f0f0f0;
+            transform: translateX(5px);
+        }
+
+        .progress-step.active {
+            background: #e3f2fd;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .progress-step.completed {
+            opacity: 0.7;
+        }
+
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 14px;
+            color: white;
+        }
+
+        .step-icon.assessment { background: #9c27b0; }
+        .step-icon.diagnosis { background: #2196f3; }
+        .step-icon.treatment { background: #4caf50; }
+        .step-icon.followup { background: #ff9800; }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .card.assessment::before { background: #9c27b0; }
+        .card.diagnosis::before { background: #2196f3; }
+        .card.treatment::before { background: #4caf50; }
+        .card.followup::before { background: #ff9800; }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card:hover::before {
+            width: 100%;
+            opacity: 0.1;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 24px;
+            color: white;
+        }
+
+        .assessment .card-icon { background: #9c27b0; }
+        .diagnosis .card-icon { background: #2196f3; }
+        .treatment .card-icon { background: #4caf50; }
+        .followup .card-icon { background: #ff9800; }
+
+        .expand-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            color: #666;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 5px;
+        }
+
+        .badge-urgent {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+
+        .badge-caution {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ff9800;
+        }
+
+        .badge-stable {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #66bb6a;
+        }
+
+        /* Content Styles */
+        .content-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #ddd;
+        }
+
+        .content-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .content-section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .content-section li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .content-section li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: #666;
+        }
+
+        .interactive-element {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .interactive-element:hover {
+            background: #f5f5f5;
+            transform: translateX(5px);
+        }
+
+        .decision-tree {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+
+        .decision-node {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 2px solid #2196f3;
+            position: relative;
+        }
+
+        .decision-node::after {
+            content: '↓';
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #2196f3;
+        }
+
+        .decision-node:last-child::after {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+
+            .header h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <h2 class="progress-title">Algorithm Progress</h2>
+            <div class="progress-step active" data-step="assessment">
+                <div class="step-icon assessment">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" data-step="diagnosis">
+                <div class="step-icon diagnosis">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" data-step="treatment">
+                <div class="step-icon treatment">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" data-step="followup">
+                <div class="step-icon followup">4</div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1>Keloid Management Algorithm</h1>
+                <p>Interactive clinical decision support tool</p>
+            </header>
+
+            <!-- Assessment Card -->
+            <div class="card assessment" id="assessment">
+                <div class="card-header" onclick="toggleCard('assessment')">
+                    <div class="card-title">
+                        <div class="card-icon">📋</div>
+                        Assessment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>Initial Evaluation</h3>
+                        <div class="interactive-element" onclick="showDetail('history')">
+                            <strong>Patient History</strong>
+                            <p>Click to explore key historical factors</p>
+                        </div>
+                        <div id="history" style="display: none; margin-top: 10px; padding: 15px; background: white; border-radius: 8px;">
+                            <ul>
+                                <li>Previous keloid formation</li>
+                                <li>Family history of keloids</li>
+                                <li>Skin type (Fitzpatrick IV-VI at higher risk)</li>
+                                <li>Inciting event (surgery, piercing, acne, etc.)</li>
+                                <li>Duration of lesion growth</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Physical Examination</h3>
+                        <span class="badge badge-caution">Check margins carefully</span>
+                        <ul>
+                            <li>Size and extent beyond original wound</li>
+                            <li>Surface characteristics (smooth, shiny)</li>
+                            <li>Consistency (firm to rubbery)</li>
+                            <li>Color (erythematous to hyperpigmented)</li>
+                            <li>Symptoms (pain, pruritus)</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Risk Assessment</h3>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            <span class="badge badge-urgent">High tension areas</span>
+                            <span class="badge badge-caution">Dark skin types</span>
+                            <span class="badge badge-stable">Early intervention</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard('diagnosis')">
+                    <div class="card-title">
+                        <div class="card-icon">🔍</div>
+                        Diagnosis
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="decision-tree">
+                        <h3>Diagnostic Decision Tree</h3>
+                        <div class="decision-node">
+                            <strong>Does the scar extend beyond the original wound margins?</strong>
+                            <p>If YES → Consider keloid | If NO → Consider hypertrophic scar</p>
+                        </div>
+                        <div class="decision-node">
+                            <strong>Is there continued growth after 12 months?</strong>
+                            <p>If YES → Supports keloid diagnosis | If NO → May be hypertrophic</p>
+                        </div>
+                        <div class="decision-node">
+                            <strong>Are there typical locations and appearance?</strong>
+                            <p>Earlobes, chest, shoulders with raised, smooth surface</p>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Differential Diagnosis</h3>
+                        <span class="badge badge-urgent">Biopsy if atypical</span>
+                        <ul>
+                            <li>Hypertrophic scar (within wound margins)</li>
+                            <li>Dermatofibrosarcoma protuberans (rare but important)</li>
+                            <li>Giant cell fibroblastoma</li>
+                            <li>Scleroderma</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>When to Refer</h3>
+                        <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                            <span class="badge badge-urgent">URGENT</span>
+                            <p><strong>Immediate referral needed for:</strong></p>
+                            <ul>
+                                <li>Rapidly growing lesions</li>
+                                <li>Atypical presentation</li>
+                                <li>Functional impairment</li>
+                                <li>Diagnostic uncertainty</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard('treatment')">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        Treatment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>First-line Options</h3>
+                        <div class="interactive-element" onclick="showTreatment('small')">
+                            <strong>Small/Single Keloids</strong>
+                            <p>Intralesional corticosteroids (triamcinolone 10-40mg/ml)</p>
+                        </div>
+                        <div id="small" style="display: none; margin-top: 10px;">
+                            <div style="background: white; padding: 15px; border-radius: 8px;">
+                                <p><strong>Protocol:</strong></p>
+                                <ul>
+                                    <li>Inject every 4-6 weeks</li>
+                                    <li>Continue until flattening occurs</li>
+                                    <li>Combine with 5-FU for resistant cases</li>
+                                    <li>Consider laser therapy (PDL or Nd:YAG)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="interactive-element" onclick="showTreatment('large')">
+                            <strong>Large/Multiple Keloids</strong>
+                            <p>Surgical excision + adjuvant therapy</p>
+                        </div>
+                        <div id="large" style="display: none; margin-top: 10px;">
+                            <div style="background: white; padding: 15px; border-radius: 8px;">
+                                <span class="badge badge-urgent">Must use adjuvant therapy</span>
+                                <p><strong>Post-surgical options:</strong></p>
+                                <ul>
+                                    <li>Radiotherapy (8-20 Gy in 1-3 fractions)</li>
+                                    <li>Corticosteroid injections</li>
+                                    <li>Pressure therapy</li>
+                                    <li>Silicone sheeting</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Combination Therapies</h3>
+                        <span class="badge badge-stable">Evidence-based</span>
+                        <ul>
+                            <li>Triamcinolone + 5-FU (improved efficacy)</li>
+                            <li>Laser + corticosteroids (synergistic effect)</li>
+                            <li>Surgery + radiotherapy (lowest recurrence)</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Emerging Therapies</h3>
+                        <ul>
+                            <li>Botulinum toxin (tension reduction)</li>
+                            <li>Platelet-rich plasma</li>
+                            <li>Microneedling</li>
+                            <li>Cryotherapy (for small lesions)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup" id="followup">
+                <div class="card-header" onclick="toggleCard('followup')">
+                    <div class="card-title">
+                        <div class="card-icon">📈</div>
+                        Follow-up
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h3>Monitoring Schedule</h3>
+                        <div class="interactive-element">
+                            <strong>Post-treatment monitoring</strong>
+                            <p>Every 4-6 weeks initially, then every 3-6 months</p>
+                        </div>
+                        <ul>
+                            <li>Assess for recurrence</li>
+                            <li>Monitor treatment side effects</li>
+                            <li>Patient-reported outcomes</li>
+                            <li>Photographic documentation</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Warning Signs</h3>
+                        <span class="badge badge-urgent">Return immediately</span>
+                        <ul>
+                            <li>Rapid regrowth after treatment</li>
+                            <li>New satellite lesions</li>
+                            <li>Severe pain or infection</li>
+                            <li>Functional limitation</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Patient Education</h3>
+                        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px;">
+                            <span class="badge badge-stable">Prevention key</span>
+                            <ul>
+                                <li>Avoid unnecessary skin trauma</li>
+                                <li>No piercings or tattoos</li>
+                                <li>Early treatment of acne/inflammation</li>
+                                <li>Sun protection for treated areas</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h3>Prognosis Counseling</h3>
+                        <p><strong>Key points to discuss:</strong></p>
+                        <ul>
+                            <li>Chronic condition with recurrence risk</li>
+                            <li>Multiple treatments often needed</li>
+                            <li>Individual response varies</li>
+                            <li>Psychological impact recognition</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId);
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Open clicked card if it wasn't expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+            }
+            
+            // Update progress sidebar
+            updateProgressSidebar(cardId);
+        }
+
+        // Update progress sidebar
+        function updateProgressSidebar(activeStep) {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach(step => {
+                step.classList.remove('active', 'completed');
+                if (step.dataset.step === activeStep) {
+                    step.classList.add('active');
+                } else if (isStepBefore(step.dataset.step, activeStep)) {
+                    step.classList.add('completed');
+                }
+            });
+        }
+
+        // Check if step is before active step
+        function isStepBefore(step, activeStep) {
+            const order = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            return order.indexOf(step) < order.indexOf(activeStep);
+        }
+
+        // Show treatment details
+        function showTreatment(type) {
+            const element = document.getElementById(type);
+            element.style.display = element.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Show detail sections
+        function showDetail(type) {
+            const element = document.getElementById(type);
+            element.style.display = element.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // Smooth scroll to section
+        function scrollToSection(sectionId) {
+            const element = document.getElementById(sectionId);
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            toggleCard(sectionId);
+        }
+
+        // Add click handlers to progress steps
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', () => {
+                const stepId = step.dataset.step;
+                scrollToSection(stepId);
+            });
+        });
+
+        // Initialize - open first card
+        window.addEventListener('DOMContentLoaded', () => {
+            toggleCard('assessment');
+        });
+
+        // Add hover effects to badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+                this.style.transition = 'transform 0.2s ease';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raynaud's Phenomenon Interactive Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .progress-step:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .progress-step.active {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1976d2;
+        }
+
+        .progress-step.completed {
+            background: #e8f5e8;
+            border-color: #4caf50;
+            color: #388e3c;
+        }
+
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .assessment { background: #ff9800; }
+        .diagnosis { background: #9c27b0; }
+        .treatment { background: #2196f3; }
+        .followup { background: #4caf50; }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .algorithm-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 8px solid;
+        }
+
+        .algorithm-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-assessment { border-left-color: #ff9800; }
+        .card-diagnosis { border-left-color: #9c27b0; }
+        .card-treatment { border-left-color: #2196f3; }
+        .card-followup { border-left-color: #4caf50; }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 24px;
+            color: white;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            color: #666;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .card-content.expanded {
+            max-height: 2000px;
+        }
+
+        .step-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            transform: translateX(5px);
+        }
+
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #2c3e50;
+        }
+
+        .step-description {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+
+        .badge-urgent {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+
+        .badge-caution {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ff9800;
+        }
+
+        .badge-stable {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+
+        .decision-tree {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .decision-node {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #2196f3 0%, #21cbf3 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .action-button.urgent {
+            background: linear-gradient(135deg, #f44336 0%, #ff6b6b 100%);
+        }
+
+        .action-button.caution {
+            background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+            
+            .algorithm-card {
+                padding: 20px;
+            }
+            
+            .card-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <div class="progress-sidebar">
+            <div class="progress-title">Algorithm Progress</div>
+            <div class="progress-step active" data-step="assessment">
+                <div class="step-icon assessment">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" data-step="diagnosis">
+                <div class="step-icon diagnosis">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" data-step="treatment">
+                <div class="step-icon treatment">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" data-step="followup">
+                <div class="step-icon followup">4</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Assessment Card -->
+            <div class="algorithm-card card-assessment" id="assessment">
+                <div class="card-header" onclick="toggleCard('assessment')">
+                    <div class="card-icon assessment">📋</div>
+                    <div class="card-title">Assessment</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-title">Clinical History
+                            <span class="severity-badge badge-caution">Essential</span>
+                        </div>
+                        <div class="step-description">Document characteristic color changes (white → blue → red), triggers (cold, stress), duration, frequency, and associated symptoms.</div>
+                    </div>
+                    
+                    <div class="step-item">
+                        <div class="step-title">Physical Examination
+                            <span class="severity-badge badge-stable">Standard</span>
+                        </div>
+                        <div class="step-description">Examine digits for color changes, ulcers, pits, nailfold capillaries, and signs of connective tissue disease.</div>
+                    </div>
+
+                    <div class="decision-tree">
+                        <div class="decision-node">
+                            <strong>Age at onset &gt;40 years?</strong><br>
+                            <button class="action-button caution" onclick="showAlert('Consider secondary causes - refer to rheumatology')">Yes</button>
+                            <button class="action-button stable" onclick="showAlert('Continue with standard workup')">No</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Risk Assessment
+                            <span class="severity-badge badge-urgent">Critical</span>
+                        </div>
+                        <div class="step-description">Identify high-risk features: digital ulcers, asymmetric attacks, systemic symptoms, abnormal capillaries.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="algorithm-card card-diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard('diagnosis')">
+                    <div class="card-icon diagnosis">🔍</div>
+                    <div class="card-title">Diagnosis</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-title">Primary vs Secondary RP
+                            <span class="severity-badge badge-caution">Key Decision</span>
+                        </div>
+                        <div class="step-description">Primary: No underlying disease, normal labs, age &lt;30, symmetric attacks. Secondary: Associated with CTD, abnormal labs, older onset.</div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Laboratory Tests
+                            <span class="severity-badge badge-stable">Routine</span>
+                        </div>
+                        <div class="step-description">ANA, ESR/CRP, CBC, urinalysis. Consider anti-centromere, anti-Scl-70 if systemic sclerosis suspected.</div>
+                    </div>
+
+                    <div class="decision-tree">
+                        <div class="decision-node">
+                            <strong>ANA positive with nucleolar pattern?</strong><br>
+                            <button class="action-button urgent" onclick="showAlert('High risk for systemic sclerosis - urgent rheumatology referral')">Yes</button>
+                            <button class="action-button stable" onclick="showAlert('Monitor and reassess in 3-6 months')">No</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Nailfold Capillaroscopy
+                            <span class="severity-badge badge-caution">Specialist</span>
+                        </div>
+                        <div class="step-description">Dilated/destroyed capillaries suggest secondary RP. Normal pattern supports primary RP.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="algorithm-card card-treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard('treatment')">
+                    <div class="card-icon treatment">💊</div>
+                    <div class="card-title">Treatment</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-title">Lifestyle Measures
+                            <span class="severity-badge badge-stable">First-line</span>
+                        </div>
+                        <div class="step-description">Keep warm, smoking cessation, stress reduction, avoid triggers, moisturize skin, protect digits.</div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Pharmacological Therapy
+                            <span class="severity-badge badge-caution">Second-line</span>
+                        </div>
+                        <div class="step-description">Calcium channel blockers (nifedipine first-line), ARBs (losartan), topical nitrates, PDE-5 inhibitors for severe cases.</div>
+                    </div>
+
+                    <div class="decision-tree">
+                        <div class="decision-node">
+                            <strong>Digital ulcers present?</strong><br>
+                            <button class="action-button urgent" onclick="showAlert('Start prostacyclin infusion + PDE-5 inhibitor. Consider bosentan for prevention.')">Yes</button>
+                            <button class="action-button stable" onclick="showAlert('Continue with standard vasodilator therapy')">No</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Severe Disease Management
+                            <span class="severity-badge badge-urgent">Specialist</span>
+                        </div>
+                        <div class="step-description">IV prostacyclins, surgical sympathectomy, wound care, pain management, treat infections.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="algorithm-card card-followup" id="followup">
+                <div class="card-header" onclick="toggleCard('followup')">
+                    <div class="card-icon followup">📈</div>
+                    <div class="card-title">Follow-up</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <div class="step-title">Monitoring Schedule
+                            <span class="severity-badge badge-stable">Routine</span>
+                        </div>
+                        <div class="step-description">Primary RP: Annual review. Secondary RP: 3-6 monthly, or as clinically indicated based on disease activity.</div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Complication Surveillance
+                            <span class="severity-badge badge-caution">Important</span>
+                        </div>
+                        <div class="step-description">Watch for digital ulcers, infections, gangrene, progression to systemic disease. Monitor treatment side effects.</div>
+                    </div>
+
+                    <div class="decision-tree">
+                        <div class="decision-node">
+                            <strong>New systemic symptoms?</strong><br>
+                            <button class="action-button urgent" onclick="showAlert('Reassess diagnosis - may need immunosuppression')">Yes</button>
+                            <button class="action-button stable" onclick="showAlert('Continue current management plan')">No</button>
+                        </div>
+                    </div>
+
+                    <div class="step-item">
+                        <div class="step-title">Prognosis Counseling
+                            <span class="severity-badge badge-stable">Education</span>
+                        </div>
+                        <div class="step-description">Primary RP generally benign. Secondary RP requires ongoing monitoring. 13% risk of developing CTD over time.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId);
+            const content = card.querySelector('.card-content');
+            const expandIcon = card.querySelector('.expand-icon');
+            
+            content.classList.toggle('expanded');
+            expandIcon.classList.toggle('expanded');
+            
+            // Update progress sidebar
+            updateProgress(cardId);
+        }
+
+        function updateProgress(activeStep) {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach(step => {
+                step.classList.remove('active', 'completed');
+                const stepId = step.getAttribute('data-step');
+                
+                if (stepId === activeStep) {
+                    step.classList.add('active');
+                } else if (isStepCompleted(stepId)) {
+                    step.classList.add('completed');
+                }
+            });
+        }
+
+        function isStepCompleted(stepId) {
+            const card = document.getElementById(stepId);
+            const content = card.querySelector('.card-content');
+            return content.classList.contains('expanded');
+        }
+
+        function showAlert(message) {
+            // Create a custom alert instead of using browser alert
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                z-index: 1000;
+                max-width: 400px;
+                text-align: center;
+            `;
+            alertDiv.innerHTML = `
+                <h3 style="margin-bottom: 15px; color: #2c3e50;">Clinical Decision</h3>
+                <p style="margin-bottom: 20px; color: #666;">${message}</p>
+                <button onclick="this.parentElement.remove()" class="action-button">Close</button>
+            `;
+            
+            // Add backdrop
+            const backdrop = document.createElement('div');
+            backdrop.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+            `;
+            
+            document.body.appendChild(backdrop);
+            document.body.appendChild(alertDiv);
+            
+            // Remove backdrop when alert is closed
+            backdrop.onclick = function() {
+                alertDiv.remove();
+                backdrop.remove();
+            };
+        }
+
+        // Smooth scrolling for progress sidebar navigation
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', function() {
+                const stepId = this.getAttribute('data-step');
+                const card = document.getElementById(stepId);
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Auto-expand the card
+                const content = card.querySelector('.card-content');
+                const expandIcon = card.querySelector('.expand-icon');
+                content.classList.add('expanded');
+                expandIcon.classList.add('expanded');
+                
+                updateProgress(stepId);
+            });
+        });
+
+        // Initialize with first card expanded
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleCard('assessment');
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                // Close any open alerts
+                const alerts = document.querySelectorAll('div[style*="z-index: 1000"]');
+                alerts.forEach(alert => alert.remove());
+                const backdrops = document.querySelectorAll('div[style*="z-index: 999"]');
+                backdrops.forEach(backdrop => backdrop.remove());
+            }
+        });
+    </script>
+</body>
+</html>

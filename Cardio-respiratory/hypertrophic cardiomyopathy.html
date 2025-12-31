@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HCM Management Algorithm | BMJ Best Practice</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            margin-right: 280px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 1.1rem;
+            color: #4a5568;
+            font-weight: 400;
+        }
+
+        .last-updated {
+            display: inline-block;
+            background: #3182ce;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            font-weight: 500;
+        }
+
+        .card-wrapper {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .card-wrapper:nth-child(2) { animation-delay: 0.1s; }
+        .card-wrapper:nth-child(3) { animation-delay: 0.2s; }
+        .card-wrapper:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .card:hover .card-header::before {
+            transform: translateX(100%);
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #9f7aea, #805ad5);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #48bb78, #38a169);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #ed8936, #dd6b20);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+
+        .expand-icon {
+            color: white;
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-body {
+            max-height: 3000px;
+        }
+
+        .card-content {
+            padding: 2rem;
+        }
+
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .severity-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, #fc8181, #f56565);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, #f6ad55, #ed8936);
+            color: white;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, #68d391, #48bb78);
+            color: white;
+        }
+
+        .badge-icon {
+            font-size: 0.9rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection {
+            margin-bottom: 1.5rem;
+        }
+
+        .subsection-title {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 0.75rem;
+            font-size: 1.05rem;
+        }
+
+        .criteria-list {
+            background: #f7fafc;
+            border-left: 4px solid #3182ce;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 0.75rem 0;
+        }
+
+        .criteria-list li {
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .criteria-list li::before {
+            content: '•';
+            color: #3182ce;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .medication-card {
+            background: linear-gradient(135deg, #ebf8ff, #e6fffa);
+            border: 1px solid #bee3f8;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .medication-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.2);
+        }
+
+        .medication-name {
+            font-weight: 600;
+            color: #2c5282;
+            font-size: 1.05rem;
+        }
+
+        .medication-dose {
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin: 0.25rem 0;
+        }
+
+        .indication {
+            background: #fff5f5;
+            border-left: 4px solid #e53e3e;
+            padding: 0.75rem;
+            border-radius: 5px;
+            margin: 0.5rem 0;
+        }
+
+        .progress-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .progress-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-item::before {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            top: -50%;
+            width: 2px;
+            height: 100%;
+            background: #e2e8f0;
+            z-index: -1;
+        }
+
+        .progress-item:first-child::before {
+            display: none;
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateX(-5px);
+        }
+
+        .progress-item.completed {
+            background: #f0fff4;
+            border: 1px solid #9ae6b4;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: #48bb78;
+            color: white;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e2e8f0;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: #f7fafc;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-item:hover {
+            background: #edf2f7;
+            transform: translateY(-2px);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+            cursor: pointer;
+        }
+
+        .info-box {
+            background: linear-gradient(135deg, #ebf4ff, #e6fffa);
+            border: 1px solid #3182ce;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-box::before {
+            content: 'i';
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 20px;
+            height: 20px;
+            background: #3182ce;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .risk-calculator {
+            background: linear-gradient(135deg, #fff5f5, #fed7d7);
+            border: 1px solid #feb2b2;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .risk-result {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .risk-high {
+            background: linear-gradient(135deg, #fc8181, #f56565);
+            color: white;
+        }
+
+        .risk-moderate {
+            background: linear-gradient(135deg, #f6ad55, #ed8936);
+            color: white;
+        }
+
+        .risk-low {
+            background: linear-gradient(135deg, #68d391, #48bb78);
+            color: white;
+        }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .flow-item {
+            background: #f7fafc;
+            border-left: 4px solid #3182ce;
+            padding: 1rem;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .flow-item::after {
+            content: '↓';
+            position: absolute;
+            bottom: -1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            color: #a0aec0;
+        }
+
+        .flow-item:last-child::after {
+            display: none;
+        }
+
+        .flow-decision {
+            background: linear-gradient(135deg, #fef5e7, #fed7aa);
+            border-left: 4px solid #ed8936;
+        }
+
+        .flow-action {
+            background: linear-gradient(135deg, #f0fff4, #c6f6d5);
+            border-left: 4px solid #48bb78;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .main-content {
+                margin-right: 0;
+                padding: 1rem;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 1rem;
+            }
+            
+            .progress-title {
+                margin-bottom: 1rem;
+            }
+            
+            .progress-item::before {
+                display: none;
+            }
+        }
+
+        .print-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            border: none;
+            padding: 1rem 1.5rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            z-index: 1001;
+        }
+
+        .print-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(66, 153, 225, 0.6);
+        }
+
+        .toggle-all {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .toggle-all button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-all button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .collapsible-content.expanded {
+            max-height: 1000px;
+        }
+
+        .collapsible-trigger {
+            cursor: pointer;
+            color: #3182ce;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.75rem 0;
+            transition: color 0.3s ease;
+        }
+
+        .collapsible-trigger:hover {
+            color: #2c5282;
+        }
+
+        .collapsible-trigger::after {
+            content: '▶';
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .collapsible-trigger.active::after {
+            transform: rotate(90deg);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-heartbeat"></i> Hypertrophic Cardiomyopathy</h1>
+                <p class="subtitle">Interactive Management Algorithm | BMJ Best Practice Guidelines</p>
+                <span class="last-updated">Last Updated: May 2025</span>
+            </div>
+
+            <div class="toggle-all">
+                <button onclick="toggleAllCards()">
+                    <i class="fas fa-expand-arrows-alt"></i> Expand/Collapse All
+                </button>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card-wrapper">
+                <div class="card" id="assessment-card">
+                    <div class="card-header assessment" onclick="toggleCard('assessment')">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            Assessment & History
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-users"></i> Family History Screening
+                                </h3>
+                                <div class="checkbox-grid">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="fh-sudden-death">
+                                        <label for="fh-sudden-death">
+                                            <strong>Sudden cardiac death</strong> in first-degree relative &lt;40 years
+                                            <span class="severity-badge badge-urgent">
+                                                <i class="fas fa-exclamation-triangle badge-icon"></i>High Risk
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="fh-hcm">
+                                        <label for="fh-hcm">
+                                            <strong>Known HCM</strong> in first-degree relatives
+                                            <span class="severity-badge badge-caution">
+                                                <i class="fas fa-shield-alt badge-icon"></i>Screen Required
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="fh-implant">
+                                        <label for="fh-implant">
+                                            Family history of <strong>pacemaker/ICD</strong> implantation
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-clipboard-list"></i> Key Symptoms
+                                </h3>
+                                <div class="checkbox-grid">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="sym-syncope">
+                                        <label for="sym-syncope">
+                                            <strong>Syncope</strong> with exertion or without prodrome
+                                            <span class="severity-badge badge-urgent">
+                                                <i class="fas fa-ambulance badge-icon"></i>Urgent
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="sym-dyspnea">
+                                        <label for="sym-dyspnea">
+                                            <strong>Dyspnea on exertion</strong> (NYHA class III/IV)
+                                            <span class="severity-badge badge-caution">
+                                                <i class="fas fa-lungs badge-icon"></i>Moderate Risk
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="sym-chest-pain">
+                                        <label for="sym-chest-pain">
+                                            <strong>Chest pain</strong> with exertion
+                                            <span class="severity-badge badge-caution">
+                                                <i class="fas fa-heartbeat badge-icon"></i>Evaluate
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="sym-palpitations">
+                                        <label for="sym-palpitations">
+                                            <strong>Palpitations</strong> (possible arrhythmia)
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="sym-asymptomatic">
+                                        <label for="sym-asymptomatic">
+                                            <strong>Asymptomatic</strong> (incidental finding)
+                                            <span class="severity-badge badge-stable">
+                                                <i class="fas fa-check-circle badge-icon"></i>Low Risk
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-user-md"></i> Physical Examination Findings
+                                </h3>
+                                <div class="subsection">
+                                    <div class="collapsible-trigger" onclick="toggleCollapsible('pe-findings')">
+                                        <i class="fas fa-plus"></i> Click to view key examination findings
+                                    </div>
+                                    <div class="collapsible-content" id="pe-findings">
+                                        <ul class="criteria-list">
+                                            <li><strong>Systolic ejection murmur</strong> at left sternal border
+                                                <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                                                    <li>Accentuated by: <em>standing, Valsalva, exercise</em></li>
+                                                    <li>Decreased by: <em>squatting, handgrip</em></li>
+                                                </ul>
+                                            </li>
+                                            <li><strong>LV lift/heave</strong> at apex</li>
+                                            <li><strong>Double apical impulse</strong> (systolic anterior motion)</li>
+                                            <li><strong>S4 gallop</strong> (stiff ventricle)</li>
+                                            <li><strong>Irregularly irregular pulse</strong> (atrial fibrillation)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-exclamation-circle"></i> Red Flag Features
+                                </h3>
+                                <div class="severity-badge badge-urgent">
+                                    <i class="fas fa-exclamation-circle badge-icon"></i>
+                                    Syncope with exertion → Urgent cardiology referral
+                                </div>
+                                <div class="severity-badge badge-urgent" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-heartbeat badge-icon"></i>
+                                    Family history of sudden death → Immediate screening
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card-wrapper">
+                <div class="card" id="diagnosis-card">
+                    <div class="card-header diagnosis" onclick="toggleCard('diagnosis')">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-microscope"></i>
+                            </div>
+                            Diagnosis & Investigations
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-heart"></i> Initial Diagnostic Tests
+                                </h3>
+                                <div class="flowchart">
+                                    <div class="flow-item">
+                                        <strong>12-lead ECG:</strong> Required for all patients
+                                        <div style="margin-top: 0.5rem;">
+                                            <span class="severity-badge badge-stable">Normal in 5-10%</span>
+                                            <span class="severity-badge badge-caution">Abnormal in 90-95%</span>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <strong>Transthoracic Echo:</strong> Diagnostic imaging modality
+                                    </div>
+                                    <div class="flow-action">
+                                        <strong>Diagnostic Criteria:</strong> LV wall thickness ≥15mm
+                                        <ul class="criteria-list" style="margin-top: 0.5rem;">
+                                            <li>Borderline: 13-14mm + family history/genetic mutation</li>
+                                            <li>Asymmetric septal hypertrophy typical</li>
+                                            <li>Assess: LVOTO, systolic/diastolic function, SAM</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-flask"></i> Laboratory Tests
+                                </h3>
+                                <div class="info-box">
+                                    <strong>European Guidelines Recommend:</strong> CK, LFTs, renal function, NT-proBNP, troponin, urinalysis
+                                </div>
+                                <p><em>US guidelines do not require routine labs for initial evaluation</em></p>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-dna"></i> Genetic Testing
+                                </h3>
+                                <div class="subsection">
+                                    <div class="severity-badge badge-caution">
+                                        <i class="fas fa-dna badge-icon"></i>
+                                        60% sensitivity for common sarcomeric mutations
+                                    </div>
+                                    <div class="severity-badge badge-stable">
+                                        <i class="fas fa-users badge-icon"></i>
+                                        Cascade screening recommended for families
+                                    </div>
+                                </div>
+                                <div class="collapsible-trigger" onclick="toggleCollapsible('genetic-info')">
+                                    <i class="fas fa-plus"></i> When to consider genetic testing
+                                </div>
+                                <div class="collapsible-content" id="genetic-info">
+                                    <ul class="criteria-list">
+                                        <li>Confirm diagnosis when unclear</li>
+                                        <li>Screen first-degree relatives</li>
+                                        <li>Reproductive counseling</li>
+                                        <li>Identify genotype-positive/phenotype-negative individuals</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-calculator"></i> Sudden Cardiac Death Risk Stratification
+                                </h3>
+                                <div class="risk-calculator">
+                                    <h4>Major Risk Factors:</h4>
+                                    <div class="checkbox-grid">
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="risk-hypertrophy">
+                                            <label for="risk-hypertrophy">
+                                                Max LV wall thickness ≥30mm
+                                                <span class="severity-badge badge-urgent">Major</span>
+                                            </label>
+                                        </div>
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="risk-nsvt">
+                                            <label for="risk-nsvt">
+                                                NSVT on Holter monitoring
+                                                <span class="severity-badge badge-urgent">Major</span>
+                                            </label>
+                                        </div>
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="risk-syncope">
+                                            <label for="risk-syncope">
+                                                Unexplained syncope (suspected arrhythmic)
+                                                <span class="severity-badge badge-urgent">Major</span>
+                                            </label>
+                                        </div>
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="risk-abnormal-bp">
+                                            <label for="risk-abnormal-bp">
+                                                Abnormal BP response to exercise (&lt;20mmHg rise)
+                                                <span class="severity-badge badge-urgent">Major</span>
+                                            </label>
+                                        </div>
+                                        <div class="checkbox-item">
+                                            <input type="checkbox" id="risk-family-death">
+                                            <label for="risk-family-death">
+                                                Family history of SCD in HCM (&lt;50 years)
+                                                <span class="severity-badge badge-urgent">Major</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="risk-result" id="risk-result">
+                                        Check risk factors to calculate
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card-wrapper">
+                <div class="card" id="treatment-card">
+                    <div class="card-header treatment" onclick="toggleCard('treatment')">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-pills"></i>
+                            </div>
+                            Treatment & Management
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-user-check"></i> Asymptomatic Patients
+                                </h3>
+                                <div class="severity-badge badge-stable">
+                                    <i class="fas fa-eye badge-icon"></i>
+                                    Observation & Monitoring
+                                </div>
+                                <ul class="criteria-list">
+                                    <li>Clinical assessment every 1-2 years (children/adolescents)</li>
+                                    <li>Every 3-5 years in adults</li>
+                                    <li>Annual follow-up if high-risk features</li>
+                                    <li>Genotype-positive/phenotype-negative: competitive sports reasonable</li>
+                                </ul>
+                                <div class="info-box">
+                                    <strong>No therapy required</strong> unless high-risk features develop
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-heartbeat"></i> Symptomatic LVOTO (EF ≥50%)
+                                </h3>
+                                <div class="flowchart">
+                                    <div class="flow-action">
+                                        <strong>First-Line:</strong> Negative inotropic therapy
+                                    </div>
+                                </div>
+
+                                <div class="subsection">
+                                    <h4 class="subsection-title">Beta-Blockers (First-Line)</h4>
+                                    <div class="medication-card">
+                                        <div class="medication-name">Atenolol</div>
+                                        <div class="medication-dose">50-100 mg orally once daily</div>
+                                    </div>
+                                    <div class="medication-card">
+                                        <div class="medication-name">Metoprolol</div>
+                                        <div class="medication-dose">100-450 mg/day in 2-3 divided doses</div>
+                                    </div>
+                                    <div class="medication-card">
+                                        <div class="medication-name">Propranolol (SR)</div>
+                                        <div class="medication-dose">80-160 mg orally once daily</div>
+                                    </div>
+                                </div>
+
+                                <div class="subsection">
+                                    <h4 class="subsection-title">Non-DHP Calcium Channel Blockers (Alternative)</h4>
+                                    <div class="medication-card">
+                                        <div class="medication-name">Verapamil</div>
+                                        <div class="medication-dose">Consult specialist for dosing</div>
+                                        <div style="font-size: 0.85rem; color: #e53e3e;">
+                                            ⚠️ Avoid in severe LVOTO (>100mmHg) or hypotension
+                                        </div>
+                                    </div>
+                                    <div class="medication-card">
+                                        <div class="medication-name">Diltiazem</div>
+                                        <div class="medication-dose">Consult specialist for dosing</div>
+                                    </div>
+                                </div>
+
+                                <div class="collapsible-trigger" onclick="toggleCollapsible('advanced-treatment')">
+                                    <i class="fas fa-plus"></i> Advanced therapy for persistent symptoms
+                                </div>
+                                <div class="collapsible-content" id="advanced-treatment">
+                                    <div class="medication-card">
+                                        <div class="medication-name">Mavacamten (Cardiac Myosin Inhibitor)</div>
+                                        <div class="medication-dose">2.5-15 mg orally once daily</div>
+                                        <div class="severity-badge badge-caution">
+                                            EF must be ≥55% to initiate
+                                        </div>
+                                        <ul class="criteria-list" style="margin-top: 0.5rem;">
+                                            <li>Add-on to beta-blocker/CCB</li>
+                                            <li>Monitor with serial echocardiograms</li>
+                                            <li>Interrupt if EF drops &lt;50%</li>
+                                        </ul>
+                                    </div>
+                                    <div class="medication-card">
+                                        <div class="medication-name">Disopyramide (Type Ia Antiarrhythmic)</div>
+                                        <div class="medication-dose">200-250 mg twice daily (controlled-release)</div>
+                                        <div style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                            Use with AV nodal blocking agent (beta-blocker/CCB)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-cut"></i> Septal Reduction Therapy
+                                </h3>
+                                <div class="severity-badge badge-urgent">
+                                    <i class="fas fa-exclamation-triangle badge-icon"></i>
+                                    Indicated for refractory severe symptoms
+                                </div>
+                                <div class="flowchart">
+                                    <div class="flow-item">
+                                        <strong>Criteria:</strong> NYHA III/IV symptoms + LVOT gradient ≥50mmHg
+                                    </div>
+                                    <div class="flow-decision">
+                                        <strong>Decision Point:</strong> Surgical myectomy vs. Alcohol septal ablation
+                                    </div>
+                                </div>
+                                <div class="subsection">
+                                    <h4 class="subsection-title">Surgical Myectomy</h4>
+                                    <ul class="criteria-list">
+                                        <li>Gold standard treatment</li>
+                                        <li>Abolishes gradient in >90% cases</li>
+                                        <li>Long-term symptomatic benefit in >80%</li>
+                                        <li>Consider if: younger age (&lt;50), need for concomitant surgery</li>
+                                    </ul>
+                                    <div class="severity-badge badge-caution">
+                                        Complications: Complete heart block (3-10%), LBBB (40-56%)
+                                    </div>
+                                </div>
+                                <div class="subsection">
+                                    <h4 class="subsection-title">Alcohol Septal Ablation (ASA)</h4>
+                                    <ul class="criteria-list">
+                                        <li>Alternative to surgery in selected patients</li>
+                                        <li>Similar symptom improvement</li>
+                                        <li>Gradual remodelling over months</li>
+                                    </ul>
+                                    <div class="severity-badge badge-caution">
+                                        Complications: Need for permanent pacemaker (>10%)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-shield-alt"></i> ICD Indications
+                                </h3>
+                                <div class="severity-badge badge-urgent">
+                                    <i class="fas fa-heartbeat badge-icon"></i>
+                                    Secondary Prevention (Class I)
+                                </div>
+                                <ul class="criteria-list">
+                                    <li>Survived cardiac arrest</li>
+                                    <li>Sustained VT causing syncope/hemodynamic compromise</li>
+                                </ul>
+                                
+                                <div class="severity-badge badge-caution">
+                                    <i class="fas fa-shield-alt badge-icon"></i>
+                                    Primary Prevention (Consider if ≥1 major risk factor)
+                                </div>
+                                <ul class="criteria-list">
+                                    <li>Max LV wall thickness ≥30mm</li>
+                                    <li>Unexplained syncope (suspected arrhythmic)</li>
+                                    <li>NSVT + other risk factors</li>
+                                    <li>LV apical aneurysm</li>
+                                    <li>Extensive late gadolinium enhancement (&gt;15%)</li>
+                                    <li>LVEF &lt;50%</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card-wrapper">
+                <div class="card" id="followup-card">
+                    <div class="card-header followup" onclick="toggleCard('followup')">
+                        <div class="card-title">
+                            <div class="card-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            Follow-up & Monitoring
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-clock"></i> Monitoring Intervals
+                                </h3>
+                                <div class="flowchart">
+                                    <div class="flow-item">
+                                        <strong>At Diagnosis:</strong> Comprehensive assessment
+                                    </div>
+                                    <div class="flow-item">
+                                        <strong>Low Risk:</strong> Every 1-2 years (clinical, ECG, echo)
+                                    </div>
+                                    <div class="flow-item">
+                                        <strong>High Risk:</strong> Every 6-12 months
+                                    </div>
+                                    <div class="flow-action">
+                                        <strong>Change in Status:</strong> Re-evaluate promptly
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-exclamation-triangle"></i> Complications to Monitor
+                                </h3>
+                                <div class="checkbox-grid">
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="comp-af">
+                                        <label for="comp-af">
+                                            <strong>Atrial Fibrillation</strong> (17-39% prevalence)
+                                            <span class="severity-badge badge-urgent">
+                                                <i class="fas fa-tint badge-icon"></i>Anticoagulation Required
+                                            </span>
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="comp-stroke">
+                                        <label for="comp-stroke">
+                                            <strong>Stroke</strong> (AF-related)
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="comp-heart-failure">
+                                        <label for="comp-heart-failure">
+                                            <strong>Heart Failure</strong> (2-15% develop end-stage)
+                                        </label>
+                                    </div>
+                                    <div class="checkbox-item">
+                                        <input type="checkbox" id="comp-ie">
+                                        <label for="comp-ie">
+                                            <strong>Infective Endocarditis</strong> (mitral valve)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-running"></i> Exercise & Lifestyle
+                                </h3>
+                                <div class="severity-badge badge-stable">
+                                    <i class="fas fa-check-circle badge-icon"></i>
+                                    Encourage moderate exercise (150 min/week)
+                                </div>
+                                <div class="severity-badge badge-caution" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-exclamation-triangle badge-icon"></i>
+                                    Avoid high-intensity competitive sports (unless specialist clearance)
+                                </div>
+                                <div class="info-box">
+                                    <strong>Recent Evidence:</strong> Vigorous exercise in experienced centers does not increase mortality for selected patients
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-user-friends"></i> Family Screening
+                                </h3>
+                                <div class="flowchart">
+                                    <div class="flow-action">
+                                        <strong>First-degree relatives:</strong> ECG + Echo at diagnosis
+                                    </div>
+                                    <div class="flow-item">
+                                        <strong>Children/Adolescents:</strong> Repeat every 12-24 months
+                                    </div>
+                                    <div class="flow-item">
+                                        <strong>Adults:</strong> Repeat every 3-5 years (lifelong)
+                                    </div>
+                                    <div class="flow-item">
+                                        <strong>Genetic testing:</strong> Cascade screening if mutation identified
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3 class="section-title">
+                                    <i class="fas fa-chart-line"></i> Prognosis
+                                </h3>
+                                <div class="subsection">
+                                    <div class="severity-badge badge-stable">
+                                        <i class="fas fa-thumbs-up badge-icon"></i>
+                                        Benign prognosis in majority
+                                    </div>
+                                    <ul class="criteria-list">
+                                        <li>90% asymptomatic at presentation</li>
+                                        <li>Annual mortality: 0.9% (asymptomatic) vs 1.9% (symptomatic)</li>
+                                        <li>Annual SCD: 0.1% (asymptomatic) vs 1.4% (symptomatic)</li>
+                                    </ul>
+                                </div>
+                                <div class="subsection">
+                                    <div class="severity-badge badge-urgent">
+                                        <i class="fas fa-exclamation-circle badge-icon"></i>
+                                        End-stage HCM: Poor prognosis
+                                    </div>
+                                    <ul class="criteria-list">
+                                        <li>Develops in 2-15% of patients</li>
+                                        <li>Mean time to transplant/death: 2.7 years</li>
+                                        <li>LVEF &lt;50% indicates high risk</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Sidebar -->
+        <div class="progress-sidebar">
+            <div class="progress-title">
+                <i class="fas fa-compass"></i>
+                Algorithm Progress
+            </div>
+            <div class="progress-item active" onclick="scrollToCard('assessment')" data-card="assessment">
+                <div class="progress-icon">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <div class="progress-text">
+                    Assessment & History
+                </div>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('diagnosis')" data-card="diagnosis">
+                <div class="progress-icon">
+                    <i class="fas fa-microscope"></i>
+                </div>
+                <div class="progress-text">
+                    Diagnosis & Investigations
+                </div>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('treatment')" data-card="treatment">
+                <div class="progress-icon">
+                    <i class="fas fa-pills"></i>
+                </div>
+                <div class="progress-text">
+                    Treatment & Management
+                </div>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('followup')" data-card="followup">
+                <div class="progress-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="progress-text">
+                    Follow-up & Monitoring
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
+                <div class="section-title">
+                    <i class="fas fa-info-circle"></i> Quick Reference
+                </div>
+                <div style="font-size: 0.85rem; line-height: 1.5;">
+                    <div style="margin-bottom: 1rem;">
+                        <strong>SCD Risk Factors:</strong>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="severity-badge badge-urgent" style="font-size: 0.7rem;">Major: ≥30mm</span>
+                            <span class="severity-badge badge-urgent" style="font-size: 0.7rem;">NSVT</span>
+                            <span class="severity-badge badge-urgent" style="font-size: 0.7rem;">Syncope</span>
+                        </div>
+                    </div>
+                    <div>
+                        <strong>LVOTO Treatment:</strong>
+                        <div style="margin-top: 0.5rem;">
+                            <span class="severity-badge badge-stable" style="font-size: 0.7rem;">Beta-blocker</span>
+                            <span class="severity-badge badge-stable" style="font-size: 0.7rem;">Verapamil</span>
+                            <span class="severity-badge badge-caution" style="font-size: 0.7rem;">Mavacamten</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-button" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Algorithm
+    </button>
+
+    <script>
+        // Card expansion functionality
+        function toggleCard(cardId) {
+            const card = document.getElementById(`${cardId}-card`);
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                updateProgress(cardId);
+            }
+            
+            // Smooth scroll to card
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Expand/collapse all cards
+        function toggleAllCards() {
+            const allCards = document.querySelectorAll('.card');
+            const allExpanded = Array.from(allCards).every(card => card.classList.contains('expanded'));
+            
+            if (allExpanded) {
+                allCards.forEach(card => card.classList.remove('expanded'));
+            } else {
+                allCards.forEach(card => card.classList.add('expanded'));
+            }
+        }
+
+        // Scroll to specific card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(`${cardId}-card`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                toggleCard(cardId);
+            }
+        }
+
+        // Update progress sidebar
+        function updateProgress(activeCardId) {
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.card === activeCardId) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Mark previous items as completed
+            const items = Array.from(document.querySelectorAll('.progress-item'));
+            const activeIndex = items.findIndex(item => item.dataset.card === activeCardId);
+            
+            items.forEach((item, index) => {
+                if (index < activeIndex) {
+                    item.classList.add('completed');
+                } else if (index > activeIndex) {
+                    item.classList.remove('completed');
+                }
+            });
+        }
+
+        // Collapsible content within cards
+        function toggleCollapsible(id) {
+            const content = document.getElementById(id);
+            const trigger = event.currentTarget;
+            
+            content.classList.toggle('expanded');
+            trigger.classList.toggle('active');
+        }
+
+        // Risk calculator functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const riskCheckboxes = document.querySelectorAll('.risk-calculator input[type="checkbox"]');
+            const riskResult = document.getElementById('risk-result');
+            
+            function updateRisk() {
+                const checkedCount = Array.from(riskCheckboxes).filter(cb => cb.checked).length;
+                
+                if (checkedCount >= 2) {
+                    riskResult.textContent = 'High Risk (≥6% 5-year SCD risk) → Strongly consider ICD';
+                    riskResult.className = 'risk-result risk-high';
+                } else if (checkedCount === 1) {
+                    riskResult.textContent = 'Moderate Risk (4-6%) → Individualized ICD decision';
+                    riskResult.className = 'risk-result risk-moderate';
+                } else {
+                    riskResult.textContent = 'Low Risk (<4%) → ICD generally not recommended';
+                    riskResult.className = 'risk-result risk-low';
+                }
+            }
+            
+            riskCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateRisk);
+            });
+        });
+
+        // Auto-expand card when scrolling to it
+        const observerOptions = {
+            threshold: 0.3,
+            rootMargin: '-50px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cardId = entry.target.id.replace('-card', '');
+                    updateProgress(cardId);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Print functionality
+        window.addEventListener('beforeprint', () => {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.add('expanded');
+            });
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                const activeItem = document.querySelector('.progress-item.active');
+                const nextItem = activeItem?.nextElementSibling;
+                if (nextItem && nextItem.classList.contains('progress-item')) {
+                    nextItem.click();
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                const activeItem = document.querySelector('.progress-item.active');
+                const prevItem = activeItem?.previousElementSibling;
+                if (prevItem && prevItem.classList.contains('progress-item')) {
+                    prevItem.click();
+                }
+            }
+        });
+
+        // Initialize with first card expanded
+        setTimeout(() => {
+            toggleCard('assessment');
+        }, 500);
+    </script>
+</body>
+</html>
