@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Large Bowel Obstruction - Clinical Decision Support</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .main-content {
+            flex: 1;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .progress-sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+            padding: 1.5rem;
+        }
+
+        .progress-sidebar h3 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+        }
+
+        .progress-item.completed {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .progress-text {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .section {
+            padding: 2rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .section-title {
+            flex: 1;
+        }
+
+        .section-title h2 {
+            color: #2c3e50;
+            font-size: 1.8rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .section-title p {
+            color: #7f8c8d;
+            font-size: 0.95rem;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            transition: transform 0.3s ease;
+        }
+
+        .section.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .section.expanded .section-content {
+            max-height: 3000px;
+            padding-top: 1.5rem;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .card h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-urgent {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .badge-caution {
+            background: #fff3e0;
+            color: #ef6c00;
+            border: 1px solid #ffe0b2;
+        }
+
+        .badge-stable {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .subsection {
+            margin-bottom: 1.5rem;
+        }
+
+        .subsection h4 {
+            color: #34495e;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .subsection li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .subsection li:last-child {
+            border-bottom: none;
+        }
+
+        .subsection li i {
+            color: #7f8c8d;
+            margin-top: 0.2rem;
+        }
+
+        .assessment { border-left-color: #3498db; }
+        .diagnosis { border-left-color: #9b59b6; }
+        .treatment { border-left-color: #27ae60; }
+        .followup { border-left-color: #e67e22; }
+
+        .assessment .section-icon { background: #3498db; }
+        .diagnosis .section-icon { background: #9b59b6; }
+        .treatment .section-icon { background: #27ae60; }
+        .followup .section-icon { background: #e67e22; }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+        }
+
+        .alert-box {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                position: static;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-stethoscope"></i> Large Bowel Obstruction</h1>
+                <p>Clinical Decision Support Algorithm | BMJ Best Practice Guidelines</p>
+            </div>
+
+            <div class="section assessment fade-in" id="assessment">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Assessment</h2>
+                        <p>Initial evaluation and risk stratification</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="section-content">
+                    <div class="card">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Key Diagnostic Factors <span class="badge badge-urgent">Urgent</span></h3>
+                        <div class="subsection">
+                            <ul>
+                                <li><i class="fas fa-check"></i> <strong>Intermittent abdominal pain:</strong> Cramping, often severe, assess continuously for ischaemia</li>
+                                <li><i class="fas fa-check"></i> <strong>Abdominal distention:</strong> Tympanic abdomen along large bowel distribution</li>
+                                <li><i class="fas fa-check"></i> <strong>Nausea/vomiting:</strong> Less frequent than small bowel obstruction, may be faeculent in later stages</li>
+                                <li><i class="fas fa-check"></i> <strong>Absolute constipation:</strong> Sudden failure to pass flatus or stool</li>
+                                <li><i class="fas fa-check"></i> <strong>Continuous pain:</strong> May indicate bowel ischaemia or impending perforation</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-question-circle"></i> History Taking <span class="badge badge-caution">Essential</span></h3>
+                        <div class="subsection">
+                            <h4><i class="fas fa-clock"></i> Onset & Duration</h4>
+                            <ul>
+                                <li><i class="fas fa-bolt"></i> <strong>Abrupt onset:</strong> Suggests volvulus</li>
+                                <li><i class="fas fa-chart-line"></i> <strong>Gradual onset:</strong> May indicate malignant process</li>
+                                <li><i class="fas fa-calendar-alt"></i> <strong>Duration:</strong> Document timeline of symptom progression</li>
+                            </ul>
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-history"></i> Associated Symptoms</h4>
+                            <ul>
+                                <li><i class="fas fa-fire"></i> <strong>Fever:</strong> May indicate perforation, sepsis, or inflammatory cause</li>
+                                <li><i class="fas fa-weight"></i> <strong>Weight loss:</strong> Suggests underlying malignancy</li>
+                                <li><i class="fas fa-tint"></i> <strong>Rectal bleeding:</strong> May indicate rectal malignancy</li>
+                                <li><i class="fas fa-utensils"></i> <strong>Dietary changes:</strong> Low fibre, red meat consumption</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-user-md"></i> Examination Findings</h3>
+                        <div class="two-column">
+                            <div class="subsection">
+                                <h4><i class="fas fa-search"></i> Abdominal Exam</h4>
+                                <ul>
+                                    <li><i class="fas fa-hand-paper"></i> Palpate for tender caecum (imminent perforation risk)</li>
+                                    <li><i class="fas fa-compress"></i> Assess distention and tympany</li>
+                                    <li><i class="fas fa-shield-alt"></i> Check for rigidity (peritonitis)</li>
+                                    <li><i class="fas fa-stethoscope"></i> Bowel sounds (hyperactive → absent)</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h4><i class="fas fa-user-nurse"></i> Rectal Exam</h4>
+                                <ul>
+                                    <li><i class="fas fa-circle"></i> Hard faeces: faecal impaction</li>
+                                    <li><i class="fas fa-adjust"></i> Soft stools: partial obstruction</li>
+                                    <li><i class="fas fa-times"></i> Empty rectum: proximal obstruction</li>
+                                    <li><i class="fas fa-dot-circle"></i> Palpable mass: rectal cancer</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-exclamation-circle"></i> Risk Factors <span class="badge badge-caution">Stratify</span></h3>
+                        <div class="two-column">
+                            <div>
+                                <h4><i class="fas fa-star"></i> Strong Risk Factors</h4>
+                                <ul>
+                                    <li><i class="fas fa-cancer"></i> Current/previous malignancy</li>
+                                    <li><i class="fas fa-disease"></i> Diverticular disease</li>
+                                    <li><i class="fas fa-sync-alt"></i> Colonic volvulus</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4><i class="fas fa-star-half-alt"></i> Other Factors</h4>
+                                <ul>
+                                    <li><i class="fas fa-hernia"></i> Hernia (rare)</li>
+                                    <li><i class="fas fa-female"></i> Gynaecological conditions</li>
+                                    <li><i class="fas fa-syringe"></i> Previous abdominal surgery</li>
+                                    <li><i class="fas fa-pills"></i> Laxative abuse</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert-box pulse">
+                        <i class="fas fa-exclamation-triangle"></i> <strong>RED FLAG:</strong> Palpable caecal tenderness indicates imminent perforation – requires immediate surgical evaluation
+                    </div>
+                </div>
+            </div>
+
+            <div class="section diagnosis fade-in" id="diagnosis">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Diagnosis</h2>
+                        <p>Investigations and differential diagnosis</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="section-content">
+                    <div class="card">
+                        <h3><i class="fas fa-radiation"></i> Imaging <span class="badge badge-urgent">CT Required</span></h3>
+                        <div class="alert-box">
+                            <i class="fas fa-clock"></i> <strong>Urgent CT abdomen & pelvis:</strong> Should be performed as soon as possible (ideally < 24 hours) to differentiate mechanical obstruction from pseudo-obstruction
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-check-double"></i> CT Findings to Identify</h4>
+                            <ul>
+                                <li><i class="fas fa-location-arrow"></i> Level and cause of obstruction</li>
+                                <li><i class="fas fa-exclamation-circle"></i> Evidence of perforation/dilatation</li>
+                                <li><i class="fas fa-heartbeat"></i> Bowel ischaemia signs</li>
+                                <li><i class="fas fa-circle-notch"></i> Closed-loop obstruction (surgical emergency)</li>
+                                <li><i class="fas fa-valve"></i> Ileocaecal valve competency</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-flask"></i> Laboratory Investigations</h3>
+                        <div class="two-column">
+                            <div class="subsection">
+                                <h4><i class="fas fa-tint"></i> Blood Tests</h4>
+                                <ul>
+                                    <li><i class="fas fa-plus"></i> <strong>FBC:</strong> WBC >10,000 suggests perforation/necrosis</li>
+                                    <li><i class="fas fa-bolt"></i> <strong>Electrolytes:</strong> Low potassium common</li>
+                                    <li><i class="fas fa-fire-alt"></i> <strong>CRP:</strong> >75 mg/L indicates inflammation</li>
+                                    <li><i class="fas fa-chart-line"></i> <strong>Urea/Creatinine:</strong> Elevated suggests dehydration</li>
+                                    <li><i class="fas fa-tint"></i> <strong>Group & Save:</strong> If surgery anticipated</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h4><i class="fas fa-search-plus"></i> Special Tests</h4>
+                                <ul>
+                                    <li><i class="fas fa-lungs"></i> <strong>ABG:</strong> Elevated lactate indicates poor perfusion</li>
+                                    <li><i class="fas fa-sugar"></i> <strong>Glucose:</strong> Rule out DKA (can cause abdominal pain)</li>
+                                    <li><i class="fas fa-female"></i> <strong>β-hCG:</strong> In women of childbearing age</li>
+                                    <li><i class="fas fa-heart"></i> <strong>ECG:</strong> If >50 years or cardiac history</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-question-circle"></i> Differential Diagnoses</h3>
+                        <div class="subsection">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #f8f9fa;">
+                                        <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Condition</th>
+                                        <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #dee2e6;">Differentiating Features</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;"><strong>Acute Colonic Pseudo-obstruction</strong></td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">Impressive distension with minimal tenderness, associated with severe illness/post-op</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;"><strong>Chronic Megacolon</strong></td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">Long-standing constipation history, slow colonic transit</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;"><strong>Toxic Megacolon</strong></td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #dee2e6;">Initial colitis, systemic sepsis signs</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i> <strong>Key Point:</strong> CT is superior to plain radiography and can differentiate mechanical from functional obstruction while identifying complications
+                    </div>
+                </div>
+            </div>
+
+            <div class="section treatment fade-in" id="treatment">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon">
+                        <i class="fas fa-procedures"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Treatment</h2>
+                        <p>Management strategies by cause</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="section-content">
+                    <div class="card">
+                        <h3><i class="fas fa-ambulance"></i> Initial Supportive Care <span class="badge badge-urgent">Immediate</span></h3>
+                        <div class="two-column">
+                            <div class="subsection">
+                                <h4><i class="fas fa-heartbeat"></i> Resuscitation</h4>
+                                <ul>
+                                    <li><i class="fas fa-air-freshener"></i> <strong>Airway:</strong> Ensure patent airway</li>
+                                    <li><i class="fas fa-lungs"></i> <strong>Breathing:</strong> Give oxygen if needed</li>
+                                    <li><i class="fas fa-tint"></i> <strong>Circulation:</strong> IV fluids for shock/dehydration</li>
+                                    <li><i class="fas fa-shield-alt"></i> <strong>Disability:</strong> Assess consciousness</li>
+                                    <li><i class="fas fa-expand"></i> <strong>Exposure:</i> Full examination</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h4><i class="fas fa-syringe"></i> Interventions</h4>
+                                <ul>
+                                    <li><i class="fas fa-rss"></i> <strong>NG Tube:</strong> Decompress distended small bowel</li>
+                                    <li><i class="fas fa-thermometer-half"></i> <strong>Catheter:</strong> Monitor urine output</li>
+                                    <li><i class="fas fa-pills"></i> <strong>Analgesia:</strong> Morphine sulfate 5-10mg Q4H</li>
+                                    <li><i class="fas fa-apple-alt"></i> <strong>Nil by Mouth:</strong> Rest the bowel</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-cancer"></i> Malignant Obstruction</h3>
+                        <div class="warning-box">
+                            <i class="fas fa-route"></i> <strong>Two main options:</strong> Emergency surgery OR stenting (bridge to surgery or palliative)
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-expand-arrows-alt"></i> Stenting Criteria <span class="badge badge-caution">Selective</span></h4>
+                            <ul>
+                                <li><i class="fas fa-check"></i> No signs of sepsis/ischaemia</li>
+                                <li><i class="fas fa-check"></i> No perforation/peritonitis</li>
+                                <li><i class="fas fa-check"></i> No closed-loop obstruction</li>
+                                <li><i class="fas fa-check"></i> Caecum < 9cm diameter</li>
+                                <li><i class="fas fa-check"></i> Left-sided lesions (better outcomes)</li>
+                            </ul>
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-cut"></i> Surgical Options <span class="badge badge-urgent">Emergency</span></h4>
+                            <ul>
+                                <li><i class="fas fa-arrow-right"></i> <strong>Right Hemicolectomy:</strong> For caecal/ascending lesions</li>
+                                <li><i class="fas fa-minus"></i> <strong>Hartmann's Procedure:</strong> Sigmoid resection + colostomy</li>
+                                <li><i class="fas fa-arrows-alt-h"></i> <strong>Subtotal Colectomy:</strong> If caecum torn/unviable</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-sync-alt"></i> Colonic Volvulus</h3>
+                        <div class="two-column">
+                            <div class="subsection">
+                                <h4><i class="fas fa-camera"></i> Endoscopic Decompression <span class="badge badge-stable">First-line</span></h4>
+                                <ul>
+                                    <li><i class="fas fa-sigmoidoscope"></i> Flexible sigmoidoscopy to untwist</li>
+                                    <li><i class="fas fa-redo"></i> 43-84% recurrence rate</li>
+                                    <li><i class="fas fa-calendar"></i> Elective resection after successful decompression</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h4><i class="fas fa-exclamation-triangle"></i> Emergency Surgery <span class="badge badge-urgent">If:</span></h4>
+                                <ul>
+                                    <li><i class="fas fa-bacteria"></i> Perforation/peritonitis</li>
+                                    <li><i class="fas fa-heartbeat"></i> Ischaemia suspected</li>
+                                    <li><i class="fas fa-times"></i> Endoscopic decompression fails</li>
+                                    <li><i class="fas fa-shield-alt"></i> Signs of sepsis</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-band-aid"></i> Benign Strictures & Diverticular Disease</h3>
+                        <div class="subsection">
+                            <h4><i class="fas fa-pills"></i> Diverticular Disease - Medical Management</h4>
+                            <ul>
+                                <li><i class="fas fa-hospital"></i> Admit for IV antibiotics & fluids</li>
+                                <li><i class="fas fa-pills"></i> Oral antibiotics if mild disease (ambulatory care)</li>
+                                <li><i class="fas fa-toilet-paper"></i> Stool softeners</li>
+                            </ul>
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-exclamation-circle"></i> Surgical Indications</h4>
+                            <ul>
+                                <li><i class="fas fa-tint"></i> Bleeding, abscess, perforation</li>
+                                <li><i class="fas fa-arrows-alt"></i> Obstruction not resolving</li>
+                                <li><i class="fas fa-project-diagram"></i> Fistula formation</li>
+                                <li><i class="fas fa-times"></i> Failure of conservative management</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-hands-helping"></i> Palliative Care Setting</h3>
+                        <div class="info-box">
+                            <i class="fas fa-heart"></i> <strong>Focus:</strong> Symptom control and quality of life
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-times-circle"></i> When Surgery NOT Indicated</h4>
+                            <ul>
+                                <li><i class="fas fa-globe"></i> Diffuse intra-abdominal cancer</li>
+                                <li><i class="fas fa-hand-paper"></i> Multiple palpable masses</li>
+                                <li><i class="fas fa-water"></i> Massive ascites</li>
+                                <li><i class="fas fa-running"></i> Poor performance status</li>
+                                <li><i class="fas fa-radiation"></i> Previous abdominal radiotherapy</li>
+                            </ul>
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-compress"></i> Conservative Management</h4>
+                            <ul>
+                                <li><i class="fas fa-ban"></i> Nil by mouth</li>
+                                <li><i class="fas fa-tint"></i> IV/SC hydration</li>
+                                <li><i class="fas fa-tube"></i> NG tube for vomiting</li>
+                                <li><i class="fas fa-pills"></i> Laxatives (avoid stimulants if colic)</li>
+                                <li><i class="fas fa-spray-can"></i> Fentanyl patch for pain (less constipating)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section followup fade-in" id="followup">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Follow-up</h2>
+                        <p>Monitoring, complications & prognosis</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="section-content">
+                    <div class="card">
+                        <h3><i class="fas fa-search"></i> Monitoring</h3>
+                        <div class="subsection">
+                            <h4><i class="fas fa-cancer"></i> Malignant Obstruction</h4>
+                            <ul>
+                                <li><i class="fas fa-calendar"></i> Clinical & CT surveillance for 5 years</li>
+                                <li><i class="fas fa-camera"></i> Colonoscopy to exclude synchronous/metachronous lesions</li>
+                                <li><i class="fas fa-user-md"></i> Regular follow-up with colorectal team</li>
+                            </ul>
+                        </div>
+                        <div class="subsection">
+                            <h4><i class="fas fa-sync-alt"></i> Volvulus/Strictures</h4>
+                            <ul>
+                                <li><i class="fas fa-check"></i> No formal monitoring if colon confirmed clear</li>
+                                <li><i class="fas fa-redo"></i> Educate on recurrence symptoms</li>
+                                <li><i class="fas fa-diet"></i> High-fibre diet for sigmoid volvulus prevention</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Complications <span class="badge badge-urgent">High Risk</span></h3>
+                        <div class="subsection">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #ffebee;">
+                                        <th style="padding: 0.75rem; text-align: left;">Complication</th>
+                                        <th style="padding: 0.75rem; text-align: left;">Timeframe</th>
+                                        <th style="padding: 0.75rem; text-align: left;">Likelihood</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #ffcdd2;"><strong>Bowel Perforation</strong></td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #ffcdd2;">Short-term</td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #ffcdd2;"><span class="badge badge-urgent">High</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" style="padding: 0.75rem; background: #ffebee; font-size: 0.9rem;">
+                                            Most common in caecum (thinnest wall). Tenderness over caecum = imminent perforation.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #ffcdd2;"><strong>Sepsis</strong></td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #ffcdd2;">Short-term</td>
+                                        <td style="padding: 0.75rem; border-bottom: 1px solid #ffcdd2;"><span class="badge badge-urgent">High</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="3" style="padding: 0.75rem; background: #ffebee; font-size: 0.9rem;">
+                                            Due to bacterial translocation. Follows perforation without surgical intervention.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3><i class="fas fa-chart-bar"></i> Prognosis</h3>
+                        <div class="two-column">
+                            <div class="subsection">
+                                <h4><i class="fas fa-sync-alt"></i> Colonic Volvulus</h4>
+                                <ul>
+                                    <li><i class="fas fa-percentage"></i> Mortality: 6-9% post-operative</li>
+                                    <li><i class="fas fa-redo"></i> Recurrence: 43-84% without surgery</li>
+                                    <li><i class="fas fa-procedures"></i> Hartmann's procedure mortality: up to 57%</li>
+                                </ul>
+                            </div>
+                            <div class="subsection">
+                                <h4><i class="fas fa-cancer"></i> Colorectal Malignancy</h4>
+                                <ul>
+                                    <li><i class="fas fa-chart-line"></i> Reduced 5-year survival with obstruction</li>
+                                    <li><i class="fas fa-sad-tear"></i> High morbidity & mortality</li>
+                                    <li><i class="fas fa-clock"></i> Emergency surgery has higher risk than elective</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-box">
+                        <i class="fas fa-lightbulb"></i> <strong>Key Message:</strong> Early diagnosis and appropriate management within 24 hours significantly improves outcomes. Multidisciplinary team input is essential.
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="progress-sidebar">
+            <h3><i class="fas fa-route"></i> Progress Tracker</h3>
+            <div class="progress-item active" onclick="scrollToSection('assessment')">
+                <div class="progress-icon" style="background: #3498db;">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="progress-text">Assessment</div>
+            </div>
+            <div class="progress-item" onclick="scrollToSection('diagnosis')">
+                <div class="progress-icon" style="background: #9b59b6;">
+                    <i class="fas fa-microscope"></i>
+                </div>
+                <div class="progress-text">Diagnosis</div>
+            </div>
+            <div class="progress-item" onclick="scrollToSection('treatment')">
+                <div class="progress-icon" style="background: #27ae60;">
+                    <i class="fas fa-procedures"></i>
+                </div>
+                <div class="progress-text">Treatment</div>
+            </div>
+            <div class="progress-item" onclick="scrollToSection('followup')">
+                <div class="progress-icon" style="background: #e67e22;">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="progress-text">Follow-up</div>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;">
+                <h4 style="color: #2c3e50; margin-bottom: 1rem;"><i class="fas fa-info-circle"></i> Severity Indicators</h4>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="badge badge-urgent">Urgent</span>
+                        <span style="font-size: 0.85rem;">Immediate action required</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="badge badge-caution">Caution</span>
+                        <span style="font-size: 0.85rem;">Careful evaluation needed</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="badge badge-stable">Stable</span>
+                        <span style="font-size: 0.85rem;">Routine management</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert-box" style="margin-top: 2rem;">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Caution:</strong> This algorithm is for guidance only. Always use clinical judgment and consult local protocols.
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand first section by default
+            const firstSection = document.querySelector('.section');
+            firstSection.classList.add('expanded');
+            
+            // Add scroll listener for progress tracking
+            window.addEventListener('scroll', updateProgressTracker);
+            updateProgressTracker(); // Initial call
+        });
+
+        function toggleSection(header) {
+            const section = header.parentElement;
+            const isExpanded = section.classList.contains('expanded');
+            
+            // Close all sections
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('expanded'));
+            
+            // Open clicked section if it wasn't already expanded
+            if (!isExpanded) {
+                section.classList.add('expanded');
+                
+                // Smooth scroll to section
+                setTimeout(() => {
+                    section.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            }
+        }
+
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                // Expand the target section
+                document.querySelectorAll('.section').forEach(s => s.classList.remove('expanded'));
+                section.classList.add('expanded');
+                
+                // Scroll to section
+                setTimeout(() => {
+                    section.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            }
+        }
+
+        function updateProgressTracker() {
+            const sections = document.querySelectorAll('.section');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            const scrollPosition = window.scrollY + 200;
+            
+            sections.forEach((section, index) => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    // Remove all active classes
+                    progressItems.forEach(item => item.classList.remove('active'));
+                    // Add active to current
+                    progressItems[index].classList.add('active');
+                    
+                    // Mark previous sections as completed
+                    for (let i = 0; i < index; i++) {
+                        progressItems[i].classList.add('completed');
+                    }
+                }
+            });
+        }
+
+        // Smooth hover effects for cards
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px) scale(1.01)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+
+        // Add pulse animation to urgent alerts
+        setInterval(() => {
+            document.querySelectorAll('.pulse').forEach(element => {
+                element.classList.remove('pulse');
+                void element.offsetWidth; // Trigger reflow
+                element.classList.add('pulse');
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

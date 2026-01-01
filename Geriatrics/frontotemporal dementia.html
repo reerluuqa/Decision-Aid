@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTD Management Algorithm - BMJ Best Practice</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+
+        .progress-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .progress-item.active {
+            opacity: 1;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .progress-item.completed {
+            opacity: 1;
+            color: #27ae60;
+        }
+
+        .progress-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        .main-content {
+            flex: 1;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .card-icon {
+            margin-right: 15px;
+            font-size: 1.5em;
+        }
+
+        .expand-icon {
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card-content.expanded {
+            max-height: 3000px;
+        }
+
+        .content-section {
+            padding: 25px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .content-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-icon {
+            margin-right: 10px;
+            color: #3498db;
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+            text-transform: uppercase;
+        }
+
+        .severity-urgent {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .severity-caution {
+            background: #f39c12;
+            color: white;
+        }
+
+        .severity-stable {
+            background: #27ae60;
+            color: white;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .risk-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .risk-item.strong {
+            border-left-color: #e74c3c;
+        }
+
+        .risk-item.weak {
+            border-left-color: #f39c12;
+        }
+
+        .investigation-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .investigation-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .treatment-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .treatment-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .algorithm-step {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            border-radius: 8px;
+        }
+
+        .algorithm-step.urgent {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .algorithm-step.caution {
+            border-left-color: #f39c12;
+            background: #fef5e7;
+        }
+
+        .algorithm-step.stable {
+            border-left-color: #27ae60;
+            background: #e8f8f5;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                position: static;
+                width: 100%;
+                margin-bottom: 20px;
+            }
+            
+            .risk-grid,
+            .investigation-grid,
+            .treatment-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-brain"></i> Frontotemporal Dementia Management</h1>
+        <p>Clinical Decision Support Algorithm - BMJ Best Practice Guidelines</p>
+    </div>
+
+    <div class="container">
+        <div class="progress-sidebar">
+            <div class="progress-title">Algorithm Progress</div>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon"><i class="fas fa-user-md"></i></div>
+                <div>Assessment</div>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon"><i class="fas fa-microscope"></i></div>
+                <div>Diagnosis</div>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon"><i class="fas fa-pills"></i></div>
+                <div>Treatment</div>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon"><i class="fas fa-stethoscope"></i></div>
+                <div>Follow-up</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Assessment Card -->
+            <div class="card" id="assessment">
+                <div class="card-header assessment" onclick="toggleCard('assessment')">
+                    <div class="card-title">
+                        <i class="fas fa-user-md card-icon"></i>
+                        Assessment
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content" id="assessment-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-history section-icon"></i>
+                            History & Examination
+                        </div>
+                        <ul class="feature-list">
+                            <li>Progressive personality/social behavior changes <span class="severity-badge severity-urgent">Core Feature</span></li>
+                            <li>Early language impairment (fluency/comprehension) <span class="severity-badge severity-urgent">Core Feature</span></li>
+                            <li>Gradual onset with steady progression</li>
+                            <li>Self-neglect and abandonment of activities</li>
+                            <li>Altered eating habits and hyperorality</li>
+                            <li>Disinhibition, apathy, loss of empathy</li>
+                            <li>Presence of motor neuron disease features <span class="severity-badge severity-caution">Consider ALS-FTD</span></li>
+                            <li>Parkinsonian symptoms <span class="severity-badge severity-caution">FTD-Parkinsonism</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-brain section-icon"></i>
+                            Cognitive Testing <span class="severity-badge severity-caution">Essential</span>
+                        </div>
+                        <div class="investigation-grid">
+                            <div class="investigation-item">
+                                <strong>MoCA (Montreal Cognitive Assessment)</strong><br>
+                                Detects frontal lobe dysfunction over time
+                            </div>
+                            <div class="investigation-item">
+                                Detects executive deficits; tracks progression
+                            </div>
+                            <div class="investigation-item">
+                                <strong>ACE-III (Addenbrooke's)</strong><br>
+                                Multi-domain test validated for FTD
+                            </div>
+                            <div class="investigation-item">
+                                Identifies executive/language predominance
+                            </div>
+                            <div class="investigation-item">
+                                <strong>Frontal Assessment Battery (FAB)</strong><br>
+                                10-minute bedside screening
+                            </div>
+                            <div class="investigation-item">
+                                Identifies frontal lobe dysfunction
+                            </div>
+                            <div class="investigation-item">
+                                <strong>EXIT-25 / Quick EXIT</strong><br>
+                                Executive function screening
+                            </div>
+                            <div class="investigation-item">
+                                Quantifies executive impairment
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-dna section-icon"></i>
+                            Risk Factors
+                        </div>
+                        <div class="risk-grid">
+                            <div class="risk-item strong">
+                                <strong>Strong Factors:</strong><br>
+                                • MAPT gene mutations<br>
+                                • GRN gene mutations<br>
+                                • C9orf72 expansions<br>
+                                • Family history of FTD
+                            </div>
+                            <div class="risk-item weak">
+                                <strong>Weaker Factors:</strong><br>
+                                • Traumatic brain injury<br>
+                                • Post-traumatic stress disorder<br>
+                                • Age 45-65 peak onset
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="algorithm-step urgent">
+                        <strong>Urgent Referral Indications:</strong><br>
+                        • Rapid progression with severe behavioral symptoms<br>
+                        • Suspected motor neuron disease features<br>
+                        • Acute psychosis with dangerous behavior<br>
+                        • Significant safety concerns for patient or others
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleCard('diagnosis')">
+                    <div class="card-title">
+                        <i class="fas fa-microscope card-icon"></i>
+                        Diagnosis & Investigations
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content" id="diagnosis-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-vial section-icon"></i>
+                            Initial Laboratory Tests <span class="severity-badge severity-stable">Routine</span>
+                        </div>
+                        <div class="investigation-grid">
+                            <div class="investigation-item"><strong>FBC & CRP</strong><br>Rule out anemia/infection</div>
+                            <div class="investigation-item">Usually normal</div>
+                            <div class="investigation-item"><strong>TSH & Free T4</strong><br>Exclude hyperthyroidism</div>
+                            <div class="investigation-item">Usually normal</div>
+                            <div class="investigation-item"><strong>Metabolic Panel</strong><br>Electrolytes, renal/liver function</div>
+                            <div class="investigation-item">Usually normal</div>
+                            <div class="investigation-item"><strong>Vitamin B12 & Folate</strong><br>Exclude deficiency</div>
+                            <div class="investigation-item">Usually normal</div>
+                            <div class="investigation-item"><strong>Syphilis, HIV, Lyme serology</strong><br>Rule out infectious causes</div>
+                            <div class="investigation-item">Usually normal</div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-x-ray section-icon"></i>
+                            Brain Imaging <span class="severity-badge severity-caution">Essential</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><strong>MRI (Preferred):</strong> Focal frontal/anterior temporal atrophy, often asymmetrical</li>
+                            <li><strong>CT Alternative:</strong> If MRI unavailable, shows focal atrophy</li>
+                            <li><strong>FDG-PET/CT:</strong> Hypometabolism in frontal/temporal lobes - differentiates from AD</li>
+                            <li><strong>Amyloid PET:</strong> Usually normal (positive in small proportion with mixed pathology)</li>
+                            <li><strong>Specific Patterns:</strong>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li><strong>bvFTD:</strong> Bilateral frontal lobe atrophy</li>
+                                    <li><strong>Semantic Dementia:</strong> Anterior temporal lobe atrophy</li>
+                                    <li><strong>nfvPPA:</strong> Left posterior frontal lobe atrophy</li>
+                                    <li><strong>PSP:</strong> Midbrain atrophy (hummingbird sign)</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-dna section-icon"></i>
+                            Genetic Testing <span class="severity-badge severity-caution">Consider</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li>Indicated for: probable bvFTD, strong family history, early onset psychiatric features</li>
+                            <li>Target genes: MAPT, GRN, C9orf72 (most common)</li>
+                            <li>C9orf72 screening: prominent psychiatric symptoms or family history of late-onset psychiatric disorder</li>
+                            <li>Requires pre/post-test genetic counseling</li>
+                            <li>Important for family planning decisions</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-clipboard-list section-icon"></i>
+                            Diagnostic Criteria
+                        </div>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>Behavioural Variant FTD</strong><br>
+                                <small>Possible: 3/6 features<br>Probable: + imaging</small>
+                            </div>
+                            <div class="treatment-item">
+                                • Behavioral disinhibition<br>
+                                • Apathy/inertia<br>
+                                • Loss of empathy<br>
+                                • Perseverative behaviors<br>
+                                • Hyperorality/dietary changes<br>
+                                • Executive deficits with spared memory/visuospatial
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Primary Progressive Aphasia</strong>
+                            </div>
+                            <div class="treatment-item">
+                                • Nonfluent/agrammatic variant<br>
+                                • Semantic variant<br>
+                                • Logopenic variant (often AD pathology)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="algorithm-step caution">
+                        <strong>Differential Diagnosis Priority:</strong><br>
+                        • Alzheimer's Disease (memory-predominant)<br>
+                        • Dementia with Lewy Bodies (visual hallucinations, fluctuating cognition)<br>
+                        • Vascular Dementia (stepwise progression, vascular imaging)<br>
+                        • Primary Psychiatric Disorders (onset pattern, family history)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment">
+                <div class="card-header treatment" onclick="toggleCard('treatment')">
+                    <div class="card-title">
+                        <i class="fas fa-pills card-icon"></i>
+                        Treatment & Management
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content" id="treatment-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-heart section-icon"></i>
+                            Supportive Care <span class="severity-badge severity-stable">Foundation</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li>Patient & caregiver education about FTD symptoms and progression</li>
+                            <li>Home safety evaluation by occupational therapist</li>
+                            <li>Financial & legal planning (early capacity may be preserved)</li>
+                            <li>End-of-life preferences discussion (early in course)</li>
+                            <li>Driving assessment <span class="severity-badge severity-caution">Impaired early</span></li>
+                            <li>Behavioral log to identify triggers and patterns</li>
+                            <li>Respite care and daycare services</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-hands-helping section-icon"></i>
+                            Non-Pharmacological Interventions <span class="severity-badge severity-stable">First Line</span>
+                        </div>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>Behavioral Strategies</strong>
+                            </div>
+                            <div class="treatment-item">
+                                • Environmental modifications<br>
+                                • Routines and structured activities<br>
+                                • Alternative strategies for compulsions<br>
+                                • Safe roaming areas<br>
+                                • Communication techniques (short sentences, eye contact)
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Therapeutic Approaches</strong>
+                            </div>
+                            <div class="treatment-item">
+                                • Cognitive stimulation therapy<br>
+                                • Music therapy (receptive preferred)<br>
+                                • Massage/touch therapy<br>
+                                • Physical activity/exercise<br>
+                                • Animal-assisted interventions
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-syringe section-icon"></i>
+                            Pharmacological Management <span class="severity-badge severity-caution">Symptom-Specific</span>
+                        </div>
+                        <div class="investigation-grid">
+                            <div class="investigation-item">
+                                <strong>Acute Agitation/Aggression</strong><br>
+                                <small>Benzodiazepine or antipsychotic <span class="severity-badge severity-urgent">Short-term only</span></small>
+                            </div>
+                            <div class="investigation-item">
+                                Lorazepam 2mg PRN (max 10mg/day)<br>
+                                OR Risperidone 0.25mg BID (max 1mg/day)<br>
+                                OR Quetiapine 25mg QHS (max 150mg/day)
+                            </div>
+                            <div class="investigation-item">
+                                <strong>Psychosis</strong>
+                            </div>
+                            <div class="investigation-item">
+                                Atypical antipsychotics preferred<br>
+                                (Risperidone, Quetiapine, Olanzapine)<br>
+                                <span class="severity-badge severity-urgent">Caution: Increased mortality risk</span>
+                            </div>
+                            <div class="investigation-item">
+                                <strong>Sleep Disturbances</strong>
+                            </div>
+                            <div class="investigation-item">
+                                Mirtazapine 7.5-15mg QHS<br>
+                                OR Trazodone 25-150mg QHS<br>
+                                OR Melatonin/Ramelteon
+                            </div>
+                            <div class="investigation-item">
+                                <strong>Impulsivity/Disinhibition</strong>
+                            </div>
+                            <div class="investigation-item">
+                                Valproate semisodium (consult specialist)<br>
+                                OR Topiramate (appetite suppression)<br>
+                                SSRI evidence variable
+                            </div>
+                            <div class="investigation-item">
+                                <strong>Pseudobulbar Affect</strong>
+                            </div>
+                            <div class="investigation-item">
+                                Dextromethorphan/Quinidine 20mg/10mg<br>
+                                Start daily x7 days, then BID
+                            </div>
+                        </div>
+                        <div class="algorithm-step urgent" style="margin-top: 15px;">
+                            <strong>IMPORTANT:</strong> Acetylcholinesterase inhibitors and memantine are NOT effective in FTD and may worsen behavioral symptoms
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-exclamation-triangle section-icon"></i>
+                            Management of Concurrent Illness <span class="severity-badge severity-urgent">Address Promptly</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li>UTI, pneumonia can worsen behavioral symptoms significantly</li>
+                            <li>Treat underlying infection → prompt resolution of acute behavioral changes</li>
+                            <li>Antibiotic selection per standard guidelines for older adults</li>
+                            <li>Decisions to withhold treatment must be made when patient is well</li>
+                        </ul>
+                    </div>
+
+                    <div class="algorithm-step stable">
+                        <strong>End-of-Life Care:</strong><br>
+                        • Focus on comfort: feeding assistance, pain control, skin care<br>
+                        • Behavioral complications uncommon at this stage<br>
+                        • Gastrostomy feeding does NOT improve long-term outcomes<br>
+                        • Palliative care involvement early
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup">
+                <div class="card-header followup" onclick="toggleCard('followup')">
+                    <div class="card-title">
+                        <i class="fas fa-stethoscope card-icon"></i>
+                        Follow-up & Monitoring
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-content" id="followup-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-calendar-check section-icon"></i>
+                            Monitoring Schedule <span class="severity-badge severity-stable">Comprehensive</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><strong>Cognitive/Behavioral evaluation:</strong> Every 6-12 months <span class="severity-badge severity-caution">Track progression</span></li>
+                            <li><strong>Carer burden assessment:</strong> Independent review at each visit</li>
+                            <li><strong>Driving status:</strong> Reassess every 6 months <span class="severity-badge severity-urgent">Safety critical</span></li>
+                            <li><strong>Functional status:</strong> Frontotemporal Rating Scale (FRS) more accurate than standard scales</li>
+                            <li><strong>Care needs:</strong> Anticipate increasing support requirements</li>
+                            <li><strong>Dependent children:</strong> Enquire about their coping and well-being</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-exclamation-circle section-icon"></i>
+                            Common Complications <span class="severity-badge severity-caution">Anticipate</span>
+                        </div>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>Financial Crisis</strong>
+                            </div>
+                            <div class="treatment-item">
+                                Irrepressible spending, compulsive gambling<br>
+                                <span class="severity-badge severity-urgent">Medium likelihood</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Legal Crisis</strong>
+                            </div>
+                            <div class="treatment-item">
+                                Shoplifting, reckless driving, aggression<br>
+                                <span class="severity-badge severity-caution">Low likelihood</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Dangerous Driving</strong>
+                            </div>
+                            <div class="treatment-item">
+                                Disinhibition, impulsivity, poor judgment<br>
+                                <span class="severity-badge severity-urgent">High likelihood</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Malnutrition</strong>
+                            </div>
+                            <div class="treatment-item">
+                                Altered eating habits, hyperorality<br>
+                                <span class="severity-badge severity-urgent">High likelihood</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Falls</strong>
+                            </div>
+                            <div class="treatment-item">
+                                Parkinsonism, poor balance<br>
+                                PSP: 90-100% fall rate, bvFTD: 16%<br>
+                                <span class="severity-badge severity-caution">Medium likelihood</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Pain Issues</strong>
+                            </div>
+                            <div class="treatment-item">
+                                Impaired pain/temperature perception<br>
+                                Especially in bvFTD and semantic dementia<br>
+                                <span class="severity-badge severity-urgent">High likelihood</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-chart-line section-icon"></i>
+                            Prognosis <span class="severity-badge severity-caution">Variable</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li><strong>Median survival:</strong> 7-13 years from diagnosis (clinic cohorts)</li>
+                            <li><strong>Shortest survival:</strong> FTD-ALS variant (2.5 years)</li>
+                            <li><strong>Longest survival:</strong> Semantic dementia (median 12 years)</li>
+                            <li><strong>FTD-ALS:</strong> Considerably shorter (3 years median)</li>
+                            <li><strong>Progression rate:</strong> Males slower than females</li>
+                            <li><strong>Predictors of rapid decline:</strong>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Reduced baseline grey-matter volume</li>
+                                    <li>Increased microglial activation in frontal regions</li>
+                                    <li>Negative behaviors (apathy, aspontaneity, rigidity)</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <i class="fas fa-users section-icon"></i>
+                            Caregiver Support <span class="severity-badge severity-stable">Critical</span>
+                        </div>
+                        <ul class="feature-list">
+                            <li>Behavior logs to identify triggers and warning signs</li>
+                            <li>Coping techniques and stress management</li>
+                            <li>Local/national support organizations (e.g., Association for FTD)</li>
+                            <li>Respite care services</li>
+                            <li>Carer counseling and psychological support</li>
+                            <li>Financial assistance and legal resources</li>
+                            <li>Peer support groups</li>
+                        </ul>
+                    </div>
+
+                    <div class="algorithm-step caution">
+                        <strong>Driving Assessment:</strong><br>
+                        • Fitness impaired even at early stages<br>
+                        • Early behavioral symptoms (disinhibition, impulsivity) are high risk<br>
+                        • Patients often in denial about driving ability<br>
+                        • Follow local reporting requirements<br>
+                        • American Academy of Neurology and UK Royal College guidelines available
+                    </div>
+
+                    <div class="algorithm-step urgent">
+                        <strong>Suicide Risk:</strong><br>
+                        • Increased risk in first 3 months after diagnosis<br>
+                        • Higher in younger patients (<65 years)<br>
+                        • Assess especially in those with known mental illness history
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(cardId) {
+            const content = document.getElementById(cardId + '-content');
+            const expandIcon = document.querySelector(`#${cardId} .expand-icon`);
+            
+            content.classList.toggle('expanded');
+            expandIcon.style.transform = content.classList.contains('expanded') 
+                ? 'rotate(180deg)' : 'rotate(0deg)';
+            
+            // Update progress indicator
+            updateProgress(cardId);
+            
+            // Smooth scroll to card
+            document.getElementById(cardId).scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+
+        // Progress tracking
+        function updateProgress(activeStep) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            progressItems.forEach(item => {
+                item.classList.remove('active', 'completed');
+                
+                const step = item.dataset.step;
+                if (step === activeStep) {
+                    item.classList.add('active');
+                }
+                
+                // Mark previous steps as completed
+                const stepOrder = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                const activeIndex = stepOrder.indexOf(activeStep);
+                const currentIndex = stepOrder.indexOf(step);
+                
+                if (currentIndex < activeIndex) {
+                    item.classList.add('completed');
+                }
+            });
+        }
+
+        // Progress sidebar click functionality
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const step = item.dataset.step;
+                toggleCard(step);
+            });
+        });
+
+        // Initialize - expand assessment card by default
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleCard('assessment');
+            
+            // Add scroll spy for progress tracking
+            window.addEventListener('scroll', () => {
+                const cards = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                const scrollPosition = window.scrollY + 200;
+                
+                for (let card of cards) {
+                    const element = document.getElementById(card);
+                    if (element) {
+                        const rect = element.getBoundingClientRect();
+                        const elementTop = rect.top + window.scrollY;
+                        const elementBottom = elementTop + element.offsetHeight;
+                        
+                        if (scrollPosition >= elementTop && scrollPosition < elementBottom) {
+                            updateProgress(card);
+                            break;
+                        }
+                    }
+                }
+            });
+        });
+
+        // Smooth transitions for severity badges on hover
+        document.querySelectorAll('.severity-badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1)';
+                this.style.transition = 'transform 0.2s ease';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

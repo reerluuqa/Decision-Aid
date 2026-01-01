@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sarcopenia Management Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --assessment-color: #3498db;
+            --diagnosis-color: #9b59b6;
+            --treatment-color: #27ae60;
+            --followup-color: #e67e22;
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #e0e6ed;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
+            --shadow-hover: 0 4px 20px rgba(0,0,0,0.12);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: var(--bg-secondary);
+            padding: 2rem 1.5rem;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            transition: var(--transition);
+        }
+
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header .last-updated {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            background: transparent;
+        }
+
+        .progress-item:hover {
+            background: rgba(52, 152, 219, 0.05);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: rgba(52, 152, 219, 0.1);
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            opacity: 0.7;
+        }
+
+        .progress-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1rem;
+            color: white;
+            transition: var(--transition);
+        }
+
+        .assessment-icon { background: var(--assessment-color); }
+        .diagnosis-icon { background: var(--diagnosis-color); }
+        .treatment-icon { background: var(--treatment-color); }
+        .followup-icon { background: var(--followup-color); }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-title {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .progress-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            transition: var(--transition);
+        }
+
+        .progress-item.completed .progress-indicator {
+            background: #27ae60;
+            border-color: #27ae60;
+            color: white;
+        }
+
+        .progress-item.active .progress-indicator {
+            border-color: var(--assessment-color);
+            background: var(--assessment-color);
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            margin-left: 280px;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .algorithm-section {
+            margin-bottom: 3rem;
+            scroll-margin-top: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .section-header:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .section-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .assessment-header .section-icon { background: var(--assessment-color); }
+        .diagnosis-header .section-icon { background: var(--diagnosis-color); }
+        .treatment-header .section-icon { background: var(--treatment-color); }
+        .followup-header .section-icon { background: var(--followup-color); }
+
+        .section-title h2 {
+            font-size: 1.8rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .section-title p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            border-left: 5px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .assessment-card { border-left-color: var(--assessment-color); }
+        .diagnosis-card { border-left-color: var(--diagnosis-color); }
+        .treatment-card { border-left-color: var(--treatment-color); }
+        .followup-card { border-left-color: var(--followup-color); }
+
+        .card-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(to right, rgba(0,0,0,0.02), transparent);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-title i {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+
+        .card-title h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .card-toggle {
+            transition: var(--transition);
+            color: var(--text-secondary);
+        }
+
+        .card.expanded .card-toggle {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 1000px;
+        }
+
+        .card-content {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 0.5rem;
+        }
+
+        .badge-red {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-amber {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-green {
+            background: #27ae60;
+            color: white;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info-item {
+            padding: 1rem;
+            background: rgba(52, 152, 219, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--assessment-color);
+        }
+
+        .diagnosis-item {
+            background: rgba(155, 89, 182, 0.05);
+            border-left-color: var(--diagnosis-color);
+        }
+
+        .treatment-item {
+            background: rgba(39, 174, 96, 0.05);
+            border-left-color: var(--treatment-color);
+        }
+
+        .followup-item {
+            background: rgba(230, 126, 34, 0.05);
+            border-left-color: var(--followup-color);
+        }
+
+        .threshold-box {
+            background: rgba(231, 76, 60, 0.1);
+            border: 1px solid rgba(231, 76, 60, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .threshold-box h4 {
+            color: #c0392b;
+            margin-bottom: 0.5rem;
+        }
+
+        .criteria-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .criteria-list li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .criteria-list li:last-child {
+            border-bottom: none;
+        }
+
+        .algorithm-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(0,0,0,0.02);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--assessment-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+
+        .step.diagnosis-step .step-number {
+            background: var(--diagnosis-color);
+        }
+
+        .step.treatment-step .step-number {
+            background: var(--treatment-color);
+        }
+
+        .step.followup-step .step-number {
+            background: var(--followup-color);
+        }
+
+        .step-content {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .step-description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .differential-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .differential-card {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+        }
+
+        .differential-card h4 {
+            color: var(--diagnosis-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .differential-card .symptoms {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .differential-card .tests {
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                padding: 1rem;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+            
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .warning-box {
+            background: rgba(243, 156, 18, 0.1);
+            border-left: 4px solid #f39c12;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .warning-box i {
+            color: #f39c12;
+            margin-right: 0.5rem;
+        }
+
+        .complication-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .complication-card {
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            border-top: 4px solid #e74c3c;
+        }
+
+        .complication-card.medium-risk {
+            border-top-color: #f39c12;
+        }
+
+        .complication-card.low-risk {
+            border-top-color: #27ae60;
+        }
+
+        .complication-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .likelihood {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            background: rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <div class="sidebar-header">
+                <h2>Sarcopenia Algorithm</h2>
+                <p class="last-updated">BMJ Best Practice<br>Sep 27, 2023</p>
+            </div>
+            
+            <div class="progress-item active" data-section="assessment">
+                <div class="progress-icon assessment-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Assessment</div>
+                    <div class="progress-subtitle">Screening & Evaluation</div>
+                </div>
+                <div class="progress-indicator">1</div>
+            </div>
+
+            <div class="progress-item" data-section="diagnosis">
+                <div class="progress-icon diagnosis-icon">
+                    <i class="fas fa-stethoscope"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Diagnosis</div>
+                    <div class="progress-subtitle">Confirm & Classify</div>
+                </div>
+                <div class="progress-indicator">2</div>
+            </div>
+
+            <div class="progress-item" data-section="treatment">
+                <div class="progress-icon treatment-icon">
+                    <i class="fas fa-activity"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Treatment</div>
+                    <div class="progress-subtitle">Interventions</div>
+                </div>
+                <div class="progress-indicator">3</div>
+            </div>
+
+            <div class="progress-item" data-section="followup">
+                <div class="progress-icon followup-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="progress-text">
+                    <div class="progress-title">Follow-up</div>
+                    <div class="progress-subtitle">Monitoring & Prognosis</div>
+                </div>
+                <div class="progress-indicator">4</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1><i class="fas fa-user-md"></i> Sarcopenia Management</h1>
+                <p class="subtitle">Interactive Clinical Decision Support Algorithm</p>
+            </div>
+
+            <!-- Assessment Section -->
+            <section id="assessment" class="algorithm-section fade-in">
+                <div class="section-header assessment-header" onclick="toggleSection('assessment')">
+                    <div class="section-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Assessment & Screening</h2>
+                        <p>Initial evaluation and risk stratification for suspected sarcopenia</p>
+                    </div>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card assessment-card" data-card="sarc-f">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-clipboard-list"></i>
+                                <h3>SARC-F Questionnaire <span class="badge badge-green">Screening</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p>First-line screening tool recommended by EWGSOP2 and ICSFR. Score ≥4 indicates risk of sarcopenia.</p>
+                                
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <strong>Strength</strong><br>
+                                        How much difficulty do you have lifting/carrying 10 lbs?
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Ambulation</strong><br>
+                                        How much difficulty walking across a room?
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Rising from Chair</strong><br>
+                                        How much difficulty transferring from chair/bed?
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Climbing Stairs</strong><br>
+                                        How much difficulty climbing 10 steps?
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Falls</strong><br>
+                                        How many falls in the past year?
+                                    </div>
+                                </div>
+
+                                <div class="threshold-box">
+                                    <h4><i class="fas fa-exclamation-triangle"></i> Positive Screen</h4>
+                                    <p><strong>Total Score ≥4</strong> → Further assessment warranted</p>
+                                    <p><strong>OR</strong></p>
+                                    <p><strong>Calf Circumference:</strong> &lt;34cm (men) / &lt;33cm (women)</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card assessment-card" data-card="physical-tests">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-dumbbell"></i>
+                                <h3>Physical Performance Tests <span class="badge badge-green">Assessment</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="criteria-list">
+                                    <li>
+                                        <span>Hand Grip Strength (HGS)</span>
+                                        <span class="badge badge-red">&lt;27kg (men) / &lt;16kg (women)</span>
+                                    </li>
+                                    <li>
+                                        <span>Sit-Stand Test (5 reps)</span>
+                                        <span class="badge badge-amber">&gt;15 seconds</span>
+                                    </li>
+                                    <li>
+                                        <span>Gait Speed (usual)</span>
+                                        <span class="badge badge-amber">&lt;1.0 m/s</span>
+                                    </li>
+                                    <li>
+                                        <span>Short Physical Performance Battery</span>
+                                        <span class="badge badge-amber">≤8 points</span>
+                                    </li>
+                                    <li>
+                                        <span>Timed Up-and-Go</span>
+                                        <span class="badge badge-amber">≥20 seconds</span>
+                                    </li>
+                                </div>
+                                
+                                <div class="warning-box">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Low muscle strength alone</strong> is sufficient to diagnose <strong>probable sarcopenia</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card assessment-card" data-card="risk-factors">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <h3>Risk Factors <span class="badge badge-amber">Caution</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <strong>Age</strong><br>
+                                        ≥65 years primary risk factor
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>BMI</strong><br>
+                                        Low (&lt;18.5) or High (≥30)
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Lifestyle</strong><br>
+                                        Sedentary, physical inactivity
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Protein Intake</strong><br>
+                                        &lt;0.8g/kg/day (low)
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Comorbidities</strong><br>
+                                        COPD, CHF, CKD, cancer
+                                    </div>
+                                    <div class="info-item">
+                                        <strong>Medications</strong><br>
+                                        Corticosteroids, GnRH agonists
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card assessment-card" data-card="initial-investigations">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-flask"></i>
+                                <h3>Initial Investigations <span class="badge badge-green">Routine</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p>Rule out secondary causes and assess baseline status:</p>
+                                
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <i class="fas fa-tint"></i> <strong>FBC & Electrolytes</strong>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-heartbeat"></i> <strong>Liver & Renal Function</strong>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-sun"></i> <strong>Vitamin D Level</strong>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-bolt"></i> <strong>Thyroid Function</strong>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-candy-cane"></i> <strong>Blood Glucose</strong>
+                                    </div>
+                                    <div class="info-item">
+                                        <i class="fas fa-vial"></i> <strong>Testosterone (if indicated)</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section id="diagnosis" class="algorithm-section fade-in">
+                <div class="section-header diagnosis-header" onclick="toggleSection('diagnosis')">
+                    <div class="section-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Diagnosis & Confirmation</h2>
+                        <p>Confirm diagnosis and determine severity using validated criteria</p>
+                    </div>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card diagnosis-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-check-circle"></i>
+                                <h3>EWGSOP2 Criteria <span class="badge badge-green">Primary</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="algorithm-steps">
+                                    <div class="step diagnosis-step">
+                                        <div class="step-number">1</div>
+                                        <div class="step-content">
+                                            <div class="step-title">Probable Sarcopenia</div>
+                                            <div class="step-description">Low muscle strength: HGS &lt;27kg (men) or &lt;16kg (women)</div>
+                                        </div>
+                                    </div>
+                                    <div class="step diagnosis-step">
+                                        <div class="step-number">2</div>
+                                        <div class="step-content">
+                                            <div class="step-title">Confirmed Sarcopenia</div>
+                                            <div class="step-description">Low strength + Low muscle quantity/quality (DXA/CT/MRI)</div>
+                                        </div>
+                                        <div class="info-grid" style="margin-top: 0.5rem;">
+                                            <div class="diagnosis-item">
+                                                <strong>DXA ASMI:</strong> &lt;7.0kg/m² (men) / &lt;5.5kg/m² (women)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="step diagnosis-step">
+                                        <div class="step-number">3</div>
+                                        <div class="step-content">
+                                            <div class="step-title">Severe Sarcopenia</div>
+                                            <div class="step-description">Confirmed + Low physical performance (gait speed ≤0.8m/s)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card diagnosis-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-globe"></i>
+                                <h3>AWGS Criteria <span class="badge badge-amber">Asia-Pacific</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <ul class="criteria-list">
+                                    <li>
+                                        <span>Low Grip Strength</span>
+                                        <span class="badge badge-red">&lt;28kg (men) / &lt;18kg (women)</span>
+                                    </li>
+                                    <li>
+                                        <span>Low Physical Performance</span>
+                                        <span class="badge badge-amber">Gait &lt;1.0m/s or SPPB ≤9</span>
+                                    </li>
+                                    <li>
+                                        <span>DXA ASMI</span>
+                                        <span class="badge badge-red">&lt;7.0kg/m² (men) / &lt;5.4kg/m² (women)</span>
+                                    </li>
+                                    <li>
+                                        <span>BIA ASMI</span>
+                                        <span class="badge badge-red">&lt;7.0kg/m² (men) / &lt;5.7kg/m² (women)</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card diagnosis-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-image"></i>
+                                <h3>Muscle Mass Assessment <span class="badge badge-amber">Imaging</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="info-grid">
+                                    <div class="diagnosis-item">
+                                        <i class="fas fa-x-ray"></i> <strong>DXA</strong><br>
+                                        Gold standard - low radiation, accessible
+                                    </div>
+                                    <div class="diagnosis-item">
+                                        <i class="fas fa-layer-group"></i> <strong>CT</strong><br>
+                                        High radiation - measures muscle quality
+                                    </div>
+                                    <div class="diagnosis-item">
+                                        <i class="fas fa-magnet"></i> <strong>MRI</strong><br>
+                                        No radiation - detailed muscle volume/quality
+                                    </div>
+                                    <div class="diagnosis-item">
+                                        <i class="fas fa-heartbeat"></i> <strong>BIA</strong><br>
+                                        Portable, inexpensive - less accurate
+                                    </div>
+                                </div>
+                                
+                                <div class="warning-box">
+                                    <i class="fas fa-info-circle"></i>
+                                    If imaging unavailable, <strong>treatment may be initiated based on low muscle strength alone</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card diagnosis-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-question-circle"></i>
+                                <h3>Differential Diagnosis <span class="badge badge-red">Rule Out</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="differential-grid">
+                                    <div class="differential-card">
+                                        <h4><i class="fas fa-brain"></i> Parkinson's Disease</h4>
+                                        <div class="symptoms">Bradykinesia, rigidity, resting tremor</div>
+                                        <div class="tests">Clinical diagnosis, neuroimaging if needed</div>
+                                    </div>
+                                    <div class="differential-card">
+                                        <h4><i class="fas fa-dna"></i> ALS</h4>
+                                        <div class="symptoms">Muscle spasms, stiffness, speech/dyspnea</div>
+                                        <div class="tests">EMG, nerve conduction studies</div>
+                                    </div>
+                                    <div class="differential-card">
+                                        <h4><i class="fas fa-bolt"></i> Hyperthyroidism</h4>
+                                        <div class="symptoms">Heat intolerance, sweating, palpitations</div>
+                                        <div class="tests">Thyroid profile, antibodies</div>
+                                    </div>
+                                    <div class="differential-card">
+                                        <h4><i class="fas fa-weight"></i> Cachexia</h4>
+                                        <div class="symptoms">Rapid muscle/fat loss with underlying disease</div>
+                                        <div class="tests">Blood tests, imaging for malignancy</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section id="treatment" class="algorithm-section fade-in">
+                <div class="section-header treatment-header" onclick="toggleSection('treatment')">
+                    <div class="section-icon">
+                        <i class="fas fa-activity"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Treatment & Management</h2>
+                        <p>Evidence-based interventions to prevent and treat sarcopenia</p>
+                    </div>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card treatment-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-dumbbell"></i>
+                                <h3>Resistance Training <span class="badge badge-green">First-Line</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p><strong>First-line treatment</strong> for all patients with confirmed sarcopenia.</p>
+                                
+                                <div class="info-grid">
+                                    <div class="treatment-item">
+                                        <strong>Frequency:</strong> 2-3 times/week
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Intensity:</strong> ~80% 1RM (high intensity superior)
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Sets/Reps:</strong> 1-3 sets of 8-12 reps
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Exercises:</strong> Free weights, resistance bands, body weight
+                                    </div>
+                                </div>
+
+                                <ul style="margin-top: 1rem; padding-left: 1.5rem;">
+                                    <li>Increases muscle protein synthesis and fiber size</li>
+                                    <li>Targets fast-twitch (type II) fibers specifically</li>
+                                    <li>Combine with balance training initially if needed</li>
+                                    <li>Consider supervised program for frail patients</li>
+                                </ul>
+
+                                <div class="threshold-box">
+                                    <h4>Expected Improvements</h4>
+                                    <p>After 18 weeks high-intensity training:</p>
+                                    <ul>
+                                        <li>Leg press: +29% (+31.6kg)</li>
+                                        <li>Knee extension: +33% (+12.1kg)</li>
+                                        <li>Chest press: +24% (+9.83kg)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card treatment-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-utensils"></i>
+                                <h3>Protein Intake <span class="badge badge-green">Essential</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p>Combine with resistance exercise for optimal outcomes.</p>
+                                
+                                <div class="info-grid">
+                                    <div class="treatment-item">
+                                        <strong>Target:</strong> 1.2g/kg body weight/day
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Per meal:</strong> 25-30g protein
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Sources:</strong> Lean meat, fish, eggs, dairy, legumes
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Distribution:</strong> Evenly across all meals
+                                    </div>
+                                </div>
+
+                                <div class="warning-box">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Protein supplementation <strong>without exercise</strong> has not proven effective
+                                </div>
+
+                                <p style="margin-top: 1rem;"><strong>Note:</strong> Older adults have anabolic resistance—require higher protein intake than younger individuals.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card treatment-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-running"></i>
+                                <h3>Aerobic Exercise <span class="badge badge-amber">Adjunct</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p>Important for overall health but <strong>not a substitute</strong> for resistance training.</p>
+                                
+                                <div class="info-grid">
+                                    <div class="treatment-item">
+                                        <strong>WHO Guidelines:</strong> 150 min moderate or 75 min vigorous/week
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Frequency:</strong> 20-60 min sessions, 3-7 times/week
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Types:</strong> Walking, cycling, swimming
+                                    </div>
+                                    <div class="treatment-item">
+                                        <strong>Benefits:</strong> Cardiovascular, mitochondrial function
+                                    </div>
+                                </div>
+
+                                <p style="margin-top: 1rem;"><strong>Walking</strong> is highly accessible and beneficial—do not overlook as primary activity.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card treatment-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-pills"></i>
+                                <h3>Emerging Therapies <span class="badge badge-amber">Investigational</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p><strong>Currently no effective drug therapy available.</strong> Following are under investigation:</p>
+                                
+                                <ul style="padding-left: 1.5rem; margin: 1rem 0;">
+                                    <li><strong>Myostatin inhibitors:</strong> ACE-083, bimagrumab - limited functional improvement</li>
+                                    <li><strong>Omega-3 fatty acids:</strong> May enhance anabolism</li>
+                                    <li><strong>HMB (β-hydroxy β-methylbutyrate):</strong> Mixed evidence</li>
+                                    <li><strong>Leucine:</strong> May overcome anabolic resistance</li>
+                                </ul>
+
+                                <div class="warning-box">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>ICSFR states evidence base is very limited</strong> for these interventions in older adults with sarcopenia
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card treatment-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-users"></i>
+                                <h3>Patient Education <span class="badge badge-green">Essential</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="algorithm-steps">
+                                    <div class="step treatment-step">
+                                        <div class="step-number">1</div>
+                                        <div class="step-content">
+                                            <div class="step-title">Dietitian Referral</div>
+                                            <div class="step-description">Review dietary habits, increase energy/protein intake</div>
+                                        </div>
+                                    </div>
+                                    <div class="step treatment-step">
+                                        <div class="step-number">2</div>
+                                        <div class="step-content">
+                                            <div class="step-title">Exercise Program</div>
+                                            <div class="step-description">Structured supervised program increases success odds</div>
+                                        </div>
+                                    </div>
+                                    <div class="step treatment-step">
+                                        <div class="step-number">3</div>
+                                        <div class="step-content">
+                                            <div class="step-title">Active Walking</div>
+                                            <div class="step-description">Complement training sessions between workouts</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section id="followup" class="algorithm-section fade-in">
+                <div class="section-header followup-header" onclick="toggleSection('followup')">
+                    <div class="section-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Follow-up & Monitoring</h2>
+                        <p>Track progress and manage complications</p>
+                    </div>
+                </div>
+
+                <div class="cards-grid">
+                    <div class="card followup-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-search"></i>
+                                <h3>Monitoring Protocol <span class="badge badge-green">Standard</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <p><strong>Reassess after 8-12 weeks</strong> of intervention</p>
+                                
+                                <div class="info-grid">
+                                    <div class="followup-item">
+                                        <strong>Physical Performance:</strong> Gait speed, chair stand, grip strength
+                                    </div>
+                                    <div class="followup-item">
+                                        <strong>Anthropometrics:</strong> Calf circumference (&lt;34cm men / &lt;33cm women)
+                                    </div>
+                                    <div class="followup-item">
+                                        <strong>Imaging:</strong> DXA superior but limited by accessibility
+                                    </div>
+                                    <div class="followup-item">
+                                        <strong>Frequency:</strong> Annual review reasonable after initial phase
+                                    </div>
+                                </div>
+
+                                <div class="warning-box">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    If <strong>no improvement</strong> identified → check adherence, consider secondary causes, intolerance to supplements, or poor nutrition
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card followup-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h3>Complications to Monitor <span class="badge badge-red">Important</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <div class="complication-grid">
+                                    <div class="complication-card">
+                                        <div class="complication-title">
+                                            Hospitalization
+                                            <span class="likelihood">Medium Risk</span>
+                                        </div>
+                                        <p>Sarcopenia is a significant predictor of hospitalization. Exercise may prevent.</p>
+                                    </div>
+                                    <div class="complication-card">
+                                        <div class="complication-title">
+                                            Falls & Fractures
+                                            <span class="likelihood">Medium Risk</span>
+                                        </div>
+                                        <p>Associated with osteosarcopenia. Manage alongside osteoporosis treatment.</p>
+                                    </div>
+                                    <div class="complication-card">
+                                        <div class="complication-title">
+                                            Care Home Admission
+                                            <span class="likelihood">Medium Risk</span>
+                                        </div>
+                                        <p>Consequence of progression to frailty. Requires physiotherapy.</p>
+                                    </div>
+                                    <div class="complication-card medium-risk">
+                                        <div class="complication-title">
+                                            Chemotherapy Toxicity
+                                            <span class="likelihood">Medium Risk</span>
+                                        </div>
+                                        <p>Increased sensitivity in cancer patients</p>
+                                    </div>
+                                    <div class="complication-card">
+                                        <div class="complication-title">
+                                            Mortality
+                                            <span class="likelihood">Low Risk</span>
+                                        </div>
+                                        <p>Independent risk factor - highlights need for early intervention</p>
+                                    </div>
+                                    <div class="complication-card medium-risk">
+                                        <div class="complication-title">
+                                            Post-op Infections
+                                            <span class="likelihood">Medium Risk</span>
+                                        </div>
+                                        <p>Independent risk factor in surgical patients</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card followup-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-chart-bar"></i>
+                                <h3>Prognosis <span class="badge badge-green">Information</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <ul style="padding-left: 1.5rem;">
+                                    <li><strong>Progression:</strong> Muscle weakening can progress to loss of function and disability</li>
+                                    <li><strong>Interventions:</strong> Nutrition and exercise training can mitigate progression</li>
+                                    <li><strong>Chronic sarcopenia:</strong> ≥6 months duration associated with chronic/progressive conditions</li>
+                                    <li><strong>Key message:</strong> Early screening and intervention reduce morbidity/mortality burden</li>
+                                </ul>
+                                
+                                <div class="info-grid" style="margin-top: 1rem;">
+                                    <div class="followup-item">
+                                        <i class="fas fa-arrow-up"></i> <strong>Improvement:</strong> Weeks to months with adherence
+                                    </div>
+                                    <div class="followup-item">
+                                        <i class="fas fa-clock"></i> <strong>Timeline:</strong> Building muscle mass takes weeks
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card followup-card">
+                        <div class="card-header" onclick="toggleCard(this)">
+                            <div class="card-title">
+                                <i class="fas fa-book"></i>
+                                <h3>Guidelines Summary <span class="badge badge-green">Reference</span></h3>
+                            </div>
+                            <i class="fas fa-chevron-down card-toggle"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-content">
+                                <ul class="criteria-list">
+                                    <li>
+                                        <span>EWGSOP2 (Europe)</span>
+                                        <span class="badge badge-green">2019</span>
+                                    </li>
+                                    <li>
+                                        <span>AWGS (Asia-Pacific)</span>
+                                        <span class="badge badge-green">2020</span>
+                                    </li>
+                                    <li>
+                                        <span>ICFSR (International)</span>
+                                        <span class="badge badge-green">2018</span>
+                                    </li>
+                                    <li>
+                                        <span>Exercise Guidelines (ICFSR)</span>
+                                        <span class="badge badge-green">2021</span>
+                                    </li>
+                                    <li>
+                                        <span>WHO Physical Activity</span>
+                                        <span class="badge badge-green">2020</span>
+                                    </li>
+                                </ul>
+                                
+                                <div class="warning-box">
+                                    <i class="fas fa-external-link-alt"></i>
+                                    <strong>Always refer to latest guidelines</strong> at bestpractice.bmj.com for updates
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        // Section toggle functionality
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            // You can add section collapsing logic here if needed
+        }
+
+        // Progress sidebar navigation
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const section = this.dataset.section;
+                const element = document.getElementById(section);
+                
+                // Update active state
+                document.querySelectorAll('.progress-item').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Smooth scroll to section
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            });
+        });
+
+        // Scroll spy for progress sidebar
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.algorithm-section');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.section === current) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Mark sections as completed
+            progressItems.forEach(item => {
+                const section = document.getElementById(item.dataset.section);
+                if (section.offsetTop < scrollY - 100) {
+                    item.classList.add('completed');
+                }
+            });
+        });
+
+        // Initialize first card expanded
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstCard = document.querySelector('.card');
+            if (firstCard) {
+                firstCard.classList.add('expanded');
+            }
+        });
+
+        // Smooth scroll for internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade-in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.algorithm-section').forEach(section => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>

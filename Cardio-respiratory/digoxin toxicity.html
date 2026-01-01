@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digoxin Toxicity - Interactive Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem 1.5rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .sidebar h2 {
+            color: #2c3e50;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sidebar h2::before {
+            content: "📊";
+            font-size: 1.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .progress-item.active {
+            border-left-color: #3498db;
+            background: #f8f9ff;
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            border-left-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin-right: 1rem;
+            font-size: 1.2rem;
+            background: #f0f0f0;
+        }
+
+        .progress-item.active .progress-icon {
+            background: #3498db;
+            color: white;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: #27ae60;
+            color: white;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-text small {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1000px;
+        }
+
+        .header {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .guideline-info {
+            background: #e3f2fd;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+            font-size: 0.9rem;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 15px;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 3000px;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        /* Severity Badges */
+        .severity-badges {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+
+        .badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .badge.urgent {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge.caution {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.stable {
+            background: #27ae60;
+            color: white;
+        }
+
+        .badge::before {
+            content: "●";
+            font-size: 1.2rem;
+        }
+
+        /* Content Sections */
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section h3::before {
+            content: "»";
+            color: #3498db;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .subsection {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            border-left: 4px solid #3498db;
+        }
+
+        .subsection h4 {
+            color: #2c3e50;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection h4::before {
+            content: "▸";
+            color: #e74c3c;
+        }
+
+        .subsection ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .subsection li {
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .subsection li::before {
+            content: "•";
+            color: #3498db;
+            font-weight: bold;
+            position: absolute;
+            left: -1rem;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .alert-box.urgent {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        .alert-box.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 1.5rem;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .card-header {
+                padding: 1.25rem;
+            }
+            
+            .card-body {
+                padding: 1.25rem;
+            }
+            
+            .badge {
+                font-size: 0.8rem;
+                padding: 0.3rem 0.6rem;
+            }
+        }
+
+        /* Utility Classes */
+        .text-muted {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .text-small {
+            font-size: 0.85rem;
+        }
+
+        .mb-1 { margin-bottom: 0.5rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .mb-3 { margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sticky Progress Sidebar -->
+        <aside class="sidebar">
+            <h2>Clinical Pathway</h2>
+            <div class="progress-item active" data-step="assessment">
+                <div class="progress-icon">📋</div>
+                <div class="progress-text">
+                    <div>Assessment</div>
+                    <small>Initial evaluation & risk stratification</small>
+                </div>
+            </div>
+            <div class="progress-item" data-step="diagnosis">
+                <div class="progress-icon">🔍</div>
+                <div class="progress-text">
+                    <div>Diagnosis</div>
+                    <small>Confirm & differentiate</small>
+                </div>
+            </div>
+            <div class="progress-item" data-step="treatment">
+                <div class="progress-icon">💊</div>
+                <div class="progress-text">
+                    <div>Treatment</div>
+                    <small>Management protocol</small>
+                </div>
+            </div>
+            <div class="progress-item" data-step="followup">
+                <div class="progress-icon">📈</div>
+                <div class="progress-text">
+                    <div>Follow-up</div>
+                    <small>Monitoring & prognosis</small>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #ddd;">
+                <div class="severity-badges" style="flex-direction: column;">
+                    <div class="badge urgent">Red: Urgent referral</div>
+                    <div class="badge caution">Amber: Caution</div>
+                    <div class="badge stable">Green: Stable</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1>🫀 Digoxin Toxicity</h1>
+                <p class="subtitle">Interactive Clinical Decision Support Algorithm</p>
+                <div class="guideline-info">
+                    <strong>Guideline:</strong> BMJ Best Practice | 
+                    <strong>Last Updated:</strong> Aug 08, 2024 | 
+                    <strong>Classification:</strong> Acute, Acute-on-Chronic, or Chronic Toxicity
+                </div>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card" id="assessment">
+                <div class="card-header assessment" onclick="toggleCard(this)">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">
+                        <h2>Assessment</h2>
+                        <p>Initial evaluation, risk factors & clinical presentation</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="severity-badges">
+                            <span class="badge urgent">Cardiac arrest imminent</span>
+                            <span class="badge caution">Age >55 years</span>
+                            <span class="badge caution">Renal impairment</span>
+                            <span class="badge caution">Electrolyte abnormalities</span>
+                        </div>
+
+                        <div class="section">
+                            <h3>Key Diagnostic Factors</h3>
+                            
+                            <div class="subsection">
+                                <h4>⚠️ Risk Factors (Common)</h4>
+                                <ul>
+                                    <li><strong>Age >55 years:</strong> Decreased clearance, increased bioavailability</li>
+                                    <li><strong>Decreased renal clearance:</strong> Digoxin clearance ↓ in renal impairment</li>
+                                    <li><strong>Hyperkalaemia (>5.0 mmol/L):</strong> Marker of severe toxicity & poor prognosis</li>
+                                    <li><strong>Hypokalaemia (<3.0-3.5 mmol/L):</strong> Exacerbates toxicity effects</li>
+                                    <li><strong>Concomitant drugs:</strong> P-glycoprotein inhibitors (verapamil, diltiazem, amiodarone, quinidine, macrolides)</li>
+                                    <li><strong>Hypomagnesaemia & Hypercalcaemia:</strong> Increases susceptibility</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h4>📋 History & Exposure</h4>
+                                <ul>
+                                    <li>Confirm digoxin exposure history</li>
+                                    <li>Dose and time of ingestion</li>
+                                    <li>Thorough drug history (including supplements & herbal remedies)</li>
+                                    <li>Assess for intentional overdose/self-harm</li>
+                                    <li>Cardiac conditions & renal impairment</li>
+                                    <li>Other illnesses affecting susceptibility</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h4>🚨 Clinical Symptoms</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                    <div>
+                                        <strong>Gastrointestinal:</strong>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Nausea & vomiting (most common)</li>
+                                            <li>Anorexia</li>
+                                            <li>Abdominal pain</li>
+                                            <li>Diarrhea</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <strong>Cardiovascular:</strong>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Palpitations</li>
+                                            <li>Syncope</li>
+                                            <li>Bradycardia</li>
+                                            <li>Arrhythmias</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <strong>Neurological:</strong>
+                                        <ul style="margin-left: 1rem; margin-top: 0.5rem;">
+                                            <li>Lethargy & weakness</li>
+                                            <li>Confusion</li>
+                                            <li>Visual disturbances (xanthopsia)</li>
+                                            <li>Blurred vision/diplopia</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert-box urgent">
+                                <div class="alert-icon">🚨</div>
+                                <div>
+                                    <strong>Chronic vs Acute Toxicity:</strong> Chronic toxicity is more common and presents indolently over days-weeks, often in elderly patients with risk factors. Acute toxicity has rapid onset (minutes-hours) and can deteriorate quickly.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Initial Investigations</h3>
+                            <div class="subsection">
+                                <h4>🩺 12-Lead ECG (ALL patients)</h4>
+                                <ul>
+                                    <li><strong>Acute OD:</strong> Marked bradycardia, PR & QRS prolongation</li>
+                                    <li><strong>Toxicity features:</strong> Increased automaticity + AV blockade</li>
+                                    <li><strong>Common:</strong> Premature ventricular contractions (most frequent), bigeminy/trigeminy</li>
+                                    <li><strong>Specific:</strong> Bidirectional VT, atrial tachycardia with block, accelerated junctional rhythms</li>
+                                    <li><strong>NOT associated:</strong> SVT with rapid ventricular response</li>
+                                    <li><strong>Repeat ECGs</strong> in symptomatic patients or mixed overdoses</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Classification of Toxicity</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                <div class="subsection" style="border-left-color: #e74c3c;">
+                                    <h4>🔴 Acute Toxicity</h4>
+                                    <p class="text-muted">No prior digoxin use; accidental/intentional overdose</p>
+                                    <ul>
+                                        <li>Rapid onset (1-2 hours)</li>
+                                        <li>Initially asymptomatic, then rapid deterioration</li>
+                                        <li>Life-threatening effects may take >12 hours</li>
+                                    </ul>
+                                </div>
+                                <div class="subsection" style="border-left-color: #f39c12;">
+                                    <h4>🟡 Acute-on-Chronic</h4>
+                                    <p class="text-muted">On digoxin therapy + overdose</p>
+                                    <ul>
+                                        <li>More toxic than acute alone</li>
+                                        <li>Existing cardiac disease</li>
+                                        <li>Higher risk complications</li>
+                                    </ul>
+                                </div>
+                                <div class="subsection" style="border-left-color: #27ae60;">
+                                    <h4>🟢 Chronic Toxicity</h4>
+                                    <p class="text-muted">Drug accumulation without overdose</p>
+                                    <ul>
+                                        <li>Most common presentation</li>
+                                        <li>Indolent course over days-weeks</li>
+                                        <li>Subtle presentation, often elderly</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis">
+                <div class="card-header diagnosis" onclick="toggleCard(this)">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">
+                        <h2>Diagnosis</h2>
+                        <p>Laboratory confirmation & differential diagnosis</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="severity-badges">
+                            <span class="badge urgent">Serum digoxin >4.0 mcg/L</span>
+                            <span class="badge urgent">Severe hyperkalaemia >6.5 mmol/L</span>
+                            <span class="badge caution">Life-threatening arrhythmias</span>
+                            <span class="badge caution">Wait 6+ hours after ingestion</span>
+                        </div>
+
+                        <div class="section">
+                            <h3>Serum Digoxin Concentration</h3>
+                            <div class="subsection">
+                                <h4>⏰ Timing & Interpretation</h4>
+                                <ul>
+                                    <li><strong>Wait ≥6 hours</strong> after ingestion before measurement</li>
+                                    <li><strong>Urgent sample:</strong> If severe toxicity suspected & Fab fragments considered</li>
+                                    <li><strong>Therapeutic range:</strong> 0.6-1.2 nmol/L (0.5-0.9 ng/mL)</li>
+                                    <li><strong>Severe toxicity:</strong> >4.0 mcg/L (5.2 nmol/L)</li>
+                                    <li><strong>Children:</strong> Tolerate higher peak concentrations</li>
+                                    <li><strong>Key point:</strong> No exact level predicts toxicity; interpret clinically</li>
+                                    <li><strong>Half-life:</strong> 30-40 hours (normal renal), up to 100 hours (impaired renal)</li>
+                                    <li><strong>Post-Fab:</strong> Assays measure free + Fab-bound digoxin → falsely elevated levels</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Electrolytes & Metabolic Panel</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                <div class="subsection">
+                                    <h4>🔬 Potassium</h4>
+                                    <ul>
+                                        <li><strong>Hyperkalaemia (≥5.0):</strong> Marker of severe toxicity</li>
+                                        <li><strong>Severe (≥6.5):</strong> Indication for Fab fragments</li>
+                                        <li>Monitor repeatedly if Fab given</li>
+                                    </ul>
+                                </div>
+                                <div class="subsection">
+                                    <h4>🔬 Magnesium</h4>
+                                    <ul>
+                                        <li>Hypomagnesaemia worsens cardiac manifestations</li>
+                                        <li>Correct before/during Fab therapy</li>
+                                    </ul>
+                                </div>
+                                <div class="subsection">
+                                    <h4>🔬 Renal Function & Glucose</h4>
+                                    <ul>
+                                        <li>Creatinine & urea: Affects clearance</li>
+                                        <li>Capillary glucose: Monitor for hyperkalaemia management</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Differential Diagnosis</h3>
+                            <div class="subsection">
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; background: white;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Condition</th>
+                                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Differentiating Features</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Beta-blocker toxicity</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                                                    Hypotension, ↓ mental status, slow ventricular rate, AV block, <strong>hypoglycaemia</strong>, normal digoxin level
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Calcium-channel blocker toxicity</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                                                    Hypotension, normal mental status, slow ventricular rate, AV block, <strong>hyperglycaemia</strong>, normal digoxin level
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Hypothyroidism</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                                                    Cold intolerance, fatigue, depression, <strong>↑ TSH, ↓ T4</strong>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Acute MI/Ischaemia</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                                                    Chest pain, dyspnoea, vomiting, normal digoxin level
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert-box">
+                            <div class="alert-icon">💡</div>
+                            <div>
+                                <strong>Clinical Diagnosis:</strong> Digoxin toxicity is primarily a clinical diagnosis based on symptoms, ECG findings, and history of exposure. Serum levels support but do not definitively confirm or exclude toxicity.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment">
+                <div class="card-header treatment" onclick="toggleCard(this)">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">
+                        <h2>Treatment</h2>
+                        <p>Immediate management & therapeutic interventions</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="severity-badges">
+                            <span class="badge urgent">Cardiac arrest → Immediate Fab</span>
+                            <span class="badge urgent">Severe hyperkalaemia >6.5 → Fab</span>
+                            <span class="badge urgent">Life-threatening arrhythmias</span>
+                            <span class="badge caution">Symptomatic bradycardia</span>
+                            <span class="badge caution">Ingestion >20 mcg/kg</span>
+                        </div>
+
+                        <div class="section">
+                            <h3>Immediate Supportive Care (ABCDE)</h3>
+                            <div class="subsection">
+                                <h4>🚨 Primary Survey</h4>
+                                <ul>
+                                    <li><strong>Airway, Breathing, Circulation, Disability, Exposure</strong> assessment</li>
+                                    <li><strong>Alert:</strong> Cardiac arrest possibility - continue resuscitation ≥1 hour</li>
+                                    <li><strong>Get senior help</strong> before stopping resuscitation</li>
+                                    <li><strong>Continuous monitoring:</strong> Cardiac rhythm, vitals, BP, capillary glucose</li>
+                                    <li><strong>IV access & fluid resuscitation</strong> for hypovolaemia</li>
+                                    <li><strong>Discontinue digoxin</strong> and rate control agents</li>
+                                </ul>
+                            </div>
+
+                            <div class="alert-box urgent">
+                                <div class="alert-icon">⚠️</div>
+                                <div>
+                                    <strong>Hemodynamic Instability:</strong> If hypotension or altered consciousness, give digoxin-specific antibody (Fab) fragments as PRIMARY management
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Electrolyte Abnormality Management</h3>
+                            
+                            <div class="subsection">
+                                <h4>🧪 Hyperkalaemia Management</h4>
+                                <div class="alert-box urgent">
+                                    <div class="alert-icon">🚨</div>
+                                    <div>
+                                        <strong>Severe hyperkalaemia (≥6.5 mmol/L) resistant to conventional treatment = INDICATION for Fab fragments</strong>
+                                    </div>
+                                </div>
+                                
+                                <p><strong>Adult Treatment (severe hyperkalaemia):</strong></p>
+                                <ul>
+                                    <li><strong>IV calcium:</strong> 10% calcium chloride OR 10% calcium gluconate (slow IV with cardiac monitoring)</li>
+                                    <li><strong>Repeat:</strong> After 5-10 min if no ECG improvement (max 30 mL)</li>
+                                    <li><strong>Nebulised salbutamol</strong></li>
+                                    <li><strong>Insulin-dextrose:</strong> 10 units short-acting insulin + 100 mL 20% dextrose IV over 5 min</li>
+                                    <li><strong>Sodium bicarbonate:</strong> For metabolic acidosis</li>
+                                    <li><strong>Haemodialysis:</strong> For renal failure with severe hyperkalaemia/acidosis</li>
+                                    <li><strong>Monitor potassium repeatedly</strong> if Fab fragments administered (risk of hypokalaemia)</li>
+                                </ul>
+
+                                <div class="alert-box">
+                                    <div class="alert-icon">👶</div>
+                                    <div>
+                                        <strong>Children (<12 years):</strong> Discuss rapidly with paediatric team and refer for specialist input
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+                                <div class="subsection">
+                                    <h4>🧪 Hypokalaemia Management</h4>
+                                    <ul>
+                                        <li>Use oral or IV potassium</li>
+                                        <li>Target high end of normal range</li>
+                                        <li>Correct before/during Fab therapy</li>
+                                    </ul>
+                                </div>
+                                <div class="subsection">
+                                    <h4>🧪 Hypomagnesaemia Management</h4>
+                                    <ul>
+                                        <li>Give additional magnesium</li>
+                                        <li>Careful monitoring to restore normal levels</li>
+                                        <li>Correct before/during Fab therapy</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Digoxin-Specific Antibody (Fab) Fragments</h3>
+                            <div class="subsection">
+                                <h4>🎯 Indications for Urgent Administration</h4>
+                                <div class="severity-badges">
+                                    <span class="badge urgent">Cardiac arrest</span>
+                                    <span class="badge urgent">Life-threatening ventricular arrhythmia</span>
+                                    <span class="badge urgent">Severe bradyarrhythmia</span>
+                                    <span class="badge urgent">Severe hyperkalaemia (>6.5)</span>
+                                </div>
+                                
+                                <p><strong>Dosing Strategy:</strong></p>
+                                <ul>
+                                    <li><strong>Full neutralisation:</strong> Calculated to neutralise all digoxin load</li>
+                                    <li><strong>Half neutralisation (adequate for most):</strong> Calculated using weight & serum digoxin concentration</li>
+                                    <li><strong>Consult TOXBASE/NPIS</strong> for dose calculation</li>
+                                    <li><strong>Cardiac arrest:</strong> Empirical dosing per toxicology resource</li>
+                                    <li><strong>Repeated doses</strong> may be required if unstable</li>
+                                </ul>
+
+                                <div class="alert-box success">
+                                    <div class="alert-icon">⏱️</div>
+                                    <div>
+                                        <strong>Onset & Monitoring:</strong> Therapeutic effect seen within 15-30 minutes. Monitor ≥24-48 hours for rebound toxicity (12-24 hours, up to 10 days in renal impairment)
+                                    </div>
+                                </div>
+
+                                <div class="alert-box">
+                                    <div class="alert-icon">⚡</div>
+                                    <div>
+                                        <strong>Key Interaction:</strong> Fab fragments cause intracellular potassium shift → monitor for profound hypokalaemia, especially if treated for hyperkalaemia
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Arrhythmia Management</h3>
+                            <div class="subsection">
+                                <h4>💓 Bradyarrhythmias & AV Block</h4>
+                                <ul>
+                                    <li><strong>First-line (if Fab not immediately available):</strong> Atropine for symptomatic bradycardia/AV block</li>
+                                    <li><strong>Second-line:</strong> Temporary pacing wire if haemodynamic compromise & Fab unavailable</li>
+                                    <li><strong>Primary:</strong> Fab fragments for severe cases</li>
+                                    <li><strong>Consult cardiology/toxicology</strong> senior specialist</li>
+                                    <li><strong>Paediatric:</strong> Lower atropine doses</li>
+                                </ul>
+                                
+                                <h4>💓 Tachyarrhythmias</h4>
+                                <ul>
+                                    <li><strong>Ventricular tachycardia/fibrillation:</strong> See Fab indications above</li>
+                                    <li><strong>DO NOT USE:</strong> Class Ia antiarrhythmics (procainamide, quinidine)</li>
+                                    <li><strong>AVOID:</strong> DC cardioversion (risk of severe arrhythmias)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Gastrointestinal Decontamination</h3>
+                            <div class="subsection">
+                                <h4>⚫ Activated Charcoal</h4>
+                                <div class="severity-badges">
+                                    <span class="badge caution">Ingestion >20 mcg/kg</span>
+                                    <span class="badge caution">Symptomatic patients</span>
+                                    <span class="badge caution">Toxic plant ingestion</span>
+                                </div>
+                                
+                                <ul>
+                                    <li><strong>Indication:</strong> Symptomatic or ingested ≥20 mcg/kg digoxin OR any toxic plant amount</li>
+                                    <li><strong>Precautions:</strong> Only if airway protected and gut motility normal</li>
+                                    <li><strong>Timing:</strong> Ideally within 2 hours; later administration may still help</li>
+                                    <li><strong>Dosing:</strong> Adults: 50g every 4 hours; Children: 1g/kg every 4 hours (max 50g/dose)</li>
+                                    <li><strong>If vomiting:</strong> Smaller doses every 2 hours + antiemetic</li>
+                                    <li><strong>Stop when:</strong> Severe features resolved OR plasma concentration reduced OR ileus develops</li>
+                                    <li><strong>Review:</strong> After 4 doses</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Psychosocial Assessment</h3>
+                            <div class="subsection">
+                                <h4>🧠 Intentional Overdose Protocol</h4>
+                                <ul>
+                                    <li><strong>Urgent mental health assessment</strong> at earliest opportunity (do not delay unless life-saving treatment needed)</li>
+                                    <li><strong>Establish emotional/mental state</strong> concurrent with physical assessment</li>
+                                    <li><strong>Safe environment:</strong> Supportive setting with regular supervision</li>
+                                    <li><strong>Refer to specialist:</strong> Self-harm assessment per NICE guidelines</li>
+                                    <li><strong>See:</strong> Suicide risk mitigation protocol</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Discharge Criteria</h3>
+                            <div class="subsection">
+                                <h4>🏠 Safe Discharge (after ≥6 hours observation)</h4>
+                                <ul>
+                                    <li>Asymptomatic with normal ECG</li>
+                                    <li>Digoxin concentration returned to normal/therapeutic range</li>
+                                    <li>Patient educated on return precautions</li>
+                                    <li>Psychosocial assessment completed (if intentional)</li>
+                                    <li><strong>Follow-up:</strong> Arrange primary care review within 1 week</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup">
+                <div class="card-header followup" onclick="toggleCard(this)">
+                    <div class="card-icon">📈</div>
+                    <div class="card-title">
+                        <h2>Follow-up & Monitoring</h2>
+                        <p>Long-term management & complication surveillance</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="severity-badges">
+                            <span class="badge stable">Prognosis excellent with treatment</span>
+                            <span class="badge caution">Monitor ≥24-48 hours post-Fab</span>
+                            <span class="badge urgent">Rebound toxicity up to 10 days</span>
+                        </div>
+
+                        <div class="section">
+                            <h3>Acute Phase Monitoring</h3>
+                            <div class="subsection">
+                                <h4>📊 Parameters to Monitor</h4>
+                                <ul>
+                                    <li><strong>Cardiac rhythm:</strong> Continuous telemetry until stable</li>
+                                    <li><strong>Vital signs:</strong> Hourly initially, then as clinically indicated</li>
+                                    <li><strong>Capillary blood glucose:</strong> Especially if insulin-dextrose given</li>
+                                    <li><strong>Pupil size:</strong> Neurological assessment</li>
+                                    <li><strong>Blood pressure:</strong> Watch for hypotension</li>
+                                    <li><strong>Serum potassium:</strong> Every 4-6 hours initially, then daily</li>
+                                    <li><strong>Digoxin concentration:</strong> Every 24 hours until stable</li>
+                                    <li><strong>Renal function:</strong> Daily during acute phase</li>
+                                </ul>
+                            </div>
+
+                            <div class="alert-box">
+                                <div class="alert-icon">⏰</div>
+                                <div>
+                                    <strong>Minimum monitoring period:</strong> 24-48 hours after Fab fragment administration, longer if renal impairment present
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Complications</h3>
+                            <div class="subsection">
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse;">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Complication</th>
+                                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Timeframe</th>
+                                                <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Likelihood</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Anaphylactoid reaction to Fab</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">Short-term (minutes after infusion)</td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><span class="badge stable">Low</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Recurrence of AF/heart failure</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">Short-term (median 7 days)</td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><span class="badge stable">Low (~2%)</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Cardiac arrest</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">Short-term</td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><span class="badge stable">Low</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><strong>Rebound toxicity</strong></td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">12-24 hours up to 10 days (if renal impairment)</td>
+                                                <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;"><span class="badge caution">Moderate</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="alert-box">
+                                    <div class="alert-icon">🔁</div>
+                                    <div>
+                                        <strong>Rebound Toxicity:</strong> Can occur 12-24 hours after initial Fab response, up to 10 days in patients with renal failure. Monitor for recurrent symptoms and ECG changes.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Prognosis</h3>
+                            <div class="subsection">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                                    <div class="alert-box success">
+                                        <div class="alert-icon">✅</div>
+                                        <div>
+                                            <strong>With Appropriate Treatment:</strong> Excellent prognosis, generally no long-term adverse outcomes
+                                        </div>
+                                    </div>
+                                    <div class="alert-box urgent">
+                                        <div class="alert-icon">⚠️</div>
+                                        <div>
+                                            <strong>Untreated Acute Toxicity:</strong> 50% mortality if K+ ≥5.0 mmol/L and untreated
+                                        </div>
+                                    </div>
+                                    <div class="alert-box caution">
+                                        <div class="alert-icon">⚡</div>
+                                        <div>
+                                            <strong>Untreated Chronic Toxicity:</strong> 5-15% mortality if undiagnosed/untreated
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Poor Prognostic Factors:</h4>
+                                <ul>
+                                    <li>Age >55 years</li>
+                                    <li>Male sex</li>
+                                    <li>Underlying heart disease</li>
+                                    <li>High-degree AV block</li>
+                                    <li>Severe hyperkalaemia</li>
+                                    <li>Delay in Fab fragment administration</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Long-term Management</h3>
+                            <div class="subsection">
+                                <h4>🔄 Ongoing Care (if digoxin continued)</h4>
+                                <ul>
+                                    <li><strong>Discontinue digoxin</strong> if possible and prescribe alternative therapy</li>
+                                    <li>If must continue: Adjust dose for medication profile and renal function</li>
+                                    <li><strong>Monitor:</strong> GFR and serum digoxin every 2-4 weeks initially</li>
+                                    <li><strong>Measure digoxin:</strong> 2-3 weeks after any therapy change or new medication</li>
+                                    <li><strong>Note:</strong> Toxicity can occur in therapeutic range (rare)</li>
+                                    <li><strong>High-risk patients:</strong> Those with renal impairment, hypokalaemia, hypomagnesaemia, hypothyroidism</li>
+                                </ul>
+                                
+                                <h4>🚫 Contraindications to Digoxin</h4>
+                                <ul>
+                                    <li>Intermittent complete heart block</li>
+                                    <li>Myocarditis</li>
+                                    <li>Second-degree AV block</li>
+                                    <li>Supraventricular arrhythmias with accessory pathways</li>
+                                    <li>Ventricular tachycardia/fibrillation</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Patient Education & Prevention</h3>
+                            <div class="subsection">
+                                <h4>📢 Key Messages</h4>
+                                <ul>
+                                    <li><strong>Overdose:</strong> Seek urgent medical attention immediately</li>
+                                    <li><strong>Herbal remedies:</strong> Beware of cardiac glycosides (foxglove, oleander, lily of the valley)</li>
+                                    <li><strong>Drug interactions:</strong> Consult doctor before starting new medications</li>
+                                    <li><strong>Renal function:</strong> Monitor kidney function regularly</li>
+                                    <li><strong>Symptoms:</strong> Report nausea, vomiting, palpitations, visual changes promptly</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c !== card) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update progress sidebar
+            updateProgress();
+            
+            // Smooth scroll to card
+            if (!isExpanded) {
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+
+        // Progress sidebar functionality
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                const step = card.id;
+                const progressItem = document.querySelector(`[data-step="${step}"]`);
+                
+                if (card.classList.contains('expanded')) {
+                    progressItem.classList.add('active');
+                    progressItem.classList.remove('completed');
+                } else if (card.classList.contains('completed')) {
+                    progressItem.classList.add('completed');
+                    progressItem.classList.remove('active');
+                } else {
+                    progressItem.classList.remove('active', 'completed');
+                }
+            });
+            
+            // Mark completed sections based on scroll position
+            checkScrollPosition();
+        }
+
+        // Scroll-based progress tracking
+        function checkScrollPosition() {
+            const cards = document.querySelectorAll('.card');
+            const scrollPosition = window.scrollY + 200;
+            
+            cards.forEach((card, index) => {
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                const step = card.id;
+                const progressItem = document.querySelector(`[data-step="${step}"]`);
+                
+                if (scrollPosition >= cardTop && scrollPosition < cardBottom) {
+                    progressItem.classList.add('active');
+                    progressItem.classList.remove('completed');
+                } else if (scrollPosition > cardBottom) {
+                    progressItem.classList.add('completed');
+                    progressItem.classList.remove('active');
+                } else {
+                    progressItem.classList.remove('active');
+                }
+            });
+        }
+
+        // Progress item click handler
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const step = item.dataset.step;
+                const targetCard = document.getElementById(step);
+                
+                // Expand target card
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+                targetCard.classList.add('expanded');
+                
+                // Scroll to card
+                setTimeout(() => {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+                
+                // Update progress
+                updateProgress();
+            });
+        })
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Expand first card by default
+            document.querySelector('#assessment').classList.add('expanded');
+            updateProgress();
+        });
+
+        // Update progress on scroll
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(checkScrollPosition, 50);
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const cards = Array.from(document.querySelectorAll('.card'));
+            const expandedCard = document.querySelector('.card.expanded');
+            const currentIndex = cards.indexOf(expandedCard);
+            
+            if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                e.preventDefault();
+                cards[currentIndex].classList.remove('expanded');
+                cards[currentIndex + 1].classList.add('expanded');
+                cards[currentIndex + 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                updateProgress();
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                e.preventDefault();
+                cards[currentIndex].classList.remove('expanded');
+                cards[currentIndex - 1].classList.add('expanded');
+                cards[currentIndex - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                updateProgress();
+            }
+        });
+    </script>
+</body>
+</html>

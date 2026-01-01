@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frailty: Acute Care Quick-Scan</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-blue: #0d47a1;
+            --light-blue: #e3f2fd;
+            --danger-red: #d32f2f;
+            --danger-bg: #ffcdd2;
+            --safe-green: #2e7d32;
+            --safe-bg: #c8e6c9;
+            --warning-orange: #f57c00;
+            --neutral-gray: #f5f7fa;
+            --text-dark: #263238;
+            --text-light: #546e7a;
+            --white: #ffffff;
+            
+            /* Spacing & Radius */
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--neutral-gray);
+            color: var(--text-dark);
+            line-height: 1.6;
+            padding-bottom: 2rem;
+        }
+
+        /* --- Header & Nav --- */
+        header {
+            background-color: var(--primary-blue);
+            color: var(--white);
+            padding: 1rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .last-updated {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        nav {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 2px; /* Scrollbar spacing */
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: var(--white);
+            color: var(--primary-blue);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            max-width: 1200px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+            display: none; /* Hidden by default, toggled via JS */
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        main.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Components --- */
+        
+        /* Alert Banners */
+        .alert-banner {
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+            border-left: 5px solid;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .alert-critical {
+            background-color: var(--danger-bg);
+            border-color: var(--danger-red);
+            color: #b71c1c;
+        }
+
+        .alert-success {
+            background-color: var(--safe-bg);
+            border-color: var(--safe-green);
+            color: #1b5e20;
+        }
+
+        .alert-info {
+            background-color: var(--light-blue);
+            border-color: var(--primary-blue);
+            color: #0d47a1;
+        }
+
+        .alert-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        /* Cards Grid */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-top: 4px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card h3 {
+            margin-bottom: 1rem;
+            color: var(--primary-blue);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-red { border-top-color: var(--danger-red); }
+        .card-green { border-top-color: var(--safe-green); }
+        .card-blue { border-top-color: var(--primary-blue); }
+
+        /* Typography & Lists */
+        ul.check-list {
+            list-style: none;
+        }
+
+        ul.check-list li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        ul.check-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--safe-green);
+            font-weight: bold;
+        }
+
+        ul.action-list li::before {
+            content: '⚠';
+            color: var(--warning-orange);
+        }
+
+        .red-text { color: var(--danger-red); font-weight: bold; }
+        .green-text { color: var(--safe-green); font-weight: bold; }
+        .blue-text { color: var(--primary-blue); font-weight: bold; }
+
+        /* Tables */
+        .ref-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+        .ref-table th, .ref-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .ref-table th {
+            background-color: var(--neutral-gray);
+            color: var(--text-light);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .ref-table tr:hover {
+            background-color: #f9f9f9;
+        }
+
+        /* Interactive CFS Tool */
+        .cfs-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .cfs-score-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-blue);
+            background: white;
+            color: var(--primary-blue);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cfs-score-btn:hover, .cfs-score-btn.selected {
+            background: var(--primary-blue);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .cfs-detail-panel {
+            background: var(--light-blue);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-top: 1rem;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-weight: 500;
+            color: var(--primary-blue);
+        }
+
+        /* Mnemonic Grid (PINCH ME) */
+        .mnemonic-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        .mnemonic-card {
+            background: var(--white);
+            border: 1px solid #ddd;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mnemonic-card:hover {
+            background: var(--danger-bg);
+            border-color: var(--danger-red);
+            transform: translateY(-2px);
+        }
+        .mnemonic-letter {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--danger-red);
+        }
+        .mnemonic-word {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        /* Collapsible */
+        details {
+            margin-bottom: 1rem;
+            border: 1px solid #ddd;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        summary {
+            padding: 1rem;
+            background: #f0f0f0;
+            cursor: pointer;
+            font-weight: 600;
+            list-style: none; /* Hide default triangle */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        summary::after {
+            content: '+';
+            font-size: 1.2rem;
+            color: var(--text-light);
+        }
+        details[open] summary::after {
+            content: '-';
+        }
+        details[open] summary {
+            border-bottom: 1px solid #ddd;
+        }
+        .details-content {
+            padding: 1rem;
+            background: white;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1rem;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            border-top: 1px solid #ddd;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            header { flex-direction: column; gap: 10px; align-items: flex-start; }
+            nav { width: 100%; }
+            .cfs-score-btn { width: 30px; height: 30px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <span>⚕️ Frailty Quick-Ref</span>
+        <span class="last-updated">Oct 2025</span>
+    </div>
+    <nav>
+        <button class="nav-btn active" onclick="showTab('dashboard')">Dashboard</button>
+        <button class="nav-btn" onclick="showTab('assessment')">ED Assessment</button>
+        <button class="nav-btn" onclick="showTab('syndromes')">Syndromes</button>
+        <button class="nav-btn" onclick="showTab('management')">Management</button>
+    </nav>
+</header>
+
+<!-- DASHBOARD SECTION -->
+<main id="dashboard" class="active">
+    <div class="alert-banner alert-critical">
+        <div class="alert-icon">🚨</div>
+        <div>
+            <strong>CRITICAL ACTION:</strong> Identify frailty using Clinical Frailty Scale (CFS) within <strong>30 minutes</strong> of arrival in ED.
+        </div>
+    </div>
+
+    <div class="grid-3">
+        <div class="card card-red">
+            <h3>Red Flags <span>⚠️</span></h3>
+            <p class="red-text">NEWS2 Score ≥ 5</p>
+            <p style="font-size:0.9rem; margin-bottom:10px;">Urgent response by clinical team trained in assessment of acutely ill patients.</p>
+            <hr style="margin:10px 0; border:0; border-top:1px solid #eee;">
+            <p class="red-text">CFS Score 7-9</p>
+            <p style="font-size:0.9rem;">Independent predictor of reduced survival. Discuss ceiling of care early.</p>
+        </div>
+        
+        <div class="card card-blue">
+            <h3>Impact <span>📊</span></h3>
+            <ul class="check-list">
+                <li>~20% of patients >75 account for 80% of bed-days.</li>
+                <li>High risk of deconditioning in hospital.</li>
+                <li>Disproportionate change in health from minor stressors.</li>
+                <li>Mortality risk is 2x higher if delirium present.</li>
+            </ul>
+        </div>
+
+        <div class="card card-green">
+            <h3>Goals <span>🎯</span></h3>
+            <ul class="check-list">
+                <li>Prevent functional decline.</li>
+                <li>Living at home at discharge.</li>
+                <li>Reduce readmissions.</li>
+                <li>Person-centred care.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+        <h3>📈 The Frailty Cycle</h3>
+        <div class="grid-2">
+            <div>
+                <p>Frailty is a distinctive health state related to ageing where multiple body systems gradually lose reserves.</p>
+                <br>
+                <p><strong>Risk Factors:</strong></p>
+                <ul class="check-list">
+                    <li>Age (>65)</li>
+                    <li>Cognitive impairment</li>
+                    <li>Diabetes & Cardiovascular disease</li>
+                    <li>Physical inactivity</li>
+                </ul>
+            </div>
+            <div style="background: var(--neutral-gray); padding:1rem; border-radius: var(--radius-md); display:flex; align-items:center; justify-content:center; text-align:center;">
+                <div>
+                    <strong style="font-size:1.2rem; display:block; margin-bottom:5px;">Spiral of Decline</strong>
+                    <span style="color:var(--text-light); font-size:0.9rem;">Disability → Dependency → Further Decline</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- ASSESSMENT SECTION -->
+<main id="assessment">
+    
+    <!-- Clinical Frailty Scale Tool -->
+    <div class="card card-blue" style="margin-bottom: 1.5rem;">
+        <h3>Clinical Frailty Scale (CFS) Calculator <span style="font-size:0.8rem; font-weight:400; color:var(--text-light)">Tap score to see definition</span></h3>
+        <div class="cfs-container" id="cfs-container">
+            <!-- Generated by JS -->
+        </div>
+        <div class="cfs-detail-panel" id="cfs-output">
+            Select a score above to see assessment details.
+        </div>
+        <div style="margin-top:1rem; font-size:0.85rem; color:var(--text-light);">
+            *Assess capability 2 weeks prior to acute illness. Not for people <65 or stable learning disabilities.
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- NEWS2 -->
+        <div class="card card-red">
+            <h3>NEWS2 Guide</h3>
+            <p style="font-size:0.9rem; margin-bottom:1rem;">Score ≥ 5 indicates high risk of clinical deterioration.</p>
+            <table class="ref-table">
+                <tr>
+                    <th>Parameter</th>
+                    <th>Score 3</th>
+                </tr>
+                <tr>
+                    <td>RR</td>
+                    <td>≤8 or ≥25</td>
+                </tr>
+                <tr>
+                    <td>SpO2</td>
+                    <td>≤91 (Scale 1-2)</td>
+                </tr>
+                <tr>
+                    <td>SBP</td>
+                    <td>≤90</td>
+                </tr>
+                <tr>
+                    <td>Pulse</td>
+                    <td>≤40 or ≥130</td>
+                </tr>
+                <tr>
+                    <td>Temp</td>
+                    <td>≤35.0</td>
+                </tr>
+                <tr>
+                    <td>Consciousness</td>
+                    <td>New Confusion (V/P/U)</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 4AT Delirium Screen -->
+        <div class="card card-red">
+            <h3>4AT (Delirium Screen)</h3>
+            <p style="font-size:0.9rem; margin-bottom:1rem;">Rapid screening test for delirium and cognitive impairment.</p>
+            <table class="ref-table">
+                <tr>
+                    <th>Component</th>
+                    <th>Score</th>
+                </tr>
+                <tr>
+                    <td>Alertness</td>
+                    <td>0-4</td>
+                </tr>
+                <tr>
+                    <td>AMT4 (Orientation)</td>
+                    <td>0-4</td>
+                </tr>
+                <tr>
+                    <td>Attention</td>
+                    <td>0-5</td>
+                </tr>
+                <tr>
+                    <td>Acute change/Fluctuating course</td>
+                    <td>0-4</td>
+                </tr>
+                <tr style="background-color: var(--danger-bg); font-weight:bold;">
+                    <td colspan="2">Score > 3 suggests possible delirium</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- SYNDROMES SECTION -->
+<main id="syndromes">
+    <div class="grid-2">
+        
+        <!-- Delirium -->
+        <div class="card card-red">
+            <h3>Delirium: PINCH ME <span>🧠</span></h3>
+            <p style="margin-bottom:1rem; font-size:0.9rem;">Click cards to reveal common reversible causes.</p>
+            
+            <div class="mnemonic-grid" id="pinch-me-container">
+                <!-- Populated by JS -->
+            </div>
+
+            <div style="margin-top: 1.5rem; padding-top:1rem; border-top:1px solid #eee;">
+                <p><strong>Pharm:</strong> Short-term Haloperidol (< 1 week) if non-pharm fails. ECG first. Contra in Parkinson's/Lewy Body.</p>
+            </div>
+        </div>
+
+        <!-- Falls -->
+        <div class="card card-orange" style="border-top-color: var(--warning-orange);">
+            <h3>Falls: Timeline of Action</h3>
+            
+            <details open>
+                <summary style="background:var(--danger-bg); color:#b71c1c;">🔴 Immediate (Initial Presentation)</summary>
+                <div class="details-content">
+                    <ul class="check-list">
+                        <li>Exclude acute illness (ECG, lying/standing BP, septic screen).</li>
+                        <li>Exclude trauma (X-Ray, CT if indicated).</li>
+                        <li>Pain assessment (PAINAD if dementia).</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details open>
+                <summary style="background:var(--light-blue); color:var(--primary-blue);">🔵 Within 3-4 Hours</summary>
+                <div class="details-content">
+                    <ul class="check-list">
+                        <li>Assess cognition (4AT/bCAM) for delirium.</li>
+                        <li>Assess gait/balance & feet.</li>
+                        <li>Stratify risk for discharge vs admission.</li>
+                    </ul>
+                </div>
+            </details>
+
+            <details>
+                <summary style="background:var(--neutral-gray);">🟢 Within 24-48 Hours</summary>
+                <div class="details-content">
+                    <ul class="check-list">
+                        <li>Continence assessment.</li>
+                        <li>Nutrition assessment.</li>
+                        <li>Home environment mod (Occupational Therapy).</li>
+                        <li>Medication review.</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+
+    </div>
+</main>
+
+<!-- MANAGEMENT SECTION -->
+<main id="management">
+    <div class="alert-banner alert-info">
+        <div class="alert-icon">🏠</div>
+        <div>
+            <strong>Admission Decision:</strong> Is the patient 'safe' to go home? Are safe alternatives (Virtual Wards, Hospital at Home) available? Avoid admission if safe community options exist.
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- Comprehensive Geriatric Assessment -->
+        <div class="card card-blue">
+            <h3>Comprehensive Geriatric Assessment (CGA)</h3>
+            <p style="margin-bottom:1rem;">Multidimensional, holistic assessment. Standard of care for people with frailty.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <div style="flex:1; min-width:120px; background:var(--light-blue); padding:10px; border-radius:4px; text-align:center; font-weight:bold;">Physical</div>
+                <div style="flex:1; min-width:120px; background:var(--light-blue); padding:10px; border-radius:4px; text-align:center; font-weight:bold;">Functional</div>
+                <div style="flex:1; min-width:120px; background:var(--light-blue); padding:10px; border-radius:4px; text-align:center; font-weight:bold;">Psychological</div>
+                <div style="flex:1; min-width:120px; background:var(--light-blue); padding:10px; border-radius:4px; text-align:center; font-weight:bold;">Social/Env</div>
+            </div>
+            <p style="margin-top:1rem; font-size:0.9rem;">Improves likelihood of being alive and living at home at follow-up.</p>
+        </div>
+
+        <!-- Ongoing Care -->
+        <div class="card card-green">
+            <h3>Ward Management</h3>
+            <ul class="check-list">
+                <li><strong>Hydration:</strong> Avoid dehydration.</li>
+                <li><strong>Nutrition:</strong> Adequate calorie intake; protect meal times.</li>
+                <li><strong>Mobility:</strong> "Keep moving!" Prevent deconditioning.</li>
+                <li><strong>Medication:</strong> Structured review. Deprescribe anticholinergics/sedatives.</li>
+                <li><strong>Sensory:</strong> Glasses, hearing aids accessible.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+        <h3>Resources</h3>
+        <ul style="list-style:none; padding:0;">
+            <li style="margin-bottom:0.5rem;"><a href="#" style="color:var(--primary-blue); text-decoration:none;">📄 BGS: Setting up frailty services</a></li>
+            <li style="margin-bottom:0.5rem;"><a href="#" style="color:var(--primary-blue); text-decoration:none;">📄 NIHR: Research on frailty</a></li>
+            <li style="margin-bottom:0.5rem;"><a href="#" style="color:var(--primary-blue); text-decoration:none;">📄 NICE: Falls in older people (QS86)</a></li>
+        </ul>
+    </div>
+</main>
+
+<footer>
+    <p>Based on BMJ Best Practice (Oct 14, 2025). <br>This is a reference tool. Clinical judgment should always supersede guidance.</p>
+</footer>
+
+<script>
+    // --- Data Definitions ---
+    const cfsData = {
+        1: "Very Fit - Robust, active, energetic, well-motivated. Exercises regularly.",
+        2: "Well - Without active disease, but less fit than category 1.",
+        3: "Managing Well - Managing well with medical conditions (not regularly active).",
+        4: "Vulnerable - While not dependent, symptoms limit activities. Often complains of 'slowing down'.",
+        5: "Mildly Frail - Needs help with IADLs (finances, transport, heavy housework).",
+        6: "Moderately Frail - Needs help with both IADLs and ADLs (dressing, bathing).",
+        7: "Severely Frail - Completely dependent for personal care. Stable medical conditions.",
+        8: "Very Severely Frail - Completely dependent, approaching end of life, unable to recover from stressors.",
+        9: "Terminally Ill - Life expectancy < 6 months, not strictly frailty but included for scoring."
+    };
+
+    const pinchMeData = [
+        { letter: 'P', word: 'Pain', desc: 'Undertreated pain is a major cause of delirium.' },
+        { letter: 'I', word: 'Infection', desc: 'UTIs, pneumonia, or sepsis.' },
+        { letter: 'N', word: 'Nutrition', desc: 'Dehydration, malnutrition, vitamin deficiencies.' },
+        { letter: 'C', word: 'Constipation', desc: 'Very common reversible cause in elderly.' },
+        { letter: 'H', word: 'Hydration', desc: 'Fluid balance, electrolyte imbalance (Na, Ca).'},
+        { letter: 'M', word: 'Medication', desc: 'New meds, opioids, benzodiazepines, anticholinergics.' },
+        { letter: 'E', word: 'Environment', desc: 'Sensory impairment (loss of glasses/hearing aids), unfamiliar environment.' }
+    ];
+
+    // --- Navigation Logic ---
+    function showTab(tabId) {
+        // Hide all main sections
+        document.querySelectorAll('main').forEach(el => el.classList.remove('active'));
+        // Show selected
+        document.getElementById(tabId).classList.add('active');
+        
+        // Update Nav Buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    // --- CFS Tool Initialization ---
+    function initCFSTool() {
+        const container = document.getElementById('cfs-container');
+        const output = document.getElementById('cfs-output');
+
+        for (let i = 1; i <= 9; i++) {
+            const btn = document.createElement('div');
+            btn.className = 'cfs-score-btn';
+            btn.textContent = i;
+            
+            btn.onclick = () => {
+                // Visual selection
+                document.querySelectorAll('.cfs-score-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                
+                // Update Text
+                const desc = cfsData[i];
+                let colorClass = '';
+                
+                if(i <= 3) colorClass = '<span class="green-text">(Robust)</span>';
+                else if(i <= 6) colorClass = '<span class="blue-text">(Pre-frail/Frail)</span>';
+                else colorClass = '<span class="red-text">(Severe Frailty)</span>';
+
+                output.innerHTML = `
+                    <div style="text-align:left; width:100%;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                            <strong>Level ${i}</strong>
+                            ${colorClass}
+                        </div>
+                        <p>${desc}</p>
+                    </div>
+                `;
+            };
+
+            container.appendChild(btn);
+        }
+    }
+
+    // --- PINCH ME Mnemonic Initialization ---
+    function initPinchMe() {
+        const container = document.getElementById('pinch-me-container');
+        
+        pinchMeData.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'mnemonic-card';
+            card.innerHTML = `
+                <span class="mnemonic-letter">${item.letter}</span>
+                <span class="mnemonic-word">${item.word}</span>
+            `;
+            
+            // Toggle description on click
+            card.onclick = () => {
+                // Remove active class from others to close
+                const others = container.querySelectorAll('.mnemonic-card');
+                let isActive = card.style.background === 'rgb(255, 227, 227)'; // check if red bg is active
+                
+                others.forEach(c => {
+                    c.style.background = '';
+                    c.style.borderColor = '';
+                    c.innerHTML = `
+                        <span class="mnemonic-letter" style="color:var(--danger-red)">${c.dataset.letter}</span>
+                        <span class="mnemonic-word">${c.dataset.word}</span>
+                    `;
+                });
+
+                if (!isActive) {
+                    card.style.background = 'var(--danger-bg)';
+                    card.style.borderColor = 'var(--danger-red)';
+                    card.innerHTML = `
+                        <span class="mnemonic-letter" style="color:var(--danger-red)">${item.letter}</span>
+                        <span class="mnemonic-word">${item.word}</span>
+                        <div style="font-size:0.8rem; margin-top:5px; color:#333; line-height:1.2;">${item.desc}</div>
+                    `;
+                }
+            };
+            
+            // Store data for reset
+            card.dataset.letter = item.letter;
+            card.dataset.word = item.word;
+            
+            container.appendChild(card);
+        });
+    }
+
+    // --- Init on Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        initCFSTool();
+        initPinchMe();
+    });
+
+</script>
+
+</body>
+</html>

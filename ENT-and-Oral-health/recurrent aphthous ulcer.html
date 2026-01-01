@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recurrent Aphthous Stomatitis - Interactive Clinical Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --assessment: #3498db;
+            --diagnosis: #9b59b6;
+            --treatment: #27ae60;
+            --followup: #f39c12;
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-light: #e0e6ed;
+            --shadow: 0 4px 6px rgba(0,0,0,0.07);
+            --shadow-hover: 0 8px 25px rgba(0,0,0,0.15);
+            --red-badge: #e74c3c;
+            --amber-badge: #f1c40f;
+            --green-badge: #2ecc71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            margin-left: 280px;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            border-left: 5px solid #e74c3c;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: rgba(52, 152, 219, 0.1);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: rgba(52, 152, 219, 0.15);
+            border-left-color: var(--assessment);
+            font-weight: 600;
+        }
+
+        .progress-item:nth-child(2).active { border-left-color: var(--diagnosis); }
+        .progress-item:nth-child(3).active { border-left-color: var(--treatment); }
+        .progress-item:nth-child(4).active { border-left-color: var(--followup); }
+
+        .progress-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+            color: white;
+        }
+
+        .progress-item:nth-child(1) .progress-icon { background: var(--assessment); }
+        .progress-item:nth-child(2) .progress-icon { background: var(--diagnosis); }
+        .progress-item:nth-child(3) .progress-icon { background: var(--treatment); }
+        .progress-item:nth-child(4) .progress-icon { background: var(--followup); }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-percentage {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            border-top: 5px solid;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-5px);
+        }
+
+        .card:nth-child(1) { border-top-color: var(--assessment); animation-delay: 0.1s; }
+        .card:nth-child(2) { border-top-color: var(--diagnosis); animation-delay: 0.2s; }
+        .card:nth-child(3) { border-top-color: var(--treatment); animation-delay: 0.3s; }
+        .card:nth-child(4) { border-top-color: var(--followup); animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: rgba(0,0,0,0.02);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .card:nth-child(1) .card-icon { background: var(--assessment); }
+        .card:nth-child(2) .card-icon { background: var(--diagnosis); }
+        .card:nth-child(3) .card-icon { background: var(--treatment); }
+        .card:nth-child(4) .card-icon { background: var(--followup); }
+
+        .card h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 0 1.5rem 1.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-red {
+            background: var(--red-badge);
+            color: white;
+        }
+
+        .badge-amber {
+            background: var(--amber-badge);
+            color: var(--text-primary);
+        }
+
+        .badge-green {
+            background: var(--green-badge);
+            color: white;
+        }
+
+        .section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section h3::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-light);
+            margin-left: 1rem;
+        }
+
+        .list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .list li {
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .list li:last-child {
+            border-bottom: none;
+        }
+
+        .list li::before {
+            content: '•';
+            font-weight: bold;
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+
+        .list li:nth-child(1)::before { color: var(--assessment); }
+        .list li:nth-child(2)::before { color: var(--diagnosis); }
+        .list li:nth-child(3)::before { color: var(--treatment); }
+        .list li:nth-child(4)::before { color: var(--followup); }
+
+        .treatment-step {
+            background: #f8f9fa;
+            border-left: 4px solid var(--treatment);
+            padding: 1rem;
+            margin: 0.75rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .treatment-step h4 {
+            color: var(--treatment);
+            margin-bottom: 0.5rem;
+        }
+
+        .medication {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+            border: 1px solid var(--border-light);
+        }
+
+        .medication strong {
+            color: var(--text-primary);
+        }
+
+        .dose {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid var(--amber-badge);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+        }
+
+        .alert-box.red {
+            background: #f8d7da;
+            border-left-color: var(--red-badge);
+        }
+
+        .alert-box.green {
+            background: #d1e7dd;
+            border-left-color: var(--green-badge);
+        }
+
+        .alert-box h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .algorithm-path {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+        }
+
+        .algorithm-path h3 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .progress-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-menu-toggle {
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 200;
+                background: var(--assessment);
+                color: white;
+                border: none;
+                padding: 0.75rem;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 50px;
+            height: 50px;
+            background: var(--assessment);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            box-shadow: var(--shadow-hover);
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .scroll-indicator.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .scroll-indicator:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="progress-sidebar" id="progressSidebar">
+            <h3><i class="fas fa-compass"></i> Algorithm Navigation</h3>
+            <div class="progress-item active" data-step="0">
+                <div class="progress-icon"><i class="fas fa-stethoscope"></i></div>
+                <div class="progress-text">
+                    <div>Assessment</div>
+                    <div class="progress-percentage">0% Complete</div>
+                </div>
+            </div>
+            <div class="progress-item" data-step="1">
+                <div class="progress-icon"><i class="fas fa-microscope"></i></div>
+                <div class="progress-text">
+                    <div>Diagnosis</div>
+                    <div class="progress-percentage">0% Complete</div>
+                </div>
+            </div>
+            <div class="progress-item" data-step="2">
+                <div class="progress-icon"><i class="fas fa-pills"></i></div>
+                <div class="progress-text">
+                    <div>Treatment</div>
+                    <div class="progress-percentage">0% Complete</div>
+                </div>
+            </div>
+            <div class="progress-item" data-step="3">
+                <div class="progress-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="progress-text">
+                    <div>Follow-up</div>
+                    <div class="progress-percentage">0% Complete</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <button class="mobile-menu-toggle" id="mobileToggle" style="display: none;">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="header">
+                <h1>Recurrent Aphthous Stomatitis</h1>
+                <p>Interactive Clinical Decision Support Algorithm | BMJ Best Practice (Aug 2022)</p>
+            </div>
+
+            <div class="algorithm-path">
+                <h3><i class="fas fa-route"></i> Treatment Overview</h3>
+                <p><strong>Stepwise Approach:</strong> 1st Line → 2nd Line → 3rd Line → Specialist Referral</p>
+                <p>Start with simple measures, escalate based on response and severity</p>
+            </div>
+
+            <div class="card" id="assessment-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-stethoscope"></i></div>
+                        <h2>Assessment & History</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3><i class="fas fa-clipboard-list"></i> Key History Points</h3>
+                            <ul class="list">
+                                <li><strong>Age of Onset:</strong> Usually childhood/adolescence, 80% before 30 years</li>
+                                <li><strong>Pattern:</strong> Episodic/cyclical nature, frequency, duration of ulcer-free periods</li>
+                                <li><strong>Family History:</strong> 42% have first-degree relatives with RAS</li>
+                                <li><strong>Triggers:</strong> Trauma, foods (chocolate, peanuts, coffee, gluten), menstrual cycle</li>
+                                <li><strong>Smoking Status:</strong> Most patients are non-smokers; ulcers may start after cessation</li>
+                                <li><strong>Medications:</strong> NSAIDs, nicorandil, ACE inhibitors, anticonvulsants</li>
+                                <li><strong>Systemic Symptoms:</strong> Fever, weight loss, GI symptoms (suggests systemic cause)</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-search"></i> Clinical Examination</h3>
+                            <div class="badge badge-green">Minor Ulcers (75-85%)</div>
+                            <p>< 10mm diameter, non-keratinised mucosa, heal in 7-10 days without scarring</p>
+                            
+                            <div class="badge badge-amber">Major Ulcers (10-15%)</div>
+                            <p>> 10mm diameter, any oral site, heal in 10-40 days, may scar</p>
+                            
+                            <div class="badge badge-red">Herpetiform Ulcers (Rare)</div>
+                            <p>5-100 pinhead ulcers, coalesce, extremely painful, frequent recurrences</p>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Red Flags</h3>
+                            <div class="alert-box red">
+                                <h4><i class="fas fa-exclamation-circle"></i> Urgent Referral Indicators</h4>
+                                <ul>
+                                    <li>Solitary ulcer >3 weeks duration (suspect malignancy)</li>
+                                    <li>Associated systemic symptoms (fever, weight loss)</li>
+                                    <li>Genital or ocular ulceration (suspect Behcet's)</li>
+                                    <li>Immunodeficiency (HIV, neutropenia)</li>
+                                    <li>Severe pain preventing intake</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-flask"></i> Investigations</h3>
+                            <ul class="list">
+                                <li><strong>FBC & Haematinics:</strong> Iron, ferritin, folate, B12 (if deficiency suspected)</li>
+                                <li><strong>Coeliac Screen:</strong> IgA-tissue transglutaminase</li>
+                                <li><strong>HIV Test:</strong> If risk factors or immunodeficiency signs</li>
+                                <li><strong>ESR/CRP:</strong> If autoinflammatory state suspected</li>
+                                <li><strong>Biopsy:</strong> If malignant ulcer or immunobullous disease suspected</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="diagnosis-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-microscope"></i></div>
+                        <h2>Diagnosis</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3><i class="fas fa-check-circle"></i> Diagnostic Criteria for RAS</h3>
+                            <p>Diagnosis is clinical - based on history and examination after excluding systemic causes</p>
+                            
+                            <div class="badge badge-green">Typical RAS Features</div>
+                            <ul class="list">
+                                <li>Recurrent round/ovoid ulcers with erythematous margins and greyish-yellow base</li>
+                                <li>Onset in childhood/adolescence</li>
+                                <li>Involvement of non-keratinised mucosa (minors)</li>
+                                <li>No systemic symptoms (afebrile)</li>
+                                <li>No genital or ocular ulceration</li>
+                                <li>No immunodeficiency history</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-bacteria"></i> Aphthous-like Ulceration (ALU)</h3>
+                            <p>Consider when ulcers are associated with systemic disease:</p>
+                            <div class="badge badge-amber">Check for Systemic Associations</div>
+                            <ul class="list">
+                                <li><strong>Haematinic Deficiencies:</strong> Iron, folate, B12 deficiency</li>
+                                <li><strong>IBD:</strong> Crohn's disease, ulcerative colitis, coeliac disease</li>
+                                <li><strong>Autoinflammatory:</strong> Behcet's syndrome, PFAPA, MAGIC syndrome</li>
+                                <li><strong>Immunodeficiency:</strong> HIV/AIDS, cyclic neutropenia</li>
+                                <li><strong>Medications:</strong> NSAIDs, nicorandil, beta-blockers</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-not-equal"></i> Differential Diagnosis</h3>
+                            <ul class="list">
+                                <li><strong>Herpes Simplex:</strong> Vesicles precede ulcers, communicable</li>
+                                <li><strong>Traumatic Ulcer:</strong> Single ulcer at site of trauma</li>
+                                <li><strong>Hand-Foot-Mouth:</strong> Children, rash on palms/soles</li>
+                                <li><strong>Syphilis:</strong> Chancre, mucous patches, gummas</li>
+                                <li><strong>Malignancy:</strong> Persistent, indurated, solitary ulcer</li>
+                                <li><strong>Pemphigus:</strong> Blistering disease with oral ulcers</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-filter"></i> Diagnostic Differentiation</h3>
+                            <div class="alert-box">
+                                <h4><i class="fas fa-info-circle"></i> Key Distinctions</h4>
+                                <p><strong>RAS:</strong> Idiopathic, childhood onset, no systemic disease</p>
+                                <p><strong>ALU:</strong> Secondary to systemic condition, investigate accordingly</p>
+                                <p><strong>Major ulcers:</strong> Size >10mm, keratinised mucosa involvement</p>
+                                <p><strong>Herpetiform:</strong> Multiple pinhead ulcers, coalescing pattern</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="treatment-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-pills"></i></div>
+                        <h2>Treatment Algorithm</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3><i class="fas fa-1"></i> 1st Line - Simple Measures</h3>
+                            <div class="treatment-step">
+                                <h4>Lifestyle & Trigger Management</h4>
+                                <ul class="list">
+                                    <li>Change to SLS-free toothpaste</li>
+                                    <li>Avoid trigger foods (acidic, spicy, trauma)</li>
+                                    <li>Address dental trauma (sharp teeth, appliances)</li>
+                                    <li>Stop smoking if applicable</li>
+                                </ul>
+                                
+                                <h4>Symptom Relief</h4>
+                                <div class="medication">
+                                    <strong>Lidocaine 2% Viscous Solution</strong>
+                                    <div class="dose">Adults: 15mL swish/spit q3h PRN (max 8 doses/day)</div>
+                                    <div class="dose">Children: 1.25mL q3h PRN (max 4 doses/12h)</div>
+                                </div>
+                                <div class="medication">
+                                    <strong>Benzydamine 0.15%</strong>
+                                    <div class="dose">Adults & ≥13yr: 15mL mouthwash q1.5-3h PRN</div>
+                                    <div class="dose">≥12yr spray: 4-8 sprays q1.5-3h PRN</div>
+                                </div>
+                                
+                                <h4>Adjunctive Therapies</h4>
+                                <div class="medication">
+                                    <strong>Chlorhexidine 0.12% Mouthwash</strong>
+                                    <div class="dose">10-15mL twice daily (brush teeth first to prevent staining)</div>
+                                </div>
+                                <div class="medication">
+                                    <strong>Vitamin B12 (Cyanocobalamin)</strong>
+                                    <div class="dose">Adults: 1000mcg orally once daily (sublingual if available)</div>
+                                    <div class="dose"><em>Effective even without deficiency</em></div>
+                                </div>
+                                <div class="medication">
+                                    <strong>Iron (if deficient)</strong>
+                                    <div class="dose">Ferrous sulfate: Adults 65-130mg elemental iron daily; Children 3mg/kg daily</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-2"></i> 2nd Line - Topical Corticosteroids</h3>
+                            <div class="treatment-step">
+                                <h4>Mainstay Treatment</h4>
+                                <div class="alert-box green">
+                                    <h4><i class="fas fa-check"></i> Indication</h4>
+                                    <p>Use if simple measures fail or for moderate-severe disease</p>
+                                </div>
+                                <div class="medication">
+                                    <strong>Triamcinolone Acetonide 0.1% Dental Paste</strong>
+                                    <div class="dose">Adults: Apply to ulcers 2-3 times daily after meals & at bedtime</div>
+                                    <div class="dose">Children: Consult specialist</div>
+                                </div>
+                                <div class="medication">
+                                    <strong>Betamethasone Soluble Tablets</strong>
+                                    <div class="dose">≥12yr: 500mcg dissolved in 20mL water, rinse 4 times daily (spit out)</div>
+                                </div>
+                                <div class="medication">
+                                    <strong>Hydrocortisone Buccal Tablets</strong>
+                                    <div class="dose">≥12yr: 2.5mg dissolved slowly in mouth 4 times daily</div>
+                                </div>
+                                <div class="alert-box">
+                                    <h4><i class="fas fa-child"></i> Pediatric Considerations</h4>
+                                    <p>Limited licensed options. Use off-label only if child can spit out medication (usually >6 years)</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-3"></i> 3rd Line - Systemic Therapy</h3>
+                            <div class="treatment-step">
+                                <div class="badge badge-amber">Specialist Supervision Required</div>
+                                <div class="medication">
+                                    <strong>Prednisolone</strong>
+                                    <div class="dose">Adults: 30-60mg daily for 7 days, then taper over 7 days</div>
+                                    <div class="dose">Children: 0.5-1mg/kg/day for 7 days, then taper</div>
+                                </div>
+                                <div class="medication">
+                                    <strong>Colchicine</strong>
+                                    <div class="dose">Adults: 0.5mg 2-3 times daily (first-line immunomodulator)</div>
+                                    <div class="dose"><em>Weak evidence but used in Behcet's syndrome</em></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-4"></i> 4th Line - Specialist Referral</h3>
+                            <div class="treatment-step">
+                                <div class="badge badge-red">Specialist Only</div>
+                                <h4>Severe/Refractory Cases</h4>
+                                <ul class="list">
+                                    <li><strong>Thalidomide:</strong> Most effective for severe RAS, extreme caution required</li>
+                                    <li><strong>Azathioprine:</strong> Immunomodulator for refractory cases</li>
+                                    <li><strong>Biologics:</strong> TNF-alpha antagonists (etanercept, adalimumab) - limited data</li>
+                                </ul>
+                                <div class="alert-box red">
+                                    <h4><i class="fas fa-warning"></i> Thalidomide Requirements</h4>
+                                    <p>Teratogenic - strict contraception required. Not used in children. Specialist prescription only with monitoring program.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="followup-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-title">
+                        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                        <h2>Follow-up & Prognosis</h2>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon"></i>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3><i class="fas fa-clock"></i> Monitoring</h3>
+                            <ul class="list">
+                                <li><strong>No specific monitoring</strong> for most patients on topical therapy</li>
+                                <li><strong>Systemic therapy:</strong> Monitor according to drug (FBC, LFTs, etc.)</li>
+                                <li><strong>Biologics:</strong> Infection screening and monitoring</li>
+                                <li><strong>Thalidomide:</strong> Pregnancy testing, contraception compliance</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Complications</h3>
+                            <div class="alert-box">
+                                <h4><i class="fas fa-scar"></i> Scarring</h4>
+                                <p>Long-term complication, mainly with major aphthae. <strong>Likelihood: Low</strong></p>
+                            </div>
+                            <div class="alert-box">
+                                <h4><i class="fas fa-fungus"></i> Oral Candidiasis</h4>
+                                <p>From prolonged topical corticosteroid use. Use for shortest term possible.</p>
+                            </div>
+                            <div class="alert-box">
+                                <h4><i class="fas fa-tooth"></i> Tooth Staining</h4>
+                                <p>From chlorhexidine use. Brush teeth before use to prevent staining.</p>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-chart-line"></i> Prognosis</h3>
+                            <div class="alert-box green">
+                                <h4><i class="fas fa-smile"></i> Natural History</h4>
+                                <p>Spontaneous resolution with age is common. Frequency and severity typically decrease over time.</p>
+                            </div>
+                            <ul class="list">
+                                <li>Most patients benefit from topical therapy during flares</li>
+                                <li>Avoidance of triggers reduces frequency</li>
+                                <li>Small proportion require aggressive immunomodulatory treatment</li>
+                                <li>Quality of life impact significant during active disease</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><i class="fas fa-user"></i> Patient Education</h3>
+                            <ul class="list">
+                                <li>Avoid oral trauma - seek dental treatment if needed</li>
+                                <li>Identify and avoid personal trigger foods</li>
+                                <li>Avoid acidic foods and drinks during active ulcers</li>
+                                <li>Dilute chlorhexidine 50/50 if pain on rinsing</li>
+                                <li>Return if ulcers persist >3 weeks or systemic symptoms develop</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <button class="scroll-indicator" id="scrollIndicator" onclick="scrollToTop()">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script>
+        let expandedCards = new Set();
+        const progressItems = document.querySelectorAll('.progress-item');
+        const cards = document.querySelectorAll('.card');
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        const mobileToggle = document.getElementById('mobileToggle');
+        const sidebar = document.getElementById('progressSidebar');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-expand first card
+            setTimeout(() => {
+                cards[0].classList.add('expanded');
+                expandedCards.add(0);
+                updateProgress();
+            }, 600);
+
+            // Mobile menu toggle
+            if (window.innerWidth <= 1024) {
+                mobileToggle.style.display = 'block';
+                mobileToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('open');
+                });
+            }
+        });
+
+        // Card toggle functionality
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const cardIndex = Array.from(cards).indexOf(card);
+            
+            card.classList.toggle('expanded');
+            
+            if (expandedCards.has(cardIndex)) {
+                expandedCards.delete(cardIndex);
+            } else {
+                expandedCards.add(cardIndex);
+            }
+            
+            updateProgress();
+            scrollToCard(card);
+        }
+
+        // Update progress sidebar
+        function updateProgress() {
+            const totalCards = cards.length;
+            const expandedCount = expandedCards.size;
+            const progressPercentage = Math.round((expandedCount / totalCards) * 100);
+
+            progressItems.forEach((item, index) => {
+                const isExpanded = expandedCards.has(index);
+                const percentage = isExpanded ? 100 : 0;
+                
+                item.classList.toggle('active', isExpanded);
+                item.querySelector('.progress-percentage').textContent = `${percentage}% Complete`;
+            });
+
+            // Update overall progress (could be added to a header)
+            document.title = `RAS Algorithm - ${progressPercentage}% Complete`;
+        }
+
+        // Scroll to specific card
+        function scrollToCard(card) {
+            const headerOffset = 100;
+            const cardPosition = card.getBoundingClientRect().top + window.pageYOffset;
+            const offsetPosition = cardPosition - headerOffset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+        }
+
+        // Scroll to top
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Progress item click handler
+        progressItems.forEach((item, index) => {
+            item.addEventListener('click', () => {
+                const targetCard = cards[index];
+                if (!expandedCards.has(index)) {
+                    targetCard.classList.add('expanded');
+                    expandedCards.add(index);
+                    updateProgress();
+                }
+                scrollToCard(targetCard);
+                
+                // Close mobile sidebar after selection
+                if (window.innerWidth <= 1024) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        });
+
+        // Scroll indicator visibility
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 300) {
+                scrollIndicator.classList.add('show');
+            } else {
+                scrollIndicator.classList.remove('show');
+            }
+
+            // Update active card based on scroll position
+            let currentCard = 0;
+            cards.forEach((card, index) => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top <= 200) {
+                    currentCard = index;
+                }
+            });
+
+            progressItems.forEach((item, index) => {
+                item.classList.toggle('active', index === currentCard);
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                const nextCard = Math.min(cards.length - 1, Math.max(...Array.from(expandedCards)) + 1);
+                scrollToCard(cards[nextCard]);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                const prevCard = Math.max(0, Math.min(...Array.from(expandedCards)) - 1);
+                scrollToCard(cards[prevCard]);
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                const activeCard = document.querySelector('.card:hover .card-header');
+                if (activeCard) {
+                    activeCard.click();
+                }
+            }
+        });
+
+        // Add smooth transitions for badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+                this.style.transition = 'transform 0.2s ease';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Algorithm path animation
+        const algorithmPath = document.querySelector('.algorithm-path');
+        setInterval(() => {
+            algorithmPath.style.transform = 'scale(1.01)';
+            setTimeout(() => {
+                algorithmPath.style.transform = 'scale(1)';
+            }, 200);
+        }, 3000);
+    </script>
+</body>
+</html>

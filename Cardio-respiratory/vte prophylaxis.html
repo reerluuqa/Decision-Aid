@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VTE Prophylaxis - Interactive Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .last-updated {
+            background: #e3f2fd;
+            padding: 10px 15px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #1976d2;
+        }
+
+        .cards-container {
+            display: grid;
+            gap: 25px;
+        }
+
+        .step-card {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .step-card.active {
+            border: 3px solid currentColor;
+        }
+
+        .card-header {
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: white;
+            position: relative;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #e67e22, #d35400);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+        }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .card-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .step-card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .step-card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .risk-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .risk-item.strong {
+            border-left-color: #e74c3c;
+            background: #fdf2f2;
+        }
+
+        .risk-item.weak {
+            border-left-color: #f39c12;
+            background: #fef9f2;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        .badge-high {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-moderate {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-low {
+            background: #27ae60;
+            color: white;
+        }
+
+        .treatment-option {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .treatment-option h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .drug-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .drug-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .mechanical-option {
+            background: #e8f5e9;
+            border-left-color: #27ae60;
+        }
+
+        .pharmacological-option {
+            background: #e3f2fd;
+            border-left-color: #3498db;
+        }
+
+        .contraindication {
+            background: #ffebee;
+            border-left-color: #e74c3c;
+        }
+
+        .sidebar {
+            width: 300px;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+
+        .progress-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .progress-card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .progress-item:hover {
+            background: #e3f2fd;
+        }
+
+        .progress-item.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .progress-item.completed {
+            background: #27ae60;
+            color: white;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon,
+        .progress-item.completed .progress-icon {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .alert-icon {
+            color: #f39c12;
+            font-size: 1.2rem;
+            margin-top: 2px;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-content strong {
+            color: #d35400;
+        }
+
+        .algorithm-path {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #e9ecef;
+        }
+
+        .algorithm-path h4 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .path-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+
+        .path-step:last-child {
+            margin-bottom: 0;
+        }
+
+        .step-number {
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .special-population {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #27ae60;
+        }
+
+        .special-population h5 {
+            color: #229954;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .risk-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .drug-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .highlight {
+            background: #fff9c4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .reference-note {
+            background: #f8f9fa;
+            border-left: 3px solid #6c757d;
+            padding: 10px 15px;
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header fade-in">
+                <h1><i class="fas fa-heartbeat"></i> Venous Thromboembolism (VTE) Prophylaxis</h1>
+                <p>Evidence-based algorithm for VTE prevention in hospitalized patients</p>
+                <div class="last-updated">
+                    <i class="fas fa-calendar-alt"></i> Last updated: Dec 02, 2025 | BMJ Best Practice
+                </div>
+            </div>
+
+            <div class="cards-container">
+                <!-- Assessment Card -->
+                <div class="step-card fade-in" data-step="assessment">
+                    <div class="card-header assessment">
+                        <div class="card-icon">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Assessment <span class="badge badge-high">Critical First Step</span></h2>
+                            <p>Evaluate VTE risk, bleeding risk & contraindications in all patients</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Baseline Investigations</h3>
+                                <p>Before initiating thromboprophylaxis, all patients should have:</p>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li><strong>Renal function:</strong> Creatinine & creatinine clearance (agents like LMWH, fondaparinux eliminated through kidney)</li>
+                                    <li><strong>Full blood count:</strong> Rule out acute drop in Hb or severe thrombocytopenia</li>
+                                    <li><strong>Coagulation profile:</strong> If coagulation disorder suspected</li>
+                                    <li><strong>Serum anti-PF4 antibodies:</strong> If clinical suspicion of HIT</li>
+                                </ul>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-layer-group"></i> VTE Risk Stratification</h3>
+                                <p>Thrombotic risk varies with admission reason & patient characteristics. Key risk factors:</p>
+                                
+                                <div class="risk-grid">
+                                    <div class="risk-item strong">
+                                        <strong><i class="fas fa-exclamation-circle"></i> Strong Risk Factors</strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Previous VTE <span class="badge badge-high">8x risk</span></li>
+                                            <li>Thrombophilia</li>
+                                            <li>Active malignancy <span class="badge badge-high">4-7x risk</span></li>
+                                            <li>Postoperative setting <span class="badge badge-high">4-22x risk</span></li>
+                                            <li>Recent trauma <span class="badge badge-high">13x risk</span></li>
+                                            <li>Indwelling central catheter</li>
+                                            <li>Immobility</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="risk-item weak">
+                                        <strong><i class="fas fa-info-circle"></i> Additional Risk Factors</strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Increasing age (>40 years)</li>
+                                            <li>Obesity (BMI >30)</li>
+                                            <li>Estrogen therapy/OCPs/HRT</li>
+                                            <li>Varicose veins</li>
+                                            <li>Pregnancy/postnatal</li>
+                                            <li>Extended travel</li>
+                                            <li>CHF, COPD, IBD</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-tint"></i> Bleeding Risk Assessment</h3>
+                                <p>Pharmacological agents are contraindicated if:</p>
+                                <ul style="margin-left: 20px; margin-top: 10px;">
+                                    <li>Active bleeding present</li>
+                                    <li>Severe thrombocytopenia</li>
+                                    <li>Coagulation disorder</li>
+                                    <li>High bleeding risk procedure</li>
+                                </ul>
+                                <div class="alert">
+                                    <div class="alert-icon">
+                                        <i class="fas fa-info-circle"></i>
+                                    </div>
+                                    <div class="alert-content">
+                                        <strong>Neuraxial anesthesia considerations:</strong> Spinal hematoma is a rare but catastrophic complication. Avoid anticoagulants close to catheter insertion/removal.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-calculator"></i> Risk Assessment Tools</h3>
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-user-injured"></i> Medical Patients</h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>Padua Prediction Score:</strong> Identify low vs high VTE risk
+                                            <span class="badge badge-moderate">Score ≥4 = High Risk</span>
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>IMPROVE Score:</strong> Assess bleeding risk to guide decisions
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-procedures"></i> Surgical Patients</h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>Caprini Score:</strong> Very low (0) to high (≥5) risk categories
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>Rogers Score:</strong> Very low (<7) to moderate (>10) risk
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="step-card fade-in" data-step="diagnosis">
+                    <div class="card-header diagnosis">
+                        <div class="card-icon">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Diagnosis <span class="badge badge-moderate">Risk Stratification</span></h2>
+                            <p>Apply validated risk scores & identify patient category</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3><i class="fas fa-hospital-user"></i> Medical Inpatients</h3>
+                                <div class="algorithm-path">
+                                    <h4>High Risk Criteria <span class="badge badge-high">Requires Prophylaxis</span></h4>
+                                    <ul style="margin-left: 20px; margin-top: 10px;">
+                                        <li>Acutely ill with reduced mobility</li>
+                                        <li>AND one or more additional VTE risk factors</li>
+                                        <li>Examples: respiratory/cardiovascular decompensation, acute infection, inflammatory conditions</li>
+                                    </ul>
+                                </div>
+                                <div class="algorithm-path">
+                                    <h4>Low Risk <span class="badge badge-low">Early Ambulation</span></h4>
+                                    <ul style="margin-left: 20px; margin-top: 10px;">
+                                        <li>Mobile patients with no additional risk factors</li>
+                                        <li>Short hospital stay expected</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-cut"></i> Surgical Patients</h3>
+                                <p>Risk varies by procedure type:</p>
+                                <div class="risk-grid">
+                                    <div class="risk-item">
+                                        <strong><span class="badge badge-high">High Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Major orthopaedic surgery (THA, TKA, hip fracture)</li>
+                                            <li>Major abdominal/pelvic cancer surgery</li>
+                                            <li>Neurosurgery (high bleeding risk)</li>
+                                            <li>Trauma surgery</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="risk-item">
+                                        <strong><span class="badge badge-moderate">Moderate Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>General/gynae/urological surgery</li>
+                                            <li>Thoracic surgery</li>
+                                            <li>Cardiac surgery</li>
+                                            <li>Bariatric surgery</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="risk-item">
+                                        <strong><span class="badge badge-low">Low Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Minor surgery (<30 min)</li>
+                                            <li>Laparoscopic procedures</li>
+                                            <li>Early ambulation feasible</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-disease"></i> Special Populations</h3>
+                                <div class="special-population">
+                                    <h5><i class="fas fa-star-of-life"></i> Cancer Patients</h5>
+                                    <p>Hospitalized cancer patients should receive thromboprophylaxis. Ambulatory cancer patients: consider prophylaxis if Khorana score ≥2 and low bleeding risk.</p>
+                                </div>
+                                
+                                <div class="special-population">
+                                    <h5><i class="fas fa-baby"></i> Pregnancy</h5>
+                                    <p>LMWH preferred (does not cross placenta). Avoid pharmacological prophylaxis during active labor.</p>
+                                </div>
+                                
+                                <div class="special-population">
+                                    <h5><i class="fas fa-lungs-virus"></i> ICU Patients</h5>
+                                    <p>Most critical care patients should receive thromboprophylaxis with UFH or LMWH.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="step-card fade-in" data-step="treatment">
+                    <div class="card-header treatment">
+                        <div class="card-icon">
+                            <i class="fas fa-syringe"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Treatment <span class="badge badge-high">Action Required</span></h2>
+                            <p>Pharmacological & non-pharmacological prophylaxis strategies</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3><i class="fas fa-pills"></i> Pharmacological Options</h3>
+                                
+                                <div class="treatment-option pharmacological-option">
+                                    <h4><i class="fas fa-check-circle"></i> First-Line Agents</h4>
+                                    <div class="drug-list">
+                                        <div class="drug-item">Enoxaparin</div>
+                                        <div class="drug-item">Tinzaparin</div>
+                                        <div class="drug-item">Dalteparin</div>
+                                        <div class="drug-item">Fondaparinux</div>
+                                        <div class="drug-item">UFH</div>
+                                    </div>
+                                    <p class="reference-note">LMWH preferred over UFH due to lower HIT risk. Start postoperatively for surgical patients.</p>
+                                </div>
+
+                                <div class="treatment-option">
+                                    <h4><i class="fas fa-tablets"></i> Direct Oral Anticoagulants (DOACs)</h4>
+                                    <div class="drug-list">
+                                        <div class="drug-item">Rivaroxaban</div>
+                                        <div class="drug-item">Apixaban</div>
+                                        <div class="drug-item">Dabigatran</div>
+                                    </div>
+                                    <p><strong>Indications:</strong> Orthopaedic surgery (THA, TKA) <span class="badge badge-moderate">Not for hip fracture</span></p>
+                                    <p><strong>Contraindications:</strong> Severe renal impairment (CrCl <30 mL/min), pregnancy, mechanical heart valves</p>
+                                </div>
+
+                                <div class="treatment-option">
+                                    <h4><i class="fas fa-aspirin"></i> Aspirin</h4>
+                                    <p>Controversial for primary prophylaxis. May be used for extended prophylaxis after orthopaedic surgery or as alternative in high-risk cancer patients.</p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-compress"></i> Non-Pharmacological Options</h3>
+                                
+                                <div class="treatment-option mechanical-option">
+                                    <h4><i class="fas fa-socks"></i> Graduated Compression Stockings (GCS)</h4>
+                                    <p>Generally safe but adherence 30-65% (pain, discomfort, heat). Use alone only if pharmacological agents contraindicated.</p>
+                                </div>
+
+                                <div class="treatment-option mechanical-option">
+                                    <h4><i class="fas fa-hand-paper"></i> Intermittent Pneumatic Compression (IPC)</h4>
+                                    <p>Significantly decreases DVT vs placebo. Preferred mechanical method. <span class="highlight">Add to pharmacological prophylaxis in high-risk patients.</span></p>
+                                </div>
+
+                                <div class="treatment-option">
+                                    <h4><i class="fas fa-walking"></i> Early Ambulation</h4>
+                                    <p>Encourage all patients when safe. Most important non-pharmacological measure.</p>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-user-friends"></i> Patient-Specific Recommendations</h3>
+                                
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-bed"></i> Medical Patients <span class="badge badge-moderate">LMWH or Fondaparinux</span></h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            High-risk (Padua ≥4): LMWH, fondaparinux, or UFH until mobile or discharge
+                                            <span class="badge badge-high">Preferred: LMWH</span>
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            Low-risk: Early ambulation, no routine pharmacological prophylaxis
+                                        </div>
+                                    </div>
+                                    <div class="reference-note">Extended prophylaxis beyond hospitalization NOT recommended for medical patients.</div>
+                                </div>
+
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-bone"></i> Major Orthopaedic Surgery <span class="badge badge-high">Pharmacological + Mechanical</span></h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            THA/TKA: LMWH, DOACs, or aspirin for <span class="highlight">minimum 10-14 days, extend to 35 days</span>
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            Hip fracture: LMWH (preferred), fondaparinux, UFH, or aspirin for <span class="highlight">minimum 10-14 days, up to 35 days</span>
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">3</div>
+                                        <div>
+                                            Add IPC devices during hospital stay
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-brain"></i> Neurosurgery <span class="badge badge-moderate">IPC First</span></h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>Routine:</strong> IPC devices (start on admission, continue 30 days or until mobile)
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>If low bleeding risk:</strong> Add LMWH or UFH 24-48h post-op for minimum 7 days
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-heart"></i> Cardiac/Thoracic Surgery <span class="badge badge-moderate">Mechanical + Pharmacological</span></h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>All patients:</strong> IPC devices (start on admission)
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>Moderate-high VTE risk:</strong> Add LMWH or UFH for minimum 7 days if bleeding risk acceptable
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-exclamation-circle"></i> Contraindications & Special Considerations</h3>
+                                
+                                <div class="treatment-option contraindication">
+                                    <h4><i class="fas fa-ban"></i> Absolute Contraindications</h4>
+                                    <ul style="margin-left: 20px;">
+                                        <li>Active bleeding</li>
+                                        <li>Severe thrombocytopenia</li>
+                                        <li>Acute HIT (use alternative agents)</li>
+                                        <li>Severe renal impairment (CrCl <30 mL/min) - adjust dose or use UFH</li>
+                                    </ul>
+                                </div>
+
+                                <div class="special-population">
+                                    <h5><i class="fas fa-weight"></i> Obesity (BMI >30)</h5>
+                                    <p>Weight-based dosing may be preferable for LMWH, though evidence is mixed. Consider higher doses for bariatric surgery patients.</p>
+                                </div>
+
+                                <div class="special-population">
+                                    <h5><i class="fas fa-allergies"></i> Heparin-Induced Thrombocytopenia (HIT)</h5>
+                                    <p>History of HIT is contraindication to UFH/LMWH. Consult thrombosis specialist for alternatives (fondaparinux, DOACs).</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="step-card fade-in" data-step="followup">
+                    <div class="card-header followup">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="card-title">
+                            <h2>Follow-up <span class="badge badge-low">Ongoing Monitoring</span></h2>
+                            <p>Monitoring, complications, patient education & secondary prevention</p>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="section">
+                                <h3><i class="fas fa-search"></i> Monitoring Requirements</h3>
+                                
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-tint"></i> Bleeding Surveillance</h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            Daily clinical assessment for bleeding (surgical site, GI tract, injection sites)
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            Monitor hemoglobin if bleeding suspected
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-vial"></i> Platelet Count Monitoring</h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>Post-surgical patients on UFH:</strong> Every other day for 4-14 days
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>Medical patients on LMWH:</strong> Routine monitoring not required (low HIT risk)
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">3</div>
+                                        <div>
+                                            <strong>If thrombosis or necrotic reaction:</strong> Check platelets immediately
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Complications to Monitor</h3>
+                                
+                                <div class="risk-grid">
+                                    <div class="risk-item strong">
+                                        <strong><i class="fas fa-lungs"></i> Pulmonary Embolism (PE) <span class="badge badge-high">Medium Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Pleuritic chest pain, dyspnea, hypoxemia</li>
+                                            <li>Systolic BP <90 mmHg suggests massive PE</li>
+                                            <li><strong>Action:</strong> O2/ALS protocol, immediate anticoagulation</li>
+                                            <li>Consider thrombolysis if high-risk</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="risk-item strong">
+                                        <strong><i class="fas fa-vein"></i> Deep Vein Thrombosis (DVT) <span class="badge badge-moderate">Medium Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Leg swelling, pain, venous distension</li>
+                                            <li>75% of postoperative VTE occurs after discharge</li>
+                                            <li><strong>Action:</strong> Diagnostic ultrasound, initiate treatment</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="risk-item">
+                                        <strong><i class="fas fa-tint"></i> Anticoagulant-Related Bleeding <span class="badge badge-low">Low Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>Risk varies by agent and patient factors</li>
+                                            <li>Prophylactic doses cause less bleeding</li>
+                                            <li><strong>Management:</strong> Stop anticoagulant, antidote if available, supportive care</li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <div class="risk-item">
+                                        <strong><i class="fas fa-allergies"></i> Heparin-Induced Thrombocytopenia <span class="badge badge-low">Low Risk</span></strong>
+                                        <ul style="margin-left: 20px; margin-top: 8px; font-size: 0.9rem;">
+                                            <li>50% platelet count drop 5-14 days after heparin start</li>
+                                            <li>More common with UFH than LMWH</li>
+                                            <li><strong>Action:</strong> Stop all heparin, consult hematology</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-user-clock"></i> Duration of Prophylaxis</h3>
+                                
+                                <div class="treatment-option">
+                                    <h4><i class="fas fa-calendar-alt"></i> Standard Duration</h4>
+                                    <div class="path-step">
+                                        <div class="step-number">•</div>
+                                        <div>
+                                            <strong>Medical patients:</strong> Until fully mobile or discharged
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">•</div>
+                                        <div>
+                                            <strong>General surgery:</strong> Minimum 7 days, consider up to 28 days if high-risk cancer surgery
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">•</div>
+                                        <div>
+                                            <strong>THA/TKA:</strong> Minimum 10-14 days, <span class="highlight">extend to 35 days</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert">
+                                    <div class="alert-icon">
+                                        <i class="fas fa-info-circle"></i>
+                                    </div>
+                                    <div class="alert-content">
+                                        <strong>Extended Prophylaxis:</strong> NOT recommended for medical patients beyond hospitalization. Consider for high-risk orthopaedic surgery and cancer patients.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-user-graduate"></i> Patient Education</h3>
+                                
+                                <div class="algorithm-path">
+                                    <h4><i class="fas fa-chalkboard-teacher"></i> Key Teaching Points</h4>
+                                    <div class="path-step">
+                                        <div class="step-number">1</div>
+                                        <div>
+                                            <strong>Signs/Symptoms of VTE:</strong> Leg swelling/pain, chest pain, shortness of breath
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">2</div>
+                                        <div>
+                                            <strong>When to seek help:</strong> Immediately if any VTE symptoms or injection site necrosis
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">3</div>
+                                        <div>
+                                            <strong>Allergic reactions:</strong> Breathing difficulty, wheezing, facial swelling = Emergency
+                                        </div>
+                                    </div>
+                                    <div class="path-step">
+                                        <div class="step-number">4</div>
+                                        <div>
+                                            <strong>Medication adherence:</strong> Importance of completing course, proper injection technique
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="special-population">
+                                    <h5><i class="fas fa-home"></i> Discharge Planning</h5>
+                                    <p>75% of postoperative VTE occurs after discharge. Ensure patients understand:</p>
+                                    <ul style="margin-left: 20px;">
+                                        <li>Duration of prophylaxis prescribed</li>
+                                        <li>How to self-administer injections if required</li>
+                                        <li>Arrangements for community support</li>
+                                        <li>Follow-up appointment scheduling</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <h3><i class="fas fa-shield-alt"></i> Secondary Prevention</h3>
+                                
+                                <div class="treatment-option">
+                                    <h4><i class="fas fa-history"></i> After First VTE Episode</h4>
+                                    <p>Recurrence risk after stopping anticoagulation:</p>
+                                    <ul style="margin-left: 20px; margin-top: 10px;">
+                                        <li>10% at 1 year</li>
+                                        <li>16% at 2 years</li>
+                                        <li>25% at 5 years</li>
+                                        <li>36% at 10 years</li>
+                                    </ul>
+                                    <p style="margin-top: 10px;"><strong>Long-term anticoagulation:</strong> Consider in patients with active cancer or thrombophilia.</p>
+                                </div>
+
+                                <div class="alert">
+                                    <div class="alert-icon">
+                                        <i class="fas fa-info-circle"></i>
+                                    </div>
+                                    <div class="alert-content">
+                                        <strong>Post-Thrombotic Syndrome:</strong> 20-50% of DVT patients develop long-term complications. Appropriate anticoagulation reduces this risk.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Sidebar -->
+        <div class="sidebar">
+            <div class="progress-card">
+                <h3><i class="fas fa-tasks"></i> Progress</h3>
+                <div class="progress-item" data-target="assessment">
+                    <div class="progress-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div>
+                        <strong>Assessment</strong>
+                        <div style="font-size: 0.85rem; opacity: 0.8;">Risk evaluation</div>
+                    </div>
+                </div>
+                <div class="progress-item" data-target="diagnosis">
+                    <div class="progress-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div>
+                        <strong>Diagnosis</strong>
+                        <div style="font-size: 0.85rem; opacity: 0.8;">Risk stratification</div>
+                    </div>
+                </div>
+                <div class="progress-item" data-target="treatment">
+                    <div class="progress-icon">
+                        <i class="fas fa-syringe"></i>
+                    </div>
+                    <div>
+                        <strong>Treatment</strong>
+                        <div style="font-size: 0.85rem; opacity: 0.8;">Prophylaxis selection</div>
+                    </div>
+                </div>
+                <div class="progress-item" data-target="followup">
+                    <div class="progress-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <strong>Follow-up</strong>
+                        <div style="font-size: 0.85rem; opacity: 0.8;">Monitoring & education</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="progress-card">
+                <h3><i class="fas fa-lightbulb"></i> Key Points</h3>
+                <div style="font-size: 0.9rem; line-height: 1.5;">
+                    <p><strong>Remember:</strong></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Assess <span class="highlight">all</span> admitted patients</li>
+                        <li>Balance VTE vs bleeding risk</li>
+                        <li>Start prophylaxis <span class="highlight">early</span></li>
+                        <li>Extended prophylaxis for high-risk surgery</li>
+                        <li>Patient education crucial for post-discharge</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="progress-card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Urgent Actions</h3>
+                <div style="font-size: 0.9rem; line-height: 1.5;">
+                    <p><span class="badge badge-high">Red Flag</span></p>
+                    <ul style="margin-left: 20px; margin-top: 10px;">
+                        <li>Suspected PE with hypotension</li>
+                        <li>Massive bleeding on anticoagulation</li>
+                        <li>Severe allergic reaction</li>
+                        <li>Necrotic injection site (possible HIT)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Interactive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const stepCards = document.querySelectorAll('.step-card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            let completedSteps = new Set();
+
+            // Expand/collapse cards
+            stepCards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                
+                header.addEventListener('click', () => {
+                    const isExpanded = card.classList.contains('expanded');
+                    
+                    // Close all cards
+                    stepCards.forEach(c => {
+                        c.classList.remove('expanded', 'active');
+                    });
+                    
+                    // Open clicked card if it wasn't already expanded
+                    if (!isExpanded) {
+                        card.classList.add('expanded', 'active');
+                        const step = card.dataset.step;
+                        completedSteps.add(step);
+                        updateProgress();
+                        
+                        // Scroll to card
+                        setTimeout(() => {
+                            card.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start',
+                                inline: 'nearest'
+                            });
+                        }, 100);
+                    } else {
+                        card.classList.remove('active');
+                    }
+                });
+            });
+
+            // Progress sidebar navigation
+            progressItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const target = item.dataset.target;
+                    const targetCard = document.querySelector(`[data-step="${target}"]`);
+                    
+                    if (targetCard) {
+                        // Close all cards
+                        stepCards.forEach(c => c.classList.remove('expanded', 'active'));
+                        
+                        // Open target card
+                        targetCard.classList.add('expanded', 'active');
+                        completedSteps.add(target);
+                        updateProgress();
+                        
+                        // Scroll to card
+                        setTimeout(() => {
+                            targetCard.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'start' 
+                            });
+                        }, 100);
+                    }
+                });
+            });
+
+            // Update progress indicators
+            function updateProgress() {
+                progressItems.forEach(item => {
+                    const step = item.dataset.target;
+                    const card = document.querySelector(`[data-step="${step}"]`);
+                    
+                    item.classList.remove('active', 'completed');
+                    
+                    if (card.classList.contains('active')) {
+                        item.classList.add('active');
+                    } else if (completedSteps.has(step)) {
+                        item.classList.add('completed');
+                    }
+                });
+            }
+
+            // Auto-expand first card on load
+            setTimeout(() => {
+                stepCards[0].classList.add('expanded', 'active');
+                updateProgress();
+            }, 500);
+
+            // Add smooth scrolling to all internal links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+
+            // Add hover effect to badges
+            document.querySelectorAll('.badge').forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.transition = 'transform 0.2s ease';
+                });
+                
+                badge.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+
+            // Create a subtle pulse effect for active progress items
+            setInterval(() => {
+                document.querySelectorAll('.progress-item.active').forEach(item => {
+                    item.style.animation = 'pulse 2s infinite';
+                });
+            }, 2000);
+        });
+
+        // Add pulse animation to CSS
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes pulse {
+                0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
+                70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

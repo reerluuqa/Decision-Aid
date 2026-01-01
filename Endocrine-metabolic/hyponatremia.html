@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyponatraemia Quick-Scan Tool</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-blue: #0288d1;
+            --primary-dark: #01579b;
+            --primary-light: #e1f5fe;
+            --accent-red: #d32f2f;
+            --accent-red-bg: #ffebee;
+            --accent-green: #2e7d32;
+            --accent-green-bg: #e8f5e9;
+            --text-dark: #263238;
+            --text-light: #546e7a;
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-hover: 0 8px 15px rgba(0,0,0,0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Header & Nav --- */
+        header {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .brand {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand svg {
+            width: 28px;
+            height: 28px;
+            fill: var(--primary-blue);
+        }
+
+        nav {
+            display: flex;
+            gap: 5px;
+            background: #f0f2f5;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .nav-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-light);
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+
+        .nav-btn.active {
+            background: white;
+            color: var(--primary-blue);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            position: relative;
+        }
+
+        .view-section {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Grid & Cards --- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-left: 5px solid transparent;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* --- Styling Types --- */
+        
+        /* Red Flags / Emergency */
+        .card.emergency {
+            border-left-color: var(--accent-red);
+            background: var(--accent-red-bg);
+        }
+        .card.emergency .card-title { color: var(--accent-red); }
+        .btn-emergency {
+            background-color: var(--accent-red);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-emergency:hover { background-color: #b71c1c; }
+
+        /* Safe / Positive */
+        .card.safe {
+            border-left-color: var(--accent-green);
+            background: #f1f8e9;
+        }
+        .card.safe .card-title { color: var(--accent-green); }
+
+        /* Info / Neutral */
+        .card.info {
+            border-left-color: var(--primary-blue);
+        }
+        .card.info .card-title { color: var(--primary-blue); }
+
+        /* --- Content Elements --- */
+        ul {
+            padding-left: 20px;
+            margin-bottom: 0;
+        }
+
+        li {
+            margin-bottom: 6px;
+            line-height: 1.4;
+            color: var(--text-dark);
+        }
+
+        .highlight {
+            font-weight: 700;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 5px;
+            text-transform: uppercase;
+        }
+        .tag.red { background: #ffcdd2; color: #b71c1c; }
+        .tag.blue { background: #bbdefb; color: #0d47a1; }
+        .tag.green { background: #c8e6c9; color: #1b5e20; }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+        th {
+            color: var(--text-light);
+            font-weight: 600;
+        }
+        tr:last-child td { border-bottom: none; }
+
+        /* Triage Section Specific */
+        .triage-questions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .question-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .q-btn {
+            padding: 8px 24px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .q-btn.yes:hover { background: #ffcdd2; color: #b71c1c; border-color: #b71c1c; }
+        .q-btn.no:hover { background: #e8f5e9; color: #1b5e20; border-color: #1b5e20; }
+
+        /* Disclaimer */
+        .disclaimer-banner {
+            background: #37474f;
+            color: #cfd8dc;
+            font-size: 0.75rem;
+            text-align: center;
+            padding: 5px;
+            flex-shrink: 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            header { flex-direction: column; gap: 10px; }
+            nav { width: 100%; justify-content: center; }
+            .nav-btn { flex: 1; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <svg viewBox="0 0 24 24">
+            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M13,6H11V11H6V13H11V18H13V13H18V11H13V6Z" />
+        </svg>
+        Hyponatraemia Quick-Scan
+    </div>
+    <nav>
+        <button class="nav-btn active" onclick="switchTab('triage')">Triage</button>
+        <button class="nav-btn" onclick="switchTab('overview')">Overview</button>
+        <button class="nav-btn" onclick="switchTab('diagnosis')">Diagnosis</button>
+        <button class="nav-btn" onclick="switchTab('management')">Management</button>
+    </nav>
+</header>
+
+<main>
+    <!-- TRIAGE SECTION: The first thing a clinician sees -->
+    <section id="triage" class="view-section active">
+        <div class="grid-2">
+            <div class="card emergency">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg style="width:24px;height:24px;fill:var(--accent-red);" viewBox="0 0 24 24"><path d="M13,14H11V10H13M13,18H11V16H13M1,21H23L12,2L1,21Z" /></svg>
+                        Immediate Danger?
+                    </div>
+                </div>
+                <div class="triage-questions">
+                    <p style="margin-bottom:10px; font-weight:600;">Symptoms of Cerebral Oedema:</p>
+                    <ul>
+                        <li>Severe headache / Nausea / Vomiting</li>
+                        <li>Altered mental status / Confusion</li>
+                        <li>Seizures / Coma</li>
+                        <li><strong>Duration:</strong> Acute (&lt;48 hours)</li>
+                    </ul>
+                    <hr style="border:0; border-top:1px solid rgba(0,0,0,0.1); margin:10px 0;">
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-emergency" onclick="alertUser('Triage: Treat as Acute Symptomatic Hyponatraemia. Administer 3% Hypertonic Saline immediately.')">YES / URGENT</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg style="width:24px;height:24px;fill:var(--primary-blue);" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20M11,7H13V9H15V11H13V13H15V15H13V17H11V15H9V13H11V11H9V9H11V7Z" /></svg>
+                        Stable or Chronic?
+                    </div>
+                </div>
+                <div class="triage-questions">
+                    <p style="margin-bottom:10px; font-weight:600;">Patient Presentation:</p>
+                    <ul>
+                        <li>Mild cognitive symptoms (confusion, gait issues)</li>
+                        <li>Asymptomatic (incidental finding)</li>
+                        <li><strong>Duration:</strong> Chronic (&ge;48 hours) or Unknown</li>
+                    </ul>
+                    <hr style="border:0; border-top:1px solid rgba(0,0,0,0.1); margin:10px 0;">
+                    <p style="font-size:0.9rem; color:var(--text-light);">Proceed to <strong>Diagnosis</strong> tab to classify volume status.</p>
+                    <button class="q-btn yes" style="margin-top:5px; width:100%; border-color:var(--primary-blue); color:var(--primary-blue);" onclick="switchTab('diagnosis')">Go to Diagnosis Algorithm</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card info">
+            <div class="card-header">
+                <div class="card-title">Serum Sodium Severity Reference</div>
+            </div>
+            <div style="display:flex; justify-content:space-around; text-align:center;">
+                <div>
+                    <div style="font-size:1.5rem; font-weight:800; color:#f57f17;">130-135</div>
+                    <span class="tag blue">Mild</span>
+                </div>
+                <div>
+                    <div style="font-size:1.5rem; font-weight:800; color:#f9a825;">125-129</div>
+                    <span class="tag" style="background:#fff9c4; color:#f57f17;">Moderate</span>
+                </div>
+                <div>
+                    <div style="font-size:1.5rem; font-weight:800; color:var(--accent-red);">&lt;125</div>
+                    <span class="tag red">Severe</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- OVERVIEW SECTION -->
+    <section id="overview" class="view-section">
+        <div class="grid-2">
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Definition</div>
+                </div>
+                <p>Serum sodium concentration <strong>&lt;135 mmol/L</strong>.</p>
+                <p style="margin-top:10px; font-size:0.9rem; color:var(--text-light);">
+                    Usually reflects excess total body water relative to sodium (Hypotonic Hyponatraemia).
+                </p>
+            </div>
+            
+            <div class="card safe">
+                <div class="card-header">
+                    <div class="card-title">Key Concept</div>
+                </div>
+                <p>Hyponatraemia is generally caused by an increase in renal water reabsorption due to <strong>Vasopressin (ADH)</strong> release combined with fluid intake.</p>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Hypovolaemic</div>
+                </div>
+                <p class="highlight">Loss of Volume</p>
+                <ul>
+                    <li>GI losses (Diarrhoea/Vomiting)</li>
+                    <li>Third spacing (Pancreatitis)</li>
+                    <li>Salt-wasting nephropathy</li>
+                    <li>Diuretics (Thiazides)</li>
+                </ul>
+            </div>
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Euvolaemic</div>
+                </div>
+                <p class="highlight">Normal Volume</p>
+                <ul>
+                    <li><strong>SIADH</strong> (Malignancy, CNS, Pulmonary)</li>
+                    <li>Medications (SSRIs, Opioids)</li>
+                    <li>Primary Polydipsia</li>
+                    <li>Endocrine (Hypothyroid, Adrenal)</li>
+                </ul>
+            </div>
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Hypervolaemic</div>
+                </div>
+                <p class="highlight">Excess Volume</p>
+                <ul>
+                    <li>Heart Failure</li>
+                    <li>Cirrhosis</li>
+                    <li>Nephrotic Syndrome</li>
+                    <li>Renal Failure</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- DIAGNOSIS SECTION -->
+    <section id="diagnosis" class="view-section">
+        <div class="card info" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <div class="card-title">Diagnostic Algorithm: Steps</div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                <div style="text-align:center; flex:1; min-width:150px;">
+                    <strong>1. Assess Osmolality</strong><br>
+                    <span style="font-size:0.85rem;">Exclude Hyperglycaemia</span>
+                </div>
+                <div style="font-size:1.5rem; color:#ccc;">&rarr;</div>
+                <div style="text-align:center; flex:1; min-width:150px;">
+                    <strong>2. Assess Volume Status</strong><br>
+                    <span style="font-size:0.85rem;">Hypo / Eu / Hyper</span>
+                </div>
+                <div style="font-size:1.5rem; color:#ccc;">&rarr;</div>
+                <div style="text-align:center; flex:1; min-width:150px;">
+                    <strong>3. Check Urine Na+</strong><br>
+                    <span style="font-size:0.85rem;">Distinguish Renal vs Non-Renal</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <!-- Lab Interpretation Table -->
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Urine Sodium Interpretation</div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Urine Na+ &gt;20</th>
+                            <th>Urine Na+ &le;20</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Hypovolaemic</strong></td>
+                            <td>Renal Loss (Diuretics, Salt-wasting)</td>
+                            <td>Extra-renal Loss (GI, Skin)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hypervolaemic</strong></td>
+                            <td>AKD/CKD or Diuretics</td>
+                            <td>CHF, Cirrhosis, Nephrosis</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Euvolaemic</strong></td>
+                            <td>SIADH, Cerebral Salt-wasting</td>
+                            <td>Low Na+ intake (Rare)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Osmolality Guide -->
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Urine Osmolality Guide</div>
+                </div>
+                <ul>
+                    <li>
+                        <span class="tag blue">High (&ge;300)</span> 
+                        <strong>SIADH / Drug effects</strong><br>
+                        <span style="font-size:0.8rem; color:#666;">Inappropriate water retention.</span>
+                    </li>
+                    <li style="margin-top:8px;">
+                        <span class="tag" style="background:#fff9c4; color:#f57f17;">Intermediate (150-300)</span> 
+                        <strong>Potomania / Partial SIADH</strong><br>
+                        <span style="font-size:0.8rem; color:#666;">Beer potomania, 'Tea and toast' diet, high fluid intake.</span>
+                    </li>
+                    <li style="margin-top:8px;">
+                        <span class="tag green">Low (&le;100-150)</span> 
+                        <strong>Primary Polydipsia</strong><br>
+                        <span style="font-size:0.8rem; color:#666;">Excessive water intake, kidneys functioning correctly.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- MANAGEMENT SECTION -->
+    <section id="management" class="view-section">
+        <!-- Acute Management -->
+        <div class="card emergency" style="margin-bottom:1.5rem;">
+            <div class="card-header">
+                <div class="card-title">Acute Symptomatic Hyponatraemia</div>
+            </div>
+            <div class="grid-2" style="margin-bottom:0;">
+                <div>
+                    <p class="highlight">Target:</p>
+                    <p>Raise serum sodium by 4-6 mmol/L in the first few hours to reverse cerebral oedema.</p>
+                    <br>
+                    <p class="highlight">Regimen:</p>
+                    <p><strong>3% Hypertonic Saline</strong> (100ml bolus over 10 mins).</p>
+                    <p style="font-size:0.85rem; margin-top:5px;">Repeat if symptoms persist.</p>
+                </div>
+                <div style="background:rgba(255,255,255,0.5); padding:10px; border-radius:4px;">
+                    <p class="highlight" style="color:#b71c1c;">WARNING: OVER-CORRECTION</p>
+                    <p style="font-size:0.9rem;">Overly rapid correction can lead to <strong>Myelinolysis (OSM)</strong>, a life-threatening complication.</p>
+                    <ul style="font-size:0.85rem; margin-top:5px;">
+                        <li>Max correction limit: 8-10 mmol/L in 24h.</li>
+                        <li>Monitor strictly.</li>
+                        <li>If over-corrected: Give DDAVP (desmopressin) + Hypotonic fluids.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chronic Management -->
+        <div class="grid-2">
+            <div class="card info">
+                <div class="card-header">
+                    <div class="card-title">Chronic / Asymptomatic</div>
+                </div>
+                <p style="margin-bottom:10px;">Treat underlying cause.</p>
+                <div style="margin-bottom:10px;">
+                    <span class="tag green">Fluid Restriction</span>
+                    <p style="font-size:0.9rem; margin-top:5px;">Usually &lt;1L/day for SIADH.</p>
+                </div>
+                <div style="margin-bottom:10px;">
+                    <span class="tag blue">Medication Review</span>
+                    <p style="font-size:0.9rem; margin-top:5px;">Stop SSRIs, Thiazides, or other causative drugs.</p>
+                </div>
+                <div>
+                    <span class="tag blue">Salt Tablets</span>
+                    <p style="font-size:0.9rem; margin-top:5px;">Can be used with fluid restriction.</p>
+                </div>
+            </div>
+
+            <div class="card safe">
+                <div class="card-header">
+                    <div class="card-title">Hypovolaemic Treatment</div>
+                </div>
+                <p class="highlight">Isotonic Saline (0.9% NaCl)</p>
+                <ul>
+                    <li>Restores intravascular volume.</li>
+                    <li>Suppresses ADH release.</li>
+                    <li>Allows kidneys to excrete excess water.</li>
+                </ul>
+                <hr style="margin:10px 0; border:0; border-top:1px solid #ccc;">
+                <p class="highlight">Hypervolaemic Treatment</p>
+                <ul>
+                    <li>Fluid restriction.</li>
+                    <li>Loop diuretics (to promote water loss).</li>
+                    <li>Salt tablets (with diuretics).</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div class="disclaimer-banner">
+    <p>Disclaimer: This tool is based on BMJ Best Practice (Feb 2024) and is for quick reference only. Always verify with clinical judgment and current guidelines.</p>
+</div>
+
+<script>
+    // Tab switching logic
+    function switchTab(tabId) {
+        // Remove active class from all sections
+        document.querySelectorAll('.view-section').forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Remove active class from all nav buttons
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // Activate selected section and button
+        document.getElementById(tabId).classList.add('active');
+        
+        // Find the button that called this function (approximate matching)
+        const buttons = document.querySelectorAll('.nav-btn');
+        if(tabId === 'triage') buttons[0].classList.add('active');
+        if(tabId === 'overview') buttons[1].classList.add('active');
+        if(tabId === 'diagnosis') buttons[2].classList.add('active');
+        if(tabId === 'management') buttons[3].classList.add('active');
+    }
+
+    // Simple non-blocking alert replacement using HTML injection
+    function alertUser(message) {
+        // Check if existing alert
+        let existingAlert = document.getElementById('custom-alert');
+        if (existingAlert) existingAlert.remove();
+
+        const alertBox = document.createElement('div');
+        alertBox.id = 'custom-alert';
+        alertBox.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #d32f2f;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
+            font-weight: bold;
+            text-align: center;
+            animation: slideDown 0.3s ease-out;
+        `;
+        alertBox.innerText = message;
+        
+        document.body.appendChild(alertBox);
+
+        // Remove after 4 seconds
+        setTimeout(() => {
+            alertBox.style.opacity = '0';
+            alertBox.style.transform = 'translate(-50%, -20px)';
+            alertBox.style.transition = 'all 0.5s';
+            setTimeout(() => alertBox.remove(), 500);
+        }, 4000);
+    }
+
+    // Add slideDown animation dynamically
+    const styleSheet = document.createElement("style");
+    styleSheet.innerText = `
+        @keyframes slideDown {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+    `;
+    document.head.appendChild(styleSheet);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIPoma Management Algorithm | BMJ Best Practice</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            padding-right: 250px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .header:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .progress-sidebar {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 25px;
+            width: 200px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: all 0.4s ease;
+        }
+
+        .progress-sidebar:hover {
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1em;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+        }
+
+        .progress-item:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateX(-5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.2);
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            padding: 25px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            font-size: 2.5em;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.5em;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .assessment-card .card-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .diagnosis-card .card-header {
+            background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        }
+
+        .treatment-card .card-header {
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        }
+
+        .followup-card .card-header {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .section:hover {
+            background: #eef2f7;
+            transform: translateX(5px);
+        }
+
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section ul, .section ol {
+            margin-left: 20px;
+            color: #34495e;
+        }
+
+        .section li {
+            margin-bottom: 8px;
+            position: relative;
+            padding-left: 15px;
+        }
+
+        .section li::before {
+            content: "•";
+            color: #667eea;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .badge:hover {
+            transform: scale(1.1);
+        }
+
+        .badge-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge-warning {
+            background: linear-gradient(135deg, #f39c12 0%, #d35400 100%);
+            color: white;
+        }
+
+        .badge-success {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .algorithm-step {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .algorithm-step:hover {
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .algorithm-step::before {
+            content: "";
+            position: absolute;
+            left: -2px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 0;
+            background: #667eea;
+            transition: height 0.4s ease;
+        }
+
+        .algorithm-step:hover::before {
+            height: 80%;
+        }
+
+        .step-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-content {
+            color: #34495e;
+            line-height: 1.7;
+        }
+
+        .medication-box {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .medication-box:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.1);
+        }
+
+        .medication-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .medication-dose {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .main-content {
+                padding-right: 30px;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                right: auto;
+                top: auto;
+                transform: none;
+                width: 100%;
+                margin: 20px 0;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .card-header {
+                padding: 20px;
+            }
+            
+            .card-icon {
+                font-size: 2em;
+            }
+            
+            .card-title {
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <div class="header">
+                <h1>VIPoma Management Algorithm</h1>
+                <p>Evidence-based clinical decision support tool | BMJ Best Practice Guidelines</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card assessment-card" id="assessment-card">
+                <div class="card-header" onclick="toggleCard('assessment-card')">
+                    <div class="card-header-left">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Assessment</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><span class="badge badge-danger">Urgent</span> Key Clinical Features</h3>
+                            <ul>
+                                <li>Profuse watery diarrhea (>700mL/day, typically >3L/day) <span class="badge badge-danger">100%</span></li>
+                                <li>Diarrhea persists even after 48-72 hours of fasting (secretory diarrhea)</li>
+                                <li>Dehydration symptoms: headache, weakness, poor skin turgor, dry mucous membranes</li>
+                                <li>Weight loss (36-100% of patients)</li>
+                                <li>Flushing secondary to vasodilation (0-33% of patients)</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-warning">Caution</span> Associated Symptoms</h3>
+                            <ul>
+                                <li>Hyperglycemia symptoms (polydipsia, polyuria, fatigue) - affects 20-50%</li>
+                                <li>Hypercalcemia due to VIP-stimulated bone resorption</li>
+                                <li>Abdominal discomfort from frequent bowel movements</li>
+                                <li>Signs of metastasis: hepatomegaly, cachexia</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Risk Factors</h3>
+                            <ul>
+                                <li>Median age at diagnosis: 51 years (range 11-75 years)</li>
+                                <li>Multiple endocrine neoplasia type 1 (MEN1) - reported in <1% of VIPoma patients</li>
+                                <li>Equal prevalence in men and women</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3>Physical Examination Findings</h3>
+                            <ul>
+                                <li>Muscle weakness and cramps (hypokalemia)</li>
+                                <li>Poor skin turgor and dry mucous membranes (dehydration)</li>
+                                <li>Orthostatic hypotension</li>
+                                <li>Hepatomegaly (if liver metastases present)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis-card" id="diagnosis-card">
+                <div class="card-header" onclick="toggleCard('diagnosis-card')">
+                    <div class="card-header-left">
+                        <div class="card-icon">🔬</div>
+                        <div class="card-title">Diagnosis</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><span class="badge badge-danger">Critical</span> Diagnostic Criteria</h3>
+                            <p>VIPoma is characterized by the triad of:</p>
+                            <ul>
+                                <li>Profuse watery diarrhea</li>
+                                <li>Hypokalemia</li>
+                                <li>Metabolic acidosis (due to bicarbonate loss)</li>
+                                <li><strong>PLUS</strong> elevated serum VIP levels</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">1st Line Tests</span> Laboratory Investigations</h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Basic Metabolic Panel</div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Serum potassium: reduced (often <3 mmol/L)</li>
+                                        <li>Serum bicarbonate: reduced (metabolic acidosis)</li>
+                                        <li>Serum calcium: raised (hypercalcemia)</li>
+                                        <li>Serum glucose: raised (hyperglycemia)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">VIP Level Measurement <span class="badge badge-danger">Essential</span></div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Fasting serum VIP >75 pg/mL may indicate enteropancreatic tumor</li>
+                                        <li>>200 pg/mL is strongly suggestive of VIPoma</li>
+                                        <li>Measure by radioimmunoassay during symptomatic period</li>
+                                        <li>If normal, repeat testing (secretion may be episodic)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Additional Tests</div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Liver function tests: may be abnormal with metastasis</li>
+                                        <li>Arterial blood gas: confirm metabolic acidosis</li>
+                                        <li>Gastric pH monitoring: increased pH (6-7) due to hypochlorhydria/achlorhydria</li>
+                                        <li>Chromogranin A/Pancreatic polypeptide: if VIP normal but suspicion remains</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Imaging</span> Tumor Localization</h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Cross-sectional Imaging <span class="badge badge-success">1st</span></div>
+                                <div class="step-content">
+                                    <p>VIPomas are usually solitary, >3cm at diagnosis:</p>
+                                    <ul>
+                                        <li><strong>CT abdomen:</strong> Multi-phase contrast-enhanced</li>
+                                        <li><strong>MRI abdomen:</strong> Multi-phase, superior for hepatic metastases</li>
+                                        <li><strong>Endoscopic ultrasound:</strong> For small elusive tumors</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Functional Imaging <span class="badge badge-warning">If CT/MRI Inconclusive</span></div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li><strong>Somatostatin receptor PET-CT/MRI:</strong> Ga-68 DOTATATE/DOTATOC</li>
+                                        <li><strong>Somatostatin receptor scintigraphy:</strong> Octreotide scan (less commonly used)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-warning">If Unresectable</span> Biopsy</h3>
+                            <p>Endoscopic ultrasound-guided fine needle aspiration for tissue diagnosis and grading (Ki-67 index).</p>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Differential Diagnosis</span></h3>
+                            <ul>
+                                <li>Infectious gastroenteritis (stool studies)</li>
+                                <li>Osmotic diarrhea (resolves with fasting)</li>
+                                <li>Gastrinoma (elevated gastrin, acidic diarrhea)</li>
+                                <li>Carcinoid syndrome (severe flushing, 5-HIAA)</li>
+                                <li>Inflammatory bowel disease (endoscopy)</li>
+                                <li>Thyroid medullary carcinoma (calcitonin)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment-card" id="treatment-card">
+                <div class="card-header" onclick="toggleCard('treatment-card')">
+                    <div class="card-header-left">
+                        <div class="card-icon">💊</div>
+                        <div class="card-title">Treatment</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><span class="badge badge-danger">Acute Presentation</span> Initial Management</h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">1. Aggressive Fluid Resuscitation</div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Saline-based IV fluids for dehydration</li>
+                                        <li>Correct electrolyte imbalances:
+                                            <ul>
+                                                <li>Potassium chloride</li>
+                                                <li>Magnesium sulfate</li>
+                                                <li>Phosphorus</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">2. Somatostatin Analogues <span class="badge badge-success">1st Line</span></div>
+                                <div class="step-content">
+                                    <div class="medication-box">
+                                        <div class="medication-name">Octreotide</div>
+                                        <div class="medication-dose">
+                                            <strong>Short-acting:</strong> 200-300 mcg/day SC in 2-4 divided doses<br>
+                                            <strong>Long-acting depot:</strong> 20 mg IM every 4 weeks<br>
+                                            <em>Titrate based on response (usual range 150-750 mcg/day)</em>
+                                        </div>
+                                    </div>
+                                    <div class="medication-box">
+                                        <div class="medication-name">Lanreotide</div>
+                                        <div class="medication-dose">
+                                            <strong>Long-acting:</strong> 120 mg SC every 4 weeks
+                                        </div>
+                                    </div>
+                                    <ul>
+                                        <li>Start short-acting for rapid symptom control</li>
+                                        <li>Transition to long-acting after 2 weeks</li>
+                                        <li>Continue short-acting for 2-4 weeks after starting long-acting to prevent symptom exacerbation</li>
+                                        <li>Up to 80% achieve clinical response (diarrhea improvement)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-success">Localized Disease</span> Surgical Management</h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Curative Resection <span class="badge badge-success">Only Curative Option</span></div>
+                                <div class="step-content">
+                                    <p><strong>Complete surgical resection offers the only chance for cure</strong></p>
+                                    <ul>
+                                        <li><strong>Pancreaticoduodenectomy:</strong> For tumors >2cm in pancreatic head</li>
+                                        <li><strong>Distal pancreatectomy:</strong> For tumors in body/tail (± splenectomy)</li>
+                                        <li><strong>Enucleation/local excision:</strong> For small tumors <2cm</li>
+                                        <li><strong>Lymphadenectomy:</strong> Remove regional nodes (peripancreatic)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-warning">Metastatic Disease</span> Multimodal Approach</h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Surgical Candidates</div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li><strong>Palliative resection:</strong> Primary tumor + regional nodes</li>
+                                        <li><strong>Debulking:</strong> Metastasectomy, RFA, cryoablation</li>
+                                        <li><strong>Liver transplant:</strong> Highly selected patients with liver-only metastases</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Liver-Directed Therapies <span class="badge badge-warning">Selective</span></div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Transarterial embolization/chemoembolization</li>
+                                        <li>Radiofrequency ablation (if lesions <3cm and ≤4 lesions)</li>
+                                        <li>Selective internal radiotherapy</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Medical Therapy</span> Tumor Control</h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Somatostatin Analogues <span class="badge badge-success">1st Line</span></div>
+                                <div class="step-content">
+                                    <p>Antiproliferative effect - prolongs progression-free survival</p>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Targeted Therapies</div>
+                                <div class="step-content">
+                                    <div class="medication-box">
+                                        <div class="medication-name">Everolimus (mTOR inhibitor)</div>
+                                        <div class="medication-dose">10 mg orally once daily</div>
+                                    </div>
+                                    <div class="medication-box">
+                                        <div class="medication-name">Sunitinib (TKI)</div>
+                                        <div class="medication-dose">37.5 mg orally once daily</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Chemotherapy <span class="badge badge-warning">For High Tumor Burden</span></div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li><strong>Streptozocin-based:</strong> + fluorouracil ± doxorubicin</li>
+                                        <li><strong>Temozolomide-based:</strong> + capecitabine</li>
+                                        <li>Combine with somatostatin analogue for symptom control</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Peptide Receptor Radionuclide Therapy <span class="badge badge-info">Advanced Disease</span></div>
+                                <div class="step-content">
+                                    <div class="medication-box">
+                                        <div class="medication-name">Lutetium-177 DOTATATE</div>
+                                        <div class="medication-dose">
+                                            For somatostatin receptor-positive tumors with progression<br>
+                                            <em>Discontinue long-acting somatostatin analogues 4 weeks prior</em>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-warning">Refractory Disease</span> Salvage Options</h3>
+                            <ul>
+                                <li>Corticosteroids: for short-term symptom control</li>
+                                <li>Clinical trial enrollment: strongly recommended</li>
+                                <li>Supportive care: optimize fluid/electrolyte management</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Emerging Therapies</span></h3>
+                            <ul>
+                                <li><strong>Surufatinib:</strong> Tyrosine kinase inhibitor (approved in China)</li>
+                                <li><strong>Cabozantinib:</strong> Significantly improved PFS in phase 3 trials</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-warning">Long-term Complications</span></h3>
+                            <ul>
+                                <li><strong>Biliary stasis/cholelithiasis:</strong> From chronic somatostatin analogue use</li>
+                                <li>Consider prophylactic cholecystectomy if long-term therapy anticipated</li>
+                                <li>Cachexia from chronic volume depletion</li>
+                                <li>Bowel obstruction from large pancreatic mass</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup-card" id="followup-card">
+                <div class="card-header" onclick="toggleCard('followup-card')">
+                    <div class="card-header-left">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Follow-up</div>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="section">
+                            <h3><span class="badge badge-info">Monitoring Protocol</span></h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Post-Surgical Resection</div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Periodic plasma VIP levels to assess for recurrence</li>
+                                        <li>Imaging studies as clinically indicated</li>
+                                        <li>Rising VIP levels or symptom recurrence warrants workup</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Medical Management</div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>Regular follow-up with fluid/electrolyte monitoring</li>
+                                        <li>Tumor marker assessment (VIP, chromogranin A)</li>
+                                        <li>Cross-sectional imaging every 3-6 months</li>
+                                        <li>Assess treatment response and side effects</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Prognosis</span></h3>
+                            <div class="algorithm-step">
+                                <div class="step-title">Localized Disease <span class="badge badge-success">Excellent</span></div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>>90% 5-year survival after complete surgical extirpation</li>
+                                        <li><50% of patients present with localized disease</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="algorithm-step">
+                                <div class="step-title">Metastatic Disease <span class="badge badge-warning">>50% at diagnosis</span></div>
+                                <div class="step-content">
+                                    <ul>
+                                        <li>5-year survival exceeds 40% even with metastasis</li>
+                                        <li>Median overall survival: 85 months (SEER data)</li>
+                                        <li>Slow-growing tumors with relatively good outcomes</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Referral Pathways</span></h3>
+                            <ul>
+                                <li><strong>Multidisciplinary team:</strong> Surgeons, gastroenterologists, medical oncologists</li>
+                                <li><strong>Specialist center:</strong> Experience in neuroendocrine tumors</li>
+                                <li><strong>Genetic counseling:</strong> Consider MEN1 testing if family history suggestive</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3><span class="badge badge-info">Patient Education</span></h3>
+                            <ul>
+                                <li>Chronic nature of disease requiring lifelong monitoring</li>
+                                <li>Importance of adhering to somatostatin analogue therapy</li>
+                                <li>Signs of recurrence to report promptly</li>
+                                <li>Nutritional support and hydration strategies</li>
+                                <li>Genetic implications for family members (if MEN1-associated)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Sidebar -->
+        <div class="progress-sidebar">
+            <h3>Progress</h3>
+            <div class="progress-item active" onclick="scrollToCard('assessment-card')" id="progress-assessment">
+                <div class="progress-icon" style="background: #3498db;">📋</div>
+                <div>Assessment</div>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('diagnosis-card')" id="progress-diagnosis">
+                <div class="progress-icon" style="background: #9b59b6;">🔬</div>
+                <div>Diagnosis</div>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('treatment-card')" id="progress-treatment">
+                <div class="progress-icon" style="background: #e67e22;">💊</div>
+                <div>Treatment</div>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('followup-card')" id="progress-followup">
+                <div class="progress-icon" style="background: #27ae60;">📊</div>
+                <div>Follow-up</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Make cards visible with staggered animation
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.classList.add('visible');
+                }, index * 200);
+            });
+
+            // Expand assessment card by default
+            setTimeout(() => {
+                document.getElementById('assessment-card').classList.add('expanded');
+            }, 500);
+
+            // Set up scroll listener for progress tracking
+            window.addEventListener('scroll', updateProgressSidebar);
+            updateProgressSidebar(); // Initial call
+        });
+
+        // Toggle card expansion
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId);
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                if (c.id !== cardId) {
+                    c.classList.remove('expanded');
+                }
+            });
+            
+            // Toggle current card
+            card.classList.toggle('expanded');
+            
+            // Update progress sidebar
+            updateProgressSidebar();
+            
+            // Smooth scroll to card
+            setTimeout(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        // Scroll to specific card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId);
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Open target card
+            setTimeout(() => {
+                card.classList.add('expanded');
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                updateProgressSidebar();
+            }, 100);
+        }
+
+        // Update progress sidebar based on scroll position
+        function updateProgressSidebar() {
+            const cards = ['assessment-card', 'diagnosis-card', 'treatment-card', 'followup-card'];
+            const progressItems = ['progress-assessment', 'progress-diagnosis', 'progress-treatment', 'progress-followup'];
+            
+            let currentCard = 'assessment-card';
+            
+            cards.forEach((cardId, index) => {
+                const card = document.getElementById(cardId);
+                const rect = card.getBoundingClientRect();
+                
+                if (rect.top <= window.innerHeight / 3 && rect.bottom >= window.innerHeight / 3) {
+                    currentCard = cardId;
+                }
+            });
+            
+            // Update active state
+            progressItems.forEach(itemId => {
+                document.getElementById(itemId).classList.remove('active');
+            });
+            
+            const activeIndex = cards.indexOf(currentCard);
+            if (activeIndex !== -1) {
+                document.getElementById(progressItems[activeIndex]).classList.add('active');
+            }
+        }
+
+        // Add hover effects to badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1) translateY(-2px)';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1) translateY(0)';
+            });
+        });
+
+        // Add click effects to algorithm steps
+        document.querySelectorAll('.algorithm-step').forEach(step => {
+            step.addEventListener('click', function() {
+                // Remove highlight from all steps
+                document.querySelectorAll('.algorithm-step').forEach(s => {
+                    s.style.background = 'white';
+                });
+                
+                // Highlight clicked step
+                this.style.background = '#f0f7ff';
+                
+                // Add pulse effect
+                this.style.boxShadow = '0 0 20px rgba(102, 126, 234, 0.4)';
+                setTimeout(() => {
+                    this.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.2)';
+                }, 500);
+            });
+        });
+    </script>
+</body>
+</html>

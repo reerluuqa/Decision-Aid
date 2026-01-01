@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Quick Scan: Substance Use & Overdose</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary-blue: #0056b3;
+            --primary-light: #e7f1ff;
+            --alert-red: #dc3545;
+            --alert-bg: #f8d7da;
+            --alert-text: #721c24;
+            --safe-green: #28a745;
+            --safe-bg: #d4edda;
+            --safe-text: #155724;
+            --neutral-gray: #6c757d;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-dark: #212529;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            line-height: 1.5;
+        }
+
+        /* --- Header & Nav --- */
+        header {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header-title {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .header-title span {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        .search-container {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.6rem 1rem 0.6rem 2.5rem;
+            border-radius: 20px;
+            border: none;
+            font-size: 0.95rem;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--neutral-gray);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* --- Global Stats Banner --- */
+        .stats-banner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--primary-blue);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--neutral-gray);
+        }
+
+        /* --- Grid for Conditions --- */
+        .conditions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+            border: 1px solid transparent;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+            border-color: var(--primary-blue);
+        }
+
+        /* Card Header */
+        .card-header {
+            padding: 1rem;
+            background-color: var(--primary-light);
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary-blue);
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-disorder { background-color: #e2e3e5; color: #383d41; }
+        .badge-overdose { background-color: var(--alert-bg); color: var(--alert-text); }
+        .badge-toxicity { background-color: #fff3cd; color: #856404; }
+
+        /* Card Body */
+        .card-body {
+            padding: 1rem;
+            flex-grow: 1;
+        }
+
+        .key-stat {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--neutral-gray);
+        }
+
+        .red-flag-preview {
+            color: var(--alert-red);
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        /* --- Modal / Detail View --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none; /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .modal-header {
+            background: var(--primary-blue);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: 0.2s;
+        }
+
+        .close-btn:hover { opacity: 1; }
+
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        /* Two Column Layout in Modal */
+        .modal-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .modal-cols { grid-template-columns: 1fr; }
+        }
+
+        /* Section Styling */
+        .info-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--neutral-gray);
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.2rem;
+        }
+
+        /* Emergency Banner */
+        .emergency-banner {
+            background-color: var(--alert-bg);
+            border-left: 5px solid var(--alert-red);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border-radius: 4px;
+        }
+
+        .emergency-title {
+            color: var(--alert-text);
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Tables */
+        .clinical-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        .clinical-table th, .clinical-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .clinical-table th {
+            background-color: #f1f3f5;
+            color: var(--neutral-gray);
+            font-weight: 600;
+        }
+
+        /* Utility */
+        .text-red { color: var(--alert-red); font-weight: 500; }
+        .text-green { color: var(--safe-green); font-weight: 500; }
+        
+        .action-btn {
+            display: inline-block;
+            background-color: var(--safe-green);
+            color: white;
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            transition: 0.2s;
+        }
+        .action-btn:hover { background-color: #218838; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Disclaimer */
+        .disclaimer {
+            font-size: 0.75rem;
+            color: var(--neutral-gray);
+            text-align: center;
+            margin-top: 3rem;
+            padding: 1rem;
+            border-top: 1px solid #ddd;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">
+        <h1>Substance Use & Overdose</h1>
+        <span>Last updated: Oct 22, 2025</span>
+    </div>
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search drug, symptom..." onkeyup="filterGrid()">
+    </div>
+</header>
+
+<main>
+    <!-- Stats Overview -->
+    <section class="stats-banner">
+        <div class="stat-card">
+            <div class="stat-value">316M</div>
+            <div class="stat-label">Global Drug Users (2023)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">244M</div>
+            <div class="stat-label">Cannabis Users</div>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--alert-red);">
+            <div class="stat-value">High</div>
+            <div class="stat-label">Polydrug Use Prevalence</div>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--safe-green);">
+            <div class="stat-value">158,991</div>
+            <div class="stat-label">Adults in Treatment (England)</div>
+        </div>
+    </section>
+
+    <!-- Dynamic Grid -->
+    <section id="conditionsGrid" class="conditions-grid">
+        <!-- Cards will be injected here by JS -->
+    </section>
+    
+    <div class="disclaimer">
+        Disclaimer: This tool is based on BMJ Best Practice topics. It is for licensed medical professionals. 
+        It does not advocate or endorse specific therapies. Use clinical judgement.
+    </div>
+</main>
+
+<!-- Modal Template -->
+<div id="detailModal" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h2 id="modalTitle">Condition Name</h2>
+            <button class="close-btn" onclick="closeModalDirect()">×</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <!-- Content injected dynamically -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // Data Structure based on PDF content
+    const conditions = [
+        {
+            id: 1,
+            title: "Opioid Overdose",
+            type: "overdose",
+            summary: "CNS/respiratory depression, miosis, apnoea. 80% deaths involve fentanyl.",
+            redFlag: "Fatal if not treated rapidly. Apnoea risk.",
+            details: {
+                aetiology: "Recent abstinence in chronic users, history of chronic pain, high potency synthetic opioids (fentanyl).",
+                presentation: "Central nervous system and respiratory depression, miosis (pinpoint pupils), apnoea.",
+                diagnosis: "Based on history and physical exam. History of opioid use is key.",
+                actions: "Rapid treatment required. Monitor respiratory function."
+            }
+        },
+        {
+            id: 2,
+            title: "Opioid Use Disorder",
+            type: "disorder",
+            summary: "Significant public health concern. Synthetic opioids driving harm.",
+            redFlag: "Chronic constipation, weight loss, withdrawal symptoms.",
+            details: {
+                aetiology: "Familial/environmental influences (peer pressure, family dynamics, availability).",
+                presentation: "Chronic constipation, weight loss, tolerance, withdrawal symptoms.",
+                diagnosis: "Clinical diagnosis requiring thorough history, psychiatric exam, and lab tests.",
+                actions: "Engagement and retention in care is imperative."
+            }
+        },
+        {
+            id: 3,
+            title: "Cocaine Toxicity",
+            type: "toxicity",
+            summary: "Hyperthermia, rhabdomyolysis, dysrhythmia, sudden death possible.",
+            redFlag: "Risk of sudden death, seizures, intracranial haemorrhage.",
+            details: {
+                aetiology: "Recreational misuse, or unintentional (body packing/stuffing).",
+                presentation: "Agitation, psychosis, seizures, hyperthermia, chest pain (ischaemia).",
+                diagnosis: "Clinical assessment of events within minutes/hours of excessive use.",
+                actions: "Manage hyperthermia, agitation, and cardiovascular complications immediately."
+            }
+        },
+        {
+            id: 4,
+            title: "Cocaine Use Disorder",
+            type: "disorder",
+            summary: "Highly addictive stimulant. ~25 million global users.",
+            redFlag: "Myocardial remodelling leading to lethal arrhythmias.",
+            details: {
+                aetiology: "Genomic predisposition. Usually insufflated, injected, or smoked.",
+                presentation: "Hyperadrenergic state: nausea, anxiety, paranoia, euphoria.",
+                diagnosis: "Clinical assessment (interview, collateral history, records).",
+                actions: "Monitor for cardiac issues. Address psychiatric comorbidity."
+            }
+        },
+        {
+            id: 5,
+            title: "Amfetamine Overdose",
+            type: "overdose",
+            summary: "Sympathetic hyperactivity. Agitation, psychosis.",
+            redFlag: "Dyspnoea, angina, palpitations (Impending risk to life).",
+            details: {
+                aetiology: "Licit or illicit ingestion. Binge users.",
+                presentation: "Agitated, irrational, restless, aggressive. Hypervigilance, paranoia.",
+                diagnosis: "Clinical diagnosis based on history of use and sympathetic hyperactivity.",
+                actions: "Close monitoring for cardiac and respiratory distress."
+            }
+        },
+        {
+            id: 6,
+            title: "Amfetamine Use Disorder",
+            type: "disorder",
+            summary: "Non-catecholamine sympathomimetic amines. ~30.7 million users.",
+            redFlag: "Psychosis, depression overlap.",
+            details: {
+                aetiology: "Comorbid psychiatric disorders, adverse childhood events.",
+                presentation: "Overlapping symptoms of psychosis and depression.",
+                diagnosis: "Clinical assessment.",
+                actions: "Address underlying psychiatric comorbidity."
+            }
+        },
+        {
+            id: 7,
+            title: "Benzodiazepine Overdose",
+            type: "overdose",
+            summary: "Excessive sedation. Coma/resp depression. Worse with alcohol/opioids.",
+            redFlag: "Coma, respiratory depression. High mortality if mixed with other depressants.",
+            details: {
+                aetiology: "Intentional self-harm, recreational misuse, accidental error.",
+                presentation: "Key feature is excessive sedation. Slurred speech, ataxia.",
+                diagnosis: "Patient history, prescription history, circumstantial evidence.",
+                actions: "Secure airway if respiratory depression present. Flumazenil use context-dependent."
+            }
+        },
+        {
+            id: 8,
+            title: "Tricyclic Antidepressant Overdose",
+            type: "overdose",
+            summary: "Narrow therapeutic index. Potent cardiovascular/CNS toxin.",
+            redFlag: "Rapid decline in mental status (1-2 hrs). Wide complex tachycardia.",
+            details: {
+                aetiology: "Ingestion of > reasonable/normal dose.",
+                presentation: "Sinus tachycardia progressing to wide complex tachycardia, ventricular arrhythmias.",
+                diagnosis: "Clinical grounds + Classic ECG changes. Sudden deterioration.",
+                actions: "Cardiac monitoring. Manage arrhythmias. Sodium bicarbonate often used."
+            }
+        },
+        {
+            id: 9,
+            title: "Paracetamol Overdose",
+            type: "overdose",
+            summary: "Often asymptomatic initially. Risk of fulminant hepatic failure.",
+            redFlag: "Fulminant hepatic failure (2-4 days post-ingestion).",
+            details: {
+                aetiology: "Self-harm attempt or therapeutic error (staggered/acute).",
+                presentation: "Often asymptomatic or mild GI symptoms initially. Massive OD: coma/metabolic acidosis.",
+                diagnosis: "Serum levels, time of ingestion, Rumack-Matthew nomogram.",
+                actions: "N-acetylcysteine is the antidote. Time-sensitive treatment."
+            }
+        },
+        {
+            id: 10,
+            title: "Cannabis Use Disorder",
+            type: "disorder",
+            summary: "Most common drug globally (244M users). Impaired cognition.",
+            redFlag: "Increased risk of schizophrenia (especially adolescents).",
+            details: {
+                aetiology: "Frequent use starting in adolescence is a major risk factor.",
+                presentation: "Impaired cognitive/psychomotor performance. Chronic bronchitis.",
+                diagnosis: "Clinical assessment.",
+                actions: "Cessation support, cognitive rehabilitation if impairment present."
+            }
+        },
+        {
+            id: 11,
+            title: "Inhalant Use Disorder",
+            type: "disorder",
+            summary: "Deliberate inhalation of volatile substances.",
+            redFlag: "Hypoxia and heart failure can occur within minutes.",
+            details: {
+                aetiology: "Household/industrial solvents, aerosols, gases (nitrous oxide).",
+                presentation: "Altered mental state, sudden sniffing death syndrome.",
+                diagnosis: "History of exposure, physical signs (e.g., rashes around mouth/nose).",
+                actions: "Immediate cessation, supportive care. Monitor for organ damage."
+            }
+        },
+        {
+            id: 12,
+            title: "Hallucinogen Use Disorder",
+            type: "disorder",
+            summary: "Phencyclidine (PCP) or other (LSD, Psilocybin).",
+            redFlag: "Persistent psychosis or hallucinogen persisting perception disorder (rare).",
+            details: {
+                aetiology: "Various synthetic and natural substances.",
+                presentation: "Unpredictable psychological effects. Visual/auditory hallucinations.",
+                diagnosis: "Clinical history.",
+                actions: "Supportive care during acute intoxication ('talking down')."
+            }
+        },
+        {
+            id: 13,
+            title: "Anabolic Steroid Use Disorder",
+            type: "disorder",
+            summary: "Testosterone derivatives. 3.3% global lifetime prevalence.",
+            redFlag: "Used at 10-100x therapeutic doses.",
+            details: {
+                aetiology: "Desire to change appearance or improve athletic performance.",
+                presentation: "Physical changes (muscle mass), aggression ('roid rage'), endocrine disruption.",
+                diagnosis: "High index of suspicion, lab tests.",
+                actions: "Behavioral therapy, medical monitoring for withdrawal/depression."
+            }
+        },
+        {
+            id: 14,
+            title: "Alcohol Use Disorder",
+            type: "disorder",
+            summary: "Associated with medical/psychiatric sequelae. 2.6M deaths (2019).",
+            redFlag: "Disproportionately affects young people (20-39).",
+            details: {
+                aetiology: "Complex biological, genetic, and social factors.",
+                presentation: "Withdrawal, liver disease, unintentional injuries, psychiatric issues.",
+                diagnosis: "Clinical criteria (DSM-5/ICD-10).",
+                actions: "Detoxification, rehabilitation, psychosocial support."
+            }
+        },
+        {
+            id: 15,
+            title: "Toxic Ingestions in Children",
+            type: "toxicity",
+            summary: "Accidental or intentional. Peaks 0-4 yrs and 13-16 yrs.",
+            redFlag: "Seizures, cardiac dysrhythmias, hepatic failure, coma.",
+            details: {
+                aetiology: "Exploring environment, stress, mental problems, or getting 'high'.",
+                presentation: "Varied: vomiting, lethargy, seizures, burns, respiratory distress.",
+                diagnosis: "Thorough clinical assessment + comprehensive lab investigation.",
+                actions: "Identify substance, decontamination if appropriate, supportive care."
+            }
+        },
+        {
+            id: 16,
+            title: "Smoking Cessation",
+            type: "disorder", // Treated as management topic
+            summary: "Most common cause of preventable death.",
+            redFlag: "Begins typically before age 24.",
+            details: {
+                aetiology: "Nicotine dependence, biological/genetic/behavioral factors.",
+                presentation: "Tobacco use, inability to quit, withdrawal symptoms.",
+                diagnosis: "History of tobacco use.",
+                actions: "Physician motivation, pharmacotherapy (NRT), behavioral counseling."
+            }
+        }
+    ];
+
+    // Function to Render Grid
+    function renderGrid(data) {
+        const grid = document.getElementById('conditionsGrid');
+        grid.innerHTML = '';
+
+        if (data.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--neutral-gray);">No conditions found matching your search.</div>';
+            return;
+        }
+
+        data.forEach(item => {
+            // Determine Badge Style
+            let badgeClass = 'badge-disorder';
+            if(item.type === 'overdose') badgeClass = 'badge-overdose';
+            if(item.type === 'toxicity') badgeClass = 'badge-toxicity';
+
+            // SVG Icon based on type
+            let icon = '';
+            if(item.type === 'overdose') icon = '⚠️'; // Warning
+            else if(item.type === 'toxicity') icon = '☣️'; // Biohazard
+            else icon = '💊'; // Pill/Disorder
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.onclick = () => openModal(item.id);
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${item.title}</div>
+                    <span class="badge ${badgeClass}">${item.type}</span>
+                </div>
+                <div class="card-body">
+                    <div class="key-stat">${item.summary}</div>
+                    ${item.redFlag ? `<div class="red-flag-preview"><span>${icon}</span> ${item.redFlag}</div>` : ''}
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // Function to Filter Grid
+    function filterGrid() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = conditions.filter(c => 
+            c.title.toLowerCase().includes(query) || 
+            c.summary.toLowerCase().includes(query) ||
+            (c.redFlag && c.redFlag.toLowerCase().includes(query))
+        );
+        renderGrid(filtered);
+    }
+
+    // Modal Logic
+    function openModal(id) {
+        const item = conditions.find(c => c.id === id);
+        if (!item) return;
+
+        document.getElementById('modalTitle').innerText = item.title;
+        
+        // Emergency Banner logic
+        const emergencyHTML = (item.type === 'overdose' || item.type === 'toxicity') ? `
+            <div class="emergency-banner">
+                <div class="emergency-title">
+                    <span>🚨 EMERGENCY ACTION REQUIRED</span>
+                </div>
+                <div class="text-red" style="font-weight: 700; margin-bottom: 0.5rem;">
+                    ${item.redFlag || "High Risk Condition"}
+                </div>
+                <div style="font-size: 0.95rem;">
+                    ${item.details.actions}
+                </div>
+            </div>
+        ` : '';
+
+        const bodyHTML = `
+            ${emergencyHTML}
+            
+            <div class="modal-cols">
+                <div class="info-section">
+                    <div class="section-title">Key Information</div>
+                    <p>${item.summary}</p>
+                </div>
+                
+                <div class="info-section">
+                    <div class="section-title">Aetiology / Risk Factors</div>
+                    <p>${item.details.aetiology}</p>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="section-title">Clinical Presentation & Diagnosis</div>
+                <table class="clinical-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50%">Presentation</th>
+                            <th style="width: 50%">Diagnosis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>${item.details.presentation}</td>
+                            <td>${item.details.diagnosis}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="text-align: right; margin-top: 1rem;">
+                <a href="#" class="action-btn">View Full Protocol ↗</a>
+            </div>
+        `;
+
+        document.getElementById('modalBody').innerHTML = bodyHTML;
+        document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function closeModal(event) {
+        if (event.target.id === 'detailModal') {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+    }
+
+    function closeModalDirect() {
+        document.getElementById('detailModal').style.display = 'none';
+    }
+
+    // Initial Render
+    window.onload = () => renderGrid(conditions);
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Narcolepsy Interactive Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-step.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-left-color: #2c3e50;
+            transform: translateX(5px);
+        }
+
+        .progress-step.completed {
+            background: #e8f5e8;
+            border-left-color: #27ae60;
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .progress-step.active .step-icon {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .progress-step.completed .step-icon {
+            background: #27ae60;
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* Card Styles */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 6px solid;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+
+        .card:hover::before {
+            transform: translateX(100%);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .card.assessment {
+            border-left-color: #3498db;
+        }
+
+        .card.diagnosis {
+            border-left-color: #9b59b6;
+        }
+
+        .card.treatment {
+            border-left-color: #e74c3c;
+        }
+
+        .card.followup {
+            border-left-color: #27ae60;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+            color: white;
+        }
+
+        .assessment .card-icon {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .diagnosis .card-icon {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .treatment .card-icon {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .followup .card-icon {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .expand-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            color: #7f8c8d;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+            opacity: 1;
+        }
+
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #bdc3c7;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        .badge.urgent {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge.caution {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge.stable {
+            background: #27ae60;
+            color: white;
+        }
+
+        .criteria-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .criteria-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .criteria-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .treatment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .treatment-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ecf0f1;
+            transition: all 0.3s ease;
+        }
+
+        .treatment-item:hover {
+            border-color: #3498db;
+            transform: translateY(-2px);
+        }
+
+        .treatment-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .treatment-desc {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .followup-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .timeline-time {
+            font-weight: bold;
+            color: #3498db;
+            margin-right: 15px;
+            min-width: 80px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+                order: 2;
+            }
+
+            .main-content {
+                order: 1;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .card-title {
+                font-size: 20px;
+            }
+
+            .treatment-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: slideIn 0.6s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <div class="progress-sidebar">
+            <div class="progress-title">Algorithm Progress</div>
+            <div class="progress-step active" data-step="assessment">
+                <div class="step-icon">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" data-step="diagnosis">
+                <div class="step-icon">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" data-step="treatment">
+                <div class="step-icon">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" data-step="followup">
+                <div class="step-icon">4</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Assessment Card -->
+            <div class="card assessment" id="assessment">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📋</div>
+                        Assessment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">⚠️</span>
+                            Key Symptoms
+                            <span class="badge urgent">Urgent Referral</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Excessive daytime sleepiness (EDS) - daily episodes of irrepressible need to sleep</li>
+                            <li>Cataplexy - sudden loss of muscle tone triggered by emotions</li>
+                            <li>Sleep paralysis - inability to move during sleep-wake transitions</li>
+                            <li>Hypnagogic/hypnopompic hallucinations - vivid perceptual experiences</li>
+                            <li>Fragmented nocturnal sleep - frequent awakenings during night</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🎯</span>
+                            Initial Evaluation
+                            <span class="badge caution">Screening Required</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Epworth Sleepiness Scale (ESS) - typically >10 in narcolepsy</li>
+                            <li>Sleep history - duration, quality, timing of sleep episodes</li>
+                            <li>Family history - 10x increased risk with first-degree relatives</li>
+                            <li>Medical history - rule out secondary causes</li>
+                            <li>Medication review - stimulants, antidepressants, sedatives</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🚨</span>
+                            Red Flags
+                            <span class="badge urgent">Immediate Attention</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Sudden onset with neurological symptoms</li>
+                            <li>Associated with head trauma or CNS infection</li>
+                            <li>Rapid progression of symptoms</li>
+                            <li>Safety concerns - driving accidents, work performance issues</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis" id="diagnosis">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">🔍</div>
+                        Diagnosis
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">📊</span>
+                            Diagnostic Criteria (ICSD-3)
+                            <span class="badge caution">Specialist Required</span>
+                        </div>
+                        <p><strong>Narcolepsy Type 1:</strong></p>
+                        <ul class="criteria-list">
+                            <li>Daily periods of irrepressible need to sleep for ≥3 months</li>
+                            <li>Cataplexy AND mean sleep latency ≤8 minutes with ≥2 SOREMPs on MSLT</li>
+                            <li>OR CSF hypocretin-1 ≤110 pg/mL (or <1/3 normal mean)</li>
+                        </ul>
+                        <p><strong>Narcolepsy Type 2:</strong></p>
+                        <ul class="criteria-list">
+                            <li>Daily periods of irrepressible need to sleep for ≥3 months</li>
+                            <li>Mean sleep latency ≤8 minutes with ≥2 SOREMPs on MSLT</li>
+                            <li>No cataplexy AND normal CSF hypocretin-1</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🧪</span>
+                            Diagnostic Tests
+                            <span class="badge stable">Standard Protocol</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li><strong>Polysomnography:</strong> Rule out other sleep disorders, document sleep architecture</li>
+                            <li><strong>Multiple Sleep Latency Test (MSLT):</strong> Objective measure of sleepiness</li>
+                            <li><strong>Actigraphy:</strong> 1-week recording to assess sleep-wake patterns</li>
+                            <li><strong>HLA typing:</strong> DQB1*06:02 positive in 95% of Type 1 cases</li>
+                            <li><strong>CSF hypocretin-1:</strong> When MSLT is inconclusive</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">⚖️</span>
+                            Differential Diagnosis
+                            <span class="badge caution">Comprehensive Assessment</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Obstructive sleep apnea (most common differential)</li>
+                            <li>Idiopathic hypersomnia (longer sleep time, unrefreshing naps)</li>
+                            <li>Insufficient sleep syndrome (improves with sleep extension)</li>
+                            <li>Depression-related hypersomnia</li>
+                            <li>Substance/medication-induced sleepiness</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment" id="treatment">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        Treatment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🌟</span>
+                            First-Line Treatments
+                            <span class="badge stable">Evidence-Based</span>
+                        </div>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <div class="treatment-title">Pitolisant (Wakix)</div>
+                                <div class="treatment-desc">H3 receptor antagonist, non-addictive, once daily dosing</div>
+                            </div>
+                            <div class="treatment-item">
+                                <div class="treatment-title">Modafinil/Armodafinil</div>
+                                <div class="treatment-desc">Wake-promoting agents, well-tolerated, morning dosing</div>
+                            </div>
+                            <div class="treatment-item">
+                                <div class="treatment-title">Sodium Oxybate</div>
+                                <div class="treatment-desc">GABA-B agonist, treats both EDS and cataplexy</div>
+                            </div>
+                            <div class="treatment-item">
+                                <div class="treatment-title">Solriamfetol</div>
+                                <div class="treatment-desc">DA/NE reuptake inhibitor, for residual sleepiness</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🎯</span>
+                            Cataplexy Treatment
+                            <span class="badge caution">Targeted Therapy</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li><strong>Sodium Oxybate:</strong> First-line, reduces cataplexy by 70-80%</li>
+                            <li><strong>Pitolisant:</strong> Effective for both EDS and cataplexy</li>
+                            <li><strong>Antidepressants:</strong> Venlafaxine, clomipramine (second-line)</li>
+                            <li><strong>Avoid triggers:</strong> Emotional stress, fatigue, alcohol</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🛡️</span>
+                            Non-Pharmacological
+                            <span class="badge stable">Essential Foundation</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Scheduled naps (15-20 minutes, 1-2 times daily)</li>
+                            <li>Sleep hygiene (consistent schedule, 7-9 hours nightly)</li>
+                            <li>Avoid alcohol, heavy meals before bedtime</li>
+                            <li>Regular exercise (not close to bedtime)</li>
+                            <li>Psychosocial support and education</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">⚠️</span>
+                            Safety Considerations
+                            <span class="badge urgent">Critical</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Driving restrictions until symptoms controlled</li>
+                            <li>Occupational safety assessments</li>
+                            <li>Pregnancy planning (teratogenic medications)</li>
+                            <li>Drug interactions (hormonal contraceptives)</li>
+                            <li>Regular monitoring for adverse effects</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup" id="followup">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-icon">📈</div>
+                        Follow-up
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">📅</span>
+                            Monitoring Schedule
+                            <span class="badge stable">Routine Care</span>
+                        </div>
+                        <div class="followup-timeline">
+                            <div class="timeline-item">
+                                <div class="timeline-time">1 Month</div>
+                                <div>Initial response assessment, adverse effects review, dose adjustments</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-time">3 Months</div>
+                                <div>Treatment efficacy evaluation, ESS score, consider dose optimization</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-time">6 Months</div>
+                                <div>Comprehensive review, MSLT if needed, long-term planning</div>
+                            </div>
+                            <div class="timeline-item">
+                                <div class="timeline-time">Annually</div>
+                                <div>Complete reassessment, cardiovascular screening, lifestyle review</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🎯</span>
+                            Treatment Goals
+                            <span class="badge stable">Target Outcomes</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>ESS score <10 (normal <10, target <15)</li>
+                            <li>Maintenance of wakefulness >20 minutes</li>
+                            <li>Cataplexy episodes <1 per week</li>
+                            <li>Normal daily functioning and safety</li>
+                            <li>Patient satisfaction with treatment</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">⚠️</span>
+                            Complications to Monitor
+                            <span class="badge caution">Vigilant Surveillance</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li><strong>Cardiovascular:</strong> Hypertension, arrhythmias (stimulants)</li>
+                            <li><strong>Psychiatric:</strong> Depression, anxiety, suicidality (rare)</li>
+                            <li><strong>Metabolic:</strong> Weight changes, glucose intolerance</li>
+                            <li><strong>Tolerance:</strong> Decreased efficacy over time</li>
+                            <li><strong>Accidents:</strong> Motor vehicle, workplace incidents</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <div class="section-title">
+                            <span class="section-icon">🔄</span>
+                            Long-term Considerations
+                            <span class="badge stable">Chronic Management</span>
+                        </div>
+                        <ul class="criteria-list">
+                            <li>Disease stability - symptoms typically persistent</li>
+                            <li>Medication adjustments with aging/comorbidities</li>
+                            <li>Lifestyle adaptations and coping strategies</li>
+                            <li>Family planning and genetic counseling</li>
+                            <li>Support group participation and education</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            const progressSteps = document.querySelectorAll('.progress-step');
+            
+            // Initialize first card as expanded
+            const firstCard = document.querySelector('.card');
+            firstCard.classList.add('expanded');
+            
+            // Card click handlers
+            cards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                header.addEventListener('click', () => {
+                    card.classList.toggle('expanded');
+                    
+                    // Update progress indicator
+                    const cardId = card.id;
+                    const correspondingStep = document.querySelector(`[data-step="${cardId}"]`);
+                    
+                    if (card.classList.contains('expanded')) {
+                        correspondingStep.classList.add('active');
+                        correspondingStep.classList.remove('completed');
+                        
+                        // Mark previous steps as completed
+                        let foundCurrent = false;
+                        progressSteps.forEach(step => {
+                            if (foundCurrent) {
+                                step.classList.remove('completed');
+                                step.classList.remove('active');
+                            } else if (step === correspondingStep) {
+                                foundCurrent = true;
+                            } else {
+                                step.classList.add('completed');
+                                step.classList.remove('active');
+                            }
+                        });
+                    }
+                });
+            });
+            
+            // Progress step click handlers
+            progressSteps.forEach(step => {
+                step.addEventListener('click', () => {
+                    const targetCardId = step.dataset.step;
+                    const targetCard = document.getElementById(targetCardId);
+                    
+                    // Expand target card
+                    cards.forEach(card => {
+                        if (card.id === targetCardId) {
+                            card.classList.add('expanded');
+                        } else {
+                            card.classList.remove('expanded');
+                        }
+                    });
+                    
+                    // Update progress indicators
+                    progressSteps.forEach(s => {
+                        s.classList.remove('active');
+                        s.classList.remove('completed');
+                    });
+                    
+                    let foundCurrent = false;
+                    progressSteps.forEach(s => {
+                        if (foundCurrent) {
+                            return;
+                        }
+                        if (s === step) {
+                            s.classList.add('active');
+                            foundCurrent = true;
+                        } else {
+                            s.classList.add('completed');
+                        }
+                    });
+                    
+                    // Smooth scroll to target card
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+            
+            // Add hover effects for badges
+            const badges = document.querySelectorAll('.badge');
+            badges.forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.1)';
+                    this.style.transition = 'transform 0.2s ease';
+                });
+                
+                badge.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+            
+            // Add typing animation effect for section titles
+            const sectionTitles = document.querySelectorAll('.section-title');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animation = 'slideIn 0.6s ease forwards';
+                    }
+                });
+            });
+            
+            sectionTitles.forEach(title => {
+                observer.observe(title);
+            });
+            
+            // Add ripple effect on card clicks
+            cards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (e.target.closest('.card-header')) {
+                        const ripple = document.createElement('div');
+                        ripple.style.position = 'absolute';
+                        ripple.style.width = '20px';
+                        ripple.style.height = '20px';
+                        ripple.style.background = 'rgba(255,255,255,0.6)';
+                        ripple.style.borderRadius = '50%';
+                        ripple.style.transform = 'translate(-50%, -50%)';
+                        ripple.style.pointerEvents = 'none';
+                        ripple.style.animation = 'ripple 0.6s ease-out';
+                        
+                        const rect = this.getBoundingClientRect();
+                        ripple.style.left = (e.clientX - rect.left) + 'px';
+                        ripple.style.top = (e.clientY - rect.top) + 'px';
+                        
+                        this.appendChild(ripple);
+                        
+                        setTimeout(() => ripple.remove(), 600);
+                    }
+                });
+            });
+            
+            // Add ripple animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes ripple {
+                    to {
+                        width: 200px;
+                        height: 200px;
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        });
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const cards = Array.from(document.querySelectorAll('.card'));
+                const currentExpanded = cards.findIndex(card => card.classList.contains('expanded'));
+                
+                let nextIndex;
+                if (e.key === 'ArrowDown') {
+                    nextIndex = (currentExpanded + 1) % cards.length;
+                } else {
+                    nextIndex = currentExpanded === 0 ? cards.length - 1 : currentExpanded - 1;
+                }
+                
+                cards.forEach(card => card.classList.remove('expanded'));
+                cards[nextIndex].classList.add('expanded');
+                cards[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Update progress
+                const progressSteps = document.querySelectorAll('.progress-step');
+                progressSteps.forEach(step => step.classList.remove('active'));
+                progressSteps[nextIndex].classList.add('active');
+            }
+        });
+    </script>
+</body>
+</html>

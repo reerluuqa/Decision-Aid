@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acute Motor Deficit Assessment Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-blue: #2563eb;
+            --secondary-blue: #1e40af;
+            --urgent-red: #dc2626;
+            --caution-amber: #f59e0b;
+            --stable-green: #059669;
+            --light-gray: #f8fafc;
+            --medium-gray: #64748b;
+            --dark-gray: #334155;
+            --white: #ffffff;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --hover-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            color: var(--dark-gray);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 2rem;
+            width: 280px;
+            height: fit-content;
+            background: var(--white);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid #e2e8f0;
+        }
+
+        .progress-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--dark-gray);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .progress-step:hover {
+            background: var(--light-gray);
+            transform: translateX(4px);
+        }
+
+        .progress-step.active {
+            background: var(--primary-blue);
+            color: var(--white);
+            border-color: var(--secondary-blue);
+        }
+
+        .progress-step.completed {
+            background: var(--stable-green);
+            color: var(--white);
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .step-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            max-width: 900px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--white);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: var(--medium-gray);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--hover-shadow);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: var(--white);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: var(--white);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: var(--white);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: var(--white);
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .card-icon {
+            font-size: 1.5rem;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+
+        .card-title h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+        }
+
+        .badge-urgent {
+            background: var(--urgent-red);
+            color: var(--white);
+        }
+
+        .badge-caution {
+            background: var(--caution-amber);
+            color: var(--white);
+        }
+
+        .badge-stable {
+            background: var(--stable-green);
+            color: var(--white);
+        }
+
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 2rem;
+        }
+
+        .content-section h3 {
+            color: var(--dark-gray);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-section h3::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--primary-blue);
+            border-radius: 2px;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist li::before {
+            content: '✓';
+            color: var(--stable-green);
+            font-weight: bold;
+            font-size: 1.1rem;
+            min-width: 20px;
+        }
+
+        .alert-box {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .alert-urgent {
+            background: #fef2f2;
+            border-left: 4px solid var(--urgent-red);
+            color: #991b1b;
+        }
+
+        .alert-caution {
+            background: #fffbeb;
+            border-left: 4px solid var(--caution-amber);
+            color: #92400e;
+        }
+
+        .alert-info {
+            background: #eff6ff;
+            border-left: 4px solid var(--primary-blue);
+            color: var(--secondary-blue);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+                order: -1;
+            }
+
+            .progress-steps {
+                display: flex;
+                overflow-x: auto;
+                gap: 0.5rem;
+            }
+
+            .progress-step {
+                min-width: 200px;
+                margin-bottom: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card-body {
+                padding: 1.5rem;
+            }
+
+            .progress-steps {
+                flex-direction: column;
+            }
+
+            .progress-step {
+                min-width: auto;
+            }
+        }
+
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <div class="progress-title">
+                <i class="fas fa-route"></i>
+                Algorithm Progress
+            </div>
+            <div class="progress-steps">
+                <div class="progress-step active" data-step="assessment">
+                    <div class="step-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <div class="step-text">Assessment</div>
+                </div>
+                <div class="progress-step" data-step="diagnosis">
+                    <div class="step-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="step-text">Diagnosis</div>
+                </div>
+                <div class="progress-step" data-step="treatment">
+                    <div class="step-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div class="step-text">Treatment</div>
+                </div>
+                <div class="progress-step" data-step="followup">
+                    <div class="step-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="step-text">Follow-up</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1>Acute Motor Deficit Assessment</h1>
+                <p>Interactive clinical algorithm for rapid assessment and management of acute motor deficits</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card expanded" id="assessment-card">
+                <div class="card-header assessment">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <h2>Initial Assessment</h2>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="content-section">
+                            <h3>Immediate Triage</h3>
+                            <div class="alert-box alert-urgent">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <div>
+                                    <strong>URGENT:</strong> Sudden onset motor deficit requires immediate evaluation for stroke or other neurovascular emergencies
+                                </div>
+                            </div>
+                            
+                            <div class="badges">
+                                <span class="badge badge-urgent">
+                                    <i class="fas fa-clock"></i> Time Critical
+                                </span>
+                                <span class="badge badge-caution">
+                                    <i class="fas fa-shield-alt"></i> Neuroprotective Measures
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Primary Assessment Checklist</h3>
+                            <ul class="checklist">
+                                <li>Onset time and progression pattern</li>
+                                <li>Associated symptoms (headache, seizure, sensory changes)</li>
+                                <li>Medical history and risk factors</li>
+                                <li>Medication history (anticoagulants, immunosuppressants)</li>
+                                <li>Recent trauma or infections</li>
+                                <li>Family history of neurological conditions</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Physical Examination</h3>
+                            <ul class="checklist">
+                                <li>Complete neurological examination</li>
+                                <li>Motor strength assessment (MRC scale)</li>
+                                <li>Sensory evaluation and reflex testing</li>
+                                <li>Cranial nerve assessment</li>
+                                <li>Gait and coordination testing</li>
+                                <li>Vital signs and general examination</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis-card">
+                <div class="card-header diagnosis">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-microscope"></i>
+                        </div>
+                        <h2>Diagnostic Workup</h2>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="content-section">
+                            <h3>Immediate Investigations</h3>
+                            <div class="alert-box alert-caution">
+                                <i class="fas fa-stopwatch"></i>
+                                <div>
+                                    <strong>Time-sensitive:</strong> Complete initial workup within 60 minutes of presentation
+                                </div>
+                            </div>
+                            
+                            <ul class="checklist">
+                                <li>Non-contrast CT head (rule out hemorrhage)</li>
+                                <li>Blood glucose measurement</li>
+                                <li>Complete blood count and coagulation studies</li>
+                                <li>Electrolytes, renal and liver function</li>
+                                <li>ECG and cardiac biomarkers</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Secondary Investigations</h3>
+                            <div class="badges">
+                                <span class="badge badge-stable">
+                                    <i class="fas fa-brain"></i> MRI Brain
+                                </span>
+                                <span class="badge badge-caution">
+                                    <i class="fas fa-wave-square"></i> EEG
+                                </span>
+                                <span class="badge badge-urgent">
+                                    <i class="fas fa-vial"></i> CSF Analysis
+                                </span>
+                            </div>
+                            
+                            <ul class="checklist">
+                                <li>MRI with DWI (if available and indicated)</li>
+                                <li>Carotid Doppler ultrasound</li>
+                                <li>Echocardiogram (if embolic source suspected)</li>
+                                <li>EEG (if seizure activity suspected)</li>
+                                <li>Lumbar puncture (if infection suspected)</li>
+                                <li>Electrophysiological studies (if peripheral cause)</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Key Differential Diagnoses</h3>
+                            <div class="alert-box alert-info">
+                                <i class="fas fa-lightbulb"></i>
+                                <div>
+                                    Consider stroke mimics: seizures, migraines, functional disorders, metabolic derangements
+                                </div>
+                            </div>
+                            
+                            <ul class="checklist">
+                                <li>Ischemic stroke (most common)</li>
+                                <li>Intracerebral hemorrhage</li>
+                                <li>Subarachnoid hemorrhage</li>
+                                <li>Guillain-Barré syndrome</li>
+                                <li>Multiple sclerosis</li>
+                                <li>Myasthenia gravis</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment-card">
+                <div class="card-header treatment">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-pills"></i>
+                        </div>
+                        <h2>Treatment Protocol</h2>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="content-section">
+                            <h3>Acute Stroke Management</h3>
+                            <div class="alert-box alert-urgent">
+                                <i class="fas fa-clock"></i>
+                                <div>
+                                    <strong>Time Window:</strong> IV thrombolysis within 4.5 hours, mechanical thrombectomy up to 24 hours
+                                </div>
+                            </div>
+                            
+                            <div class="badges">
+                                <span class="badge badge-urgent">
+                                    <i class="fas fa-syringe"></i> tPA
+                                </span>
+                                <span class="badge badge-caution">
+                                    <i class="fas fa-procedures"></i> Thrombectomy
+                                </span>
+                                <span class="badge badge-stable">
+                                    <i class="fas fa-shield-alt"></i> Neuroprotection
+                                </span>
+                            </div>
+                            
+                            <ul class="checklist">
+                                <li>Activate stroke protocol immediately</li>
+                                <li>Blood pressure management (maintain <185/110 for tPA)</li>
+                                <li>IV thrombolysis if eligible</li>
+                                <li>Mechanical thrombectomy for large vessel occlusion</li>
+                                <li>Antiplatelet therapy (avoid in hemorrhage)</li>
+                                <li>Neuroprotective measures</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Supportive Care</h3>
+                            <ul class="checklist">
+                                <li>Airway management and oxygenation</li>
+                                <li>Fluid balance and electrolyte correction</li>
+                                <li>Glycemic control (maintain 140-180 mg/dL)</li>
+                                <li>Temperature management</li>
+                                <li>Deep vein thrombosis prophylaxis</li>
+                                <li>Pressure ulcer prevention</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Condition-Specific Treatments</h3>
+                            <ul class="checklist">
+                                <li><strong>GBS:</strong> IV immunoglobulin or plasma exchange</li>
+                                <li><strong>Myasthenia:</strong> Acetylcholinesterase inhibitors</li>
+                                <li><strong>MS:</strong> High-dose corticosteroids</li>
+                                <li><strong>Infection:</strong> Appropriate antimicrobial therapy</li>
+                                <li><strong>Metabolic:</strong> Correct underlying abnormalities</li>
+                                <li><strong>Functional:</strong> Psychological support and rehabilitation</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup-card">
+                <div class="card-header followup">
+                    <div class="card-title">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h2>Follow-up & Monitoring</h2>
+                    </div>
+                    <div class="expand-icon">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="content-section">
+                            <h3>Neurological Monitoring</h3>
+                            <div class="badges">
+                                <span class="badge badge-caution">
+                                    <i class="fas fa-eye"></i> Neuro Checks
+                                </span>
+                                <span class="badge badge-stable">
+                                    <i class="fas fa-chart-bar"></i> Progress Tracking
+                                </span>
+                                <span class="badge badge-urgent">
+                                    <i class="fas fa-exclamation"></i> Complication Watch
+                                </span>
+                            </div>
+                            
+                            <ul class="checklist">
+                                <li>Neurological assessments every 2-4 hours initially</li>
+                                <li>NIHSS scoring for stroke patients</li>
+                                <li>Monitor for signs of deterioration</li>
+                                <li>Complication surveillance</li>
+                                <li>Functional assessment scales</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Rehabilitation Planning</h3>
+                            <ul class="checklist">
+                                <li>Early rehabilitation assessment</li>
+                                <li>Physical and occupational therapy</li>
+                                <li>Speech and language therapy if needed</li>
+                                <li>Swallowing assessment</li>
+                                <li>Psychological support</li>
+                                <li>Social work involvement</li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3>Long-term Management</h3>
+                            <div class="alert-box alert-info">
+                                <i class="fas fa-calendar-alt"></i>
+                                <div>
+                                    <strong>Follow-up Schedule:</strong> Outpatient visits at 1 week, 1 month, 3 months, 6 months, then annually
+                                </div>
+                            </div>
+                            
+                            <ul class="checklist">
+                                <li>Secondary stroke prevention</li>
+                                <li>Risk factor modification</li>
+                                <li>Medication optimization</li>
+                                <li>Imaging surveillance if indicated</li>
+                                <li>Quality of life assessment</li>
+                                <li>Caregiver education and support</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            const progressSteps = document.querySelectorAll('.progress-step');
+            
+            // Initialize first card as expanded
+            const firstCard = document.getElementById('assessment-card');
+            firstCard.classList.add('expanded');
+            
+            // Card click handlers
+            cards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                header.addEventListener('click', () => {
+                    const isExpanded = card.classList.contains('expanded');
+                    
+                    // Close all cards
+                    cards.forEach(c => c.classList.remove('expanded'));
+                    
+                    // Toggle current card
+                    if (!isExpanded) {
+                        card.classList.add('expanded');
+                        updateProgress(card.id);
+                    }
+                });
+            });
+            
+            // Progress step click handlers
+            progressSteps.forEach(step => {
+                step.addEventListener('click', () => {
+                    const stepId = step.dataset.step;
+                    const targetCard = document.getElementById(stepId + '-card');
+                    
+                    // Close all cards
+                    cards.forEach(c => c.classList.remove('expanded'));
+                    
+                    // Open target card
+                    targetCard.classList.add('expanded');
+                    
+                    // Smooth scroll to card
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Update progress
+                    updateProgress(stepId + '-card');
+                });
+            });
+            
+            function updateProgress(activeCardId) {
+                const stepId = activeCardId.replace('-card', '');
+                
+                progressSteps.forEach(step => {
+                    step.classList.remove('active', 'completed');
+                    
+                    if (step.dataset.step === stepId) {
+                        step.classList.add('active');
+                    } else if (isStepBefore(step.dataset.step, stepId)) {
+                        step.classList.add('completed');
+                    }
+                });
+            }
+            
+            function isStepBefore(step1, step2) {
+                const order = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                return order.indexOf(step1) < order.indexOf(step2);
+            }
+            
+            // Intersection Observer for automatic progress updates
+            const observerOptions = {
+                threshold: 0.5,
+                rootMargin: '-100px 0px -100px 0px'
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        updateProgress(entry.target.id);
+                    }
+                });
+            }, observerOptions);
+            
+            cards.forEach(card => {
+                observer.observe(card);
+            });
+            
+            // Add smooth hover effects to badges
+            const badges = document.querySelectorAll('.badge');
+            badges.forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.style.transform = 'scale(1.05)';
+                    this.style.transition = 'transform 0.2s ease';
+                });
+                
+                badge.addEventListener('mouseleave', function() {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+            
+            // Add loading animation for expandable content
+            const cardHeaders = document.querySelectorAll('.card-header');
+            cardHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const card = this.parentElement;
+                    const icon = this.querySelector('.expand-icon i');
+                    
+                    if (card.classList.contains('expanded')) {
+                        icon.className = 'fas fa-spinner loading';
+                        setTimeout(() => {
+                            icon.className = 'fas fa-chevron-down';
+                        }, 400);
+                    }
+                });
+            });
+        });
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                const cards = Array.from(document.querySelectorAll('.card'));
+                const currentCard = cards.find(card => card.classList.contains('expanded'));
+                const currentIndex = cards.indexOf(currentCard);
+                
+                let newIndex;
+                if (e.key === 'ArrowDown') {
+                    newIndex = Math.min(currentIndex + 1, cards.length - 1);
+                } else {
+                    newIndex = Math.max(currentIndex - 1, 0);
+                }
+                
+                if (newIndex !== currentIndex) {
+                    cards.forEach(c => c.classList.remove('expanded'));
+                    cards[newIndex].classList.add('expanded');
+                    cards[newIndex].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Update progress
+                    const progressSteps = document.querySelectorAll('.progress-step');
+                    const stepId = cards[newIndex].id.replace('-card', '');
+                    progressSteps.forEach(step => {
+                        step.classList.remove('active', 'completed');
+                        if (step.dataset.step === stepId) {
+                            step.classList.add('active');
+                        } else if (isStepBefore(step.dataset.step, stepId)) {
+                            step.classList.add('completed');
+                        }
+                    });
+                }
+            }
+        });
+        
+        function isStepBefore(step1, step2) {
+            const order = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            return order.indexOf(step1) < order.indexOf(step2);
+        }
+    </script>
+</body>
+</html>

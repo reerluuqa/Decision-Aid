@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takayasu's Arteritis Interactive Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 15px;
+            padding: 30px 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .progress-sidebar h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .progress-item:hover {
+            background: #f0f0f0;
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item.active .progress-icon {
+            background: #1976d2;
+            color: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+        }
+
+        .algorithm-header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .algorithm-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .algorithm-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card.assessment::before { background: #4CAF50; }
+        .card.diagnosis::before { background: #2196F3; }
+        .card.treatment::before { background: #FF9800; }
+        .card.followup::before { background: #9C27B0; }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 15px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .assessment .card-icon { background: #4CAF50; }
+        .diagnosis .card-icon { background: #2196F3; }
+        .treatment .card-icon { background: #FF9800; }
+        .followup .card-icon { background: #9C27B0; }
+
+        .card-title {
+            font-size: 1.5rem;
+            color: #333;
+            flex: 1;
+        }
+
+        .expand-icon {
+            font-size: 20px;
+            transition: transform 0.3s ease;
+            color: #666;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+
+        .badge-urgent {
+            background: #f44336;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-stable {
+            background: #4caf50;
+            color: white;
+        }
+
+        /* Content Styles */
+        .content-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+
+        .content-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .criteria-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .criteria-list li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        .criteria-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .treatment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .treatment-item {
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            border-left: 4px solid #FF9800;
+            transition: all 0.3s ease;
+        }
+
+        .treatment-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .severity-indicator {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .severity-item {
+            flex: 1;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .severity-item:hover {
+            transform: scale(1.05);
+        }
+
+        .severity-low { background: #4caf50; }
+        .severity-moderate { background: #ff9800; }
+        .severity-high { background: #f44336; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+
+            .algorithm-header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <h3>Algorithm Progress</h3>
+            <div class="progress-item active" onclick="scrollToCard('assessment')">
+                <div class="progress-icon">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('diagnosis')">
+                <div class="progress-icon">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('treatment')">
+                <div class="progress-icon">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('followup')">
+                <div class="progress-icon">4</div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="algorithm-header">
+                <h1>Takayasu's Arteritis Algorithm</h1>
+                <p>Interactive clinical decision support tool</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card assessment" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📋</div>
+                    <h3 class="card-title">Initial Assessment</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h4>Key Clinical Features</h4>
+                        <ul class="criteria-list">
+                            <li>Age ≤40 years <span class="badge badge-caution">Caution</span></li>
+                            <li>Female predominance (8:1 ratio)</li>
+                            <li>Asian ethnicity higher prevalence</li>
+                            <li>Constitutional symptoms (fever, weight loss, fatigue)</li>
+                            <li>Vascular symptoms (claudication, absent pulses)</li>
+                            <li>Hypertension (often difficult to control)</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h4>Physical Examination</h4>
+                        <div class="severity-indicator">
+                            <div class="severity-item severity-high">
+                                <strong>Urgent</strong><br>
+                                BP difference >20mmHg
+                            </div>
+                            <div class="severity-item severity-moderate">
+                                <strong>Caution</strong><br>
+                                Absent pulses
+                            </div>
+                            <div class="severity-item severity-low">
+                                <strong>Monitor</strong><br>
+                                Vascular bruits
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">🔍</div>
+                    <h3 class="card-title">Diagnostic Workup</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h4>2022 ACR/EULAR Classification Criteria <span class="badge badge-urgent">Required</span></h4>
+                        <p><strong>Absolute Requirements:</strong></p>
+                        <ul class="criteria-list">
+                            <li>Age ≤60 years at diagnosis</li>
+                            <li>Evidence of vasculitis on imaging</li>
+                        </ul>
+                        
+                        <p><strong>Clinical Criteria (Points):</strong></p>
+                        <ul class="criteria-list">
+                            <li>Female sex (+1)</li>
+                            <li>Angina or ischemic cardiac pain (+2)</li>
+                            <li>Arm or leg claudication (+2)</li>
+                            <li>Vascular bruit (+2)</li>
+                            <li>Reduced pulse in upper extremity (+2)</li>
+                            <li>Carotid artery abnormality (+2)</li>
+                            <li>BP difference ≥20mmHg (+1)</li>
+                        </ul>
+                        <p><strong>Score ≥5 required for classification</strong></p>
+                    </div>
+
+                    <div class="content-section">
+                        <h4>Imaging Studies</h4>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>CT Angiography</strong><br>
+                                Gold standard - 95% sensitivity
+                            </div>
+                            <div class="treatment-item">
+                                <strong>MRA</strong><br>
+                                No radiation - good for follow-up
+                            </div>
+                            <div class="treatment-item">
+                                <strong>PET-FDG</strong><br>
+                                Assesses disease activity
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Ultrasound</strong><br>
+                                Initial screening tool
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">💊</div>
+                    <h3 class="card-title">Treatment Algorithm</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h4>Induction Therapy <span class="badge badge-urgent">Urgent</span></h4>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>Glucocorticoids</strong><br>
+                                Prednisolone 1mg/kg/day (max 60mg)<br>
+                                <small>Taper over 3-6 months</small>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Steroid-sparing agent</strong><br>
+                                Methotrexate 15-25mg weekly<br>
+                                <small>Start concurrently</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h4>Refractory Disease</h4>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>TNF-α Inhibitors</strong><br>
+                                Infliximab first-line<br>
+                                <span class="badge badge-caution">93% response rate</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>IL-6 Inhibitor</strong><br>
+                                Tocilizumab alternative<br>
+                                <span class="badge badge-stable">Consider if TNF contraindicated</span>
+                            </div>
+                            <div class="treatment-item">
+                                <strong>JAK Inhibitors</strong><br>
+                                Tofacitinib (emerging)<br>
+                                <span class="badge badge-stable">Phase 4 trials ongoing</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-section">
+                        <h4>Surgical Intervention</h4>
+                        <p><strong>Indications:</strong> Severe ischemia, uncontrolled hypertension, aneurysms</p>
+                        <div class="severity-indicator">
+                            <div class="severity-item severity-high">
+                                <strong>Emergency</strong><br>
+                                Aneurysm rupture risk
+                            </div>
+                            <div class="severity-item severity-moderate">
+                                <strong>Semi-urgent</strong><br>
+                                Critical stenosis
+                            </div>
+                            <div class="severity-item severity-low">
+                                <strong>Elective</strong><br>
+                                Failed medical therapy
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📈</div>
+                    <h3 class="card-title">Monitoring & Follow-up</h3>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-content">
+                    <div class="content-section">
+                        <h4>Active Disease Monitoring</h4>
+                        <ul class="criteria-list">
+                            <li>Clinical review every 4-6 weeks</li>
+                            <li>ESR/CRP at each visit</li>
+                            <li>Vascular imaging every 3-6 months</li>
+                            <li>BP monitoring in all 4 limbs</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h4>Remission Monitoring</h4>
+                        <ul class="criteria-list">
+                            <li>Review every 3-6 months</li>
+                            <li>Annual vascular imaging</li>
+                            <li>Relapse rate >80% - stay vigilant</li>
+                            <li>5-year mortality 7-30% with treatment</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-section">
+                        <h4>Complication Prevention</h4>
+                        <div class="treatment-grid">
+                            <div class="treatment-item">
+                                <strong>Osteoporosis</strong><br>
+                                DEXA scan baseline<br>
+                                Calcium + Vit D + Bisphosphonate
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Infection</strong><br>
+                                Pneumocystis prophylaxis<br>
+                                Vaccinations up to date
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Cardiovascular</strong><br>
+                                Aspirin 75mg daily<br>
+                                Control risk factors
+                            </div>
+                            <div class="treatment-item">
+                                <strong>Diabetes</strong><br>
+                                Monitor blood glucose<br>
+                                HbA1c every 3 months
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Update active progress item
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        // Auto-update progress sidebar on scroll
+        window.addEventListener('scroll', () => {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            cards.forEach((card, index) => {
+                const rect = card.getBoundingClientRect();
+                if (rect.top <= 100 && rect.bottom >= 100) {
+                    progressItems.forEach(item => item.classList.remove('active'));
+                    progressItems[index].classList.add('active');
+                }
+            });
+        });
+
+        // Expand first card by default
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('.card').classList.add('expanded');
+        });
+    </script>
+</body>
+</html>

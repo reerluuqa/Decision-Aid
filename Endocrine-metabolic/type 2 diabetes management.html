@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2D Glycaemic Control: Clinical Quick-Scan</title>
+    <style>
+        :root {
+            /* Clinical Color Palette */
+            --col-red-alert: #dc2626;
+            --col-red-bg: #fef2f2;
+            --col-green-safe: #16a34a;
+            --col-green-bg: #f0fdf4;
+            --col-blue-info: #2563eb;
+            --col-blue-bg: #eff6ff;
+            --col-orange-warning: #ea580c;
+            --col-orange-bg: #fff7ed;
+            
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            margin: 0;
+            padding-bottom: 4rem;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 { margin-top: 0; letter-spacing: -0.025em; }
+        h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
+        h2 { font-size: 1.25rem; font-weight: 600; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .font-bold { font-weight: 700; }
+        .text-red { color: var(--col-red-alert); }
+        .text-green { color: var(--col-green-safe); }
+        .text-blue { color: var(--col-blue-info); }
+
+        /* Layout Grid */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                grid-template-columns: 300px 1fr;
+                align-items: start;
+            }
+            .full-width { grid-column: 1 / -1; }
+            .sidebar-sticky { position: sticky; top: 1rem; }
+        }
+
+        /* Components: Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Alert Banners */
+        .alert-red { background: var(--col-red-bg); border-left: 4px solid var(--col-red-alert); }
+        .alert-green { background: var(--col-green-bg); border-left: 4px solid var(--col-green-safe); }
+        .alert-blue { background: var(--col-blue-bg); border-left: 4px solid var(--col-blue-info); }
+        .alert-orange { background: var(--col-orange-bg); border-left: 4px solid var(--col-orange-warning); }
+
+        /* Navigation */
+        .nav-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin-bottom: 1.5rem;
+        }
+        .nav-item {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: var(--col-blue-info);
+            color: white;
+            border-color: var(--col-blue-info);
+        }
+
+        /* Data Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .data-table th, .data-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .data-table th {
+            background: #f1f5f9;
+            font-weight: 600;
+        }
+        .data-table tr:hover {
+            background-color: #f8fafc;
+        }
+        .cell-benefit { color: var(--col-green-safe); font-weight: bold; }
+        .cell-harm { color: var(--col-red-alert); font-weight: bold; }
+        .cell-neutral { color: var(--text-muted); }
+
+        /* Mechanism Chips */
+        .chip {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .chip-met { background: #dbeafe; color: #1e40af; }
+        .chip-gli { background: #fee2e2; color: #991b1b; }
+        .chip-glp { background: #dcfce7; color: #166534; }
+        .chip-sglt { background: #e0e7ff; color: #3730a3; }
+
+        /* Tabs Logic */
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Utility */
+        .grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        @media (min-width: 768px) { .grid-2 { grid-template-columns: 1fr 1fr; } }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Sidebar / Navigation -->
+    <aside class="sidebar-sticky">
+        <div class="card alert-blue">
+            <h4 style="margin-top:0">Quick Navigator</h4>
+            <p class="text-sm text-muted" style="margin-bottom:1rem">T2D Drugs & Glycaemic Control</p>
+            <ul class="nav-pills" style="flex-direction: column; gap: 0.25rem;">
+                <li class="nav-item active" onclick="showSection('overview')">🚑 Red Flags & Rescue</li>
+                <li class="nav-item" onclick="showSection('mechanisms')">🧠 Cheat Sheet (MOA)</li>
+                <li class="nav-item" onclick="showSection('guidance')">📋 NICE Guidance Path</li>
+                <li class="nav-item" onclick="showSection('comparison')">📊 Drug Comparison</li>
+                <li class="nav-item" onclick="showSection('safety')">⚠️ Safety & Dilemmas</li>
+                <li class="nav-item" onclick="showSection('monitoring')">📈 Monitoring & Driving</li>
+            </ul>
+        </div>
+
+        <div class="card" style="margin-top: 1rem;">
+            <h4>Context</h4>
+            <p class="text-xs text-muted">Updated: April 2025</p>
+            <p class="text-sm"><strong>Key Change:</strong> Gliflozins (SGLT2i) now 1st line alongside Metformin for high CVD risk.</p>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main>
+
+        <!-- SECTION: RED FLAGS -->
+        <section id="overview" class="tab-content active">
+            <div class="card alert-red">
+                <h3 style="color:var(--col-red-alert)">⚠️ Immediate Actions</h3>
+                <ul class="text-sm" style="margin-bottom:0">
+                    <li><strong>Symptomatic Hyperglycaemia:</strong> Consider 'Rescue Therapy' with Insulin or Sulphonylurea immediately.</li>
+                    <li><strong>Severe Hypoglycaemia:</strong> Defined as impaired consciousness or requiring medical help. Doubles long-term CVD risk.</li>
+                    <li><strong>DKA Risk:</strong> Gliflozins carry risk (2 more/1000 over 5y). Ensure Sick Day Rules are understood.</li>
+                </ul>
+            </div>
+
+            <div class="grid-2" style="margin-top: 1.5rem;">
+                <div class="card">
+                    <h4>Targets (NICE 2022)</h4>
+                    <table class="data-table">
+                        <tr>
+                            <td>Lifestyle / Non-hypo drug</td>
+                            <td class="text-green font-bold">48 mmol/mol (6.5%)</td>
+                        </tr>
+                        <tr>
+                            <td>Hypo-inducing drug (SU/Insulin)</td>
+                            <td class="text-green font-bold">53 mmol/mol (7.0%)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Intensify if HbA1c ></strong></td>
+                            <td>58 mmol/mol (7.5%)</td>
+                        </tr>
+                    </table>
+                    <p class="text-xs text-muted" style="margin-top:0.5rem">*De-intensify if HbA1c < 48. Always personalise.</p>
+                </div>
+                <div class="card">
+                    <h4>Driving (DVLA Summary)</h4>
+                    <p class="text-sm"><strong>Insulin / Sulphonylureas:</strong></p>
+                    <ul class="text-xs">
+                        <li>Must not have >1 severe hypo in last 12m (and none in last 3m).</li>
+                        <li>Check glucose < 2hrs before driving & every 2 hrs.</li>
+                    </ul>
+                    <p class="text-sm"><strong>Non-hypo agents:</strong></p>
+                    <ul class="text-xs">
+                        <li>Group 1: Drive as normal.</li>
+                        <li>Group 2: "Regular medical review".</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: MECHANISMS -->
+        <section id="mechanisms" class="tab-content">
+            <h2>How Drugs Work (Cheat Sheet)</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <span class="chip chip-met">Metformin</span>
+                    <p class="text-sm"><strong>Mnemonic:</strong> Sucks sugar out of blood into liver, muscle, fat. Good for heart.</p>
+                </div>
+                <div class="card">
+                    <span class="chip chip-gli">Gliclazide (SU)</span>
+                    <p class="text-sm"><strong>Mnemonic:</strong> Kicks pancreas to make more insulin. <span class="text-red">Watch out for Hypos.</span></p>
+                </div>
+                <div class="card">
+                    <span class="chip chip-glp">GLP-1 Mimetics</span>
+                    <p class="text-sm"><strong>Mnemonic:</strong> Mimic incretins (gut hormones). Augment insulin, slow stomach emptying (weight loss).</p>
+                </div>
+                <div class="card">
+                    <span class="chip chip-sglt">Gliflozin (SGLT2i)</span>
+                    <p class="text-sm"><strong>Mnemonic:</strong> Makes you pee out excess sugar. Great for Heart Failure & Renal protection.</p>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top:1rem">
+                <h4>Specific Populations</h4>
+                <div class="grid-2">
+                    <div>
+                        <p class="text-sm"><strong>COPD:</strong> GLP-1s reduce exacerbations (admissions). Gliflozins reduce admissions but not moderate exacerbations.</p>
+                    </div>
+                    <div>
+                        <p class="text-sm"><strong>Renal:</strong> Gliflozins prevent ≥40% fall in eGFR. Check eGFR thresholds before starting.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION: GUIDANCE -->
+        <section id="guidance" class="tab-content">
+            <h2>Therapy Pathway (NICE/SIGN)</h2>
+            
+            <div class="card alert-blue">
+                <h4>1st Line Strategy</h4>
+                <div class="grid-2">
+                    <div class="text-sm">
+                        <strong>Standard:</strong> Metformin.<br>
+                        <strong>High CVD Risk:</strong> Metformin <span class="font-bold">+</span> Gliflozin.<br>
+                        <strong>Established CVD:</strong> Offer Gliflozin.
+                    </div>
+                    <div class="text-sm">
+                        <em>Note: Gliflozins can be added at ANY stage if CVD/risk factors develop.</em>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h4>Second Line (After Metformin +/- Gliflozin)</h4>
+                <p class="text-sm">Consider patient factors (frailty, weight, renal, hypo risk).</p>
+                <ul class="text-sm" style="list-style-type: none; padding: 0;">
+                    <li style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;">
+                        <strong>Priority: Gliflozin (SGLT2i)</strong><br>
+                        <span class="text-green">Best outcomes:</span> Lower HbA1c, lower BMI, lower BP, fewer HF admissions.
+                    </li>
+                    <li style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;">
+                        <strong>Alternative: Gliptin (DPP-4i)</strong><br>
+                        <span class="text-blue">Pros:</span> Weak but safe (no hypos).<br>
+                        <span class="text-red">Cons:</span> Least effective if baseline HbA1c is high.
+                    </li>
+                    <li style="margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid #eee;">
+                        <strong>Alternative: Sulphonylurea</strong><br>
+                        <span class="text-red">Cons:</strong> High hypo risk, weight gain. Use with caution.
+                    </li>
+                    <li>
+                        <strong>Specialist Use: GLP-1</strong><br>
+                        <span class="text-green">Indication:</span> High BMI (BMI ≥35 with comorbidities, or ≥30).
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION: COMPARISON -->
+        <section id="comparison" class="tab-content">
+            <h2>Drug Comparison (Meta-Analysis Data)</h2>
+            <p class="text-sm text-muted">Events per 1000 patients over 5 years compared to standard care.</p>
+            
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="min-width: 120px;">Drug Class</th>
+                            <th>All-cause Mortality</th>
+                            <th>CV Mortality</th>
+                            <th>Heart Failure Admissions</th>
+                            <th>End-Stage Renal Disease</th>
+                            <th>Key Harms</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="font-bold">Gliflozin (SGLT2i)</td>
+                            <td class="cell-benefit">17 fewer</td>
+                            <td class="cell-benefit">14 fewer</td>
+                            <td class="cell-benefit">33 fewer</td>
+                            <td class="cell-benefit">34 fewer</td>
+                            <td class="cell-harm text-xs">Genital infections, DKA, Amputations</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">GLP-1 Mimetic</td>
+                            <td class="cell-benefit">17 fewer</td>
+                            <td class="cell-benefit">13 fewer</td>
+                            <td class="cell-benefit">9 fewer</td>
+                            <td class="cell-benefit">14 fewer</td>
+                            <td class="cell-harm text-xs">Severe GI events</td>
+                        </tr>
+                        <tr>
+                            <td>Metformin</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="text-xs text-muted">B12 deficiency risk</td>
+                        </tr>
+                        <tr>
+                            <td>Sulphonylurea</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-harm text-xs">109 more Hypos/5y</td>
+                        </tr>
+                        <tr>
+                            <td>Gliptin (DPP-4i)</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="text-xs text-muted">Cholecystitis (rare)</td>
+                        </tr>
+                        <tr>
+                            <td>Pioglitazone</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-harm">48 more</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="text-xs text-muted">Weight gain, fractures</td>
+                        </tr>
+                        <tr>
+                            <td>Basal Insulin</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-neutral">No impact</td>
+                            <td class="cell-harm text-xs">39 more Hypos/5y</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card alert-orange" style="margin-top: 1rem;">
+                <h4>Head-to-Head (GRADE Trial)</h4>
+                <p class="text-sm">
+                    <strong>Winner (Glycaemic):</strong> Liraglutide (GLP-1) & Insulin Glargine.<br>
+                    <strong>Winner (CV):</strong> Liraglutide showed superiority vs pooled average of others.<br>
+                    <strong>Laggard:</strong> Sitagliptin (Gliptin) performed poorly in high baseline HbA1c.
+                </p>
+            </div>
+        </section>
+
+        <!-- SECTION: SAFETY -->
+        <section id="safety" class="tab-content">
+            <h2>Safety, Dilemmas & Special Topics</h2>
+            
+            <div class="grid-2">
+                <div class="card">
+                    <h4 class="text-blue">Metformin & B12</h4>
+                    <ul class="text-sm">
+                        <li>Risk of deficiency: <strong>1 in 10</strong>.</li>
+                        <li><strong>Action:</strong> Check B12 if symptoms/signs present.</li>
+                        <li><strong>Pragmatic Tip:</strong> Add B12 to annual diabetes bloods for those on Metformin.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4 class="text-red">Sick Day Rules (Gliflozins)</h4>
+                    <ul class="text-sm">
+                        <li>Stop Gliflozins if acute illness/dehydration.</li>
+                        <li>Risk of <strong>euglycaemic DKA</strong>.</li>
+                        <li>Do not restart until eating/drinking normally for 24-48h.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h4>Drug Dilemmas</h4>
+                <details>
+                    <summary class="text-sm font-bold" style="cursor:pointer; color:var(--col-blue-info)">Can we combine Gliptin + Sulphonylurea?</summary>
+                    <div class="text-sm" style="margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid #e2e8f0;">
+                        <span class="text-red font-bold">Caution:</span> Significant increase in hypoglycaemia (1 extra case per 17 people in first 6 months). BNF recommends reducing SU dose when starting gliptin.
+                    </div>
+                </details>
+                <details>
+                    <summary class="text-sm font-bold" style="cursor:pointer; color:var(--col-blue-info)">Can we combine Gliflozin + GLP-1?</summary>
+                    <div class="text-sm" style="margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid #e2e8f0;">
+                        <span class="text-green font-bold">Yes (beneficial):</span> Dual therapy shows summative benefits. Fewer CV events and renal events compared to monotherapy. (Note: NICE currently limits GLP-1s for obesity/cost, but evidence supports combo).
+                    </div>
+                </details>
+                <details>
+                    <summary class="text-sm font-bold" style="cursor:pointer; color:var(--col-blue-info)">GLP-1s and Suicidality?</summary>
+                    <div class="text-sm" style="margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid #e2e8f0;">
+                        <span class="text-green font-bold">Reassuring:</span> Large cohort studies found NO increased risk of suicide vs other diabetes drugs. Some even showed protective effects.
+                    </div>
+                </details>
+                <details>
+                    <summary class="text-sm font-bold" style="cursor:pointer; color:var(--col-blue-info)">Gastric Emptying (Rapid vs Delayed)</summary>
+                    <div class="text-sm" style="margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid #e2e8f0;">
+                        <strong>Emerging Concept:</strong> 20% of poorly controlled diabetics have <em>rapid</em> gastric emptying (not just delayed). Rapid emptying worsens post-prandial hyperglycaemia. Treating delayed emptying might worsen sugar control.
+                    </div>
+                </details>
+            </div>
+        </section>
+
+        <!-- SECTION: MONITORING -->
+        <section id="monitoring" class="tab-content">
+            <h2>Monitoring Guidelines</h2>
+
+            <div class="card">
+                <h4>Who needs Blood Sugar Monitoring?</h4>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Monitoring Type</th>
+                            <th>Offer To...</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Capillary (Finger prick)</strong></td>
+                            <td class="text-sm">
+                                - On Insulin<br>
+                                - History of hypoglycaemia<br>
+                                - On Steroids<br>
+                                - DVLA requirements
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Continuous (Flash/rtCGM)</strong></td>
+                            <td class="text-sm">
+                                - On Multiple Daily Injections (MDI) + recurrent/severe hypos<br>
+                                - Impaired hypo awareness<br>
+                                - Disability preventing finger pricks
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-xs text-muted" style="margin-top:1rem">*For all others, routine self-monitoring is NOT indicated (high quality RCTs show no HbA1c difference).</p>
+            </div>
+
+            <div class="card" style="margin-top: 1rem;">
+                <h4>Driving Rules Snapshot</h4>
+                <div class="grid-2">
+                    <div class="alert-red" style="padding:0.5rem; border-radius:4px;">
+                        <strong>Group 1 (Car)</strong><br>
+                        <span class="text-xs">If on Insulin/SU:</span> No >1 severe hypo in 12m. Test <2h before drive.
+                    </div>
+                    <div class="alert-red" style="padding:0.5rem; border-radius:4px;">
+                        <strong>Group 2 (HGV/LGV)</strong><br>
+                        <span class="text-xs">If on Insulin:</span> NO severe hypos in 12m. Finger prick ONLY (no flash allowed for testing).
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+    function showSection(sectionId) {
+        // Update Tab Content
+        document.querySelectorAll('.tab-content').forEach(el => {
+            el.classList.remove('active');
+        });
+        document.getElementById(sectionId).classList.add('active');
+
+        // Update Nav Pills
+        document.querySelectorAll('.nav-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Find the clicked nav item based on onclick attribute matching
+        const navItems = document.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            if(item.getAttribute('onclick').includes(sectionId)) {
+                item.classList.add('active');
+            }
+        });
+
+        // Scroll to top of main on mobile for better UX
+        if(window.innerWidth < 1024) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+</script>
+
+</body>
+</html>

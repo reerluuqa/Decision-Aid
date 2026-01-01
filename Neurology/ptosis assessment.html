@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ptosis Assessment Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .progress-item:hover {
+            background: #f8f9fa;
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 8px solid;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .assessment-card {
+            border-left-color: #3498db;
+        }
+
+        .diagnosis-card {
+            border-left-color: #9b59b6;
+        }
+
+        .treatment-card {
+            border-left-color: #e74c3c;
+        }
+
+        .followup-card {
+            border-left-color: #27ae60;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 24px;
+            color: white;
+        }
+
+        .assessment-card .card-icon {
+            background: #3498db;
+        }
+
+        .diagnosis-card .card-icon {
+            background: #9b59b6;
+        }
+
+        .treatment-card .card-icon {
+            background: #e74c3c;
+        }
+
+        .followup-card .card-icon {
+            background: #27ae60;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .card-content.expanded {
+            max-height: 2000px;
+        }
+
+        .step-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .step-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            background: #e3f2fd;
+            transform: translateX(5px);
+        }
+
+        .severity-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge-urgent {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #f39c12;
+            color: white;
+        }
+
+        .badge-stable {
+            background: #27ae60;
+            color: white;
+        }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .flow-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid #3498db;
+            position: relative;
+        }
+
+        .flow-item::after {
+            content: '↓';
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #3498db;
+        }
+
+        .flow-item:last-child::after {
+            display: none;
+        }
+
+        .interactive-element {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .interactive-element:hover {
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+        .hidden-content {
+            display: none;
+            margin-top: 10px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                order: 2;
+            }
+            
+            .main-content {
+                order: 1;
+            }
+            
+            .step-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-sidebar">
+            <div class="progress-title">Algorithm Progress</div>
+            <div class="progress-item active" onclick="scrollToCard('assessment')">
+                <div class="progress-icon" style="background: #3498db;">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('diagnosis')">
+                <div class="progress-icon" style="background: #9b59b6;">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('treatment')">
+                <div class="progress-icon" style="background: #e74c3c;">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" onclick="scrollToCard('followup')">
+                <div class="progress-icon" style="background: #27ae60;">4</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card assessment-card" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">Assessment of Ptosis</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-grid">
+                        <div class="step-item interactive-element" onclick="toggleHidden('history')">
+                            <h4>📖 History Taking</h4>
+                            <p>Comprehensive patient history including onset, duration, and associated symptoms</p>
+                            <span class="severity-badge badge-caution">Essential</span>
+                            <div id="history" class="hidden-content">
+                                <strong>Key Questions:</strong>
+                                <ul>
+                                    <li>When did the ptosis first appear?</li>
+                                    <li>Is it progressive or stable?</li>
+                                    <li>Any associated pain or trauma?</li>
+                                    <li>Family history of similar conditions?</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step-item interactive-element" onclick="toggleHidden('examination')">
+                            <h4>🔍 Physical Examination</h4>
+                            <p>Detailed ocular examination including visual acuity and eyelid measurements</p>
+                            <span class="severity-badge badge-stable">Routine</span>
+                            <div id="examination" class="hidden-content">
+                                <strong>Examination Steps:</strong>
+                                <ul>
+                                    <li>Measure visual acuity</li>
+                                    <li>Assess eyelid position (MRD-1)</li>
+                                    <li>Evaluate levator function</li>
+                                    <li>Check pupillary responses</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step-item interactive-element" onclick="toggleHidden('severity')">
+                            <h4>📊 Severity Assessment</h4>
+                            <p>Determine the degree of ptosis and its impact on visual function</p>
+                            <span class="severity-badge badge-urgent">Critical</span>
+                            <div id="severity" class="hidden-content">
+                                <strong>Severity Classification:</strong>
+                                <ul>
+                                    <li><strong>Mild:</strong> 1-2mm MRD-1 reduction</li>
+                                    <li><strong>Moderate:</strong> 3-4mm MRD-1 reduction</li>
+                                    <li><strong>Severe:</strong> >4mm MRD-1 reduction</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card diagnosis-card" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">🔬</div>
+                    <div class="card-title">Diagnosis & Differential</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="flowchart">
+                        <div class="flow-item interactive-element" onclick="toggleHidden('congenital')">
+                            <h4>👶 Congenital Ptosis</h4>
+                            <p>Present at birth or early childhood, often due to levator muscle dystrophy</p>
+                            <span class="severity-badge badge-caution">Specialist Referral</span>
+                            <div id="congenital" class="hidden-content">
+                                <strong>Characteristics:</strong>
+                                <ul>
+                                    <li>Present since birth</li>
+                                    <li>Poor levator function</li>
+                                    <li>May have associated amblyopia</li>
+                                    <li>Often requires surgical correction</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flow-item interactive-element" onclick="toggleHidden('aponeurotic')">
+                            <h4>👴 Aponeurotic Ptosis</h4>
+                            <p>Most common acquired type, due to levator aponeurosis dehiscence</p>
+                            <span class="severity-badge badge-stable">Common</span>
+                            <div id="aponeurotic" class="hidden-content">
+                                <strong>Risk Factors:</strong>
+                                <ul>
+                                    <li>Age-related changes</li>
+                                    <li>Previous eye surgery</li>
+                                    <li>Contact lens wear</li>
+                                    <li>Good levator function preserved</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flow-item interactive-element" onclick="toggleHidden('neurogenic')">
+                            <h4>🧠 Neurogenic Ptosis</h4>
+                            <p>Due to neurological conditions affecting oculomotor pathways</p>
+                            <span class="severity-badge badge-urgent">Urgent Referral</span>
+                            <div id="neurogenic" class="hidden-content">
+                                <strong>Causes:</strong>
+                                <ul>
+                                    <li>Third nerve palsy</li>
+                                    <li>Horner's syndrome</li>
+                                    <li>Myasthenia gravis</li>
+                                    <li>Requires immediate evaluation</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card treatment-card" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">Treatment Options</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-grid">
+                        <div class="step-item interactive-element" onclick="toggleHidden('conservative')">
+                            <h4>🌿 Conservative Management</h4>
+                            <p>Non-surgical approaches for mild cases or temporary relief</p>
+                            <span class="severity-badge badge-stable">First Line</span>
+                            <div id="conservative" class="hidden-content">
+                                <strong>Options:</strong>
+                                <ul>
+                                    <li>Observation for mild cases</li>
+                                    <li>Crutch glasses for temporary support</li>
+                                    <li>Treatment of underlying conditions</li>
+                                    <li>Regular monitoring</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step-item interactive-element" onclick="toggleHidden('surgical')">
+                            <h4>🔧 Surgical Intervention</h4>
+                            <p>Definitive treatment for moderate to severe cases</p>
+                            <span class="severity-badge badge-caution">Specialist Only</span>
+                            <div id="surgical" class="hidden-content">
+                                <strong>Procedures:</strong>
+                                <ul>
+                                    <li><strong>Levator resection:</strong> For good levator function</li>
+                                    <li><strong>Frontalis suspension:</strong> For poor levator function</li>
+                                    <li><strong>Müller muscle resection:</strong> For mild cases</li>
+                                    <li><strong>Brow suspension:</strong> Alternative technique</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="step-item interactive-element" onclick="toggleHidden('emergency')">
+                            <h4>🚨 Emergency Treatment</h4>
+                            <p>Immediate intervention for urgent cases</p>
+                            <span class="severity-badge badge-urgent">Immediate</span>
+                            <div id="emergency" class="hidden-content">
+                                <strong>Indications:</strong>
+                                <ul>
+                                    <li>Acute third nerve palsy</li>
+                                    <li>Traumatic ptosis with globe injury</li>
+                                    <li>Orbital cellulitis</li>
+                                    <li>Giant cell arteritis</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card followup-card" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📈</div>
+                    <div class="card-title">Follow-up & Monitoring</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="flowchart">
+                        <div class="flow-item interactive-element" onclick="toggleHidden('postop')">
+                            <h4>🩹 Post-operative Care</h4>
+                            <p>Immediate post-surgical monitoring and wound care</p>
+                            <span class="severity-badge badge-caution">Critical Period</span>
+                            <div id="postop" class="hidden-content">
+                                <strong>First Week:</strong>
+                                <ul>
+                                    <li>Daily wound inspection</li>
+                                    <li>Antibiotic prophylaxis</li>
+                                    <li>Cold compresses</li>
+                                    <li>Elevation of head</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flow-item interactive-element" onclick="toggleHidden('longterm')">
+                            <h4>📅 Long-term Monitoring</h4>
+                            <p>Regular assessment of surgical outcomes and complications</p>
+                            <span class="severity-badge badge-stable">Routine</span>
+                            <div id="longterm" class="hidden-content">
+                                <strong>Schedule:</strong>
+                                <ul>
+                                    <li>1 month post-op</li>
+                                    <li>3 months post-op</li>
+                                    <li>6 months post-op</li>
+                                    <li>Annual thereafter</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="flow-item interactive-element" onclick="toggleHidden('complications')">
+                            <h4>⚠️ Complication Management</h4>
+                            <p>Recognition and management of potential complications</p>
+                            <span class="severity-badge badge-urgent">Vigilant</span>
+                            <div id="complications" class="hidden-content">
+                                <strong>Watch for:</strong>
+                                <ul>
+                                    <li>Under-correction</li>
+                                    <li>Over-correction</li>
+                                    <li>Exposure keratopathy</li>
+                                    <li>Infection or hematoma</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleCard(header) {
+            const card = header.parentElement;
+            const content = card.querySelector('.card-content');
+            const icon = header.querySelector('.expand-icon');
+            
+            content.classList.toggle('expanded');
+            icon.classList.toggle('expanded');
+        }
+
+        function toggleHidden(id) {
+            const element = document.getElementById(id);
+            if (element.style.display === 'block') {
+                element.style.display = 'none';
+            } else {
+                element.style.display = 'block';
+            }
+        }
+
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Update active progress item
+            document.querySelectorAll('.progress-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+        }
+
+        // Auto-expand first card on load
+        window.addEventListener('load', function() {
+            const firstCard = document.querySelector('.card-content');
+            const firstIcon = document.querySelector('.expand-icon');
+            firstCard.classList.add('expanded');
+            firstIcon.classList.add('expanded');
+        });
+
+        // Add scroll spy functionality
+        window.addEventListener('scroll', function() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            let current = '';
+            cards.forEach(card => {
+                const cardTop = card.offsetTop;
+                const cardHeight = card.clientHeight;
+                if (scrollY >= (cardTop - 200)) {
+                    current = card.getAttribute('id');
+                }
+            });
+
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.textContent.toLowerCase().includes(current)) {
+                    item.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

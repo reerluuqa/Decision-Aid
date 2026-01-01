@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVC Syndrome - Interactive Management Algorithm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --assessment-color: #3B82F6;
+            --diagnosis-color: #8B5CF6;
+            --treatment-color: #10B981;
+            --followup-color: #F59E0B;
+        }
+        
+        .card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .expandable-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .expandable-content.expanded {
+            max-height: 1000px;
+        }
+        
+        .progress-item {
+            transition: all 0.3s ease;
+        }
+        
+        .progress-item.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--assessment-color);
+        }
+        
+        .progress-item.diagnosis.active {
+            border-left-color: var(--diagnosis-color);
+        }
+        
+        .progress-item.treatment.active {
+            border-left-color: var(--treatment-color);
+        }
+        
+        .progress-item.followup.active {
+            border-left-color: var(--followup-color);
+        }
+        
+        .badge {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        .severity-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        .sidebar-sticky {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .icon-wrapper {
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover .icon-wrapper {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b-2 border-blue-600">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center space-x-4">
+                <i class="fas fa-heartbeat text-3xl text-blue-600"></i>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Superior Vena Cava Syndrome</h1>
+                    <p class="text-sm text-gray-600">BMJ Best Practice Algorithm • Last updated: Jul 18, 2023</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex gap-8">
+            <!-- Progress Sidebar -->
+            <aside class="w-64 flex-shrink-0">
+                <div class="sidebar-sticky bg-white rounded-lg shadow-md p-4">
+                    <h3 class="font-semibold text-gray-900 mb-4 flex items-center">
+                        <i class="fas fa-map-marked-alt mr-2 text-blue-600"></i>
+                        Algorithm Progress
+                    </h3>
+                    <nav class="space-y-2">
+                        <a href="#assessment" class="progress-item active block p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-stethoscope mr-3 text-blue-600"></i>
+                                Assessment
+                            </div>
+                        </a>
+                        <a href="#diagnosis" class="progress-item block p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-microscope mr-3 text-purple-600"></i>
+                                Diagnosis
+                            </div>
+                        </a>
+                        <a href="#treatment" class="progress-item block p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-user-md mr-3 text-green-600"></i>
+                                Treatment
+                            </div>
+                        </a>
+                        <a href="#followup" class="progress-item block p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                            <div class="flex items-center">
+                                <i class="fas fa-chart-line mr-3 text-amber-600"></i>
+                                Follow-up
+                            </div>
+                        </a>
+                    </nav>
+                    
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <h4 class="font-semibold text-gray-900 mb-3 text-sm">Severity Indicators</h4>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                                <span class="text-gray-700">Urgent/High Risk</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 bg-amber-500 rounded-full mr-2"></span>
+                                <span class="text-gray-700">Caution/Moderate</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                                <span class="text-gray-700">Stable/Low Risk</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 space-y-8">
+                <!-- Assessment Card -->
+                <section id="assessment" class="card bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="relative p-6 cursor-pointer" onclick="toggleCard(this)" style="background: linear-gradient(135deg, var(--assessment-color), #60A5FA);">
+                        <div class="absolute top-4 right-4 icon-wrapper">
+                            <i class="fas fa-stethoscope text-white text-3xl opacity-80"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Assessment & History</h2>
+                        <p class="text-blue-100">Clinical evaluation and risk factor identification</p>
+                        <div class="severity-badge">
+                            <span class="badge bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>Urgent if airway compromise
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="expandable-content">
+                        <div class="p-6 space-y-6">
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                        <i class="fas fa-list-ul text-blue-600 mr-2"></i>
+                                        Key Risk Factors
+                                    </h3>
+                                    <ul class="space-y-2 text-sm">
+                                        <li class="flex items-start">
+                                            <span class="text-red-500 mr-2">•</span>
+                                            <span><strong>Smoking history</strong> - Strong relationship to lung cancer (most common cause)</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-amber-500 mr-2">•</span>
+                                            <span><strong>Multiple pacemaker leads</strong> - Increasingly frequent benign cause</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-amber-500 mr-2">•</span>
+                                            <span><strong>Central venous catheters/ports</strong> - Iatrogenic thrombosis risk</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-amber-500 mr-2">•</span>
+                                            <span><strong>Age >50 years</strong> - Malignancy more likely</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-amber-500 mr-2">•</span>
+                                            <span><strong>Prior radiation</strong> - Mediastinal fibrosis risk</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                        <i class="fas fa-exclamation-circle text-red-600 mr-2"></i>
+                                        Critical Symptoms
+                                    </h3>
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                        <ul class="space-y-1 text-sm text-red-800">
+                                            <li>• Sudden-onset dyspnea from laryngeal edema</li>
+                                            <li>• Cyanosis and stridor (4% of cases)</li>
+                                            <li>• Mental changes, stupor, or coma (4% of cases)</li>
+                                            <li>• Severe cerebral edema with papilledema</li>
+                                        </ul>
+                                        <p class="text-xs text-red-600 mt-2 font-medium">These require IMMEDIATE intervention</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-symptoms text-blue-600 mr-2"></i>
+                                    Common Clinical Features
+                                </h3>
+                                <div class="grid md:grid-cols-3 gap-4">
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <h4 class="font-medium text-sm text-gray-800 mb-2">Facial/Upper Extremity</h4>
+                                        <ul class="text-xs space-y-1 text-gray-700">
+                                            <li>• Facial swelling (80%)</li>
+                                            <li>• Upper extremity edema</li>
+                                            <li>• Facial plethora</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <h4 class="font-medium text-sm text-gray-800 mb-2">Respiratory</h4>
+                                        <ul class="text-xs space-y-1 text-gray-700">
+                                            <li>• Dyspnea (60%)</li>
+                                            <li>• Cough (54%)</li>
+                                            <li>• Orthopnea</li>
+                                        </ul>
+                                    </div>
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <h4 class="font-medium text-sm text-gray-800 mb-2">Venous Congestion</h4>
+                                        <ul class="text-xs space-y-1 text-gray-700">
+                                            <li>• Distended neck veins (63%)</li>
+                                            <li>• Chest wall veins (53%)</li>
+                                            <li>• Prominent collateral vessels</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-3">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Symptoms worsen with bending forward or lying down. Engorged veins worsen with these maneuvers.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Diagnosis Card -->
+                <section id="diagnosis" class="card bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="relative p-6 cursor-pointer" onclick="toggleCard(this)" style="background: linear-gradient(135deg, var(--diagnosis-color), #A78BFA);">
+                        <div class="absolute top-4 right-4 icon-wrapper">
+                            <i class="fas fa-microscope text-white text-3xl opacity-80"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Investigations & Diagnosis</h2>
+                        <p class="purple-100">Confirm diagnosis and identify underlying etiology</p>
+                        <div class="severity-badge">
+                            <span class="badge bg-amber-500 text-white text-xs px-2 py-1 rounded-full">
+                                <i class="fas fa-clock mr-1"></i>CT Chest is test of choice
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="expandable-content">
+                        <div class="p-6 space-y-6">
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-star text-purple-600 mr-2"></i>
+                                    First-Line Investigations
+                                </h3>
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <div class="flex items-start">
+                                            <div class="flex-shrink-0">
+                                                <span class="inline-block w-3 h-3 bg-green-500 rounded-full mt-1.5"></span>
+                                            </div>
+                                            <div class="ml-3">
+                                                <h4 class="text-sm font-medium text-blue-900">Chest CT with IV Contrast</h4>
+                                                <p class="text-xs text-blue-700 mt-1">Most useful test - establishes diagnosis, shows location/severity, identifies pathology (malignancy vs thrombosis). Can guide biopsy.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <h4 class="font-medium text-sm text-gray-800 mb-2">
+                                                <i class="fas fa-x-ray text-purple-600 mr-2"></i>
+                                                Chest X-ray
+                                            </h4>
+                                            <p class="text-xs text-gray-700">May show widened mediastinum or lung mass. Initial screening tool.</p>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <h4 class="font-medium text-sm text-gray-800 mb-2">
+                                                <i class="fas fa-magnet text-purple-600 mr-2"></i>
+                                                Chest MRI
+                                            </h4>
+                                            <p class="text-xs text-gray-700">Alternative if contrast allergy or renal failure. Avoid gadolinium in severe renal insufficiency.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <h4 class="font-medium text-sm text-gray-800 mb-2">
+                                            <i class="fas fa-wave-square text-purple-600 mr-2"></i>
+                                            Upper Extremity Ultrasound
+                                        </h4>
+                                        <p class="text-xs text-gray-700">Non-invasive screening. Monophasic flow in SVC or loss of respiratory variation suggests obstruction.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-search-plus text-purple-600 mr-2"></i>
+                                    Definitive/Tissue Diagnosis
+                                </h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-sm text-amber-900 mb-2">Biopsy Options</h4>
+                                        <ul class="text-xs space-y-1 text-amber-800">
+                                            <li>• <strong>Supraclavicular lymph node:</strong> Least invasive, examine for cervical lymphadenopathy</li>
+                                            <li>• <strong>Bronchoscopy:</strong> 50-70% yield</li>
+                                            <li>• <strong>Transthoracic needle aspiration:</strong> ~75% yield</li>
+                                            <li>• <strong>Mediastinoscopy:</strong> >90% yield</li>
+                                        </ul>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">
+                                                <i class="fas fa-flask text-purple-600 mr-2"></i>
+                                                Sputum Analysis
+                                            </h4>
+                                            <p class="text-xs text-gray-700 mt-1">Cytology for malignancy, culture for TB/fungal infections</p>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">
+                                                <i class="fas fa-tint text-purple-600 mr-2"></i>
+                                                Thoracentesis
+                                            </h4>
+                                            <p class="text-xs text-gray-700 mt-1">If pleural effusion present - cytological analysis</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-question-circle text-purple-600 mr-2"></i>
+                                    Key Differentials
+                                </h3>
+                                <div class="grid md:grid-cols-2 space-y-2 md:space-y-0 md:gap-4">
+                                    <div class="space-y-2">
+                                        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-red-900">Cardiac Tamponade</h4>
+                                            <p class="text-xs text-red-700">No facial/upper extremity edema, pulsus paradoxus</p>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">Constrictive Pericarditis</h4>
+                                            <p class="text-xs text-gray-700">Elevated JVP with Kussmaul's sign</p>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">Right-sided Heart Failure</h4>
+                                            <p class="text-xs text-gray-700">Preserved respiratory JVP variation</p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">Pulmonary Embolism</h4>
+                                            <p class="text-xs text-gray-700">Usually absent upper extremity edema</p>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">COPD Exacerbation</h4>
+                                            <p class="text-xs text-gray-700">Wheezing, obstructive PFTs</p>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <h4 class="font-medium text-xs text-gray-800">Cardiac Tumor</h4>
+                                            <p class="text-xs text-gray-700">Usually absent upper extremity edema</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Treatment Card -->
+                <section id="treatment" class="card bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="relative p-6 cursor-pointer" onclick="toggleCard(this)" style="background: linear-gradient(135deg, var(--treatment-color), #34D399);">
+                        <div class="absolute top-4 right-4 icon-wrapper">
+                            <i class="fas fa-user-md text-white text-3xl opacity-80"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Treatment Management</h2>
+                        <p class="text-green-100">Interventional & therapeutic strategies</p>
+                        <div class="severity-badge">
+                            <span class="badge bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                <i class="fas fa-ambulance mr-1"></i>Airway = Emergency
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="expandable-content">
+                        <div class="p-6 space-y-6">
+                            <!-- Acute Management -->
+                            <div class="bg-red-50 border-2 border-red-200 rounded-lg p-5">
+                                <h3 class="font-semibold text-red-900 mb-3 flex items-center">
+                                    <i class="fas fa-exclamation-triangle text-red-600 mr-2"></i>
+                                    ACUTE: Life-Threatening Airway Obstruction
+                                </h3>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div class="bg-white rounded-lg p-4 border border-red-300">
+                                        <h4 class="font-medium text-sm text-red-900 mb-2">Option 1: Secure Airway + Radiotherapy + Steroids</h4>
+                                        <div class="text-xs space-y-1 text-red-800">
+                                            <p>• <strong>Airway:</strong> Intubation or surgical airway</p>
+                                            <p>• <strong>Dexamethasone:</strong> 10mg IV bolus → 4mg q6h</p>
+                                            <p>• <strong>Radiotherapy:</strong> Urgent (only if life-threatening)</p>
+                                            <p class="mt-2 font-medium">⚠️ May interfere with histopathological diagnosis</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white rounded-lg p-4 border border-red-300">
+                                        <h4 class="font-medium text-sm text-red-900 mb-2">Option 2: Endovascular Stenting</h4>
+                                        <div class="text-xs space-y-1 text-red-800">
+                                            <p>• <strong>Preferred:</strong> Can be done before tissue diagnosis</p>
+                                            <p>• <strong>Access:</strong> Femoral vein, conscious sedation</p>
+                                            <p>• <strong>Success:</strong> High technical/clinical success rates</p>
+                                            <p>• <strong>Patency:</strong> 80-94%, 20% require repeat</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Malignant Causes -->
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-shield-alt text-green-600 mr-2"></i>
+                                    Malignant Obstruction Management
+                                </h3>
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <h4 class="font-medium text-sm text-green-900 mb-2">1. Treat Underlying Malignancy</h4>
+                                    <ul class="text-xs space-y-1 text-green-800">
+                                        <li>• <strong>Chemotherapy:</strong> Effective for lung cancer, lymphomas, germ cell tumors</li>
+                                        <li>• <strong>Radiotherapy:</strong> Most malignant tumors are sensitive</li>
+                                        <li>• <strong>Surgery:</strong> Thymomas resistant to chemo/radiation may need SVC reconstruction</li>
+                                    </ul>
+                                </div>
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                    <h4 class="font-medium text-sm text-green-900 mb-2">2. Percutaneous Endovascular Stenting</h4>
+                                    <p class="text-xs text-green-800 mb-2">Recommended for ALL patients - achieves rapid symptom improvement with fewer side effects than radiotherapy</p>
+                                    <div class="text-xs space-y-1 text-green-700">
+                                        <p>• Self-expanding or balloon-expandable stents (usually bare metal)</p>
+                                        <p>• Complications: 3-7% (thrombosis, migration, perforation, bleeding)</p>
+                                        <p>• Anticoagulation: Aspirin, clopidogrel, warfarin (1-14% bleeding risk)</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Benign Causes -->
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-band-aid text-green-600 mr-2"></i>
+                                    Benign Obstruction Management
+                                </h3>
+                                <div class="space-y-4">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-sm text-blue-900 mb-2">
+                                            <i class="fas fa-bacterium mr-1"></i>
+                                            Infectious Causes
+                                        </h4>
+                                        <div class="text-xs space-y-1 text-blue-800">
+                                            <p>• Treat infection with appropriate antimicrobials (aspergillosis, TB, histoplasmosis, etc.)</p>
+                                            <p>• If obstruction persists: Consider stents or bypass surgery</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <h4 class="font-medium text-sm text-gray-800 mb-2">
+                                                <i class="fas fa-syringe text-green-600 mr-2"></i>
+                                                Catheter Thrombosis
+                                            </h4>
+                                            <ul class="text-xs space-y-1 text-gray-700">
+                                                <li>• Remove catheter(s)</li>
+                                                <li>• Local thrombolysis ± short-course anticoagulation</li>
+                                                <li>• Warfarin 1 year (INR 2-3) if chronic therapy needed</li>
+                                                <li>• Thrombolysis most effective within 5 days</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <h4 class="font-medium text-sm text-gray-800 mb-2">
+                                                <i class="fas fa-heartbeat text-green-600 mr-2"></i>
+                                                Pacemaker Leads
+                                            </h4>
+                                            <ul class="text-xs space-y-1 text-gray-700">
+                                                <li>• Percutaneous balloon dilatation/stenting preferred</li>
+                                                <li>• Lead removal: 1-3% mortality risk</li>
+                                                <li>• Check for infection (blood cultures, TEE)</li>
+                                                <li>• Long-term warfarin (INR 2-3)</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-medium text-sm text-gray-800 mb-2">
+                                    <i class="fas fa-ambulance text-blue-600 mr-2"></i>
+                                    Supportive Measures
+                                </h4>
+                                <ul class="text-xs space-y-1 text-gray-700">
+                                    <li>• <strong>Diuretics:</strong> For symptom relief (dose per renal function)</li>
+                                    <li>• <strong>Low-salt diet:</strong> Reduce fluid retention</li>
+                                    <li>• <strong>Avoid upper extremity lines:</strong> Prevent worsening obstruction</li>
+                                    <li>• <strong>Head elevation:</strong> Reduce venous pressure</li>
+                                    <li>• <strong>Oxygen:</strong> For dyspnea</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Follow-up Card -->
+                <section id="followup" class="card bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="relative p-6 cursor-pointer" onclick="toggleCard(this)" style="background: linear-gradient(135deg, var(--followup-color), #FBBF24);">
+                        <div class="absolute top-4 right-4 icon-wrapper">
+                            <i class="fas fa-chart-line text-white text-3xl opacity-80"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Follow-up & Prognosis</h2>
+                        <p class="text-amber-100">Monitoring and long-term outcomes</p>
+                        <div class="severity-badge">
+                            <span class="badge bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                                <i class="fas fa-calendar-check mr-1"></i>Regular surveillance needed
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="expandable-content">
+                        <div class="p-6 space-y-6">
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                        <i class="fas fa-eye text-amber-600 mr-2"></i>
+                                        Monitoring
+                                    </h3>
+                                    <div class="bg-gray-50 rounded-lg p-4">
+                                        <ul class="text-sm space-y-2 text-gray-700">
+                                            <li class="flex items-start">
+                                                <i class="fas fa-user-check text-amber-500 mr-2 mt-1"></i>
+                                                <span>Regular follow-up by treating physician (oncologist/surgeon/cardiologist/radiotherapist)</span>
+                                            </li>
+                                            <li class="flex items-start">
+                                                <i class="fas fa-clock text-amber-500 mr-2 mt-1"></i>
+                                                <span>Frequency depends on underlying etiology and treatment</span>
+                                            </li>
+                                            <li class="flex items-start">
+                                                <i class="fas fa-search text-amber-500 mr-2 mt-1"></i>
+                                                <span>Monitor for symptom recurrence: upper extremity swelling, engorged neck veins, facial edema/p plethora</span>
+                                            </li>
+                                            <li class="flex items-start">
+                                                <i class="fas fa-exclamation-triangle text-red-500 mr-2 mt-1"></i>
+                                                <span>ED referral if dyspnea or airway compromise develops</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                        <i class="fas fa-exclamation-triangle text-amber-600 mr-2"></i>
+                                        Potential Complications
+                                    </h3>
+                                    <div class="space-y-3">
+                                        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                            <h4 class="font-medium text-sm text-red-900">Stent-related (3-7%)</h4>
+                                            <ul class="text-xs space-y-1 text-red-800">
+                                                <li>• Thrombosis or migration</li>
+                                                <li>• Dissection, perforation</li>
+                                                <li>• Bleeding, infection</li>
+                                                <li>• Cardiac tamponade</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                            <h4 class="font-medium text-sm text-red-900">Anticoagulation-related</h4>
+                                            <ul class="text-xs space-y-1 text-red-800">
+                                                <li>• Bleeding (1-14% risk)</li>
+                                                <li>• Volume overload/heart failure exacerbation</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h3 class="font-semibold text-gray-900 mb-3 flex items-center">
+                                    <i class="fas fa-chart-pie text-amber-600 mr-2"></i>
+                                    Prognosis by Etiology
+                                </h3>
+                                <div class="grid md:grid-cols-2 gap-6">
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-lg text-red-900 mb-3 flex items-center">
+                                            <i class="fas fa-shield-alt mr-2"></i>
+                                            Malignant Causes
+                                        </h4>
+                                        <div class="space-y-3">
+                                            <div class="bg-white rounded p-3">
+                                                <h5 class="font-medium text-sm text-red-800">Treatment-Responsive Malignancies</h5>
+                                                <p class="text-xs text-red-700 mt-1">SVC syndrome does NOT necessarily signify adverse outcomes</p>
+                                            </div>
+                                            <div class="bg-white rounded p-3">
+                                                <h5 class="font-medium text-sm text-red-800">Non-Small Cell Lung Cancer (Resistant)</h5>
+                                                <p class="text-xs text-red-700 mt-1">Poor prognosis, median survival <6 months</p>
+                                            </div>
+                                            <div class="bg-white rounded p-3">
+                                                <h5 class="font-medium text-sm text-red-800">General Malignant Prognosis</h5>
+                                                <p class="text-xs text-red-700 mt-1">Depends on tumor type, staging, and histopathology</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                        <h4 class="font-medium text-lg text-green-900 mb-3 flex items-center">
+                                            <i class="fas fa-band-aid mr-2"></i>
+                                            Benign Causes
+                                        </h4>
+                                        <div class="space-y-3">
+                                            <div class="bg-white rounded p-3">
+                                                <h5 class="font-medium text-sm text-green-800">Stenting or Surgery</h5>
+                                                <p class="text-xs text-green-700 mt-1">~90% patency rates, may need repeat stenting</p>
+                                            </div>
+                                            <div class="bg-white rounded p-3">
+                                                <h5 class="font-medium text-sm text-green-800">Anticoagulation Duration</h5>
+                                                <p class="text-xs text-green-700 mt-1">1-3 months post-stenting (no clear guidelines)</p>
+                                            </div>
+                                            <div class="bg-white rounded p-3">
+                                                <h5 class="font-medium text-sm text-green-800">Long-term Outcomes</h5>
+                                                <p class="text-xs text-green-700 mt-1">Generally excellent with appropriate intervention</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                <h4 class="font-medium text-sm text-amber-900 mb-2">
+                                    <i class="fas fa-lightbulb text-amber-600 mr-2"></i>
+                                    Patient Education Points
+                                </h4>
+                                <ul class="text-xs space-y-1 text-amber-800">
+                                    <li>• Monitor for recurrence symptoms (swelling, engorged veins, facial changes)</li>
+                                    <li>• Report immediately for dyspnea or airway symptoms</li>
+                                    <li>• Understand underlying cause determines prognosis</li>
+                                    <li>• Compliance with anticoagulation if prescribed</li>
+                                    <li>• Regular follow-up appointments are critical</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate cards on load
+            setTimeout(() => {
+                document.querySelectorAll('.card').forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('visible');
+                    }, index * 200);
+                });
+            }, 100);
+            
+            // Expand first card by default
+            const firstCard = document.querySelector('#assessment .expandable-content');
+            firstCard.classList.add('expanded');
+            
+            // Setup intersection observer for sidebar
+            setupIntersectionObserver();
+        });
+        
+        // Toggle card expansion
+        function toggleCard(header) {
+            const content = header.nextElementSibling;
+            const isExpanded = content.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.expandable-content').forEach(el => {
+                el.classList.remove('expanded');
+            });
+            
+            // Toggle current card if it wasn't already expanded
+            if (!isExpanded) {
+                content.classList.add('expanded');
+            }
+        }
+        
+        // Setup intersection observer for progress sidebar
+        function setupIntersectionObserver() {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.progress-item');
+            
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const id = entry.target.id;
+                            
+                            // Remove active class from all links
+                            navLinks.forEach(link => {
+                                link.classList.remove('active');
+                                link.classList.remove('diagnosis', 'treatment', 'followup');
+                            });
+                            
+                            // Add active class to current link
+                            const activeLink = document.querySelector(`a[href="#${id}"]`);
+                            if (activeLink) {
+                                activeLink.classList.add('active');
+                                
+                                // Add specific color class
+                                if (id === 'diagnosis') activeLink.classList.add('diagnosis');
+                                else if (id === 'treatment') activeLink.classList.add('treatment');
+                                else if (id === 'followup') activeLink.classList.add('followup');
+                            }
+                        }
+                    });
+                },
+                { threshold: 0.5 }
+            );
+            
+            sections.forEach(section => observer.observe(section));
+        }
+        
+        // Smooth scroll for sidebar links
+        document.querySelectorAll('.progress-item').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const target = document.querySelector(targetId);
+                
+                if (target) {
+                    // Smooth scroll to target
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Expand the target card
+                    const content = target.querySelector('.expandable-content');
+                    if (content) {
+                        // Close all other cards first
+                        document.querySelectorAll('.expandable-content').forEach(el => {
+                            el.classList.remove('expanded');
+                        });
+                        // Expand target card
+                        content.classList.add('expanded');
+                    }
+                }
+            });
+        });
+        
+        // Add hover effects to severity badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.animation = 'none';
+            });
+            badge.addEventListener('mouseleave', function() {
+                this.style.animation = 'pulse 2s infinite';
+            });
+        });
+        
+        // Add click handlers for expandable sections within cards
+        document.querySelectorAll('.expandable-content h4').forEach(heading => {
+            heading.style.cursor = 'pointer';
+            heading.addEventListener('click', function() {
+                const content = this.nextElementSibling;
+                if (content && content.tagName === 'UL' || content.tagName === 'P') {
+                    content.style.display = content.style.display === 'none' ? 'block' : 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

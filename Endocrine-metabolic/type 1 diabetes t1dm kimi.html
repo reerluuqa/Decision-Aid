@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type 1 Diabetes Management Algorithm | NICE CKS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            position: sticky;
+            top: 2rem;
+            width: 280px;
+            height: fit-content;
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .sidebar h3 {
+            color: #0f172a;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: #f1f5f9;
+            transform: translateX(4px);
+        }
+
+        .progress-item.active {
+            background: #e0f2fe;
+            border-left-color: #0284c7;
+            font-weight: 600;
+        }
+
+        .progress-item.completed {
+            background: #dcfce7;
+            border-left-color: #16a34a;
+        }
+
+        .progress-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.9rem;
+        }
+
+        .progress-item.assessment .progress-icon { background: #dbeafe; color: #3b82f6; }
+        .progress-item.diagnosis .progress-icon { background: #ede9fe; color: #8b5cf6; }
+        .progress-item.treatment .progress-icon { background: #dcfce7; color: #10b981; }
+        .progress-item.followup .progress-icon { background: #fef3c7; color: #f59e0b; }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+            max-width: 1000px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e2e8f0;
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+            transform: translateY(-4px);
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .card-header:hover {
+            filter: brightness(1.1);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card.expanded .card-body {
+            max-height: 3000px;
+        }
+
+        .card-content {
+            padding: 2rem;
+        }
+
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h4 {
+            color: #0f172a;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .subsection {
+            margin-left: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .subsection h5 {
+            color: #334155;
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .subsection ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .subsection li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .subsection li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: #64748b;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .subsection li strong {
+            color: #0f172a;
+        }
+
+        /* Severity Badges */
+        .severity-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge.red {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .badge.amber {
+            background: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fed7aa;
+        }
+
+        .badge.green {
+            background: #dcfce7;
+            color: #16a34a;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge.blue {
+            background: #dbeafe;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+        }
+
+        .badge.purple {
+            background: #ede9fe;
+            color: #7c3aed;
+            border: 1px solid #ddd6fe;
+        }
+
+        /* Key Points Box */
+        .key-points {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-left: 4px solid #0284c7;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .key-points h5 {
+            color: #0369a1;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .key-points ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .key-points li {
+            padding: 0.25rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .key-points li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #0284c7;
+            font-weight: bold;
+        }
+
+        /* Info Box */
+        .info-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .info-box h5 {
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 1rem;
+            }
+
+            .sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card-title {
+                font-size: 1.2rem;
+            }
+
+            .card-content {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            .sidebar {
+                display: none;
+            }
+
+            .card {
+                break-inside: avoid;
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+
+            .card-body {
+                max-height: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🩺 Type 1 Diabetes Management Algorithm</h1>
+        <p>Evidence-based clinical decision support • NICE CKS September 2025</p>
+    </header>
+
+    <div class="container">
+        <aside class="sidebar">
+            <h3>📍 Progress Tracker</h3>
+            <div class="progress-item assessment active" onclick="scrollToCard('assessment')">
+                <div class="progress-icon">🩺</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item diagnosis" onclick="scrollToCard('diagnosis')">
+                <div class="progress-icon">🔬</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item treatment" onclick="scrollToCard('treatment')">
+                <div class="progress-icon">💊</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item followup" onclick="scrollToCard('followup')">
+                <div class="progress-icon">📊</div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <main class="content">
+            <!-- Assessment Card -->
+            <div class="card" id="assessment-card">
+                <div class="card-header assessment" onclick="toggleCard('assessment')">
+                    <div class="card-title">
+                        <div class="card-icon">🩺</div>
+                        Assessment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="severity-badges">
+                            <span class="badge red">🚨 Immediate Referral</span>
+                            <span class="badge amber">⚠️ Suspect DKA</span>
+                            <span class="badge green">📋 Routine Assessment</span>
+                        </div>
+
+                        <div class="section">
+                            <h4>👨‍⚕️ Adults (≥18 years)</h4>
+                            <div class="subsection">
+                                <h5>Suspect Type 1 Diabetes if:</h5>
+                                <ul>
+                                    <li><strong>Hyperglycaemia:</strong> Random plasma glucose >11 mmol/L + one or more of:</li>
+                                    <li><strong>Ketosis:</strong> Urine ketones ≥2+ OR blood ketones ≥3 mmol/L</li>
+                                    <li><strong>Weight loss:</strong> Rapid, unexplained</li>
+                                    <li><strong>Age:</strong> Onset <50 years (but can occur at any age)</li>
+                                    <li><strong>BMI:</strong> <25 kg/m² (but can occur with higher BMI)</li>
+                                    <li><strong>Autoimmune history:</strong> Personal/family history of autoimmune disease</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>👶 Children & Young People (12 months - 17 years)</h4>
+                            <div class="subsection">
+                                <h5>Key Features:</h5>
+                                <ul>
+                                    <li><strong>Classic triad:</strong> Polyuria, polydipsia, weight loss</li>
+                                    <li><strong>Additional:</strong> Excessive tiredness</li>
+                                    <li><strong>Age:</strong> Most common in 10-14 years, but can occur at any age</li>
+                                    <li><strong>Alert:</strong> Same-day referral to paediatric diabetes team</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>⚠️ Diabetic Ketoacidosis (DKA)</h4>
+                            <div class="subsection">
+                                <h5>Suspect DKA if:</h5>
+                                <ul>
+                                    <li><strong>Hyperglycaemia:</strong> Blood glucose >11 mmol/L (may be normal in pump users)</li>
+                                    <li><strong>Gastrointestinal:</strong> Nausea, vomiting, abdominal pain</li>
+                                    <li><strong>Respiratory:</strong> Tachypnoea, deep sighing (Kussmaul) respiration</li>
+                                    <li><strong>Dehydration:</strong> Dry mucous membranes, reduced skin turgor, oliguria</li>
+                                    <li><strong>Neurological:</strong> Reduced consciousness, irritability, confusion</li>
+                                    <li><strong>Precipitants:</strong> Infection, stress, insulin omission, drugs (steroids, antipsychotics)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🩸 Hypoglycaemia</h4>
+                            <div class="subsection">
+                                <h5>Definition & Severity:</h5>
+                                <ul>
+                                    <li><strong>Alert value:</strong> 3.0-3.9 mmol/L</li>
+                                    <li><strong>Clinically important:</strong> <3.0 mmol/L</li>
+                                    <li><strong>Severe:</strong> Requires assistance for recovery</li>
+                                    <li><strong>Nocturnal:</strong> Lethargy, altered mood, headache on waking</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="key-points">
+                            <h5>🎯 Key Assessment Points</h5>
+                            <ul>
+                                <li>Do not rule out type 1 diabetes based on BMI or age alone</li>
+                                <li>Consider pancreatic cancer if age >60 with weight loss + new diabetes</li>
+                                <li>Test ketones in ALL suspected cases</li>
+                                <li>Same-day referral to specialist team if suspected</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card" id="diagnosis-card">
+                <div class="card-header diagnosis" onclick="toggleCard('diagnosis')">
+                    <div class="card-title">
+                        <div class="card-icon">🔬</div>
+                        Diagnosis
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="severity-badges">
+                            <span class="badge red">🧪 Confirm with Autoantibodies</span>
+                            <span class="badge amber">🤔 Atypical Features → C-peptide</span>
+                            <span class="badge green">✅ Clinical Diagnosis Usually Sufficient</span>
+                        </div>
+
+                        <div class="section">
+                            <h4>👨‍⚕️ Adults: Diagnostic Process</h4>
+                            <div class="subsection">
+                                <h5>1. Clinical Diagnosis</h5>
+                                <ul>
+                                    <li>Based on: Hyperglycaemia + ketosis + typical features</li>
+                                    <li>Immediate same-day referral to specialist team</li>
+                                    <li>Diabetes specialist team confirms diagnosis & initiates care</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>2. Autoantibody Testing</h5>
+                                <ul>
+                                    <li><strong>Indication:</strong> Measure in all adults at diagnosis</li>
+                                    <li><strong>Which antibodies:</strong> At minimum, test for 2 different types</li>
+                                    <li><strong>Interpretation:</strong> At least one positive supports type 1 diagnosis</li>
+                                    <li><strong>Timing:</strong> False negative rate lowest at diagnosis</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>3. C-peptide Testing</h5>
+                                <ul>
+                                    <li><strong>Do NOT routinely measure</strong> to confirm type 1 diabetes</li>
+                                    <li><strong>Consider if:</strong> Clinical features consistent but autoantibodies negative</li>
+                                    <li><strong>Type:</strong> Non-fasting serum C-peptide</li>
+                                    <li><strong>Use:</strong> Resolve diagnostic uncertainty</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>👶 Children & Young People</h4>
+                            <div class="subsection">
+                                <h5>Diagnostic Approach:</h5>
+                                <ul>
+                                    <li><strong>Assume type 1 diabetes</strong> unless strong indicators suggest otherwise</li>
+                                    <li>Same-day referral to paediatric diabetes specialist team</li>
+                                    <li>Specialist team confirms diagnosis & provides immediate care</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Features Suggesting Type 2 Diabetes:</h5>
+                                <ul>
+                                    <li>Strong family history of type 2 diabetes</li>
+                                    <li>Obesity</li>
+                                    <li>Black or Asian family origin</li>
+                                    <li>Evidence of insulin resistance (e.g., acanthosis nigricans)</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Features Suggesting Other Types:</h5>
+                                <ul>
+                                    <li><strong>Age <12 months:</strong> Suggests neonatal diabetes</li>
+                                    <li><strong>Autosomal dominant family history:</strong> Suggests monogenic diabetes</li>
+                                    <li><strong>No ketonaemia during hyperglycaemia:</strong> Rare in type 1</li>
+                                    <li><strong>Associated features:</strong> Optic atrophy, deafness, mitochondrial disease features</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="key-points">
+                            <h5>🎯 Diagnostic Priorities</h5>
+                            <ul>
+                                <li>Do not delay insulin therapy while awaiting test results</li>
+                                <li>Autoantibody testing reduces misdiagnosis rate</li>
+                                <li>Consider alternative diagnoses if presentation atypical</li>
+                                <li>Specialist confirmation required for all cases</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card" id="treatment-card">
+                <div class="card-header treatment" onclick="toggleCard('treatment')">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        Treatment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="severity-badges">
+                            <span class="badge red">🏥 Emergency DKA → Hospital</span>
+                            <span class="badge amber">⚡ Same-Day Specialist Referral</span>
+                            <span class="badge green">📚 Structured Education</span>
+                            <span class="badge blue">🩸 Insulin Therapy</span>
+                        </div>
+
+                        <div class="section">
+                            <h4>🚨 Immediate Actions</h4>
+                            <div class="subsection">
+                                <h5>At Diagnosis:</h5>
+                                <ul>
+                                    <li><strong>Immediate referral:</strong> Same-day to diabetes specialist team</li>
+                                    <li><strong>Individual care plan:</strong> Developed by specialist team</li>
+                                    <li><strong>Education:</strong> Basic survival skills (injection technique, glucose monitoring)</li>
+                                    <li><strong>Specialist management:</strong> Insulin initiation & dose adjustment by trained professionals</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>📚 Structured Education</h4>
+                            <div class="subsection">
+                                <h5>DAFNE Programme:</h5>
+                                <ul>
+                                    <li><strong>Timing:</strong> Offer 6-12 months after diagnosis (or when clinically appropriate)</li>
+                                    <li><strong>Content:</strong> Carbohydrate counting, insulin dose adjustment</li>
+                                    <li><strong>Format:</strong> Group sessions (alternative if unable/unwilling)</li>
+                                    <li><strong>Goal:</strong> Enable self-management and normal eating</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🩸 Insulin Therapy</h4>
+                            <div class="info-box">
+                                <h5>💡 Important Note</h5>
+                                <p>Insulin therapy should ONLY be initiated and managed by healthcare professionals with relevant expertise and training. See NICE CKS topic on <strong>Insulin therapy in type 1 diabetes</strong> for detailed guidance.</p>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🍎 Lifestyle Management</h4>
+                            
+                            <div class="subsection">
+                                <h5>🥗 Dietary Advice:</h5>
+                                <ul>
+                                    <li>Healthy, balanced diet for optimal growth/weight</li>
+                                    <li>Carbohydrate counting education (essential for dose adjustment)</li>
+                                    <li>Structured education programme (DAFNE)</li>
+                                    <li>Refer to dietitian if overweight/obesity</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>🏃‍♂️ Physical Activity:</h5>
+                                <ul>
+                                    <li>Explain effects on blood glucose (may lower levels)</li>
+                                    <li>Monitor glucose before/after exercise</li>
+                                    <li>Carry carbohydrate for hypoglycaemia prevention</li>
+                                    <li>Adjust insulin/nutrition for prolonged activity</li>
+                                    <li>Avoid alcohol before/during exercise</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>🍷 Alcohol Intake:</h5>
+                                <ul>
+                                    <li>Safe limits education</li>
+                                    <li>Never drink on empty stomach</li>
+                                    <li>Eat carbohydrate before and after drinking</li>
+                                    <li>Regular glucose monitoring</li>
+                                    <li>Delayed hypoglycaemia risk (especially nocturnal)</li>
+                                    <li>Increased DKA risk with heavy consumption</li>
+                                    <li>Always carry diabetes identification</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>🚭 Smoking & Substances:</h5>
+                                <ul>
+                                    <li>Smoking cessation advice (risk factor for complications)</li>
+                                    <li>Reinforce annually for non-quitters</li>
+                                    <li>Advise young non-smokers never to start</li>
+                                    <li>Recreational drugs (cannabis, cocaine) increase DKA risk</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>🦷 Oral Health:</h5>
+                                <ul>
+                                    <li>Higher risk of periodontitis</li>
+                                    <li>Importance of good oral hygiene</li>
+                                    <li>Regular dental reviews</li>
+                                    <li>Periodontitis management improves glucose control</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🤒 Intercurrent Illness ("Sick Day Rules")</h4>
+                            <div class="key-points">
+                                <h5>🚨 When to Seek Emergency Care</h5>
+                                <ul>
+                                    <li>Moderate ketonuria (≥2+) or ketonaemia (1.5-2.9 mmol/L) with inability to eat/drink</li>
+                                    <li>Immediate DKA risk</li>
+                                    <li>No rapid improvement with insulin</li>
+                                    <li>Persistent vomiting >2 hours</li>
+                                    <li>Severe dehydration</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="subsection">
+                                <h5>If Managing at Home:</h5>
+                                <ul>
+                                    <li><strong>Never stop insulin:</strong> May need increased dose</li>
+                                    <li><strong>Monitor frequently:</strong> Glucose every 1-2 hours (including overnight)</li>
+                                    <li><strong>Check ketones:</strong> Every 3-4 hours (increase to 1-2 hours if elevated)</li>
+                                    <li><strong>Urgent advice if:</strong> Urine ketones >2+ OR blood ketones >3 mmol/L</li>
+                                    <li><strong>Maintain nutrition:</strong> Normal meals if possible; use carb drinks if poor appetite</li>
+                                    <li><strong>Hydration:</strong> ≥3L fluid daily (water/carbs-free fluids if glucose high)</li>
+                                    <li><strong>Hypoglycaemia treatment:</strong> Fast-acting carbs + carb drinks</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>💓 Cardiovascular Risk Management</h4>
+
+                            <div class="subsection">
+                                <h5>🩺 Blood Pressure Targets:</h5>
+                                <ul>
+                                    <li><strong>ACR <70 mg/mol:</strong> <140/90 mmHg (target 120-139/80-89)</li>
+                                    <li><strong>ACR ≥70 mg/mol:</strong> <130/80 mmHg (target 120-129/80)</li>
+                                    <li><strong>Age ≥80 years:</strong> <150/90 mmHg</li>
+                                    <li><strong>First-line:</strong> ACE inhibitor (or ARB if contraindicated)</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>💊 Lipid Management:</h5>
+                                <ul>
+                                    <li><strong>Primary prevention (≥40 years OR diabetes >10 years OR CKD):</strong> Atorvastatin 20mg</li>
+                                    <li><strong>All others aged 18-40:</strong> Consider atorvastatin 20mg</li>
+                                    <li><strong>Secondary prevention (established CVD):</strong> Atorvastatin 80mg</li>
+                                    <li><strong>Do NOT use CVD risk scores</strong> in type 1 diabetes</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>💉 Immunizations</h4>
+                            <div class="subsection">
+                                <ul>
+                                    <li><strong>Annual:</strong> Influenza vaccine</li>
+                                    <li><strong>One-off:</strong> Pneumococcal vaccine</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card" id="followup-card">
+                <div class="card-header followup" onclick="toggleCard('followup')">
+                    <div class="card-title">
+                        <div class="card-icon">📊</div>
+                        Follow-up
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="severity-badges">
+                            <span class="badge red">🚨 Annual Complication Screening</span>
+                            <span class="badge amber">📅 HbA1c Every 3-6 Months</span>
+                            <span class="badge green">✅ Target: HbA1c ≤48 mmol/mol</span>
+                        </div>
+
+                        <div class="section">
+                            <h4>📈 HbA1c Monitoring</h4>
+                            <div class="subsection">
+                                <h5>Frequency:</h5>
+                                <ul>
+                                    <li><strong>Adults:</strong> Every 3-6 months (more often if control changing)</li>
+                                    <li><strong>Children/Young People:</strong> Every 3 months (minimum 4x/year)</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Targets:</h5>
+                                <ul>
+                                    <li><strong>Ideal target:</strong> ≤48 mmol/mol (minimizes complication risk)</li>
+                                    <li><strong>Individualize:</strong> Based on age, activities, comorbidities, hypoglycaemia risk</li>
+                                    <li><strong>Benefit:</strong> Any reduction reduces long-term complications</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>👁️ Diabetic Eye Disease</h4>
+                            <div class="subsection">
+                                <h5>Adults:</h5>
+                                <ul>
+                                    <li><strong>At diagnosis:</strong> Immediate referral to diabetic eye screening service</li>
+                                    <li><strong>Subsequent:</strong> Annual screening (12-24 month intervals if low risk)</li>
+                                    <li><strong>Emergency ophthalmology review if:</strong> Sudden vision loss, rubeosis iridis, pre-retinal/vitreous haemorrhage, retinal detachment</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Children/Young People:</h5>
+                                <ul>
+                                    <li><strong>Until age 12:</strong> Eye exam by optometrist every 2 years</li>
+                                    <li><strong>From age 12:</strong> NHS diabetic eye screening programme annually</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🫘 Diabetic Kidney Disease</h4>
+                            <div class="subsection">
+                                <h5>Screening Tests:</h5>
+                                <ul>
+                                    <li><strong>Urine ACR:</strong> Early morning sample annually</li>
+                                    <li><strong>Serum creatinine & eGFR:</strong> Annually</li>
+                                    <li><strong>Diagnose CKD if:</strong> eGFR <60 OR ACR >3 mg/mmol (persistent)</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Management if Detected:</h5>
+                                <ul>
+                                    <li>ACE inhibitor (or ARB) if hypertensive/albuminuric</li>
+                                    <li>Refer to renal specialist if indicated</li>
+                                    <li>Avoid high protein diet</li>
+                                    <li>Optimize glucose and BP control</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🦶 Diabetic Foot Problems</h4>
+                            <div class="subsection">
+                                <h5>Risk Assessment (Annually):</h5>
+                                <ul>
+                                    <li><strong>Neuropathy:</strong> 10g monofilament testing</li>
+                                    <li><strong>Ischaemia:</strong> Ankle brachial pressure index (ABPI)</li>
+                                    <li><strong>Skin:</strong> Ulceration, callus, infection</li>
+                                    <li><strong>Deformity:</strong> Including Charcot arthropathy</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Risk Stratification:</h5>
+                                <ul>
+                                    <li><span class="badge green">Low Risk</span>: No risk factors except callus alone</li>
+                                    <li><span class="badge amber">Moderate Risk</span>: Neuropathy, ischaemia, or deformity alone</li>
+                                    <li><span class="badge red">High Risk</span>: Previous ulcer/amputation, neuropathy + ischaemia, on dialysis</li>
+                                    <li><span class="badge red">Active Problem</span>: Ulceration, infection, critical ischaemia, Charcot</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Referral Pathways:</h5>
+                                <ul>
+                                    <li><strong>Moderate risk:</strong> Foot protection service (6-8 weeks)</li>
+                                    <li><strong>High risk:</strong> Foot protection service (2-4 weeks)</li>
+                                    <li><strong>Active problem:</strong> Multidisciplinary foot care service (1 working day)</li>
+                                    <li><strong>Limb/life threatening:</strong> Immediate acute services</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🧠 Diabetic Neuropathy</h4>
+                            <div class="subsection">
+                                <h5>Screening & Management:</h5>
+                                <ul>
+                                    <li><strong>Chronic painful neuropathy:</strong> Refer for treatment (see NICE neuropathic pain guideline)</li>
+                                    <li><strong>Erectile dysfunction:</strong> Consider PDE-5 inhibitors</li>
+                                    <li><strong>Autonomic neuropathy:</strong> Gastroparesis, bladder symptoms, orthostatic hypotension, excessive sweating</li>
+                                    <li><strong>Refer:</strong> Gastroenterology/urology as appropriate</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🧘 Emotional & Psychological Wellbeing</h4>
+                            <div class="subsection">
+                                <h5>Assessment at Each Visit:</h5>
+                                <ul>
+                                    <li><strong>Diabetes distress:</strong> Affects 20-40% (especially at diagnosis/complications)</li>
+                                    <li><strong>Depression/anxiety:</strong> Twice as prevalent as general population</li>
+                                    <li><strong>Eating disorders:</strong> Over-represented, especially young women ("diabulimia" - insulin omission for weight loss)</li>
+                                    <li><strong>Children:</strong> Twice as likely to have psychiatric disorder</li>
+                                </ul>
+                            </div>
+
+                            <div class="subsection">
+                                <h5>Management:</h5>
+                                <ul>
+                                    <li>Screen for depression, anxiety, disordered eating</li>
+                                    <li>Offer referral to mental health services with diabetes expertise</li>
+                                    <li>Behavioural interventions: CBT, counselling</li>
+                                    <li>Support for carers/family members</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🔍 Other Autoimmune Screening</h4>
+                            <div class="subsection">
+                                <h5>Annual Screening:</h5>
+                                <ul>
+                                    <li><strong>Thyroid disease:</strong> TSH at diagnosis, then annually</li>
+                                    <li><strong>Coeliac disease:</strong> Screen at diagnosis, repeat if symptoms</li>
+                                    <li><strong>Addison's disease:</strong> If clinical features</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>🔄 Transition to Adult Services</h4>
+                            <div class="subsection">
+                                <h5>Preparation (From age 12-14):</h5>
+                                <ul>
+                                    <li>Explain changes in clinic location, team, targets</li>
+                                    <li>Timing varies by: physical development, emotional maturity, life transitions</li>
+                                    <li>Offer self-management education appropriate to needs</li>
+                                    <li>Joint paediatric-adult clinics before transfer</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h4>📋 Annual Review Checklist</h4>
+                            <div class="key-points">
+                                <ul>
+                                    <li>✓ HbA1c and glucose monitoring review</li>
+                                    <li>✓ Hypoglycaemia assessment</li>
+                                    <li>✓ Blood pressure and BMI</li>
+                                    <li>✓ Smoking status</li>
+                                    <li>✓ Eye screening results</li>
+                                    <li>✓ Kidney function (ACR, eGFR)</li>
+                                    <li>✓ Foot examination and risk classification</li>
+                                    <li>✓ Neuropathy assessment</li>
+                                    <li>✓ Emotional/psychological wellbeing</li>
+                                    <li>✓ Injection sites inspection</li>
+                                    <li>✓ Sick day rules knowledge</li>
+                                    <li>✓ Contraception/pregnancy planning (if relevant)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="info-box">
+                            <h5>📊 Quality Standards (NICE)</h5>
+                            <p><strong>Adults:</strong> Structured education, choice of CGM, statin if ≥40yrs, 9 key care processes annually</p>
+                            <p><strong>Children:</strong> Multidisciplinary team, education programme, intensive insulin therapy, real-time CGM, ketone testing, mental health support access</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card expansion functionality
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all other cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Toggle current card
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                updateProgress(cardId);
+            } else {
+                updateProgress(null);
+            }
+        }
+
+        // Progress tracking
+        function updateProgress(activeCard) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                item.classList.remove('active', 'completed');
+            });
+
+            if (activeCard) {
+                const activeItem = document.querySelector(`.progress-item.${activeCard}`);
+                activeItem.classList.add('active');
+                
+                // Mark previous items as completed
+                const allItems = Array.from(progressItems);
+                const activeIndex = allItems.findIndex(item => item.classList.contains(activeCard));
+                allItems.forEach((item, index) => {
+                    if (index < activeIndex) {
+                        item.classList.add('completed');
+                    }
+                });
+            }
+        }
+
+        // Smooth scroll to card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            const header = document.querySelector('header');
+            const headerHeight = header.offsetHeight;
+            
+            // Expand the card
+            card.classList.add('expanded');
+            updateProgress(cardId);
+            
+            // Scroll to card
+            const cardTop = card.getBoundingClientRect().top + window.scrollY - headerHeight - 20;
+            window.scrollTo({
+                top: cardTop,
+                behavior: 'smooth'
+            });
+        }
+
+        // Auto-expand first card on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('assessment-card').classList.add('expanded');
+            updateProgress('assessment');
+        });
+
+        // Progress tracking on scroll
+        let ticking = false;
+        function updateProgressOnScroll() {
+            const cards = document.querySelectorAll('.card');
+            const scrollPosition = window.scrollY + 200;
+
+            cards.forEach(card => {
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition < cardBottom) {
+                    const cardId = card.id.replace('-card', '');
+                    updateProgress(cardId);
+                }
+            });
+            
+            ticking = false;
+        }
+
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                requestAnimationFrame(updateProgressOnScroll);
+                ticking = true;
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const cards = Array.from(document.querySelectorAll('.card'));
+            const currentIndex = cards.findIndex(card => card.classList.contains('expanded'));
+            
+            if (e.key === 'ArrowDown' && currentIndex < cards.length - 1) {
+                e.preventDefault();
+                scrollToCard(cards[currentIndex + 1].id.replace('-card', ''));
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                e.preventDefault();
+                scrollToCard(cards[currentIndex - 1].id.replace('-card', ''));
+            }
+        });
+
+        // Smooth hover effects for badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+                this.style.transition = 'transform 0.2s ease';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Print functionality (Ctrl+P)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'p') {
+                // Expand all cards before printing
+                document.querySelectorAll('.card').forEach(card => {
+                    card.classList.add('expanded');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

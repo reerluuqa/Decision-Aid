@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NICE CKS Cough Management Algorithm</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e7f1 100%);
+            min-height: 100vh;
+            color: #2d3748;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            padding: 30px 20px;
+            z-index: 100;
+            transition: all 0.3s ease;
+            border-right: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-header h2 {
+            color: #2b6cb0;
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .progress-header p {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: rgba(237, 242, 247, 0.6);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .progress-item:hover {
+            background: rgba(226, 232, 240, 0.8);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: rgba(66, 153, 225, 0.15);
+            border-left: 4px solid #3182ce;
+            font-weight: 600;
+            color: #2b6cb0;
+        }
+
+        .progress-item.completed {
+            background: rgba(72, 187, 120, 0.15);
+            border-left: 4px solid #38a169;
+            color: #2f855a;
+        }
+
+        .progress-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 1.1rem;
+            background: rgba(237, 242, 247, 0.8);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .progress-item.active .progress-icon {
+            background: #3182ce;
+            color: white;
+        }
+
+        .progress-item.completed .progress-icon {
+            background: #38a169;
+            color: white;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-title {
+            font-weight: 600;
+            margin-bottom: 2px;
+            font-size: 0.95rem;
+        }
+
+        .progress-subtitle {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .header h1 {
+            color: #2b6cb0;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: #4a5568;
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .last-updated {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #4a5568;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        /* Cards */
+        .card-container {
+            display: grid;
+            gap: 25px;
+            margin-bottom: 50px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.05);
+            backdrop-filter: blur(5px);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .card.expanded {
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            padding: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .card-header.assessment {
+            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+        }
+
+        .card-header.diagnosis {
+            background: linear-gradient(135deg, #00b5d8 0%, #0e7490 100%);
+        }
+
+        .card-header.treatment {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+        }
+
+        .card-header.followup {
+            background: linear-gradient(135deg, #805ad5 0%, #553c9a 100%);
+        }
+
+        .card-header-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-icon {
+            font-size: 2rem;
+            background: rgba(255,255,255,0.15);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1);
+            background: rgba(255,255,255,0.25);
+        }
+
+        .card-title-group h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .card-title-group p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+            background: rgba(255,255,255,0.15);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-body {
+            max-height: 2000px;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        /* Badges */
+        .badge-container {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+
+        .badge:hover {
+            transform: translateY(-2px);
+        }
+
+        .badge.urgent {
+            background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+            color: white;
+        }
+
+        .badge.caution {
+            background: linear-gradient(135deg, #f6ad55 0%, #dd6b20 100%);
+            color: white;
+        }
+
+        .badge.stable {
+            background: linear-gradient(135deg, #68d391 0%, #38a169 100%);
+            color: white;
+        }
+
+        .badge.info {
+            background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%);
+            color: white;
+        }
+
+        /* Lists */
+        .content-section {
+            margin-bottom: 25px;
+        }
+
+        .content-section h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .content-section h3 i {
+            color: #3182ce;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .checklist li:hover {
+            background: rgba(237, 242, 247, 0.4);
+            border-radius: 6px;
+            padding-left: 10px;
+            padding-right: 10px;
+            margin: 0 -10px;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist input[type="checkbox"] {
+            margin-top: 3px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+            accent-color: #3182ce;
+        }
+
+        .checklist label {
+            cursor: pointer;
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #3182ce, #00b5d8, #38a169);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -34px;
+            top: 25px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #3182ce;
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px #3182ce;
+        }
+
+        .timeline-item.diagnosis::before {
+            background: #00b5d8;
+            box-shadow: 0 0 0 2px #00b5d8;
+        }
+
+        .timeline-item.treatment::before {
+            background: #38a169;
+            box-shadow: 0 0 0 2px #38a169;
+        }
+
+        .timeline-item.followup::before {
+            background: #805ad5;
+            box-shadow: 0 0 0 2px #805ad5;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .timeline-description {
+            color: #4a5568;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .progress-sidebar {
+                width: 240px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                padding: 20px;
+            }
+
+            .progress-header {
+                margin-bottom: 20px;
+            }
+
+            .progress-items {
+                display: flex;
+                gap: 10px;
+                overflow-x: auto;
+                padding-bottom: 10px;
+            }
+
+            .progress-item {
+                min-width: 200px;
+                margin-bottom: 0;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .card-header {
+                padding: 20px;
+            }
+
+            .card-icon {
+                width: 50px;
+                height: 50px;
+                font-size: 1.5rem;
+            }
+
+            .card-title-group h2 {
+                font-size: 1.2rem;
+            }
+
+            .card-content {
+                padding: 20px;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+        .card:nth-child(4) { animation-delay: 0.4s; }
+
+        /* Decorative elements */
+        .floating-elements {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .floating-icon {
+            position: absolute;
+            font-size: 2.5rem;
+            opacity: 0.03;
+            animation: float 20s infinite ease-in-out;
+            color: #3182ce;
+        }
+
+        .floating-icon:nth-child(1) {
+            top: 10%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .floating-icon:nth-child(2) {
+            top: 20%;
+            right: 15%;
+            animation-delay: 3s;
+            color: #00b5d8;
+        }
+
+        .floating-icon:nth-child(3) {
+            bottom: 30%;
+            left: 20%;
+            animation-delay: 5s;
+            color: #38a169;
+        }
+
+        .floating-icon:nth-child(4) {
+            bottom: 10%;
+            right: 10%;
+            animation-delay: 7s;
+            color: #805ad5;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-20px) rotate(5deg);
+            }
+            50% {
+                transform: translateY(0) rotate(-5deg);
+            }
+            75% {
+                transform: translateY(20px) rotate(3deg);
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            .progress-sidebar {
+                display: none;
+            }
+            
+            .card {
+                box-shadow: none;
+                border: 1px solid #e2e8f0;
+                page-break-inside: avoid;
+            }
+            
+            .card.expanded .card-body {
+                max-height: none;
+            }
+            
+            .floating-elements {
+                display: none;
+            }
+            
+            .expand-icon {
+                display: none;
+            }
+        }
+
+        /* Loading animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(49, 130, 206, 0.2);
+            border-top: 3px solid #3182ce;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="floating-elements">
+        <i class="fas fa-stethoscope floating-icon"></i>
+        <i class="fas fa-lungs floating-icon"></i>
+        <i class="fas fa-pills floating-icon"></i>
+        <i class="fas fa-heartbeat floating-icon"></i>
+    </div>
+
+    <div class="container">
+        <aside class="progress-sidebar">
+            <div class="progress-header">
+                <h2>Progress</h2>
+                <p>Click to navigate</p>
+            </div>
+            <div class="progress-items">
+                <div class="progress-item active" data-card="assessment">
+                    <div class="progress-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="progress-text">
+                        <div class="progress-title">Assessment</div>
+                        <div class="progress-subtitle">Initial evaluation</div>
+                    </div>
+                </div>
+                <div class="progress-item" data-card="diagnosis">
+                    <div class="progress-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="progress-text">
+                        <div class="progress-title">Diagnosis</div>
+                        <div class="progress-subtitle">Determine cause</div>
+                    </div>
+                </div>
+                <div class="progress-item" data-card="treatment">
+                    <div class="progress-icon">
+                        <i class="fas fa-prescription-bottle"></i>
+                    </div>
+                    <div class="progress-text">
+                        <div class="progress-title">Management</div>
+                        <div class="progress-subtitle">Treatment options</div>
+                    </div>
+                </div>
+                <div class="progress-item" data-card="followup">
+                    <div class="progress-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="progress-text">
+                        <div class="progress-title">Follow-up</div>
+                        <div class="progress-subtitle">Monitoring plan</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="header">
+                <div class="last-updated">
+                    <i class="fas fa-calendar-alt"></i> Last revised: April 2025
+                </div>
+                <h1><i class="fas fa-lungs"></i> Cough Management Algorithm</h1>
+                <p>Evidence-based approach to assessing and managing adult patients with cough as the predominant symptom</p>
+            </div>
+
+            <div class="card-container">
+                <!-- Assessment Card -->
+                <div class="card expanded" id="assessment-card">
+                    <div class="card-header assessment">
+                        <div class="card-header-content">
+                            <div class="card-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <div class="card-title-group">
+                                <h2>Assessment</h2>
+                                <p>Initial evaluation of patient with cough</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="badge-container">
+                                <span class="badge urgent">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Urgent if red flags present
+                                </span>
+                                <span class="badge caution">
+                                    <i class="fas fa-clock"></i>
+                                    Duration guides management
+                                </span>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-history"></i> History Taking</h3>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="onset">
+                                        <label for="onset">Onset and duration of cough (acute <3 weeks, sub-acute 3-8 weeks, chronic >8 weeks)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="type">
+                                        <label for="type">Type: dry or productive, frequency, pattern (diurnal variation)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="triggers">
+                                        <label for="triggers">Precipitating/exacerbating factors (exercise, talking, laughing, environmental)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="associated">
+                                        <label for="associated">Associated symptoms (fever, breathlessness, chest pain, hemoptysis)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="meds">
+                                        <label for="meds">Medication review (ACE inhibitors, sitagliptin)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="smoking">
+                                        <label for="smoking">Smoking history (active or passive exposure)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="occupational">
+                                        <label for="occupational">Occupational/environmental exposures</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="family">
+                                        <label for="family">Family history (atopy, asthma, COPD, lung disease)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="recent">
+                                        <label for="recent">Recent respiratory infection or travel history</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-flag"></i> Red Flag Assessment</h3>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="red1">
+                                        <label for="red1">Hemoptysis (consider cancer, PE, TB, bronchiectasis)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red2">
+                                        <label for="red2">Systemic symptoms: fever, weight loss, night sweats</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red3">
+                                        <label for="red3">Significant breathlessness at rest/night</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red4">
+                                        <label for="red4">Smoker >45 years with new/change in cough or voice disturbance</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red5">
+                                        <label for="red5">Smoker 55-80 years with ≥30 pack-year history (current or quit <15 years)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red6">
+                                        <label for="red6">Chest pain, peripheral edema with weight gain</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red7">
+                                        <label for="red7">Trouble swallowing, vomiting</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="red8">
+                                        <label for="red8">Hoarseness >3 weeks</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-stethoscope"></i> Physical Examination</h3>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="exam1">
+                                        <label for="exam1">Vital signs including SpO2 (if acutely unwell)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="exam2">
+                                        <label for="exam2">Chest examination: breath sounds, crackles, wheeze</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="exam3">
+                                        <label for="exam3">Cardiovascular examination</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="exam4">
+                                        <label for="exam4">ENT examination: ears, nose, throat, post-nasal drip</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="exam5">
+                                        <label for="exam5">Look for finger clubbing, lymphadenopathy</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-vial"></i> Initial Investigations</h3>
+                                <div class="badge-container">
+                                    <span class="badge info">
+                                        <i class="fas fa-info-circle"></i>
+                                        Guidelines recommend chest X-ray for chronic cough
+                                    </span>
+                                </div>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="inv1">
+                                        <label for="inv1">Pulse oximetry (if acutely unwell)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv2">
+                                        <label for="inv2">Peak expiratory flow rate (if asthma suspected)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv3">
+                                        <label for="inv3">Chest X-ray (chronic cough >8 weeks, red flags, uncertain diagnosis)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv4">
+                                        <label for="inv4">Spirometry (diagnostic, consider reversibility testing)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv5">
+                                        <label for="inv5">FeNO testing (if available, for eosinophilic inflammation)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv6">
+                                        <label for="inv6">C-reactive protein (if pneumonia suspected)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv7">
+                                        <label for="inv7">Pertussis serology (if whooping cough suspected)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="inv8">
+                                        <label for="inv8">Full blood count</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="alert" style="background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%); padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #00b5d8;">
+                                <p><strong>Key Point:</strong> The duration of cough at presentation guides diagnosis and management. All chronic coughs start as sub-acute, and recurrent acute coughs may indicate undiagnosed chronic disease.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card" id="diagnosis-card">
+                    <div class="card-header diagnosis">
+                        <div class="card-header-content">
+                            <div class="card-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <div class="card-title-group">
+                                <h2>Diagnosis</h2>
+                                <p>Differential diagnosis based on cough duration</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Acute Cough (< 3 weeks)</div>
+                                    <div class="timeline-description">
+                                        Most common: Viral upper respiratory tract infection (URTI)
+                                        <div class="badge-container" style="margin-top: 10px;">
+                                            <span class="badge stable">Usually self-limiting</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Sub-acute Cough (3-8 weeks)</div>
+                                    <div class="timeline-description">
+                                        Most common: Post-infectious cough (e.g., after Mycoplasma pneumonia or Bordetella pertussis)
+                                        <div class="badge-container" style="margin-top: 10px;">
+                                            <span class="badge caution">May require specific treatment</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Chronic Cough (> 8 weeks)</div>
+                                    <div class="timeline-description">
+                                        Most common causes: Upper airway cough syndrome, asthma, eosinophilic bronchitis, GORD, ACE inhibitor, smoking
+                                        <div class="badge-container" style="margin-top: 10px;">
+                                            <span class="badge urgent">Requires systematic evaluation</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-diagnoses"></i> Differential Diagnosis</h3>
+                                
+                                <div class="content-section">
+                                    <h4><i class="fas fa-wind"></i> Acute Cough Differentials</h4>
+                                    <ul class="checklist">
+                                        <li>
+                                            <input type="checkbox" id="acute1">
+                                            <label for="acute1"><strong>Viral URTI:</strong> Cough ± sputum, general malaise, fever, localized ENT symptoms</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="acute2">
+                                            <label for="acute2"><strong>COVID-19:</strong> Follow PHE guidance, see NICE COVID-19 topic</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="acute3">
+                                            <label for="acute3"><strong>Acute bronchitis:</strong> Cough ± sputum, breathlessness, wheeze, crackles (clear with coughing)</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="acute4">
+                                            <label for="acute4"><strong>Pneumonia:</strong> ≥1 respiratory symptom + focal chest signs + ≥1 systemic feature</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="acute5">
+                                            <label for="acute5"><strong>Pneumothorax:</strong> Sudden pleuritic pain, breathlessness, reduced breath sounds</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="acute6">
+                                            <label for="acute6"><strong>Pulmonary embolism:</strong> Acute breathlessness, pleuritic pain, hemoptysis, tachycardia</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="acute7">
+                                            <label for="acute7"><strong>Acute exacerbation:</strong> Asthma, COPD, bronchiectasis (see respective topics)</label>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="content-section">
+                                    <h4><i class="fas fa-calendar-alt"></i> Sub-acute Cough Differential</h4>
+                                    <ul class="checklist">
+                                        <li>
+                                            <input type="checkbox" id="sub1">
+                                            <label for="sub1"><strong>Post-infectious cough:</strong> Persistent dry cough after obvious RTI, systemically well, normal examination</label>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="content-section">
+                                    <h4><i class="fas fa-clock"></i> Chronic Cough Differentials</h4>
+                                    <ul class="checklist">
+                                        <li>
+                                            <input type="checkbox" id="chron1">
+                                            <label for="chron1"><strong>Upper airway cough syndrome (UACS):</strong> Frequent throat clearing, nasal congestion/discharge, cobblestone oropharynx</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron2">
+                                            <label for="chron2"><strong>ACE inhibitor-induced:</strong> Bouts of coughing within hours-months of first dose</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron3">
+                                            <label for="chron3"><strong>Asthma:</strong> Wheeze, breathlessness, diurnal variation, PEF variability</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron4">
+                                            <label for="chron4"><strong>Eosinophilic bronchitis:</strong> Normal examination/spirometry, responds to ICS</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron5">
+                                            <label for="chron5"><strong>GORD:</strong> Cough worse with eating, talking, bending, lying down</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron6">
+                                            <label for="chron6"><strong>Smoking-related:</strong> Dry cough worse in mornings</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron7">
+                                            <label for="chron7"><strong>Bronchiectasis:</strong> Daily sputum production, coarse crackles, hemoptysis</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron8">
+                                            <label for="chron8"><strong>COPD:</strong> Progressive breathlessness, wheeze, hyperinflated chest</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron9">
+                                            <label for="chron9"><strong>Interstitial lung disease:</strong> Dry cough + breathlessness, fine crackles, clubbing</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron10">
+                                            <label for="chron10"><strong>Lung cancer:</strong> Hemoptysis, chest pain, weight loss, clubbing, lymphadenopathy</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron11">
+                                            <label for="chron11"><strong>Tuberculosis:</strong> Sputum, weight loss, night sweats (consider in endemic areas)</label>
+                                        </li>
+                                        <li>
+                                            <input type="checkbox" id="chron12">
+                                            <label for="chron12"><strong>Somatic cough syndrome:</strong> Diagnosis of exclusion after extensive evaluation</label>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert" style="background: linear-gradient(135deg, #fef5e7 0%, #fed7aa 100%); padding: 20px; border-radius: 8px; margin-top: 20px; border-left: 4px solid #f6ad55;">
+                                <p><strong>Clinical Pearl:</strong> More than one cause of chronic cough is often present. Cough hypersensitivity syndrome describes excessive stimulation of normal cough reflex by irritants.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card" id="treatment-card">
+                    <div class="card-header treatment">
+                        <div class="card-header-content">
+                            <div class="card-icon">
+                                <i class="fas fa-prescription-bottle"></i>
+                            </div>
+                            <div class="card-title-group">
+                                <h2>Management</h2>
+                                <p>Treatment based on diagnosis and severity</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="badge-container">
+                                <span class="badge urgent">
+                                    <i class="fas fa-ambulance"></i>
+                                    Emergency admission if red flags
+                                </span>
+                                <span class="badge caution">
+                                    <i class="fas fa-pills"></i>
+                                    Sequential trials may be needed
+                                </span>
+                                <span class="badge stable">
+                                    <i class="fas fa-home"></i>
+                                    Most managed in primary care
+                                </span>
+                            </div>
+
+                            <!-- Emergency Admission -->
+                            <div class="content-section">
+                                <h3><i class="fas fa-hospital"></i> Emergency Admission Criteria</h3>
+                                <div class="alert" style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 8px; border-left: 4px solid #f87171;">
+                                    <p><strong>Arrange immediate emergency admission for:</strong></p>
+                                    <ul style="margin-left: 20px; margin-top: 10px;">
+                                        <li>Suspected pulmonary embolism or pneumothorax</li>
+                                        <li>Signs/symptoms of serious illness</li>
+                                        <li>Community-acquired pneumonia with CRB65 ≥2</li>
+                                        <li>Tachycardia >130 bpm or SpO2 <92%</li>
+                                        <li>PEFR <33% predicted or use of accessory muscles</li>
+                                        <li>Clinical features of foreign body aspiration</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Acute Cough Management -->
+                            <div class="content-section">
+                                <h3><i class="fas fa-wind"></i> Acute Cough Management (< 3 weeks)</h3>
+                                <div class="badge-container">
+                                    <span class="badge stable">Usually viral, self-limiting</span>
+                                    <span class-badge caution="badge caution">Avoid unnecessary antibiotics</span>
+                                </div>
+                                
+                                <h4>Upper Respiratory Tract Infection:</h4>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="acmgmt1">
+                                        <label for="acmgmt1">Reassure: usually lasts 3-4 weeks</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="acmgmt2">
+                                        <label for="acmgmt2">Self-care: paracetamol/ibuprofen for pain/fever</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="acmgmt3">
+                                        <label for="acmgmt3">Consider: honey, pelargonium, guaifenesin, dextromethorphan</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="acmgmt4">
+                                        <label for="acmgmt4">Advise: seek help if symptoms worsen or persist >3-4 weeks</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="acmgmt5">
+                                        <label for="acmgmt5">Smoking cessation advice</label>
+                                    </li>
+                                </ul>
+
+                                <h4>Antibiotic Use (NICE Guidelines):</h4>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="ab1">
+                                        <label for="ab1"><strong>Do NOT offer antibiotics</strong> for non-systemically unwell patients</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="ab2">
+                                        <label for="ab2"><strong>Immediate antibiotic</strong> if systemically very unwell:
+                                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                                <li>Doxycycline 200mg day 1, then 100mg daily for 4 days (avoid in pregnancy)</li>
+                                                <li>Alternative: Amoxicillin 500mg TDS for 5 days</li>
+                                                <li>Alternative: Clarithromycin 250-500mg BD for 5 days (if penicillin allergic)</li>
+                                            </ul>
+                                        </label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="ab3">
+                                        <label for="ab3"><strong>Back-up prescription</strong> for higher risk patients: use if symptoms worsen rapidly</label>
+                                    </li>
+                                </ul>
+
+                                <div class="alert" style="background: linear-gradient(135deg, #f0f9ff 0%, #bae6fd 100%); padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #0ea5e9;">
+                                    <p><strong>Important:</strong> Do NOT offer bronchodilators, corticosteroids, or mucolytics unless underlying airways disease present.</p>
+                                </div>
+                            </div>
+
+                            <!-- Sub-acute Cough Management -->
+                            <div class="content-section">
+                                <h3><i class="fas fa-calendar-week"></i> Sub-acute Cough Management (3-8 weeks)</h3>
+                                <div class="badge-container">
+                                    <span class="badge stable">Often self-limiting</span>
+                                </div>
+                                
+                                <h4>Post-infectious Cough:</h4>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="submgmt1">
+                                        <label for="submgmt1">Reassure: usually self-limiting, lasts up to 8 weeks</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="submgmt2">
+                                        <label for="submgmt2">Trial of inhaled ipratropium</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="submgmt3">
+                                        <label for="submgmt3">If quality of life affected: inhaled corticosteroids</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="submgmt4">
+                                        <label for="submgmt4">Severe paroxysms: short course oral prednisolone 30-40mg daily</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="submgmt5">
+                                        <label for="submgmt5">If other measures fail: centrally acting antitussives (codeine, dextromethorphan)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="submgmt6">
+                                        <label for="submgmt6">Re-assess if not improving after 2 months</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Chronic Cough Management -->
+                            <div class="content-section">
+                                <h3><i class="fas fa-clock"></i> Chronic Cough Management (> 8 weeks)</h3>
+                                <p><strong>Approach:</strong> Sequential trials of treatment starting with most likely etiology</p>
+                                
+                                <h4>Targeted Management by Cause:</h4>
+                                
+                                <h5><i class="fas fa-prescription-bottle-alt"></i> ACE Inhibitor-induced Cough:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="ace1">
+                                        <label for="ace1">Stop ACE inhibitor, prescribe alternative (e.g., ARB)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="ace2">
+                                        <label for="ace2">Cough usually resolves within 1 month (may persist for months)</label>
+                                    </li>
+                                </ul>
+
+                                <h5><i class="fas fa-lungs"></i> Asthma:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="asthma1">
+                                        <label for="asthma1">See NICE Asthma topic for detailed management</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="asthma2">
+                                        <label for="asthma2">Inhaled corticosteroids ± bronchodilators as per asthma guidelines</label>
+                                    </li>
+                                </ul>
+
+                                <h5><i class="fas fa-microscope"></i> Eosinophilic Bronchitis:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="eb1">
+                                        <label for="eb1">Inhaled corticosteroids first line</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="eb2">
+                                        <label for="eb2">If no response: increase ICS dose + consider leukotriene inhibitor (montelukast)</label>
+                                    </li>
+                                </ul>
+
+                                <h5><i class="fas fa-stomach"></i> Gastro-oesophageal Reflux Disease:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="gord1">
+                                        <label for="gord1">See NICE Dyspepsia - proven GORD topic</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="gord2">
+                                        <label for="gord2">Lifestyle modifications + proton pump inhibitor trial</label>
+                                    </li>
+                                </ul>
+
+                                <h5><i class="fas fa-smoking"></i> Smoking-related Cough:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="smoke1">
+                                        <label for="smoke1">Smoking cessation advice and support</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="smoke2">
+                                        <label for="smoke2">Warn about transient increase in cough after quitting</label>
+                                    </li>
+                                </ul>
+
+                                <h5><i class="fas fa-head-side-cough"></i> Upper Airway Cough Syndrome:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="uacs1">
+                                        <label for="uacs1">Antihistamine (e.g., chlorphenamine) + decongestant (pseudoephedrine)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="uacs2">
+                                        <label for="uacs2">Avoid allergic/environmental triggers</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="uacs3">
+                                        <label for="uacs3">Symptoms improve in 1-2 weeks (resolution may take weeks-months)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="uacs4">
+                                        <label for="uacs4">If rhinitis: intranasal corticosteroid/antihistamine/cromoglicate</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="uacs5">
+                                        <label for="uacs5">If sinusitis: intranasal steroid ± antibiotic</label>
+                                    </li>
+                                </ul>
+
+                                <h5><i class="fas fa-question-circle"></i> Cough-variant Asthma:</h5>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="cva1">
+                                        <label for="cva1">Inhaled corticosteroids first line</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="cva2">
+                                        <label for="cva2">If no response: increase ICS dose, consider leukotriene inhibitor or add beta-agonist</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Refractory Cough -->
+                            <div class="content-section">
+                                <h3><i class="fas fa-exclamation-circle"></i> Refractory Cough</h3>
+                                <p>Cough not responding to trials of treatment or diagnostic uncertainty</p>
+                                
+                                <h4>Next Steps:</h4>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="ref1">
+                                        <label for="ref1">Refer to respiratory physician for specialist assessment</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="ref2">
+                                        <label for="ref2">Consider occupational/environmental specialist referral for objective testing</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="ref3">
+                                        <label for="ref3">Speech and language therapy referral</label>
+                                    </li>
+                                </ul>
+
+                                <h4>Specialist Treatment Options:</h4>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="spec1">
+                                        <label for="spec1">Trial of low-dose morphine (5-10mg BD)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="spec2">
+                                        <label for="spec2">Trial of gabapentin</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="spec3">
+                                        <label for="spec3">Speech and language intervention</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Condition-specific Management -->
+                            <div class="content-section">
+                                <h3><i class="fas fa-book-medical"></i> Condition-specific Management</h3>
+                                <p>For other underlying conditions, refer to specific NICE CKS topics:</p>
+                                <ul style="margin-left: 20px; line-height: 1.8;">
+                                    <li>Bronchiectasis → See NICE Bronchiectasis topic</li>
+                                    <li>COPD → See NICE COPD topic</li>
+                                    <li>Heart failure → See NICE Heart failure - chronic topic</li>
+                                    <li>Interstitial lung disease → Refer to secondary care</li>
+                                    <li>Lung cancer → See NICE Lung cancer recognition and referral topic</li>
+                                    <li>Obstructive sleep apnoea → See NICE OSA topic</li>
+                                    <li>Pertussis → See NICE Whooping cough topic</li>
+                                    <li>Pulmonary TB → See NICE Tuberculosis topic</li>
+                                    <li>Sitagliptin-induced → Stop sitagliptin (see Diabetes - type 2)</li>
+                                    <li>Somatic cough syndrome → Refer for specialist assessment</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card" id="followup-card">
+                    <div class="card-header followup">
+                        <div class="card-header-content">
+                            <div class="card-icon">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                            <div class="card-title-group">
+                                <h2>Follow-up & Monitoring</h2>
+                                <p>Assessment of response and ongoing management</p>
+                            </div>
+                        </div>
+                        <div class="expand-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-content">
+                            <div class="badge-container">
+                                <span class="badge stable">
+                                    <i class="fas fa-check-circle"></i>
+                                    Monitor treatment response
+                                </span>
+                                <span class="badge caution">
+                                    <i class="fas fa-clock"></i>
+                                    Time-specific follow-up
+                                </span>
+                            </div>
+
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-title">Acute Cough Follow-up</div>
+                                    <div class="timeline-description">
+                                        <ul class="checklist" style="margin-top: 10px;">
+                                            <li>
+                                                <input type="checkbox" id="fu-acute1">
+                                                <label for="fu-acute1">Re-assess if symptoms worsen rapidly or significantly</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-acute2">
+                                                <label for="fu-acute2">Consider alternative diagnoses if not improving by 3-4 weeks</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-acute3">
+                                                <label for="fu-acute3">Check for signs of more serious illness (respiratory failure, sepsis)</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-acute4">
+                                                <label for="fu-acute4">Review antibiotic use if previous courses taken</label>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="timeline-item diagnosis">
+                                    <div class="timeline-title">Sub-acute Cough Follow-up</div>
+                                    <div class="timeline-description">
+                                        <ul class="checklist" style="margin-top: 10px;">
+                                            <li>
+                                                <input type="checkbox" id="fu-sub1">
+                                                <label for="fu-sub1">Schedule review at 8 weeks if cough persists</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-sub2">
+                                                <label for="fu-sub2">Re-assess for chronic cough causes if not resolving</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-sub3">
+                                                <label for="fu-sub3">Evaluate treatment response to ipratropium/ICS</label>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="timeline-item treatment">
+                                    <div class="timeline-title">Chronic Cough Follow-up</div>
+                                    <div class="timeline-description">
+                                        <ul class="checklist" style="margin-top: 10px;">
+                                            <li>
+                                                <input type="checkbox" id="fu-chron1">
+                                                <label for="fu-chron1">Assess response to specific treatment within 2-4 weeks</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-chron2">
+                                                <label for="fu-chron2">Stepwise approach: move to next treatment if partial/no response</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-chron3">
+                                                <label for="fu-chron3">Consider combination therapy if multiple causes suspected</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-chron4">
+                                                <label for="fu-chron4">Use validated tools (e.g., Leicester Cough Questionnaire) to assess severity/QoL</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-chron5">
+                                                <label for="fu-chron5">Refer to respiratory physician if refractory after 3-4 treatment trials</label>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="timeline-item followup">
+                                    <div class="timeline-title">Long-term Monitoring</div>
+                                    <div class="timeline-description">
+                                        <ul class="checklist" style="margin-top: 10px;">
+                                            <li>
+                                                <input type="checkbox" id="fu-long1">
+                                                <label for="fu-long1">Monitor for complications (syncope, incontinence, psychological impact)</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-long2">
+                                                <label for="fu-long2">Assess treatment adherence and inhaler technique</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-long3">
+                                                <label for="fu-long3">Monitor for adverse effects of medications</label>
+                                            </li>
+                                            <li>
+                                                <input type="checkbox" id="fu-long4">
+                                                <label for="fu-long4">Evaluate need for specialist referral or further investigations</label>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-exclamation-triangle"></i> When to Escalate Care</h3>
+                                <div class="alert" style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); padding: 20px; border-radius: 8px; border-left: 4px solid #f87171;">
+                                    <p><strong>Refer Urgently if:</strong></p>
+                                    <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                                        <li>Red flag symptoms develop (hemoptysis, weight loss, etc.)</li>
+                                        <li>Clinical features suggest cancer, TB, or serious lung disease</li>
+                                        <li>Diagnostic uncertainty after initial assessment</li>
+                                        <li>No response to appropriate trials of treatment</li>
+                                        <li>Cough significantly impacts quality of life despite treatment</li>
+                                        <li>Need for specialist investigations (bronchoscopy, CT, manometry)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-user-shield"></i> Patient Safety & Education</h3>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="safety1">
+                                        <label for="safety1">Provide clear safety-netting advice (when to seek urgent care)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="safety2">
+                                        <label for="safety2">Educate about expected duration and natural history</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="safety3">
+                                        <label for="safety3">Explain rationale for investigations and treatments</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="safety4">
+                                        <label for="safety4">Address smoking cessation and trigger avoidance</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="safety5">
+                                        <label for="safety5">Provide written information/resources</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="safety6">
+                                        <label for="safety6">Document discussion and shared decision-making</label>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="content-section">
+                                <h3><i class="fas fa-chart-line"></i> Outcome Measures</h3>
+                                <p>While no specific outcome measures were identified in the NICE review, consider:</p>
+                                <ul class="checklist">
+                                    <li>
+                                        <input type="checkbox" id="out1">
+                                        <label for="out1">Resolution or improvement of cough symptoms</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="out2">
+                                        <label for="out2">Improvement in quality of life measures</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="out3">
+                                        <label for="out3">Reduction in complications (incontinence, syncope)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="out4">
+                                        <label for="out4">Appropriate antibiotic stewardship (avoiding unnecessary use)</label>
+                                    </li>
+                                    <li>
+                                        <input type="checkbox" id="out5">
+                                        <label for="out5">Appropriate referral rates to secondary care</label>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert" style="background: linear-gradient(135deg, #f0f9ff 0%, #bae6fd 100%); padding: 25px; border-radius: 12px; margin-top: 30px; border-left: 4px solid #0ea5e9;">
+                <h3 style="margin-bottom: 15px; color: #1e40af;"><i class="fas fa-info-circle"></i> Algorithm Summary</h3>
+                <div id="summary-content" style="line-height: 1.7;">
+                    <p><strong>Assessment:</strong> Complete history, examination, and investigations based on duration and red flags.</p>
+                    <p><strong>Diagnosis:</strong> Categorize by duration (acute/sub-acute/chronic) and identify likely cause(s).</p>
+                    <p><strong>Management:</strong> Targeted treatment based on etiology, sequential trials for chronic cough.</p>
+                    <p><strong>Follow-up:</strong> Monitor response, safety-netting, and referral if red flags or refractory.</p>
+                </div>
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #93c5fd;">
+                    <p style="font-size: 0.9rem; color: #1e40af;"><i class="fas fa-calendar-alt"></i> <strong>Last Updated:</strong> April 2025 | <strong>Source:</strong> NICE CKS Cough Topic</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Loading animation
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                }, 500);
+            }, 1000);
+        });
+
+        // Card expansion functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            // Card click handlers
+            cards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                header.addEventListener('click', () => toggleCard(card));
+            });
+
+            // Progress sidebar click handlers
+            progressItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    const cardId = item.dataset.card;
+                    const targetCard = document.getElementById(`${cardId}-card`);
+                    
+                    // Scroll to card
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    
+                    // Expand target card
+                    setTimeout(() => {
+                        expandCard(targetCard);
+                        updateProgressSidebar(cardId);
+                    }, 300);
+                });
+            });
+
+            // Scroll spy for progress sidebar
+            window.addEventListener('scroll', updateProgressOnScroll);
+            
+            // Checkbox persistence
+            loadCheckboxStates();
+            document.querySelectorAll('.checklist input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', saveCheckboxState);
+            });
+
+            // Initialize summary
+            updateSummary();
+        });
+
+        function toggleCard(card) {
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            
+            // Toggle clicked card
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                updateProgressSidebar(getCardType(card));
+            }
+        }
+
+        function expandCard(card) {
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            card.classList.add('expanded');
+        }
+
+        function getCardType(card) {
+            const cardId = card.id;
+            if (cardId.includes('assessment')) return 'assessment';
+            if (cardId.includes('diagnosis')) return 'diagnosis';
+            if (cardId.includes('treatment')) return 'treatment';
+            if (cardId.includes('followup')) return 'followup';
+            return null;
+        }
+
+        function updateProgressSidebar(activeCard) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                item.classList.remove('active', 'completed');
+                if (item.dataset.card === activeCard) {
+                    item.classList.add('active');
+                } else {
+                    // Mark previous items as completed
+                    const cards = ['assessment', 'diagnosis', 'treatment', 'followup'];
+                    const activeIndex = cards.indexOf(activeCard);
+                    const itemIndex = cards.indexOf(item.dataset.card);
+                    if (itemIndex < activeIndex) {
+                        item.classList.add('completed');
+                    }
+                }
+            });
+        }
+
+        function updateProgressOnScroll() {
+            const cards = document.querySelectorAll('.card');
+            const scrollPosition = window.scrollY + 100;
+            
+            cards.forEach(card => {
+                const cardTop = card.offsetTop;
+                const cardBottom = cardTop + card.offsetHeight;
+                
+                if (scrollPosition >= cardTop && scrollPosition < cardBottom) {
+                    const cardType = getCardType(card);
+                    updateProgressSidebar(cardType);
+                }
+            });
+        }
+
+        // Save checkbox states to localStorage
+        function saveCheckboxState(e) {
+            const checkbox = e.target;
+            const checkboxId = checkbox.id;
+            const isChecked = checkbox.checked;
+            
+            localStorage.setItem(`coughAlgorithm_${checkboxId}`, isChecked);
+            updateSummary();
+        }
+
+        // Load checkbox states from localStorage
+        function loadCheckboxStates() {
+            document.querySelectorAll('.checklist input[type="checkbox"]').forEach(checkbox => {
+                const savedState = localStorage.getItem(`coughAlgorithm_${checkbox.id}`);
+                if (savedState !== null) {
+                    checkbox.checked = savedState === 'true';
+                }
+            });
+            updateSummary();
+        }
+
+        // Update summary based on completed checkboxes
+        function updateSummary() {
+            const totalCheckboxes = document.querySelectorAll('.checklist input[type="checkbox"]').length;
+            const completedCheckboxes = document.querySelectorAll('.checklist input[type="checkbox"]:checked').length;
+            const percentage = totalCheckboxes > 0 ? Math.round((completedCheckboxes / totalCheckboxes) * 100) : 0;
+            
+            const summaryContent = document.getElementById('summary-content');
+            const progressText = `
+                <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.7); border-radius: 8px; border-left: 4px solid #3182ce;">
+                    <strong>Progress:</strong> ${completedCheckboxes}/${totalCheckboxes} items completed (${percentage}%)
+                    <div style="margin-top: 10px; background: rgba(0,0,0,0.1); border-radius: 10px; height: 8px; overflow: hidden;">
+                        <div style="width: ${percentage}%; height: 100%; background: linear-gradient(90deg, #3182ce, #00b5d8); transition: width 0.5s ease;"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Add progress to summary if not already present
+            const existingProgress = summaryContent.querySelector('.progress-text');
+            if (existingProgress) {
+                existingProgress.innerHTML = progressText;
+            } else {
+                const progressDiv = document.createElement('div');
+                progressDiv.className = 'progress-text';
+                progressDiv.innerHTML = progressText;
+                summaryContent.appendChild(progressDiv);
+            }
+        }
+
+        // Smooth scroll for internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                navigateCards(1);
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                navigateCards(-1);
+            }
+        });
+
+        function navigateCards(direction) {
+            const cards = Array.from(document.querySelectorAll('.card'));
+            const currentIndex = cards.findIndex(card => card.classList.contains('expanded'));
+            const nextIndex = currentIndex + direction;
+            
+            if (nextIndex >= 0 && nextIndex < cards.length) {
+                const nextCard = cards[nextIndex];
+                expandCard(nextCard);
+                nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                updateProgressSidebar(getCardType(nextCard));
+            }
+        }
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Add print button
+        const printButton = document.createElement('button');
+        printButton.innerHTML = '<i class="fas fa-print"></i> Print Algorithm';
+        printButton.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        `;
+        printButton.addEventListener('click', printAlgorithm);
+        printButton.addEventListener('mouseenter', () => {
+            printButton.style.transform = 'translateY(-2px)';
+            printButton.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)';
+        });
+        printButton.addEventListener('mouseleave', () => {
+            printButton.style.transform = 'translateY(0)';
+            printButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        });
+        document.body.appendChild(printButton);
+
+        // Responsive behavior
+        function handleResize() {
+            const cards = document.querySelectorAll('.card');
+            const isMobile = window.innerWidth <= 768;
+            
+            if (isMobile) {
+                // On mobile, ensure only one card is expanded at a time
+                cards.forEach(card => {
+                    if (!card.classList.contains('expanded')) {
+                        card.querySelector('.card-body').style.maxHeight = '0';
+                    }
+                });
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+        handleResize(); // Initial call
+
+        // Add reset functionality
+        const resetButton = document.createElement('button');
+        resetButton.innerHTML = '<i class="fas fa-undo"></i> Reset Checklist';
+        resetButton.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 170px;
+            background: linear-gradient(135deg, #805ad5 0%, #553c9a 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        `;
+        resetButton.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all checkboxes? This action cannot be undone.')) {
+                document.querySelectorAll('.checklist input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                    localStorage.removeItem(`coughAlgorithm_${checkbox.id}`);
+                });
+                updateSummary();
+            }
+        });
+        resetButton.addEventListener('mouseenter', () => {
+            resetButton.style.transform = 'translateY(-2px)';
+            resetButton.style.boxShadow = '0 6px 15px rgba(0,0,0,0.2)';
+        });
+        resetButton.addEventListener('mouseleave', () => {
+            resetButton.style.transform = 'translateY(0)';
+            resetButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        });
+        document.body.appendChild(resetButton);
+
+        // Add dark mode support
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark-mode');
+        }
+
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (e.matches) {
+                document.documentElement.classList.add('dark-mode');
+            } else {
+                document.documentElement.classList.remove('dark-mode');
+            }
+        });
+    </script>
+</body>
+</html>

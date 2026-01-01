@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CKD Management Algorithm - Red Whale GEMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --assessment-color: #9b59b6;
+            --diagnosis-color: #3498db;
+            --treatment-color: #27ae60;
+            --followup-color: #e67e22;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --success-color: #2ecc71;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border-color: #e9ecef;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem 0;
+        }
+
+        .progress-sidebar {
+            width: 280px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+            margin-top: 2rem;
+            transition: var(--transition);
+        }
+
+        .progress-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+        }
+
+        .progress-item:hover {
+            background: var(--bg-color);
+            transform: translateX(4px);
+        }
+
+        .progress-item.active {
+            background: rgba(102, 126, 234, 0.1);
+            border-left-color: #667eea;
+            font-weight: 600;
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .progress-item:nth-child(1) .progress-icon { background: var(--assessment-color); }
+        .progress-item:nth-child(2) .progress-icon { background: var(--diagnosis-color); }
+        .progress-item:nth-child(3) .progress-icon { background: var(--treatment-color); }
+        .progress-item:nth-child(4) .progress-icon { background: var(--followup-color); }
+
+        .stage-section {
+            margin-bottom: 3rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .stage-section:nth-child(1) { animation-delay: 0.1s; }
+        .stage-section:nth-child(2) { animation-delay: 0.2s; }
+        .stage-section:nth-child(3) { animation-delay: 0.3s; }
+        .stage-section:nth-child(4) { animation-delay: 0.4s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            transition: var(--transition);
+            box-shadow: var(--shadow);
+        }
+
+        .section-title {
+            flex: 1;
+        }
+
+        .section-title h2 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .section-title p {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .section-header:hover .expand-icon {
+            transform: scale(1.1);
+            color: var(--text-primary);
+        }
+
+        .section-content {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            max-height: 0;
+            transition: var(--transition);
+        }
+
+        .section-content.expanded {
+            max-height: 2000px;
+            margin-top: 1rem;
+        }
+
+        .content-wrapper {
+            padding: 2rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info-card {
+            background: var(--bg-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border-left: 4px solid;
+            transition: var(--transition);
+        }
+
+        .info-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+        }
+
+        .info-card h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-card ul {
+            list-style: none;
+            margin: 0;
+        }
+
+        .info-card li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .info-card li:last-child {
+            border-bottom: none;
+        }
+
+        .info-card li i {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            transition: var(--transition);
+            cursor: help;
+        }
+
+        .severity-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .badge-danger {
+            background: rgba(231, 76, 60, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(231, 76, 60, 0.2);
+        }
+
+        .badge-warning {
+            background: rgba(243, 156, 18, 0.1);
+            color: var(--warning-color);
+            border: 1px solid rgba(243, 156, 18, 0.2);
+        }
+
+        .badge-success {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(46, 204, 113, 0.2);
+        }
+
+        .classification-table {
+            overflow-x: auto;
+            margin: 1.5rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background: var(--text-primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: var(--bg-color);
+        }
+
+        .alpha-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .alpha-card {
+            background: linear-gradient(135deg, var(--treatment-color), #2ecc71);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .alpha-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        .alpha-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .alpha-card p, .alpha-card ul {
+            opacity: 0.95;
+            font-size: 0.95rem;
+        }
+
+        .alpha-card ul {
+            list-style: none;
+            margin-top: 0.5rem;
+        }
+
+        .alpha-card li {
+            padding: 0.25rem 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .alpha-card li i {
+            margin-top: 0.3rem;
+            font-size: 0.7rem;
+        }
+
+        .monitoring-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .monitoring-card {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .monitoring-card:hover {
+            border-color: var(--followup-color);
+            transform: translateY(-2px);
+        }
+
+        .monitoring-frequency {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--followup-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .monitoring-conditions {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .referral-criteria {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin: 1.5rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .referral-criteria h3 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .referral-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .referral-item {
+            background: rgba(255,255,255,0.1);
+            padding: 0.75rem;
+            border-radius: 6px;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer-note {
+            background: var(--card-bg);
+            border-left: 4px solid #3498db;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .progress-sidebar {
+                width: 100%;
+                position: relative;
+                top: 0;
+                margin-top: 1rem;
+            }
+            
+            .progress-items {
+                display: flex;
+                overflow-x: auto;
+                gap: 0.5rem;
+                padding-bottom: 0.5rem;
+            }
+            
+            .progress-item {
+                min-width: 200px;
+                margin-bottom: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .content-wrapper {
+                padding: 1.5rem;
+            }
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(102, 126, 234, 0.2);
+            z-index: 1000;
+        }
+
+        .scroll-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+
+    <header class="header">
+        <h1><i class="fas fa-kidneys"></i> CKD Management Algorithm</h1>
+        <p>Evidence-based guidelines for chronic kidney disease diagnosis and management</p>
+    </header>
+
+    <div class="container">
+        <main class="main-content">
+            <!-- Assessment Section -->
+            <section class="stage-section" id="assessment">
+                <div class="section-header" onclick="toggleSection('assessment')">
+                    <div class="section-icon" style="background: var(--assessment-color);">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Assessment & Screening</h2>
+                        <p>Identify at-risk patients and initial investigations</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="assessment-icon"></i>
+                </div>
+                <div class="section-content" id="assessment-content">
+                    <div class="content-wrapper">
+                        <div class="card-grid">
+                            <div class="info-card" style="border-left-color: var(--assessment-color);">
+                                <h3><i class="fas fa-users"></i> Targeted Screening</h3>
+                                <ul>
+                                    <li><i class="fas fa-dot-circle"></i> Previous acute kidney injury (AKI)</li>
+                                    <li><i class="fas fa-dot-circle"></i> Incidental dipstick findings (blood or protein)</li>
+                                    <li><i class="fas fa-dot-circle"></i> Diabetes mellitus</li>
+                                    <li><i class="fas fa-dot-circle"></i> Hypertension or cardiovascular disease</li>
+                                    <li><i class="fas fa-dot-circle"></i> Long-term NSAID use</li>
+                                    <li><i class="fas fa-dot-circle"></i> Prostatic hypertrophy or renal stones</li>
+                                </ul>
+                            </div>
+                            <div class="info-card" style="border-left-color: var(--assessment-color);">
+                                <h3><i class="fas fa-flask"></i> Initial Investigations</h3>
+                                <ul>
+                                    <li><i class="fas fa-dot-circle"></i> Urea & Electrolytes (U&Es)</li>
+                                    <li><i class="fas fa-dot-circle"></i> Full Blood Count (FBC) - especially if eGFR ≤30</li>
+                                    <li><i class="fas fa-dot-circle"></i> Albumin-Creatinine Ratio (ACR)</li>
+                                    <li><i class="fas fa-dot-circle"></i> Urine dipstick (specifically for blood)</li>
+                                    <li><i class="fas fa-dot-circle"></i> Liver Function Tests (LFT) & Bone profile</li>
+                                    <li><i class="fas fa-dot-circle"></i> Blood Pressure measurement</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="info-card" style="border-left-color: var(--warning-color);">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Key Practice Points</h3>
+                            <ul>
+                                <li><i class="fas fa-times-circle"></i> <strong>DO NOT</strong> dip urine for protein (send for ACR instead)</li>
+                                <li><i class="fas fa-check-circle"></i> <strong>DO</strong> dip urine for BLOOD</li>
+                                <li><i class="fas fa-redo"></i> If eGFR is low, <strong>repeat within 2 weeks</strong> to exclude AKI</li>
+                            </ul>
+                        </div>
+
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-success">
+                                <i class="fas fa-shield-alt"></i> Routine Screening
+                            </span>
+                            <span class="severity-badge badge-warning">
+                                <i class="fas fa-exclamation-triangle"></i> ACR 3-70: Repeat early morning sample
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="stage-section" id="diagnosis">
+                <div class="section-header" onclick="toggleSection('diagnosis')">
+                    <div class="section-icon" style="background: var(--diagnosis-color);">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Diagnosis & Classification</h2>
+                        <p>Confirm CKD and determine stage</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="diagnosis-icon"></i>
+                </div>
+                <div class="section-content" id="diagnosis-content">
+                    <div class="content-wrapper">
+                        <div class="card-grid">
+                            <div class="info-card" style="border-left-color: var(--diagnosis-color);">
+                                <h3><i class="fas fa-diagnoses"></i> Diagnostic Criteria</h3>
+                                <p>CKD is diagnosed if <strong>any</strong> of the following are present:</p>
+                                <ul style="margin-top: 1rem;">
+                                    <li><i class="fas fa-dot-circle"></i> eGFR &lt;60 ml/min on 2 occasions <strong>≥3 months apart</strong></li>
+                                    <li><i class="fas fa-dot-circle"></i> ACR ≥3 mg/mmol (repeat early morning if 3-70)</li>
+                                    <li><i class="fas fa-dot-circle"></i> Structural or genetic kidney disease</li>
+                                </ul>
+                            </div>
+                            <div class="info-card" style="border-left-color: var(--diagnosis-color);">
+                                <h3><i class="fas fa-calculator"></i> Risk Calculation</h3>
+                                <p>Calculate 5-year risk of renal replacement therapy:</p>
+                                <ul style="margin-top: 1rem;">
+                                    <li><i class="fas fa-dot-circle"></i> Use 4-variable kidney failure risk equation</li>
+                                    <li><i class="fas fa-dot-circle"></i> Download from NICE website (Implementation support)</li>
+                                    <li><i class="fas fa-dot-circle"></i> <strong>Refer if 5-year risk &gt;5%</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <h3 style="margin: 1.5rem 0 1rem 0;"><i class="fas fa-layer-group"></i> CKD Classification (GFR Stages)</h3>
+                        <div class="classification-table">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Stage</th>
+                                        <th>eGFR (ml/min)</th>
+                                        <th>Category</th>
+                                        <th>Action Required</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><span class="severity-badge badge-success">G1</span></td>
+                                        <td>&gt;90</td>
+                                        <td>Normal/High</td>
+                                        <td>Monitor if other evidence of kidney damage</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="severity-badge badge-success">G2</span></td>
+                                        <td>60-89</td>
+                                        <td>Mild reduction</td>
+                                        <td>Monitor if other evidence of kidney damage</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="severity-badge badge-warning">G3a</span></td>
+                                        <td>45-59</td>
+                                        <td>Mild-moderate reduction</td>
+                                        <td>6-monthly monitoring if ACR &gt;30</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="severity-badge badge-warning">G3b</span></td>
+                                        <td>30-44</td>
+                                        <td>Moderate-severe reduction</td>
+                                        <td>4-6 monthly monitoring</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="severity-badge badge-danger">G4</span></td>
+                                        <td>15-29</td>
+                                        <td>Severe reduction</td>
+                                        <td>3-4 monthly monitoring, consider referral</td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="severity-badge badge-danger">G5</span></td>
+                                        <td>&lt;15</td>
+                                        <td>Kidney failure</td>
+                                        <td><strong>Urgent referral</strong>, 3 monthly monitoring</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="info-card" style="border-left-color: var(--warning-color);">
+                            <h3><i class="fas fa-imaging"></i> Ultrasound Indications</h3>
+                            <ul>
+                                <li><i class="fas fa-dot-circle"></i> eGFR &lt;30 ml/min</li>
+                                <li><i class="fas fa-dot-circle"></i> Accelerated CKD (see below)</li>
+                                <li><i class="fas fa-dot-circle"></i> Visible or persistent non-visible haematuria</li>
+                                <li><i class="fas fa-dot-circle"></i> Symptoms suggesting obstruction</li>
+                                <li><i class="fas fa-dot-circle"></i> Age &gt;20y with family history of polycystic kidneys</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="stage-section" id="treatment">
+                <div class="section-header" onclick="toggleSection('treatment')">
+                    <div class="section-icon" style="background: var(--treatment-color);">
+                        <i class="fas fa-capsules"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Treatment (Think ALPHA)</h2>
+                        <p>Comprehensive management framework</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="treatment-icon"></i>
+                </div>
+                <div class="section-content" id="treatment-content">
+                    <div class="content-wrapper">
+                        <div class="alpha-grid">
+                            <div class="alpha-card">
+                                <h3><i class="fas fa-pills"></i> A - Atorvastatin</h3>
+                                <p><strong>20mg for ALL patients</strong> (primary & secondary prevention)</p>
+                                <ul>
+                                    <li><i class="fas fa-arrow-right"></i> 1° prevention: Aim for &gt;40% reduction in non-HDL cholesterol</li>
+                                    <li><i class="fas fa-arrow-right"></i> 2° prevention: Aim for LDL ≤2mmol/l or non-HDL ≤2.6mmol/l</li>
+                                    <li><i class="fas fa-arrow-right"></i> If targets not met: Increase dose if eGFR ≥30 (seek specialist advice if eGFR &lt;30)</li>
+                                </ul>
+                            </div>
+                            <div class="alpha-card">
+                                <h3><i class="fas fa-heart"></i> L - Lifestyle</h3>
+                                <p><strong>Optimization essential for all patients</strong></p>
+                                <ul>
+                                    <li><i class="fas fa-arrow-right"></i> BMI optimization</li>
+                                    <li><i class="fas fa-arrow-right"></i> Smoking cessation</li>
+                                    <li><i class="fas fa-arrow-right"></i> Dietary modifications (low salt, protein moderation)</li>
+                                    <li><i class="fas fa-arrow-right"></i> Regular exercise</li>
+                                </ul>
+                            </div>
+                            <div class="alpha-card">
+                                <h3><i class="fas fa-filter"></i> P - Proteinuria</h3>
+                                <p><strong>ACEi/ARB therapy key</strong></p>
+                                <ul>
+                                    <li><i class="fas fa-arrow-right"></i> Start ACEi/ARB if ACR ≥70, or ACR ≥3 if diabetic</li>
+                                    <li><i class="fas fa-arrow-right"></i> Up-titrate to maximum tolerated dose</li>
+                                    <li><i class="fas fa-arrow-right"></i> Add GLIFLOZIN if T2DM & ACR &gt;30 (consider if ACR 3-30)</li>
+                                </ul>
+                            </div>
+                            <div class="alpha-card">
+                                <h3><i class="fas fa-tachometer-alt"></i> H - Hypertension</h3>
+                                <p><strong>Targets based on ACR, regardless of age</strong></p>
+                                <ul>
+                                    <li><i class="fas fa-arrow-right"></i> ACR &lt;70: Target BP &lt;140/90 mmHg</li>
+                                    <li><i class="fas fa-arrow-right"></i> ACR ≥70: Target BP &lt;130/80 mmHg</li>
+                                    <li><i class="fas fa-arrow-right"></i> Manage according to NICE hypertension guidance</li>
+                                </ul>
+                            </div>
+                            <div class="alpha-card">
+                                <h3><i class="fas fa-tint"></i> A - Anaemia</h3>
+                                <p><strong>Investigate and manage appropriately</strong></p>
+                                <ul>
+                                    <li><i class="fas fa-arrow-right"></i> eGFR &gt;60: CKD unlikely cause</li>
+                                    <li><i class="fas fa-arrow-right"></i> eGFR 30-60: CKD may be the cause</li>
+                                    <li><i class="fas fa-arrow-right"></i> eGFR &lt;30: CKD often the cause</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="card-grid">
+                            <div class="info-card" style="border-left-color: var(--success-color);">
+                                <h3><i class="fas fa-prescription"></i> GLIFLOZIN Use (NICE Guidance)</h3>
+                                <ul>
+                                    <li><i class="fas fa-check-circle"></i> OFFER if T2DM and ACR &gt;30 (on max ACEi/ARB)</li>
+                                    <li><i class="fas fa-question-circle"></i> Consider if T2DM and ACR 3-30</li>
+                                    <li><i class="fas fa-info-circle"></i> Technology appraisals outline other situations where dapagliflozin/empagliflozin are 'an option'</li>
+                                </ul>
+                            </div>
+                            <div class="info-card" style="border-left-color: var(--warning-color);">
+                                <h3><i class="fas fa-exclamation-circle"></i> Practice Pearls</h3>
+                                <ul>
+                                    <li><i class="fas fa-arrow-right"></i> ACEi/ARB can worsen eGFR initially - monitor potassium and creatinine</li>
+                                    <li><i class="fas fa-arrow-right"></i> GLIFLOZINS have renal protective effects beyond glucose control</li>
+                                    <li><i class="fas fa-arrow-right"></i> Statins reduce cardiovascular risk significantly in CKD</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="severity-badges">
+                            <span class="severity-badge badge-success">
+                                <i class="fas fa-check"></i> Annual Review
+                            </span>
+                            <span class="severity-badge badge-warning">
+                                <i class="fas fa-eye"></i> Close Monitoring
+                            </span>
+                            <span class="severity-badge badge-danger">
+                                <i class="fas fa-ambulance"></i> Urgent Action
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="stage-section" id="followup">
+                <div class="section-header" onclick="toggleSection('followup')">
+                    <div class="section-icon" style="background: var(--followup-color);">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="section-title">
+                        <h2>Follow-up & Referral</h2>
+                        <p>Monitoring schedule and escalation criteria</p>
+                    </div>
+                    <i class="fas fa-chevron-down expand-icon" id="followup-icon"></i>
+                </div>
+                <div class="section-content" id="followup-content">
+                    <div class="content-wrapper">
+                        <h3 style="margin-bottom: 1rem;"><i class="fas fa-clock"></i> Monitoring Frequency</h3>
+                        <div class="monitoring-grid">
+                            <div class="monitoring-card">
+                                <div class="monitoring-frequency">Annual</div>
+                                <div class="monitoring-conditions">eGFR ≥45 and ACR ≤30</div>
+                                <span class="severity-badge badge-success" style="margin-top: 0.5rem;">Stable</span>
+                            </div>
+                            <div class="monitoring-card">
+                                <div class="monitoring-frequency">6 Monthly</div>
+                                <div class="monitoring-conditions">eGFR 30-59 and ACR &gt;30</div>
+                                <span class="severity-badge badge-warning" style="margin-top: 0.5rem;">Caution</span>
+                            </div>
+                            <div class="monitoring-card">
+                                <div class="monitoring-frequency">4 Monthly</div>
+                                <div class="monitoring-conditions">eGFR 15-45 and ACR &gt;30</div>
+                                <span class="severity-badge badge-warning" style="margin-top: 0.5rem;">Increased Risk</span>
+                            </div>
+                            <div class="monitoring-card">
+                                <div class="monitoring-frequency">3 Monthly</div>
+                                <div class="monitoring-conditions">eGFR &lt;15 (any ACR)</div>
+                                <span class="severity-badge badge-danger" style="margin-top: 0.5rem;">High Risk</span>
+                            </div>
+                        </div>
+
+                        <div class="referral-criteria">
+                            <h3><i class="fas fa-hospital"></i> Referral Criteria</h3>
+                            <div class="referral-list">
+                                <div class="referral-item">
+                                    <i class="fas fa-calculator"></i> <strong>5-year risk &gt;5%</strong> on 4-variable calculator
+                                </div>
+                                <div class="referral-item">
+                                    <i class="fas fa-tachometer-alt"></i> <strong>Accelerated CKD</strong> (see definition below)
+                                </div>
+                                <div class="referral-item">
+                                    <i class="fas fa-filter"></i> <strong>ACR ≥70</strong> (unless due to diabetes and treated)
+                                </div>
+                                <div class="referral-item">
+                                    <i class="fas fa-plus-circle"></i> <strong>ACR &gt;30 + haematuria</strong>
+                                </div>
+                                <div class="referral-item">
+                                    <i class="fas fa-obstruction"></i> <strong>CKD + renal outflow obstruction</strong> (urology)
+                                </div>
+                                <div class="referral-item">
+                                    <i class="fas fa-pills"></i> <strong>CKD + hypertension resistant to 4 agents</strong>
+                                </div>
+                                <div class="referral-item">
+                                    <i class="fas fa-dna"></i> <strong>Structural/genetic causes of CKD</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card" style="border-left-color: var(--danger-color);">
+                            <h3><i class="fas fa-exclamation-triangle"></i> Accelerated CKD Definition</h3>
+                            <p><strong>Over 12 months:</strong></p>
+                            <ul>
+                                <li><i class="fas fa-arrow-down"></i> <strong>Absolute</strong> sustained fall in eGFR of <strong>15 ml/min</strong></li>
+                                <li><i class="fas fa-percentage"></i> <strong>OR</strong> Relative eGFR fall <strong>≥25%</strong> which results in worse CKD staging</li>
+                            </ul>
+                            <span class="severity-badge badge-danger" style="margin-top: 1rem;">
+                                <i class="fas fa-ambulance"></i> Requires urgent referral
+                            </span>
+                        </div>
+
+                        <div class="card-grid">
+                            <div class="info-card" style="border-left-color: var(--success-color);">
+                                <h3><i class="fas fa-user-md"></i> Primary Care Management</h3>
+                                <ul>
+                                    <li><i class="fas fa-check"></i> Stable G1-G3a with ACR &lt;30</li>
+                                    <li><i class="fas fa-check"></i> Well-controlled hypertension</li>
+                                    <li><i class="fas fa-check"></i> No concerning features</li>
+                                    <li><i class="fas fa-check"></i> Patient stable on current therapy</li>
+                                </ul>
+                            </div>
+                            <div class="info-card" style="border-left-color: var(--warning-color);">
+                                <h3><i class="fas fa-eye"></i> Enhanced Monitoring</h3>
+                                <ul>
+                                    <li><i class="fas fa-exclamation"></i> ACR 30-70 (check for progression)</li>
+                                    <li><i class="fas fa-exclamation"></i> eGFR declining but not accelerated</li>
+                                    <li><i class="fas fa-exclamation"></i> New onset anaemia</li>
+                                    <li><i class="fas fa-exclamation"></i> Rising BP despite treatment</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="footer-note">
+                <i class="fas fa-info-circle"></i> <strong>Disclaimer:</strong> This algorithm is based on Red Whale GEMS (Guidelines & Evidence Made Simple) from January 2024. Always check the latest NICE guidance and use clinical judgment. For full references, see the relevant Red Whale module.
+            </div>
+        </main>
+
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar">
+            <div class="progress-title">
+                <i class="fas fa-route"></i> Algorithm Progress
+            </div>
+            <div class="progress-items" id="progressItems">
+                <div class="progress-item active" onclick="scrollToSection('assessment')" data-section="assessment">
+                    <div class="progress-icon">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <div>
+                        <strong>Assessment</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Screening & Initial Tests</div>
+                    </div>
+                </div>
+                <div class="progress-item" onclick="scrollToSection('diagnosis')" data-section="diagnosis">
+                    <div class="progress-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div>
+                        <strong>Diagnosis</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Confirm & Stage CKD</div>
+                    </div>
+                </div>
+                <div class="progress-item" onclick="scrollToSection('treatment')" data-section="treatment">
+                    <div class="progress-icon">
+                        <i class="fas fa-capsules"></i>
+                    </div>
+                    <div>
+                        <strong>Treatment</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">ALPHA Framework</div>
+                    </div>
+                </div>
+                <div class="progress-item" onclick="scrollToSection('followup')" data-section="followup">
+                    <div class="progress-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div>
+                        <strong>Follow-up</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary);">Monitoring & Referral</div>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--success-color);"></div>
+                    <span style="font-size: 0.85rem;">Stable/Routine</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--warning-color);"></div>
+                    <span style="font-size: 0.85rem;">Caution/Monitor</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--danger-color);"></div>
+                    <span style="font-size: 0.85rem;">Urgent/Refer</span>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // Section toggle functionality
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            const isExpanded = content.classList.contains('expanded');
+            
+            // Close all sections
+            document.querySelectorAll('.section-content').forEach(el => {
+                el.classList.remove('expanded');
+            });
+            document.querySelectorAll('.expand-icon').forEach(el => {
+                el.style.transform = 'rotate(0deg)';
+            });
+            
+            // Open clicked section if it wasn't already open
+            if (!isExpanded) {
+                content.classList.add('expanded');
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Smooth scroll to section
+        function scrollToSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const headerHeight = 100;
+            const sectionTop = section.offsetTop - headerHeight;
+            
+            window.scrollTo({
+                top: sectionTop,
+                behavior: 'smooth'
+            });
+            
+            // Expand the section
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            content.classList.add('expanded');
+            icon.style.transform = 'rotate(180deg)';
+        }
+
+        // Progress sidebar highlighting
+        function updateProgress() {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const scrollPosition = window.scrollY + 150;
+            
+            sections.forEach(sectionId => {
+                const section = document.getElementById(sectionId);
+                const sectionTop = section.offsetTop;
+                const sectionBottom = sectionTop + section.offsetHeight;
+                const progressItem = document.querySelector(`[data-section="${sectionId}"]`);
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
+                    progressItem.classList.add('active');
+                } else {
+                    progressItem.classList.remove('active');
+                }
+            });
+            
+            // Update scroll progress bar
+            const scrollProgress = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
+            document.getElementById('scrollProgress').style.width = scrollProgress + '%';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand assessment section by default
+            toggleSection('assessment');
+            
+            // Add scroll listener
+            window.addEventListener('scroll', updateProgress);
+            window.addEventListener('resize', updateProgress);
+            
+            // Add hover effects to severity badges
+            document.querySelectorAll('.severity-badge').forEach(badge => {
+                badge.addEventListener('click', function() {
+                    this.style.animation = 'pulse 0.6s ease';
+                    setTimeout(() => this.style.animation = '', 600);
+                });
+            });
+            
+            // Add pulse animation to critical items
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                    100% { transform: scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            updateProgress();
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+            const currentActive = document.querySelector('.progress-item.active');
+            const currentIndex = Array.from(currentActive.parentNode.children).indexOf(currentActive);
+            
+            if (e.key === 'ArrowDown' && currentIndex < sections.length - 1) {
+                scrollToSection(sections[currentIndex + 1]);
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                scrollToSection(sections[currentIndex - 1]);
+            }
+        });
+
+        // Add subtle parallax effect to header
+        window.addEventListener('scroll', function() {
+            const scrolled = window.pageYOffset;
+            const header = document.querySelector('.header');
+            header.style.transform = `translateY(${scrolled * 0.5}px)`;
+        });
+    </script>
+</body>
+</html>

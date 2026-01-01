@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pterygium: Clinical Quick-Scan</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-sidebar: #1e293b;
+            
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --text-light: #f1f5f9;
+
+            --primary-blue: #2563eb;
+            --primary-light: #dbeafe;
+
+            --success-green: #059669;
+            --success-light: #d1fae5;
+
+            --danger-red: #dc2626;
+            --danger-light: #fee2e2;
+            --danger-dark: #991b1b;
+
+            --warning-orange: #ea580c;
+            --warning-light: #ffedd5;
+
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.5;
+            height: 100vh;
+            overflow: hidden; /* App-like feel */
+            display: flex;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .animate-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        /* --- Sidebar Navigation --- */
+        aside {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .brand {
+            padding: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            color: #94a3b8;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            font-size: 0.95rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(255,255,255,0.05);
+            color: white;
+            border-left-color: var(--primary-blue);
+        }
+
+        .nav-icon {
+            margin-right: 0.75rem;
+            width: 18px;
+            text-align: center;
+        }
+
+        /* --- Main Content Area --- */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            scroll-behavior: smooth;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* --- Grid Layouts --- */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .card-body {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        /* --- Utility Classes for Visual Cues --- */
+        /* Red / Urgent */
+        .border-red-l { border-left: 4px solid var(--danger-red); }
+        .bg-red-50 { background-color: var(--danger-light); }
+        .text-red { color: var(--danger-red); }
+        .card.urgent {
+            background-color: #fff5f5;
+            border-color: #fecaca;
+        }
+        .urgent-badge {
+            background-color: var(--danger-red);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            animation: pulse-red 2s infinite;
+        }
+
+        /* Green / Safe / Action */
+        .border-green-l { border-left: 4px solid var(--success-green); }
+        .bg-green-50 { background-color: var(--success-light); }
+        .text-green { color: var(--success-green); }
+        .card.positive {
+            background-color: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        /* Blue / Neutral / Info */
+        .border-blue-l { border-left: 4px solid var(--primary-blue); }
+        .bg-blue-50 { background-color: var(--primary-light); }
+        .text-blue { color: var(--primary-blue); }
+        .card.info {
+            background-color: #eff6ff;
+            border-color: #bfdbfe;
+        }
+
+        /* --- Tables --- */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f1f5f9;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        /* --- Specific Modules --- */
+        
+        /* Definition Box */
+        .def-box {
+            background: #1e293b;
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            margin-bottom: 2rem;
+        }
+        .def-title {
+            color: #60a5fa;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        /* Risk Tags */
+        .risk-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .risk-high { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .risk-med { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+
+        /* Surgical Comparison */
+        .surg-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .surg-row:last-child { border-bottom: none; }
+        .surg-rec {
+            font-weight: bold;
+            color: var(--success-green);
+            font-size: 0.85rem;
+            background: #d1fae5;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            aside { display: none; } /* In a real app, toggle with hamburger */
+            body { overflow: auto; }
+            header { padding-top: 1rem; }
+        }
+        
+        /* Section Spacing */
+        section {
+            scroll-margin-top: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-main);
+        }
+
+        /* Icons (SVG) */
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Sidebar Navigation -->
+<aside>
+    <div class="brand">
+        <svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px;">
+            <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+        </svg>
+        PterygiumRef
+    </div>
+    <nav>
+        <a href="#overview" class="nav-item active"><span class="nav-icon">📋</span>Overview & Red Flags</a>
+        <a href="#diagnosis" class="nav-item"><span class="nav-icon">🔍</span>Diagnosis & Risks</a>
+        <a href="#management" class="nav-item"><span class="nav-icon">💊</span>Management Algorithm</a>
+        <a href="#surgery" class="nav-item"><span class="nav-icon">🔪</span>Surgical Options</a>
+        <a href="#complications" class="nav-item"><span class="nav-icon">⚠️</span>Complications</a>
+        <a href="#followup" class="nav-item"><span class="nav-icon">📅</span>Follow-up</a>
+    </nav>
+</aside>
+
+<!-- Main Content -->
+<main>
+    <header>
+        <h1>Pterygium Clinical Reference</h1>
+        <p class="subtitle">Based on BMJ Best Practice (Last updated: Nov 28, 2024)</p>
+    </header>
+
+    <!-- SECTION 1: OVERVIEW & RED FLAGS -->
+    <section id="overview" class="animate-in">
+        <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+            Overview & Immediate Recognition
+        </div>
+
+        <div class="def-box">
+            <span class="def-title">Definition</span>
+            Wing-shaped fibrovascular overgrowth from conjunctiva onto cornea.
+            <br>
+            <small style="opacity:0.8">Triangular shape (Body, Head, Cap). Occurs interpalpebrally, usually nasal side, often bilateral.</small>
+        </div>
+
+        <div class="grid-2">
+            <!-- Critical Presentation -->
+            <div class="card urgent">
+                <div class="card-header text-red">
+                    <span>⚡ Critical Findings (Red Flags)</span>
+                </div>
+                <div class="card-body">
+                    <ul style="list-style-type: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;"><strong>Double Vision:</strong> Tethering of medial rectus (Rare but significant).</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>Visual Axis Encroachment:</strong> Growth to centre of cornea causing reduced vision.</li>
+                        <li><strong>Irregular Astigmatism:</strong> Significant blurring.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Standard Presentation -->
+            <div class="card">
+                <div class="card-header text-blue">
+                    <span>Common Presentation</span>
+                </div>
+                <div class="card-body">
+                    <ul style="list-style-type: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;">• Ocular irritation, burning, tearing.</li>
+                        <li style="margin-bottom: 0.5rem;">• Impaired cosmesis ( fleshy, red lesion).</li>
+                        <li>• Stocker's line (iron deposit at leading edge).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: DIAGNOSIS & RISKS -->
+    <section id="diagnosis" class="animate-in">
+        <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            Diagnosis & Risk Factors
+        </div>
+
+        <div class="grid-2">
+            <!-- Investigations -->
+            <div class="card">
+                <div class="card-header">Diagnostic Workup</div>
+                <div class="card-body">
+                    <table style="margin-top: 0.5rem;">
+                        <tr>
+                            <td><strong>Slit-lamp Exam</strong></td>
+                            <td>1st line. Assess extent & nature.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fluorescein Staining</strong></td>
+                            <td>Check for epithelial breakdown.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Corneal Topography</strong></td>
+                            <td>If astigmatism suspected.</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Risk Factors -->
+            <div class="card">
+                <div class="card-header">Key Risk Factors</div>
+                <div class="card-body">
+                    <div style="margin-bottom: 1rem;">
+                        <span class="risk-tag risk-high">STRONG</span>
+                        <span class="risk-tag risk-high">Chronic UV Exposure</span>
+                        <span class="risk-tag risk-high">Living < 40° Latitude</span>
+                    </div>
+                    <div>
+                        <span class="risk-tag risk-med">WEAK</span>
+                        <span class="risk-tag risk-med">Outdoor Work</span>
+                        <span class="risk-tag risk-med">Increasing Age</span>
+                        <span class="risk-tag risk-med">Family History</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Differentials Table -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">Key Differentials</div>
+            <div class="card-body">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Condition</th>
+                            <th>Distinguishing Feature</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Pseudopterygium</strong></td>
+                            <td>History of trauma/infection. Probe can pass under body at limbus.</td>
+                            <td>Rule out trauma</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pingueculum</strong></td>
+                            <td>Yellowish, <strong>does NOT encroach</strong> on cornea.</td>
+                            <td>Reassurance</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Conjunctival CIS / SCC</strong></td>
+                            <td>Gelatinous, leukoplakia, not restricted to interpalpebral fissure.</td>
+                            <td><span class="text-red">Biopsy required</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 3: MANAGEMENT ALGORITHM -->
+    <section id="management" class="animate-in">
+        <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+            Management Flow
+        </div>
+
+        <!-- Asymptomatic -->
+        <div class="card positive border-green-l">
+            <div class="card-header text-green">
+                <span style="font-size: 1.5rem;">1</span> Asymptomatic / Mild
+            </div>
+            <div class="card-body">
+                <div style="display:flex; align-items:flex-start; gap: 1rem;">
+                    <div style="font-size: 2rem; color: var(--success-green);">🛡️</div>
+                    <div>
+                        <strong>Primary Action:</strong> No active treatment needed.
+                        <br>
+                        <span class="text-green" style="font-weight:600;">Advise UV Protection:</span> Wrap-around sunglasses & wide-brimmed hats.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; color: var(--text-muted); font-size: 1.5rem; margin: -0.5rem 0;">↓</div>
+
+        <!-- Symptomatic Non-Surgical -->
+        <div class="card info border-blue-l" style="margin-bottom: 1.5rem;">
+            <div class="card-header text-blue">
+                <span style="font-size: 1.5rem;">2</span> Symptomatic (Irritation/Burning) - No Visual Threat
+            </div>
+            <div class="card-body">
+                <div class="grid-2" style="margin-bottom: 0; gap: 2rem;">
+                    <div>
+                        <strong>Step 1: Lubrication</strong>
+                        <p>Topical artificial tears (Over the counter).</p>
+                    </div>
+                    <div>
+                        <strong>Step 2: Anti-Inflammatory</strong>
+                        <p>Topical corticosteroids (Fluorometholone / Loteprednol) if inflammation present.</p>
+                        <small class="text-red" style="display:block; margin-top:4px;">⚠️ Monitor IOP at 2-3 weeks (Risk of Glaucoma).</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Surgical Indications (RED) -->
+        <div class="card urgent border-red-l">
+            <div class="card-header" style="color: var(--danger-dark);">
+                <span class="urgent-badge">Surgery Indicated</span>
+                <span style="font-size: 1.5rem;">3</span> Proceed to Surgery
+            </div>
+            <div class="card-body">
+                <p style="margin-bottom: 1rem;">Surgical intervention is indicated if <strong>any</strong> of the following are present:</p>
+                <div class="grid-2">
+                    <ul>
+                        <li>✓ Significant ocular irritation (unresolved by medical therapy).</li>
+                        <li>✓ Impaired ocular cosmesis.</li>
+                    </ul>
+                    <ul>
+                        <li>✓ <strong>Reduced visual acuity</strong> (astigmatism / axis encroachment).</li>
+                        <li>✓ Double vision.</li>
+                        <li>✓ Continued documented progression.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: SURGICAL OPTIONS -->
+    <section id="surgery" class="animate-in">
+        <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+            Surgical Techniques Comparison
+        </div>
+
+        <div class="card">
+            <div class="card-header">Technique Selection</div>
+            <div class="card-body" style="padding: 0;">
+                
+                <!-- Autograft (Best) -->
+                <div class="surg-row" style="background-color: #f0fdf4;">
+                    <div>
+                        <strong style="color: var(--success-green);">Conjunctival Autografting</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Bare sclera covered with free graft from superior bulbar conjunctiva. Often includes limbal tissue.</div>
+                    </div>
+                    <div class="surg-rec">RECOMMENDED</div>
+                </div>
+
+                <!-- Amniotic Membrane -->
+                <div class="surg-row">
+                    <div>
+                        <strong>Amniotic Membrane Transplantation</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Used for extensive pterygium or glaucoma patients (preserve superior conjunctiva).</div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b;">Alternative</div>
+                </div>
+
+                <!-- Simple Excision (Caution) -->
+                <div class="surg-row" style="background-color: #fff5f5;">
+                    <div>
+                        <strong style="color: var(--danger-red);">Simple Excision (Bare Sclera)</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Shearing off head/body. Quick but high failure rate.</div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--danger-red); font-weight: bold;">High Recurrence (>33%)</div>
+                </div>
+
+                <!-- Adjuncts -->
+                <div class="surg-row">
+                    <div>
+                        <strong>Adjunctive Therapies (Mitomycin C, 5-FU, Beta-radiation)</strong>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Used to reduce recurrence in recurrent cases.</div>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--warning-orange);">⚠️ Sight-threatening risks (scleral melt)</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: COMPLICATIONS & FOLLOWUP -->
+    <section id="complications" class="animate-in">
+        <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            Complications & Monitoring
+        </div>
+
+        <div class="grid-2">
+            <!-- Recurrence Info -->
+            <div class="card">
+                <div class="card-header">Recurrence Rates</div>
+                <div class="card-body">
+                    <div style="margin-bottom: 1rem;">
+                        <strong>Conjunctival Autografting:</strong>
+                        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; margin-top: 5px; width: 100%;">
+                            <div style="height: 100%; width: 15%; background: var(--success-green); border-radius: 4px;"></div>
+                        </div>
+                        <small>5% - 15% (Best outcome)</small>
+                    </div>
+                    <div>
+                        <strong>Simple Excision:</strong>
+                        <div style="height: 8px; background: #e2e8f0; border-radius: 4px; margin-top: 5px; width: 100%;">
+                            <div style="height: 100%; width: 80%; background: var(--danger-red); border-radius: 4px;"></div>
+                        </div>
+                        <small>>33% (High risk)</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow Up -->
+            <div class="card">
+                <div class="card-header">Post-Op Follow Up</div>
+                <div class="card-body">
+                    <ul style="list-style-type: none; padding: 0;">
+                        <li style="margin-bottom: 0.5rem;"><strong>1 Day:</strong> Initial check.</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>4 Weeks:</strong> Assess healing.</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>12 Weeks:</strong> Check for early recurrence.</li>
+                        <li style="margin-bottom: 0.5rem;"><strong>6 & 12 Months:</strong> Long term monitoring.</li>
+                    </ul>
+                    <div style="margin-top: 1rem; font-size: 0.85rem; background: var(--primary-light); padding: 0.5rem; border-radius: 4px;">
+                        <strong>Rx:</strong> Antibiotic-corticosteroid drops tapered over 6-12 weeks.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Severe Complications -->
+        <div class="card urgent" style="margin-top: 1.5rem;">
+            <div class="card-header text-red">Severe Complications (Rare)</div>
+            <div class="card-body">
+                <div class="grid-4" style="margin-bottom:0">
+                    <div>• Scleral melt / perforation (Mitomycin C use)</div>
+                    <div>• Corneal endothelial cell loss</div>
+                    <div>• Postoperative Tenon's granuloma</div>
+                    <div>• Diplopia (Muscle restriction)</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+    // Simple Interaction Scripts
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // Navigation Highlighting on Scroll
+        const sections = document.querySelectorAll('section');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= (sectionTop - 150)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.getAttribute('href').includes(current)) {
+                    item.classList.add('active');
+                }
+            });
+        });
+
+        // Add animation classes on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = 1;
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        });
+
+        sections.forEach((section) => {
+            section.style.opacity = 0;
+            section.style.transform = 'translateY(20px)';
+            section.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+            observer.observe(section);
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acute Aspiration Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 250px;
+            height: fit-content;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .progress-sidebar h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step:hover {
+            background: #f0f0f0;
+        }
+
+        .progress-step.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .progress-step.completed {
+            background: #4caf50;
+            color: white;
+        }
+
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        .progress-step.active .step-icon,
+        .progress-step.completed .step-icon {
+            background: white;
+            color: #333;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .card:hover::before {
+            width: 100%;
+            opacity: 0.1;
+        }
+
+        /* Card Colors */
+        .assessment-card::before { background: #3498db; }
+        .diagnosis-card::before { background: #9b59b6; }
+        .treatment-card::before { background: #e74c3c; }
+        .followup-card::before { background: #27ae60; }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-right: 20px;
+            color: white;
+        }
+
+        .assessment-card .card-icon { background: #3498db; }
+        .diagnosis-card .card-icon { background: #9b59b6; }
+        .treatment-card .card-icon { background: #e74c3c; }
+        .followup-card .card-icon { background: #27ae60; }
+
+        .card-title {
+            flex: 1;
+        }
+
+        .card-title h2 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+
+        .card-title p {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .expand-icon {
+            font-size: 24px;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            margin-top: 20px;
+        }
+
+        .card.expanded .card-content {
+            max-height: 2000px;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 5px;
+        }
+
+        .badge-urgent {
+            background: #ff4757;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #ffa502;
+            color: white;
+        }
+
+        .badge-stable {
+            background: #2ed573;
+            color: white;
+        }
+
+        /* Content Styles */
+        .step-list {
+            list-style: none;
+            counter-reset: step-counter;
+        }
+
+        .step-list li {
+            counter-increment: step-counter;
+            position: relative;
+            padding-left: 40px;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        .step-list li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .sub-steps {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .sub-steps li {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+
+        .sub-steps li::before {
+            display: none;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .info-box {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <div class="progress-sidebar">
+            <h3>Algorithm Progress</h3>
+            <div class="progress-step active" onclick="scrollToCard('assessment')">
+                <div class="step-icon">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" onclick="scrollToCard('diagnosis')">
+                <div class="step-icon">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" onclick="scrollToCard('treatment')">
+                <div class="step-icon">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" onclick="scrollToCard('followup')">
+                <div class="step-icon">4</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1>Acute Aspiration Management</h1>
+                <p>Interactive Clinical Decision Support Algorithm</p>
+            </div>
+
+            <!-- Assessment Card -->
+            <div class="card assessment-card" id="assessment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">
+                        <h2>Initial Assessment</h2>
+                        <p>Rapid evaluation of aspiration risk</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="warning-box">
+                        <strong>🚨 High Risk Indicators:</strong>
+                        <span class="badge badge-urgent">Urgent Referral</span>
+                    </div>
+                    
+                    <ol class="step-list">
+                        <li><strong>ABC Assessment</strong>
+                            <ul class="sub-steps">
+                                <li>Airway: Check for obstruction, secretions</li>
+                                <li>Breathing: Respiratory rate, oxygen saturation</li>
+                                <li>Circulation: Blood pressure, heart rate</li>
+                            </ul>
+                        </li>
+                        <li><strong>Conscious Level</strong>
+                            <span class="badge badge-urgent">GCS < 9</span>
+                            <ul class="sub-steps">
+                                <li>Glasgow Coma Scale assessment</li>
+                                <li>Protective airway reflexes</li>
+                            </ul>
+                        </li>
+                        <li><strong>Risk Factor Identification</strong>
+                            <ul class="sub-steps">
+                                <li>Recent anesthesia/sedation</li>
+                                <li>Neurological conditions (stroke, Parkinson's)</li>
+                                <li>Gastrointestinal disorders</li>
+                                <li>Advanced age (>70 years)</li>
+                            </ul>
+                        </li>
+                        <li><strong>Clinical Signs</strong>
+                            <span class="badge badge-caution">Caution</span>
+                            <ul class="sub-steps">
+                                <li>Coughing/choking episodes</li>
+                                <li>Wheezing or crackles</li>
+                                <li>Tachypnea or dyspnea</li>
+                                <li>Fever or hypoxia</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis-card" id="diagnosis">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">
+                        <h2>Diagnostic Workup</h2>
+                        <p>Confirm aspiration and assess severity</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="info-box">
+                        <strong>💡 Key Point:</strong> Maintain high index of suspicion in at-risk patients
+                    </div>
+                    
+                    <ol class="step-list">
+                        <li><strong>Imaging Studies</strong>
+                            <span class="badge badge-urgent">Chest X-ray within 1 hour</span>
+                            <ul class="sub-steps">
+                                <li>Chest X-ray: Look for bilateral infiltrates</li>
+                                <li>Right lung more commonly affected</li>
+                                <li>CT chest if symptoms persist</li>
+                            </ul>
+                        </li>
+                        <li><strong>Laboratory Tests</strong>
+                            <ul class="sub-steps">
+                                <li>Complete blood count</li>
+                                <li>Arterial blood gas</li>
+                                <li>Procalcitonin/CRP for infection</li>
+                            </ul>
+                        </li>
+                        <li><strong>Bronchoscopy</strong>
+                            <span class="badge badge-caution">If severe or barium aspiration</span>
+                            <ul class="sub-steps">
+                                <li>Remove particulate matter</li>
+                                <li>Bronchoalveolar lavage for cultures</li>
+                            </ul>
+                        </li>
+                        <li><strong>Differential Diagnosis</strong>
+                            <ul class="sub-steps">
+                                <li>Community-acquired pneumonia</li>
+                                <li>ARDS</li>
+                                <li>Heart failure</li>
+                                <li>Pulmonary embolism</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment-card" id="treatment">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">
+                        <h2>Treatment Protocol</h2>
+                        <p>Immediate and ongoing management</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="warning-box">
+                        <strong>⚠️ Critical Actions:</strong>
+                        <span class="badge badge-urgent">Airway Protection</span>
+                        <span class="badge badge-caution">No Routine Antibiotics</span>
+                    </div>
+                    
+                    <ol class="step-list">
+                        <li><strong>Immediate Actions</strong>
+                            <span class="badge badge-urgent">Within minutes</span>
+                            <ul class="sub-steps">
+                                <li>Position: Semi-prone, 30° head-down</li>
+                                <li>Suction oropharynx</li>
+                                <li>Oxygen therapy (target SpO2 88-96%)</li>
+                                <li>Secure airway if GCS < 9</li>
+                            </ul>
+                        </li>
+                        <li><strong>Supportive Care</strong>
+                            <ul class="sub-steps">
+                                <li>Nasogastric tube insertion</li>
+                                <li>45° head-up positioning</li>
+                                <li>Positive pressure ventilation if needed</li>
+                            </ul>
+                        </li>
+                        <li><strong>Antibiotic Considerations</strong>
+                            <div class="info-box">
+                                Gastric contents are typically sterile - avoid routine antibiotics
+                            </div>
+                            <ul class="sub-steps">
+                                <li>Consider if: mechanical ventilation, gastroparesis, small bowel obstruction</li>
+                                <li>Start if no improvement after 48 hours</li>
+                                <li>Culture before starting antibiotics</li>
+                            </ul>
+                        </li>
+                        <li><strong>Special Considerations</strong>
+                            <ul class="sub-steps">
+                                <li>Barium aspiration: Early bronchoscopy</li>
+                                <li>GLP-1 agonists: Delayed gastric emptying risk</li>
+                                <li>Pregnancy: Higher aspiration risk</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup-card" id="followup">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <div class="card-icon">📈</div>
+                    <div class="card-title">
+                        <h2>Follow-up & Prevention</h2>
+                        <p>Monitoring and preventive strategies</p>
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="info-box">
+                        <strong>📊 Monitoring:</strong> Observe for 48 hours minimum
+                    </div>
+                    
+                    <ol class="step-list">
+                        <li><strong>Monitoring Parameters</strong>
+                            <span class="badge badge-stable">Daily assessment</span>
+                            <ul class="sub-steps">
+                                <li>Respiratory status</li>
+                                <li>Temperature trends</li>
+                                <li>Oxygen requirements</li>
+                                <li>Chest X-ray evolution</li>
+                            </ul>
+                        </li>
+                        <li><strong>Complication Watch</strong>
+                            <span class="badge badge-caution">High vigilance</span>
+                            <ul class="sub-steps">
+                                <li>Aspiration pneumonia (25% risk)</li>
+                                <li>ARDS (12% mortality if develops)</li>
+                                <li>Lung abscess/empyema</li>
+                                <li>Barium fibrosis (rare)</li>
+                            </ul>
+                        </li>
+                        <li><strong>Prevention Strategies</strong>
+                            <ul class="sub-steps">
+                                <li>Dysphagia screening in high-risk patients</li>
+                                <li>Speech therapy assessment</li>
+                                <li>Feeding modifications</li>
+                                <li>Positioning during meals</li>
+                            </ul>
+                        </li>
+                        <li><strong>Patient Education</strong>
+                            <ul class="sub-steps">
+                                <li>Recognition of aspiration signs</li>
+                                <li>Feeding technique training</li>
+                                <li>When to seek medical attention</li>
+                                <li>Family/caregiver education</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle card expansion
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('expanded');
+            
+            // Update progress sidebar
+            updateProgress();
+        }
+
+        // Scroll to specific card
+        function scrollToCard(cardId) {
+            const card = document.getElementById(cardId);
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // Expand the card
+            const header = card.querySelector('.card-header');
+            card.classList.add('expanded');
+            
+            // Update progress
+            updateProgress();
+        }
+
+        // Update progress sidebar
+        function updateProgress() {
+            const cards = document.querySelectorAll('.card');
+            const progressSteps = document.querySelectorAll('.progress-step');
+            
+            cards.forEach((card, index) => {
+                if (card.classList.contains('expanded')) {
+                    progressSteps[index].classList.add('active');
+                    progressSteps[index].classList.remove('completed');
+                } else if (card.getBoundingClientRect().top < window.innerHeight) {
+                    progressSteps[index].classList.add('completed');
+                    progressSteps[index].classList.remove('active');
+                } else {
+                    progressSteps[index].classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        // Auto-expand first card on load
+        window.addEventListener('load', () => {
+            const firstCard = document.querySelector('.card');
+            firstCard.classList.add('expanded');
+            updateProgress();
+        });
+
+        // Update progress on scroll
+        window.addEventListener('scroll', updateProgress);
+    </script>
+</body>
+</html>

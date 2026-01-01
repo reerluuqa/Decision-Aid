@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UACS Interactive Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .progress-sidebar {
+            position: sticky;
+            top: 20px;
+            width: 200px;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #4a5568;
+            text-align: center;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .progress-step.active {
+            background: #e6f3ff;
+            border-left: 4px solid #4299e1;
+        }
+
+        .progress-step.completed {
+            background: #f0fff4;
+            border-left: 4px solid #48bb78;
+        }
+
+        .step-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-size: 14px;
+            color: white;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            margin-right: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover .card-icon {
+            transform: scale(1.1);
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .expand-icon {
+            margin-left: auto;
+            font-size: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            max-height: 1000px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 5px;
+        }
+
+        .badge-urgent {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .badge-caution {
+            background: #fef5e7;
+            color: #dd6b20;
+        }
+
+        .badge-stable {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .step-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border-left: 4px solid #4299e1;
+            transition: all 0.3s ease;
+        }
+
+        .step-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .assessment { border-left-color: #4299e1; }
+        .diagnosis { border-left-color: #9f7aea; }
+        .treatment { border-left-color: #48bb78; }
+        .followup { border-left-color: #ed8936; }
+
+        .assessment .card-icon { background: linear-gradient(135deg, #4299e1, #3182ce); }
+        .diagnosis .card-icon { background: linear-gradient(135deg, #9f7aea, #805ad5); }
+        .treatment .card-icon { background: linear-gradient(135deg, #48bb78, #38a169); }
+        .followup .card-icon { background: linear-gradient(135deg, #ed8936, #dd6b20); }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                padding: 10px;
+            }
+            
+            .progress-sidebar {
+                position: relative;
+                width: 100%;
+                top: 0;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-sidebar">
+            <div class="progress-title">Progress</div>
+            <div class="progress-step active" data-step="assessment">
+                <div class="step-icon" style="background: #4299e1;">1</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-step" data-step="diagnosis">
+                <div class="step-icon" style="background: #9f7aea;">2</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-step" data-step="treatment">
+                <div class="step-icon" style="background: #48bb78;">3</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-step" data-step="followup">
+                <div class="step-icon" style="background: #ed8936;">4</div>
+                <span>Follow-up</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card assessment" id="assessment">
+                <div class="card-header">
+                    <div class="card-icon">📋</div>
+                    <div class="card-title">Assessment</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <strong>History Taking:</strong> Chronic cough ≥8 weeks, throat sensations, postnasal drip
+                        <span class="badge badge-stable">Key Feature</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Physical Examination:</strong> Oropharyngeal exam for cobblestone mucosa, visible mucus
+                        <span class="badge badge-caution">Visual Signs</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Risk Factors:</strong> Seasonal triggers, occupational exposure, female gender
+                        <span class="badge badge-stable">Consider</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Red Flags:</strong> Hemoptysis, chest pain, persistent voice changes
+                        <span class="badge badge-urgent">Urgent Referral</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card diagnosis" id="diagnosis">
+                <div class="card-header">
+                    <div class="card-icon">🔍</div>
+                    <div class="card-title">Diagnosis</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <strong>Empirical Trial:</strong> First-generation antihistamine + decongestant for 2 weeks
+                        <span class="badge badge-stable">Diagnostic & Therapeutic</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Baseline Tests:</strong> Chest X-ray, FBC, Spirometry, FeNO measurement
+                        <span class="badge badge-caution">Rule Out Other Causes</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Response Assessment:</strong> Improvement within 2 weeks confirms diagnosis
+                        <span class="badge badge-stable">Key Criterion</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Differential Diagnosis:</strong> Asthma, GERD, bronchiectasis, ACE inhibitor use
+                        <span class="badge badge-caution">Consider Coexistence</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card treatment" id="treatment">
+                <div class="card-header">
+                    <div class="card-icon">💊</div>
+                    <div class="card-title">Treatment</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <strong>First-line:</strong> Chlorphenamine 4mg + Pseudoephedrine 60mg every 4-6 hours
+                        <span class="badge badge-stable">Continue if Effective</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Trigger Avoidance:</strong> Allergens, irritants, nasal decongestant overuse
+                        <span class="badge badge-caution">Lifestyle Measures</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Coexisting Conditions:</strong>
+                        <br>• Rhinitis: Intranasal corticosteroids
+                        <br>• CRSwNP: Antibiotics/antifungals
+                        <br>• GERD: Proton-pump inhibitors
+                        <span class="badge badge-stable">Targeted Therapy</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Non-pharmacological:</strong> Speech and language therapy, laryngeal hygiene
+                        <span class="badge badge-stable">Adjunctive</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card followup" id="followup">
+                <div class="card-header">
+                    <div class="card-icon">📈</div>
+                    <div class="card-title">Follow-up</div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-content">
+                    <div class="step-item">
+                        <strong>Monitoring:</strong> Review every 2-3 months initially, assess treatment response
+                        <span class="badge badge-stable">Regular Assessment</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Complications:</strong> Urinary incontinence (60% of women), headache, cough syncope
+                        <span class="badge badge-caution">Quality of Life Impact</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Prognosis:</strong> Variable response rates, multiple coexisting causes common
+                        <span class="badge badge-stable">Set Expectations</span>
+                    </div>
+                    <div class="step-item">
+                        <strong>Refractory Cases:</strong> Consider gabapentin, morphine, or gefapixant
+                        <span class="badge badge-urgent">Specialist Referral</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card');
+            const progressSteps = document.querySelectorAll('.progress-step');
+
+            // Card expansion functionality
+            cards.forEach(card => {
+                const header = card.querySelector('.card-header');
+                header.addEventListener('click', () => {
+                    card.classList.toggle('expanded');
+                    
+                    // Update progress
+                    const cardId = card.id;
+                    progressSteps.forEach(step => {
+                        step.classList.remove('active');
+                        if (step.dataset.step === cardId) {
+                            step.classList.add('active');
+                        }
+                        if (isCardCompleted(cardId)) {
+                            step.classList.add('completed');
+                        }
+                    });
+                });
+            });
+
+            // Progress step navigation
+            progressSteps.forEach(step => {
+                step.addEventListener('click', () => {
+                    const targetCard = document.getElementById(step.dataset.step);
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetCard.classList.add('expanded');
+                    
+                    progressSteps.forEach(s => s.classList.remove('active'));
+                    step.classList.add('active');
+                });
+            });
+
+            function isCardCompleted(cardId) {
+                const card = document.getElementById(cardId);
+                return card.classList.contains('expanded');
+            }
+
+            // Auto-expand first card
+            setTimeout(() => {
+                document.getElementById('assessment').classList.add('expanded');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

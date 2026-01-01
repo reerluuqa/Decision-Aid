@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acute Kidney Injury (AKI) - Interactive Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: 100vh;
+        }
+
+        header {
+            background: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        header h1 {
+            color: #2196F3;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* Sticky Sidebar */
+        .sidebar {
+            width: 280px;
+            background: white;
+            padding: 2rem 1rem;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar h3 {
+            color: #2196F3;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-list {
+            list-style: none;
+        }
+
+        .progress-list li {
+            margin-bottom: 1rem;
+        }
+
+        .progress-list a {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 8px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-list a::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: transparent;
+            transition: background 0.3s ease;
+        }
+
+        .progress-list a:hover {
+            transform: translateX(5px);
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .progress-list a.active {
+            background: #e3f2fd;
+            font-weight: 600;
+        }
+
+        .progress-list a.active::before {
+            background: #2196F3;
+        }
+
+        .progress-list .step-icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.3s ease;
+        }
+
+        .assessment-card .card-header { background: #2196F3; }
+        .diagnosis-card .card-header { background: #9C27B0; }
+        .treatment-card .card-header { background: #FF9800; }
+        .followup-card .card-header { background: #4CAF50; }
+
+        .card-header h2 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .card-header .icon {
+            font-size: 2rem;
+            margin-right: 1rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.collapsed .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            padding: 1.5rem;
+            display: none;
+        }
+
+        .card:not(.collapsed) .card-body {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Sub-sections within cards */
+        .sub-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+        }
+
+        .sub-section h3 {
+            color: #2196F3;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .sub-section .sub-icon {
+            font-size: 1.5rem;
+            margin-right: 0.5rem;
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            color: white;
+        }
+
+        .badge-urgent { background: #f44336; }
+        .badge-caution { background: #ff9800; }
+        .badge-stable { background: #4caf50; }
+        .badge-info { background: #2196F3; }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background: #2196F3;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .data-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        /* Mobile Toggle Button */
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: block;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                transform: translateX(-100%);
+                z-index: 999;
+                width: 320px;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            .card-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .data-table {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Utility Classes */
+        .highlight-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .danger-box {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .key-point {
+            display: flex;
+            align-items: flex-start;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+        }
+
+        .key-point::before {
+            content: "💡";
+            font-size: 1.5rem;
+            margin-right: 1rem;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Acute Kidney Injury (AKI) Management</h1>
+        <p>Interactive Clinical Decision Support Tool | NICE NG148 (Updated 2024)</p>
+    </header>
+
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <h3>Algorithm Progress</h3>
+            <ul class="progress-list">
+                <li>
+                    <a href="#assessment" class="active" data-section="assessment">
+                        <span class="step-icon">🔍</span>
+                        <span>Assessment</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#diagnosis" data-section="diagnosis">
+                        <span class="step-icon">🔬</span>
+                        <span>Diagnosis</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#treatment" data-section="treatment">
+                        <span class="step-icon">💊</span>
+                        <span>Treatment</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#followup" data-section="followup">
+                        <span class="step-icon">📈</span>
+                        <span>Follow-up</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="content">
+            <!-- Assessment Section -->
+            <section id="assessment" class="card assessment-card">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <h2>
+                        <span class="icon">🔍</span>
+                        Assessment
+                    </h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">📋</span> Definition (KDIGO)</h3>
+                        <p>AKI is defined as <strong>any one of</strong>:</p>
+                        <ul>
+                            <li>Increase in creatinine by ≥26.5 μmol/l within 48h <span class="badge badge-info">Acute Rise</span></li>
+                            <li>Increase in creatinine to ≥1.5x baseline within 7 days <span class="badge badge-info">Subacute Rise</span></li>
+                            <li>Urine output <0.5ml/kg/h for 6h <span class="badge badge-info">Oliguria</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">⚠️</span> AKI Staging (KDIGO)</h3>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Stage</th>
+                                    <th>Creatinine</th>
+                                    <th>Urine Output</th>
+                                    <th>Severity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Stage 1</td>
+                                    <td>1.5–1.9x baseline or >26.5 μmol/l rise within 48h</td>
+                                    <td><0.5 ml/kg/h for 6–12h</td>
+                                    <td><span class="badge badge-stable">Mild</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Stage 2</td>
+                                    <td>2–2.9x baseline</td>
+                                    <td><0.5 ml/kg/h for ≥12h</td>
+                                    <td><span class="badge badge-caution">Moderate</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Stage 3</td>
+                                    <td>≥3x baseline or >354 μmol/l</td>
+                                    <td><0.3 ml/kg/h for ≥24h or anuria ≥12h</td>
+                                    <td><span class="badge badge-urgent">Severe</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🎯</span> At-Risk Groups</h3>
+                        <p class="danger-box">
+                            <strong>Always consider AKI in these high-risk groups:</strong>
+                        </p>
+                        <ul>
+                            <li>Age ≥65 years <span class="badge badge-caution">Elderly</span></li>
+                            <li>Chronic Kidney Disease (CKD) <span class="badge badge-caution">CKD</span></li>
+                            <li>Heart failure <span class="badge badge-caution">HF</span></li>
+                            <li>Diabetes mellitus <span class="badge badge-caution">DM</span></li>
+                            <li>Liver disease <span class="badge badge-caution">Liver</span></li>
+                            <li>Previous AKI episode <span class="badge badge-caution">Prior AKI</span></li>
+                            <li>Sepsis or acute illness <span class="badge badge-urgent">Acute Illness</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">💊</span> DAMN-Glif Drugs</h3>
+                        <p class="warning-box">
+                            <strong>Drugs that increase AKI risk:</strong>
+                        </p>
+                        <ul>
+                            <li><strong>D</strong>iuretics <span class="badge badge-caution">Volume Depletion</span></li>
+                            <li><strong>A</strong>CE inhibitors/ARBs <span class="badge badge-caution">↓ GFR</span></li>
+                            <li><strong>M</strong>etformin <span class="badge badge-caution">Lactic Acidosis Risk</span></li>
+                            <li><strong>N</strong>SAIDs <span class="badge badge-caution">↓ Renal Perfusion</span></li>
+                            <li><strong>Glif</strong>lozins (SGLT2 inhibitors) <span class="badge badge-caution">DKA Risk</span></li>
+                        </ul>
+                        <div class="key-point">
+                            <strong>Sick Day Guidance:</strong> Consider advising high-risk patients to temporarily withhold these drugs during acute illness with fluid balance disturbance (vomiting, diarrhea, fever). Balance benefits vs risks.
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🚩</span> Red Flags</h3>
+                        <ul>
+                            <li>SBP <90 mmHg or >40 mmHg drop from usual BP <span class="badge badge-urgent">Hypotension</span></li>
+                            <li>Oliguria or anuria <span class="badge badge-urgent">Urinary Output</span></li>
+                            <li>Known/suspected urinary tract obstruction <span class="badge badge-urgent">Obstruction</span></li>
+                            <li>Hyperkalaemia (K+ >6.0 mmol/L) <span class="badge badge-urgent">Hyperkalaemia</span></li>
+                            <li>Severe dehydration symptoms <span class="badge badge-urgent">Dehydration</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section id="diagnosis" class="card diagnosis-card collapsed">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <h2>
+                        <span class="icon">🔬</span>
+                        Diagnosis
+                    </h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🧪</span> NICE Diagnostic Criteria</h3>
+                        <p>AKI is present if <strong>any</strong> of the following apply:</p>
+                        <ul>
+                            <li>Rise in serum creatinine ≥26 μmol/L within 48h <span class="badge badge-info">Acute</span></li>
+                            <li>50% or greater rise in serum creatinine within 7 days <span class="badge badge-info">Subacute</span></li>
+                            <li>Urine output <0.5 ml/kg/h for >6h (adults) <span class="badge badge-info">Oliguria</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🏥</span> Managing AKI Warnings in Primary Care</h3>
+                        <p class="highlight-box">
+                            <strong>Clinical context is crucial:</strong> Consider pre-test probability based on patient's condition
+                        </p>
+                        
+                        <h4 style="color: #9C27B0; margin: 1rem 0;">Repeat Testing & Review Timelines</h4>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>AKI Warning</th>
+                                    <th>Stable Context (Low Risk)</th>
+                                    <th>Acute Illness (High Risk)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Stage 1</strong><br>Creatinine 1.5–1.9x baseline</td>
+                                    <td>Review & repeat U&Es ≤72h <span class="badge badge-stable">Stable</span></td>
+                                    <td>Review & repeat U&Es ≤24h <span class="badge badge-caution">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Stage 2</strong><br>Creatinine 2–2.9x baseline</td>
+                                    <td>Review & repeat U&Es ≤24h <span class="badge badge-caution">Urgent</span></td>
+                                    <td>Review & repeat U&Es ≤6h <span class="badge badge-urgent">Emergency</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Stage 3</strong><br>Creatinine ≥3x baseline or >354 μmol/l</td>
+                                    <td>Review & repeat U&Es ≤6h <span class="badge badge-urgent">Emergency</span></td>
+                                    <td><strong>Consider immediate admission</strong> <span class="badge badge-urgent">CRITICAL</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="key-point">
+                            <strong>Risk factors requiring earlier review:</strong> Poor intake/output, hyperkalaemia, frailty with comorbidities, known CKD 4/5/transplant, suspected obstruction, immunodeficiency.
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">💧</span> Urinalysis</h3>
+                        <p>Dip urine for:</p>
+                        <ul>
+                            <li>Blood <span class="badge badge-caution">?Nephritis</span></li>
+                            <li>Protein <span class="badge badge-caution">?Nephritis</span></li>
+                            <li>Leucocytes & nitrites <span class="badge badge-caution">?UTI</span></li>
+                            <li>Glucose <span class="badge badge-info">Glycosuria</span></li>
+                        </ul>
+                        <p class="warning-box">
+                            <strong>Interpretation:</strong> If negative dipstick in AKI, likely pre-renal cause or drug-related rather than intrinsic kidney disease.
+                        </p>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🔍</span> Identify the Cause</h3>
+                        <p class="danger-box">
+                            <strong>Key questions to ask:</strong>
+                        </p>
+                        <ul>
+                            <li>Is this sepsis? <span class="badge badge-urgent">Sepsis?</span></li>
+                            <li>Is this hypovolaemia/dehydration? <span class="badge badge-caution">Volume Status</span></li>
+                            <li>Has there been recent increase in ACEi/ARB/diuretics? <span class="badge badge-caution">Drug Changes</span></li>
+                            <li>Could this be urinary tract obstruction? <span class="badge badge-caution">Obstruction</span></li>
+                            <li>Check sodium and potassium levels <span class="badge badge-info">Electrolytes</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section id="treatment" class="card treatment-card collapsed">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <h2>
+                        <span class="icon">💊</span>
+                        Treatment
+                    </h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🚨</span> Immediate Referral Criteria</h3>
+                        <p class="danger-box">
+                            <strong>Consider IMMEDIATE admission for potential dialysis if:</strong>
+                        </p>
+                        <ul>
+                            <li>Fluid overload or pulmonary oedema <span class="badge badge-urgent">Urgent</span></li>
+                            <li>Hyperkalaemia (K+ >6.5 mmol/L or ECG changes) <span class="badge badge-urgent">Urgent</span></li>
+                            <li>Metabolic acidosis (pH <7.2) <span class="badge badge-urgent">Urgent</span></li>
+                            <li>Uraemia or complications (pericarditis, encephalopathy) <span class="badge badge-urgent">Urgent</span></li>
+                            <li>AKI Stage 3 with acute illness <span class="badge badge-urgent">Immediate</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">📞</span> Nephrology Consultation</h3>
+                        <p class="highlight-box">
+                            <strong>Discuss ALL cases of AKI with a nephrologist as soon as possible (most within 24h)</strong>
+                        </p>
+                        <ul>
+                            <li>To advise on management <span class="badge badge-info">Expert Input</span></li>
+                            <li>To consider need for renal replacement therapy <span class="badge badge-caution">Dialysis?</span></li>
+                            <li>To investigate for intrinsic renal disease <span class="badge badge-info">Diagnosis</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🚫</span> Medication Management</h3>
+                        <p class="warning-box">
+                            <strong>Consider WITHHOLDING drugs that could exacerbate AKI:</strong>
+                        </p>
+                        <ul>
+                            <li>Diuretics (if hypovolaemic) <span class="badge badge-caution">Volume Depletion</span></li>
+                            <li>NSAIDs <span class="badge badge-caution">↓ Renal Perfusion</span></li>
+                            <li>Antihypertensives including ACEi/ARBs <span class="badge badge-caution">↓ GFR</span></li>
+                            <li>Metformin (risk of lactic acidosis) <span class="badge badge-caution">Contraindicated</span></li>
+                        </ul>
+                        <div class="key-point">
+                            <strong>Review:</strong> Check if any new nephrotoxic drugs have been started (PPIs, NSAIDs, certain antibiotics, allopurinol).
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">💧</span> Fluid Management</h3>
+                        <p class="highlight-box">
+                            <strong>Assess fluid status thoroughly:</strong>
+                        </p>
+                        <ul>
+                            <li>Fluid intake and output record <span class="badge badge-info">I/O Chart</span></li>
+                            <li>Pulse, BP (including postural drop) <span class="badge badge-caution">Haemodynamics</span></li>
+                            <li>JVP, capillary refill, dry axillae <span class="badge badge-info">Clinical Signs</span></li>
+                        </ul>
+                        <p class="warning-box">
+                            <strong>Note:</strong> AKI can present with oliguria OR polyuria. Treat the patient, not just the numbers.
+                        </p>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">📊</span> Managing ACEi/ARB-Induced Creatinine Rise</h3>
+                        <p class="highlight-box">
+                            <strong>When monitoring reveals rising creatinine after starting ACEi/ARBs:</strong>
+                        </p>
+                        
+                        <h4 style="margin: 1rem 0; color: #FF9800;">Creatinine rise 15–30% from baseline</h4>
+                        <ul>
+                            <li>Assess BP: If SBP <120, reduce/stop other antihypertensives <span class="badge badge-info">Optimize BP</span></li>
+                            <li>Assess fluid status: If hypovolaemic, reduce diuretics <span class="badge badge-info">Volume Status</span></li>
+                            <li><strong>Continue ACEi/ARB</strong> and repeat U&Es in 1–2 weeks <span class="badge badge-stable">Continue</span></li>
+                        </ul>
+
+                        <h4 style="margin: 1rem 0; color: #FF9800;">Creatinine rise ≥30%</h4>
+                        <p class="danger-box">
+                            <strong>Try to continue drug if strong indication (heart failure, MI, CKD with albuminuria)</strong>
+                        </p>
+                        <ul>
+                            <li>Same management as above <span class="badge badge-info">Adjust BP/Volume</span></li>
+                            <li>Repeat U&Es in 5–7 days <span class="badge badge-caution">Early Recheck</span></li>
+                            <li>If no improvement: Stop ACEi/ARB and recheck in 5–7 days <span class="badge badge-caution">Stop if Persistent</span></li>
+                            <li>Seek nephrology advice even if creatinine returns to baseline <span class="badge badge-info">Specialist Input</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🔍</span> Investigation for Obstruction</h3>
+                        <ul>
+                            <li>Immediate ultrasound (<6h) if obstruction suspected <span class="badge badge-urgent">Emergency</span></li>
+                            <li>Ultrasound within 24h if no cause identified <span class="badge badge-caution">Urgent</span></li>
+                            <li>If obstruction found: stenting within 12h of diagnosis <span class="badge badge-urgent">Time-Critical</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section id="followup" class="card followup-card collapsed">
+                <div class="card-header" onclick="toggleCard(this)">
+                    <h2>
+                        <span class="icon">📈</span>
+                        Follow-up
+                    </h2>
+                    <span class="expand-icon">▼</span>
+                </div>
+                <div class="card-body">
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🏥</span> Post-Hospital AKI Follow-up</h3>
+                        <p class="highlight-box">
+                            <strong>All patients who have had AKI require structured follow-up:</strong>
+                        </p>
+                        
+                        <h4 style="margin: 1rem 0; color: #4CAF50;">Within 3 months of AKI episode:</h4>
+                        <ul>
+                            <li>Clinical review with doctor/nurse/pharmacist <span class="badge badge-stable">Required</span></li>
+                            <li>Medication review (including restarting drugs withheld) <span class="badge badge-info">Medication Review</span></li>
+                            <li>Advice on maintaining kidney health <span class="badge badge-info">Education</span></li>
+                            <li>Plan for ongoing monitoring of renal function <span class="badge badge-info">Monitoring Plan</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">🔬</span> Long-term Monitoring</h3>
+                        <p class="warning-box">
+                            <strong>Monitor for CKD development/progression for at least 3 years after AKI</strong>
+                        </p>
+                        <ul>
+                            <li>Even if eGFR returns to baseline <span class="badge badge-caution">All Patients</span></li>
+                            <li>Periodic eGFR and ACR testing <span class="badge badge-info">Renal Monitoring</span></li>
+                            <li>Frequency not specified by NICE – use clinical judgment <span class="badge badge-info">Individualized</span></li>
+                        </ul>
+                        
+                        <div class="key-point">
+                            <strong>At 3 months:</strong> Repeat renal function to check for evolving CKD. This is a critical checkpoint that should not be missed.
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">💊</span> Medication Restart</h3>
+                        <p class="highlight-box">
+                            <strong>Key considerations when restarting medications:</strong>
+                        </p>
+                        <ul>
+                            <li><strong>ACE inhibitors/ARBs:</strong> Restart only if eGFR and potassium stable <span class="badge badge-info">Renal Function</span></li>
+                            <li><strong>Diuretics:</strong> Start at lower dose, titrate slowly <span class="badge badge-caution">Titration</span></li>
+                            <li><strong>Metformin:</strong> Restart only when eGFR >30 ml/min and patient stable <span class="badge badge-caution">Contraindication</span></li>
+                            <li><strong>NSAIDs:</strong> Consider avoiding if recurrent AKI <span class="badge badge-caution">Risk Assessment</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">❤️</span> Cardiovascular Risk Review</h3>
+                        <p class="warning-box">
+                            <strong>Evidence suggests AKI increases long-term CV risk:</strong>
+                        </p>
+                        <ul>
+                            <li>Review and manage CV risk factors <span class="badge badge-info">Prevention</span></li>
+                            <li>Lifestyle advice and support <span class="badge badge-info">Lifestyle</span></li>
+                            <li>Consider patient motivation post-AKI for behavior change <span class="badge badge-stable">Opportunity</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">⚠️</span> Predictors of Poor Outcomes</h3>
+                        <p class="danger-box">
+                            <strong>Creatinine rise on starting ACEi/ARB may predict poor outcomes:</strong>
+                        </p>
+                        <ul>
+                            <li>Creatinine rise ≥30%: 3.4x greater risk of end-stage renal disease <span class="badge badge-urgent">High Risk</span></li>
+                            <li>1.5x greater risk of MI, 1.4x greater risk of heart failure <span class="badge badge-caution">CV Risk</span></li>
+                            <li>1.8x greater all-cause mortality <span class="badge badge-urgent">Mortality</span></li>
+                        </ul>
+                        <div class="key-point">
+                            <strong>Clinical implication:</strong> Patients with creatinine rise on ACEi/ARBs may be high-risk group requiring closer monitoring and CV risk factor management.
+                        </div>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">📝</span> Practice Systems for AKI Follow-up</h3>
+                        <p class="highlight-box">
+                            <strong>Ensure your practice has systems to:</strong>
+                        </p>
+                        <ul>
+                            <li>Flag AKI hospital admissions electronically <span class="badge badge-info">IT System</span></li>
+                            <li>Schedule 3-month review automatically <span class="badge badge-info">Recall System</span></li>
+                            <li>Monitor eGFR and ACR periodically <span class="badge badge-info">Lab Tracking</span></li>
+                            <li>Identify high-risk patients for intensified monitoring <span class="badge badge-caution">Risk Stratification</span></li>
+                        </ul>
+                    </div>
+
+                    <div class="sub-section">
+                        <h3><span class="sub-icon">💡</span> Key Take-Home Messages</h3>
+                        <ul>
+                            <li class="key-point">Always think kidneys – consider AKI in all acutely unwell patients</li>
+                            <li class="key-point">Be particularly alert in elderly, CKD patients, and those on DAMN-Glif drugs</li>
+                            <li class="key-point">Don't miss AKI in CKD patients – a rise in creatinine may be AKI, not just CKD progression</li>
+                            <li class="key-point">Follow NHS Think Kidneys guidance for retesting and management</li>
+                            <li class="key-point">Ensure all AKI patients have 3-month follow-up and long-term monitoring</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Toggle card expand/collapse
+        function toggleCard(header) {
+            const card = header.parentElement;
+            card.classList.toggle('collapsed');
+        }
+
+        // Toggle sidebar on mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Smooth scrolling and active state management
+        const links = document.querySelectorAll('.progress-list a');
+        const sections = document.querySelectorAll('.card');
+
+        // Intersection Observer for scroll spy
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -60% 0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    // Remove active class from all links
+                    links.forEach(link => link.classList.remove('active'));
+                    
+                    // Add active class to current section link
+                    const sectionId = entry.target.id;
+                    const activeLink = document.querySelector(`a[href="#${sectionId}"]`);
+                    if (activeLink) {
+                        activeLink.classList.add('active');
+                    }
+                }
+            });
+        }, observerOptions);
+
+        // Observe all sections
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+
+        // Smooth scroll for sidebar links
+        links.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                if (targetSection) {
+                    targetSection.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Expand the target card if it's collapsed
+                    const card = targetSection;
+                    if (card.classList.contains('collapsed')) {
+                        card.classList.remove('collapsed');
+                    }
+                    
+                    // Close mobile sidebar after selection
+                    document.getElementById('sidebar').classList.remove('open');
+                }
+            });
+        });
+
+        // Auto-expand card when scrolling into view
+        const autoExpandObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+                    const card = entry.target;
+                    if (card.classList.contains('collapsed')) {
+                        card.classList.remove('collapsed');
+                    }
+                }
+            });
+        }, { threshold: 0.3 });
+
+        sections.forEach(section => {
+            autoExpandObserver.observe(section);
+        });
+
+        // Add hover effect to badges
+        document.querySelectorAll('.badge').forEach(badge => {
+            badge.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1)';
+                this.style.transition = 'transform 0.2s ease';
+            });
+            
+            badge.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-toggle');
+            
+            if (window.innerWidth <= 768 && 
+                sidebar.classList.contains('open') && 
+                !sidebar.contains(e.target) && 
+                !toggle.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        // Initialize: expand first card
+        document.addEventListener('DOMContentLoaded', () => {
+            const firstCard = document.querySelector('.card');
+            if (firstCard) {
+                firstCard.classList.remove('collapsed');
+            }
+        });
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const activeLink = document.querySelector('.progress-list a.active');
+            if (!activeLink) return;
+
+            const currentIndex = Array.from(links).indexOf(activeLink);
+            
+            if (e.key === 'ArrowDown' && currentIndex < links.length - 1) {
+                e.preventDefault();
+                links[currentIndex + 1].click();
+            } else if (e.key === 'ArrowUp' && currentIndex > 0) {
+                e.preventDefault();
+                links[currentIndex - 1].click();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const sectionId = activeLink.getAttribute('href');
+                const card = document.querySelector(sectionId);
+                if (card) {
+                    card.classList.toggle('collapsed');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progressive Supranuclear Palsy - Interactive Management Algorithm</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 250px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 2rem 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .progress-sidebar h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .progress-item:hover {
+            background: rgba(0,0,0,0.05);
+            transform: translateX(5px);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .progress-icon {
+            width: 32px;
+            height: 32px;
+            margin-right: 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .progress-line {
+            position: absolute;
+            left: 16px;
+            top: 60px;
+            bottom: 20px;
+            width: 2px;
+            background: linear-gradient(to bottom, #1976d2, #388e3c, #f57c00);
+            z-index: -1;
+        }
+
+        /* Main Content */
+        .content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #1976d2;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        /* Card Base Styles */
+        .card {
+            background: white;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: 1.5rem 2rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+        }
+
+        .card:hover .card-header::before {
+            top: -100%;
+            right: -100%;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .card.expanded .card-body {
+            max-height: 3000px;
+        }
+
+        .card-content {
+            padding: 2rem;
+        }
+
+        /* Card Colors */
+        .assessment-card {
+            --card-color: #1976d2;
+            --card-color-light: #42a5f5;
+        }
+
+        .assessment-card .card-header {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+        }
+
+        .diagnosis-card {
+            --card-color: #7b1fa2;
+            --card-color-light: #ab47bc;
+        }
+
+        .diagnosis-card .card-header {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+        }
+
+        .treatment-card {
+            --card-color: #388e3c;
+            --card-color-light: #66bb6a;
+        }
+
+        .treatment-card .card-header {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+        }
+
+        .followup-card {
+            --card-color: #f57c00;
+            --card-color-light: #ffb74d;
+        }
+
+        .followup-card .card-header {
+            background: linear-gradient(135deg, var(--card-color) 0%, var(--card-color-light) 100%);
+        }
+
+        /* Content Styles */
+        .section {
+            margin-bottom: 2rem;
+        }
+
+        .section h3 {
+            color: var(--card-color);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .section ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .section li {
+            padding: 0.75rem 0;
+            padding-left: 2rem;
+            position: relative;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .section li::before {
+            content: '▸';
+            position: absolute;
+            left: 0;
+            color: var(--card-color);
+            font-weight: bold;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-urgent {
+            background: #ef5350;
+            color: white;
+        }
+
+        .badge-caution {
+            background: #ffb74d;
+            color: #2c3e50;
+        }
+
+        .badge-stable {
+            background: #66bb6a;
+            color: white;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            margin: 1rem 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: var(--card-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(0,0,0,0.03);
+        }
+
+        .highlight-box {
+            background: rgba(25, 118, 210, 0.1);
+            border-left: 4px solid #1976d2;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: rgba(239, 83, 80, 0.1);
+            border-left: 4px solid #ef5350;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .info-item {
+            background: rgba(0,0,0,0.03);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .info-item h4 {
+            color: var(--card-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .progress-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .content {
+                margin-left: 0;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card-content {
+                padding: 1rem;
+            }
+
+            .table-container {
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Scroll Progress Indicator */
+        .scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            z-index: 2000;
+        }
+
+        .scroll-progress-bar {
+            height: 100%;
+            background: linear-gradient(to right, #1976d2, #7b1fa2, #388e3c);
+            transition: width 0.2s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-progress">
+        <div class="scroll-progress-bar" id="scrollBar"></div>
+    </div>
+
+    <div class="container">
+        <aside class="progress-sidebar" id="progressSidebar">
+            <div class="progress-line"></div>
+            <h3>Algorithm Progress</h3>
+            <div class="progress-item active" data-card="assessment">
+                <div class="progress-icon">📋</div>
+                <span>Assessment</span>
+            </div>
+            <div class="progress-item" data-card="diagnosis">
+                <div class="progress-icon">🔬</div>
+                <span>Diagnosis</span>
+            </div>
+            <div class="progress-item" data-card="treatment">
+                <div class="progress-icon">💊</div>
+                <span>Treatment</span>
+            </div>
+            <div class="progress-item" data-card="followup">
+                <div class="progress-icon">📈</div>
+                <span>Follow-up</span>
+            </div>
+        </aside>
+
+        <main class="content">
+            <header>
+                <h1>Progressive Supranuclear Palsy</h1>
+                <p>Interactive Clinical Management Algorithm | BMJ Best Practice May 2024</p>
+            </header>
+
+            <!-- Assessment Card -->
+            <div class="card assessment-card" id="assessment-card">
+                <div class="card-header" onclick="toggleCard('assessment')">
+                    <div class="card-title">
+                        <div class="card-icon">📋</div>
+                        Assessment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3>Key Diagnostic Features <span class="badge badge-urgent">High Priority</span></h3>
+                            <ul>
+                                <li>Postural instability with unexplained falls (often backwards) within first 3 years</li>
+                                <li>Slow vertical saccades or vertical supranuclear gaze palsy</li>
+                                <li>Axial-predominant akinetic-rigid parkinsonism with poor levodopa response</li>
+                                <li>Early dysphagia and/or dysarthria</li>
+                                <li>Frontal executive dysfunction (apathy, impulsivity)</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3>Physical Examination Checklist</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <h4>Eye Movements</h4>
+                                    <p>Test vertical saccades (slow, "round-the-houses" sign), doll's head maneuver, square wave jerks, optokinetic nystagmus</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Postural Instability</h4>
+                                    <p>Perform pull test, observe gait (wide-based, en bloc turning), sit-to-stand assessment</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Cognitive Assessment</h4>
+                                    <p>Use MoCA (preferred), evaluate executive function, verbal fluency, apathy scale</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Speech & Swallowing</h4>
+                                    <p>Assess dysarthria, apraxia of speech, water swallow test for dysphagia</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Initial Investigations <span class="badge badge-caution">Essential</span></h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Investigation</th>
+                                            <th>Purpose/Findings</th>
+                                            <th>Priority</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Brain MRI</td>
+                                            <td>Midbrain atrophy ("hummingbird", "Mickey Mouse" signs), rule out other pathologies</td>
+                                            <td><span class="badge badge-urgent">Critical</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Levodopa Trial</td>
+                                            <td>Minimal/no response supports PSP diagnosis (≤30% improvement on MDS-UPDRS)</td>
+                                            <td><span class="badge badge-caution">High</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>FDG-PET</td>
+                                            <td>Hypometabolism in medial frontal gyrus, anterior cingulate, pons, ventral striatum</td>
+                                            <td><span class="badge badge-stable">Optional</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Polysomnography</td>
+                                            <td>REM sleep behavior disorder uncommon (favors PD/DLB/MSA)</td>
+                                            <td><span class="badge badge-stable">Selective</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td>Active Stand Test</td>
+                                            <td>Distinguish from MSA/DLB (orthostatic hypotension absent in PSP)</td>
+                                            <td><span class="badge badge-caution">Recommended</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="warning-box">
+                            <strong>🚨 Red Flags for Urgent Referral:</strong> Rapid symptom progression, frequent falls with injury, severe dysphagia with aspiration risk, profound executive dysfunction affecting safety
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagnosis Card -->
+            <div class="card diagnosis-card" id="diagnosis-card">
+                <div class="card-header" onclick="toggleCard('diagnosis')">
+                    <div class="card-title">
+                        <div class="card-icon">🔬</div>
+                        Diagnosis
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3>MDS-PSP Diagnostic Criteria (2017) <span class="badge badge-urgent">Gold Standard</span></h3>
+                            <div class="highlight-box">
+                                <strong>Mandatory Inclusion:</strong> Age ≥40 years, gradual progression, sporadic occurrence
+                            </div>
+                            
+                            <h4>Four Functional Domains:</h4>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <h4>Ocular Motor</h4>
+                                    <p><strong>O1:</strong> Vertical supranuclear gaze palsy<br>
+                                    <strong>O2:</strong> Slow vertical saccades<br>
+                                    <strong>O3:</strong> Macro square wave jerks/eyelid-opening apraxia</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Postural Instability</h4>
+                                    <p><strong>P1:</strong> Repeated unprovoked falls within 3 years<br>
+                                    <strong>P2:</strong> Falls on pull-test within 3 years<br>
+                                    <strong>P3:</strong> >2 steps backward on pull-test</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Akinesia</h4>
+                                    <p><strong>A1:</strong> Progressive gait freezing within 3 years<br>
+                                    <strong>A2:</strong> Axial-predominant, levodopa-resistant parkinsonism<br>
+                                    <strong>A3:</strong> Parkinsonism with tremor/asymmetry/levodopa-responsive</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Cognitive Dysfunction</h4>
+                                    <p><strong>C1:</strong> Speech/language disorder (non-fluent aphasia/apraxia)<br>
+                                    <strong>C2:</strong> Frontal behavioral presentation<br>
+                                    <strong>C3:</strong> Corticobasal syndrome</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Diagnostic Certainty Levels</h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Certainty Level</th>
+                                            <th>Criteria Combinations</th>
+                                            <th>Typical Phenotype</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge badge-urgent">Probable PSP</span></td>
+                                            <td>(O1 or O2) + (P1 or P2) [RS]<br>(O1 or O2) + A1 [PGF]<br>(O1 or O2) + (A2 or A3) [P]<br>(O1 or O2) + C2 [F]</td>
+                                            <td>PSP-RS, PSP-PGF, PSP-P, PSP-F</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-caution">Possible PSP</span></td>
+                                            <td>O1 alone [OM]<br>O2 + P3 [RS]<br>A1 alone [PGF]<br>(O1 or O2) + C1 [SL]<br>(O1 or O2) + C3 [CBS]</td>
+                                            <td>PSP-OM, PSP-RS, PSP-PGF, PSP-SL, PSP-CBS</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-stable">Suggestive PSP</span></td>
+                                            <td>O2 or O3 alone [OM]<br>P1 or P2 alone [PI]<br>O3 + (P2 or P3) [RS]<br>(A2 or A3) + any clue [P]<br>C1 or C3 alone [SL/CBS]</td>
+                                            <td>Early/intermediate phenotypes</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Key Differential Diagnoses</h3>
+                            <ul>
+                                <li><strong>Idiopathic Parkinson's Disease:</strong> Excellent levodopa response, limb-predominant symptoms, hyposmia common</li>
+                                <li><strong>Multiple System Atrophy:</strong> Early autonomic dysfunction (orthostatic hypotension, severe urinary symptoms), cerebellar atrophy</li>
+                                <li><strong>Dementia with Lewy Bodies:</strong> Visual hallucinations, fluctuating cognition, REM sleep behavior disorder</li>
+                                <li><strong>Corticobasal Degeneration:</strong> Asymmetric limb dystonia, alien limb, myoclonus, cortical sensory loss</li>
+                                <li><strong>Vascular Parkinsonism:</strong> Stepwise progression, lower-body parkinsonism, MRI infarcts</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Treatment Card -->
+            <div class="card treatment-card" id="treatment-card">
+                <div class="card-header" onclick="toggleCard('treatment')">
+                    <div class="card-title">
+                        <div class="card-icon">💊</div>
+                        Treatment
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3>Multidisciplinary Team Approach <span class="badge badge-urgent">Essential</span></h3>
+                            <div class="highlight-box">
+                                Core Team: Movement disorder neurologist, physiotherapist, occupational therapist, speech-language pathologist, social worker/case manager, neuropsychologist
+                            </div>
+                            <p>Goals: Symptomatic management, rehabilitation, fall prevention, optimize quality of life, advance care planning</p>
+                        </div>
+
+                        <div class="section">
+                            <h3>Symptom-Specific Management Algorithm</h3>
+                            
+                            <h4>1. Parkinsonism <span class="badge badge-caution">Levodopa Trial Required</span></h4>
+                            <ul>
+                                <li><strong>Carbidopa/Levodopa:</strong> 25/100 mg TID, titrate to max 2000 mg/day levodopa over 4 weeks</li>
+                                <li>Maintain minimum 1-3 months before assessing response (≤30% improvement defines resistance)</li>
+                                <li>If no benefit, taper over 2 weeks and discontinue</li>
+                                <li>Avoid dopamine agonists, MAO-B inhibitors, COMT inhibitors, anticholinergics</li>
+                            </ul>
+
+                            <h4>2. Gait & Balance Impairment <span class="badge badge-urgent">Fall Prevention Priority</span></h4>
+                            <ul>
+                                <li><strong>Daily physiotherapy:</strong> Resistance training, balance exercises, gait training (60-80 min/day, 5 days/week)</li>
+                                <li><strong>Assistive devices:</strong> Weighted, wide-based walker with reverse brakes (U-Step®)</li>
+                                <li>Visual/auditory cueing for freezing of gait</li>
+                                <li>Trial amantadine 100-300 mg/day (weak evidence, monitor for psychosis)</li>
+                                <li>CoQ10 trial for 2 months (minimal evidence, low risk)</li>
+                            </ul>
+
+                            <h4>3. Dysphagia & Drooling <span class="badge badge-urgent">Aspiration Risk</span></h4>
+                            <ul>
+                                <li><strong>SLP evaluation:</strong> Modified barium swallow if silent aspiration suspected</li>
+                                <li>Postural maneuvers (chin-tuck), thickened liquids, soft/pureed foods</li>
+                                <li>Consider Lee Silverman Voice Treatment (LSVT)</li>
+                                <li><strong>PEG tube:</strong> If aspiration all textures + weight loss >10% or pneumonia</li>
+                                <li><strong>Drooling:</strong> Glycopyrronium (no CNS penetration) or botulinum toxin (risk of worsening dysphagia)</li>
+                            </ul>
+
+                            <h4>4. Speech Impairment <span class="badge badge-stable">Rehabilitation Focus</span></h4>
+                            <ul>
+                                <li>Speech therapy for dysarthria/apraxia</li>
+                                <li>LSVT may improve voice quality</li>
+                                <li>Augmentative communication devices (alphabet board, eye-gaze systems)</li>
+                                <li>Pacing techniques for palilalia</li>
+                            </ul>
+
+                            <h4>5. Behavioral Symptoms <span class="badge badge-caution">Caution with Medications</span></h4>
+                            <ul>
+                                <li><strong>Depression:</strong> SSRI (citalopram, escitalopram, sertraline) - avoid TCAs</li>
+                                <li><strong>Emotional lability/PBA:</strong> Dextromethorphan/quinidine (most effective), SSRIs as alternative</li>
+                                <li><strong>Impulsivity:</strong> Reduce/stop dopaminergics, trial non-dopaminergic SSRIs</li>
+                                <li>Apathy: Generally pharmacoresistant, focus on behavioral strategies</li>
+                            </ul>
+
+                            <h4>6. Cognitive Impairment <span class="badge badge-caution">Limited Options</span></h4>
+                            <ul>
+                                <li>NO proven symptomatic therapy for executive dysfunction</li>
+                                <li>If Alzheimer's-type memory impairment predominates: cautious trial of donepezil (worsens mobility)</li>
+                                <li>Avoid memantine (may worsen cognition)</li>
+                                <li>Occupational therapy: structured routines, daily planners, environmental modifications</li>
+                            </ul>
+
+                            <h4>7. Dystonia <span class="badge badge-stable">Botulinum Toxin</span></h4>
+                            <ul>
+                                <li><strong>Botulinum toxin injection:</strong> Limb, cervical, facial (blepharospasm) dystonia - repeat q3 months</li>
+                                <li>Avoid anticholinergics (cognitive impairment)</li>
+                                <li>Muscle relaxants (baclofen, clonazepam) only as last resort</li>
+                                <li>Eyelid-opening apraxia: neuro-ophthalmology referral</li>
+                            </ul>
+
+                            <h4>8. Sleep Disturbance <span class="badge badge-stable">Standard Approaches</span></h4>
+                            <ul>
+                                <li><strong>Insomnia:</strong> Melatonin (also for REM behavior disorder)</li>
+                                <li><strong>Daytime sleepiness:</strong> Modafinil/armodafinil 200-400 mg, methylphenidate 10-60 mg/day</li>
+                                <li><strong>⚠️ AVOID benzodiazepines</strong> - associated with faster PSP progression</li>
+                                <li>OBSTRUCTIVE SLEEP APNEA: CPAP, positioning, weight loss</li>
+                            </ul>
+
+                            <h4>9. Constipation <span class="badge badge-stable">Standard Management</span></h4>
+                            <ul>
+                                <li>Non-pharmacological: Hydration, fiber, physical activity</li>
+                                <li>Docusate stool softener, osmotic laxatives (PEG, magnesium citrate)</li>
+                                <li>Avoid stimulant laxatives long-term</li>
+                            </ul>
+
+                            <h4>10. Urinary Symptoms <span class="badge badge-stable">Urology Input</span></h4>
+                            <ul>
+                                <li><strong>Obstruction:</strong> Alpha-blockers (terazosin, doxazosin, tamsulosin)</li>
+                                <li><strong>Overactive bladder:</strong> Beta-3 agonist (mirabegron)</li>
+                                <li>Avoid antimuscarinics (cognitive effects)</li>
+                            </ul>
+                        </div>
+
+                        <div class="warning-box">
+                            <strong>⚠️ Critical Safety Alerts:</strong><br>
+                            • Benzodiazepines accelerate PSP progression - AVOID<br>
+                            • Anticholinergics worsen cognition - minimize CNS penetration<br>
+                    • Polypharmacy common - regularly review and discontinue ineffective medications
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow-up Card -->
+            <div class="card followup-card" id="followup-card">
+                <div class="card-header" onclick="toggleCard('followup')">
+                    <div class="card-title">
+                        <div class="card-icon">📈</div>
+                        Follow-up
+                    </div>
+                    <div class="expand-icon">▼</div>
+                </div>
+                <div class="card-body">
+                    <div class="card-content">
+                        <div class="section">
+                            <h3>Prognosis & Disease Monitoring <span class="badge badge-urgent">Poor Prognosis</span></h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <h4>PSP-RS (Classic)</h4>
+                                    <p>Median survival: <strong>6-8 years</strong> from symptom onset<br>
+                                    Median survival: <strong>5.3 years</strong> from diagnosis<br>
+                                    Rapid progression: wheelchair <3 years, severe dysphagia <4 years</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>PSP-P (Parkinsonism)</h4>
+                                    <p>Mean survival: <strong>11.2 years</strong><br>
+                                    Slower progression, better levodopa response initially</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>PSP-PGF (Gait Freezing)</h4>
+                                    <p>Mean survival: <strong>11.5 years</strong><br>
+                                    Can survive up to 19 years</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section">
+                            <h3>Poor Prognostic Factors <span class="badge badge-urgent">Early Palliative Care Trigger</span></h3>
+                            <ul>
+                                <li>Early falls (within first year)</li>
+                                <li>Early cognitive impairment/dementia</li>
+                                <li>Early dysphagia (within 2 years)</li>
+                                <li>PSP-RS phenotype</li>
+                                <li>Older age at onset</li>
+                                <li>Rapid symptom progression</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3>Monitoring Tools</h3>
+                            <ul>
+                                <li><strong>PSP Rating Scale (PSPRS):</strong> Recommended by ERN-RND to track progression</li>
+                                <li><strong>Clinical milestones:</strong> Walking aid requirement, wheelchair dependence, severe dysphagia, cognitive decline, recurrent falls</li>
+                                <li><strong>Cognitive monitoring:</strong> MoCA every 6-12 months, neuropsychological evaluation if declining</li>
+                                <li><strong>Functional assessment:</strong> ADLs, swallowing function, speech intelligibility</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3>Palliative Care & Advance Planning <span class="badge badge-urgent">Start Within 1st Year</span></h3>
+                            <ul>
+                                <li><strong>Initiate discussions at diagnosis:</strong> Disease trajectory, prognosis, goals of care</li>
+                                <li><strong>Advance directives:</strong> Decision-making capacity may decline within 2-3 years</li>
+                                <li><strong>Feeding decisions:</strong> PEG timing, aspiration risk management</li>
+                                <li><strong>End-of-life planning:</strong> Preferred place of care, resuscitation status</li>
+                                <li><strong>Support services:</strong> PSP Association (UK), CurePSP (US), caregiver respite</li>
+                            </ul>
+                        </div>
+
+                        <div class="section">
+                            <h3>Caregiver Support & Resources</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <h4>Educational Resources</h4>
+                                    <p>• PSP Association (UK): www.pspassociation.org.uk<br>
+                                    • CurePSP (US): www.psp.org<br>
+                                    • Association for Frontotemporal Degeneration: www.theaftd.org</p>
+                                </div>
+                                <div class="info-item">
+                                    <h4>Caregiver Burden</h4>
+                                    <p>High rates of depression, anxiety, burden - routine screening recommended<br>
+                                    Respite care essential</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="highlight-box">
+                            <strong>🔍 Key Follow-up Actions:</strong><br>
+                            • Review every 3-6 months initially, then 6-12 months<br>
+                            • Monitor for medication side effects and polypharmacy<br>
+                            • Assess fall risk and home safety at each visit<br>
+                            • Screen for depression in both patient and caregiver<br>
+                            • Reassess need for therapy services regularly
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer style="text-align: center; padding: 2rem; color: #6c757d; font-size: 0.9rem;">
+                <p>Based on BMJ Best Practice Guidelines | Last Updated: May 2024</p>
+                <p>Designed for educational purposes - clinical judgment should always be applied</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+            
+            // Toggle clicked card
+            if (!isExpanded) {
+                card.classList.add('expanded');
+            }
+            
+            // Update progress sidebar
+            updateProgressSidebar(cardId);
+        }
+
+        // Progress sidebar functionality
+        function updateProgressSidebar(activeCard) {
+            const progressItems = document.querySelectorAll('.progress-item');
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.card === activeCard) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Progress sidebar click navigation
+        document.querySelectorAll('.progress-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const cardId = item.dataset.card;
+                const card = document.getElementById(cardId + '-card');
+                
+                // Scroll to card
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Expand card
+                document.querySelectorAll('.card').forEach(c => c.classList.remove('expanded'));
+                card.classList.add('expanded');
+                
+                // Update progress
+                updateProgressSidebar(cardId);
+            });
+        });
+
+        // Scroll progress bar
+        function updateScrollProgress() {
+            const scrollBar = document.getElementById('scrollBar');
+            const scrollTop = window.pageYOffset;
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+            const scrollPercent = (scrollTop / docHeight) * 100;
+            scrollBar.style.width = scrollPercent + '%';
+        }
+
+        // Intersection Observer for progress sidebar
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -70% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const cardId = entry.target.id.replace('-card', '');
+                    updateProgressSidebar(cardId);
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Smooth scroll for better UX
+        document.addEventListener('scroll', () => {
+            updateScrollProgress();
+        });
+
+        // Initialize: expand assessment card by default
+        window.addEventListener('load', () => {
+            document.getElementById('assessment-card').classList.add('expanded');
+            updateProgressSidebar('assessment');
+        });
+
+        // Mobile sidebar toggle (for responsive)
+        const sidebar = document.getElementById('progressSidebar');
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        });
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        });
+
+        function handleSwipe() {
+            if (window.innerWidth <= 768) {
+                if (touchEndX < touchStartX - 50) {
+                    sidebar.classList.remove('open');
+                }
+                if (touchEndX > touchStartX + 50 && touchStartX < 50) {
+                    sidebar.classList.add('open');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

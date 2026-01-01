@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocaine Use Disorder - Clinical Decision Support</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --urgent: #c0392b;
+            --caution: #f39c12;
+            --stable: #27ae60;
+            --background: #ecf0f1;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --border: #bdc3c7;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --assessment: #3498db;
+            --diagnosis: #e67e22;
+            --treatment: #9b59b6;
+            --followup: #16a085;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Progress Sidebar */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: var(--primary);
+            color: white;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 2px 0 10px var(--shadow);
+            transition: transform 0.3s ease;
+        }
+
+        .progress-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .progress-item.active {
+            background: rgba(255, 255, 255, 0.15);
+            opacity: 1;
+        }
+
+        .progress-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+        }
+
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .progress-item.assessment .progress-icon {
+            background: var(--assessment);
+        }
+
+        .progress-item.diagnosis .progress-icon {
+            background: var(--diagnosis);
+        }
+
+        .progress-item.treatment .progress-icon {
+            background: var(--treatment);
+        }
+
+        .progress-item.followup .progress-icon {
+            background: var(--followup);
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 250px;
+            padding: 2rem;
+            max-width: 1200px;
+            margin-right: auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 15px var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .step-section {
+            margin-bottom: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .step-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px var(--shadow);
+            transition: all 0.3s ease;
+        }
+
+        .step-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .step-header {
+            padding: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .step-header.assessment {
+            background: linear-gradient(135deg, var(--assessment), #2980b9);
+        }
+
+        .step-header.diagnosis {
+            background: linear-gradient(135deg, var(--diagnosis), #d35400);
+        }
+
+        .step-header.treatment {
+            background: linear-gradient(135deg, var(--treatment), #8e44ad);
+        }
+
+        .step-header.followup {
+            background: linear-gradient(135deg, var(--followup), #138d75);
+        }
+
+        .step-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .step-title h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        .expand-icon {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+
+        .step-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+        }
+
+        .step-content.expanded {
+            max-height: none;
+        }
+
+        .content-inner {
+            padding: 1.5rem;
+        }
+
+        /* Severity Badges */
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin: 0.2rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .severity-badge.urgent {
+            background: var(--urgent);
+            color: white;
+        }
+
+        .severity-badge.caution {
+            background: var(--caution);
+            color: white;
+        }
+
+        .severity-badge.stable {
+            background: var(--stable);
+            color: white;
+        }
+
+        .severity-badge i {
+            font-size: 0.9rem;
+        }
+
+        /* Content Cards */
+        .content-block {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .content-block h3 {
+            color: var(--primary);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .content-block h4 {
+            color: var(--secondary);
+            font-size: 1rem;
+            margin: 0.75rem 0 0.5rem;
+        }
+
+        .content-block ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .content-block li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(189, 195, 199, 0.3);
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .content-block li:before {
+            content: "•";
+            color: var(--secondary);
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .content-block li:last-child {
+            border-bottom: none;
+        }
+
+        /* Table Styles */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+
+        .data-table tr:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+
+        .data-table td strong {
+            color: var(--secondary);
+        }
+
+        /* Algorithm Flow */
+        .algorithm-flow {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+
+        .flow-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .flow-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .flow-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--secondary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .flow-content h4 {
+            margin-bottom: 0.25rem;
+            color: var(--primary);
+        }
+
+        .flow-content p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .progress-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+
+            .step-title h2 {
+                font-size: 1.2rem;
+            }
+
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-toggle {
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 101;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: block;
+            }
+        }
+
+        /* Highlight Animation */
+        .highlight {
+            animation: highlight 2s ease-in-out;
+        }
+
+        @keyframes highlight {
+            0%, 100% {
+                background: transparent;
+            }
+            50% {
+                background: rgba(52, 152, 219, 0.2);
+            }
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+            margin-top: 3rem;
+            border-radius: 8px;
+        }
+
+        .footer p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar" id="progressSidebar">
+            <div class="progress-header">
+                <h2>Clinical Algorithm</h2>
+                <p>Progress through the steps</p>
+            </div>
+            <div class="progress-item assessment active" data-step="assessment">
+                <div class="progress-icon">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <div class="progress-text">Assessment</div>
+            </div>
+            <div class="progress-item diagnosis" data-step="diagnosis">
+                <div class="progress-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="progress-text">Diagnosis</div>
+            </div>
+            <div class="progress-item treatment" data-step="treatment">
+                <div class="progress-icon">
+                    <i class="fas fa-pills"></i>
+                </div>
+                <div class="progress-text">Treatment</div>
+            </div>
+            <div class="progress-item followup" data-step="followup">
+                <div class="progress-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="progress-text">Follow-up</div>
+            </div>
+        </aside>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-toggle" id="mobileToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="header">
+                <h1><i class="fas fa-brain"></i> Cocaine Use Disorder</h1>
+                <p>Interactive Clinical Decision Support Algorithm | BMJ Best Practice Guidelines</p>
+            </div>
+
+            <!-- Assessment Section -->
+            <section class="step-section" id="assessment">
+                <div class="step-card">
+                    <div class="step-header assessment" onclick="toggleSection('assessment')">
+                        <div class="step-title">
+                            <div class="step-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <h2>Assessment</h2>
+                        </div>
+                        <div class="expand-icon" id="assessment-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="step-content" id="assessment-content">
+                        <div class="content-inner">
+                            <!-- Emergency Assessment -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Emergency Assessment</h3>
+                                <div class="severity-badge urgent">
+                                    <i class="fas fa-ambulance"></i>
+                                    URGENT: Immediate evaluation required
+                                </div>
+                                <p><strong>Assess for signs of cocaine intoxication requiring emergency management:</strong></p>
+                                <ul>
+                                    <li>Loss of consciousness or altered mental status</li>
+                                    <li>Chest pain or cardiovascular symptoms</li>
+                                    <li>Focal neurological complaints (weakness, aphasia, visual changes)</li>
+                                    <li>Seizure activity</li>
+                                    <li>Severe agitation or psychosis</li>
+                                    <li>Hyperthermia (temperature >40°C)</li>
+                                </ul>
+                                <div class="flow-item">
+                                    <div class="flow-number">1</div>
+                                    <div class="flow-content">
+                                        <h4>If acute intoxication present:</h4>
+                                        <p>Immediate emergency department referral for acute management</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- History Taking -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-history"></i> Comprehensive History</h3>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1</div>
+                                        <div class="flow-content">
+                                            <h4>Pattern of Use</h4>
+                                            <p>Amount, frequency, route (snort, smoke, inject), binge patterns</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">2</div>
+                                        <div class="flow-content">
+                                            <h4>DSM-5-TR Criteria</h4>
+                                            <p>Screen for ≥2 criteria in 12 months (mild: 2-3, moderate: 4-5, severe: ≥6)</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">3</div>
+                                        <div class="flow-content">
+                                            <h4>Risk Assessment</h4>
+                                            <p>Overdose history, previous withdrawals, psychiatric comorbidities, suicidal ideation</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">4</div>
+                                        <div class="flow-content">
+                                            <h4>Social Determinants</h4>
+                                            <p>Housing, employment, social support, high-risk behaviors</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Key Diagnostic Factors:</h4>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Factor</th>
+                                            <th>Frequency</th>
+                                            <th>Clinical Significance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Hypertension</strong></td>
+                                            <td>Common</td>
+                                            <td>Hyperadrenergic state</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Tachycardia</strong></td>
+                                            <td>Common</td>
+                                            <td>Hyperadrenergic state</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Mydriasis</strong></td>
+                                            <td>Common</td>
+                                            <td>Adrenergic arousal</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Chest Pain</strong></td>
+                                            <td>Common</td>
+                                            <td>May indicate acute MI</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Suicidal Ideation</strong></td>
+                                            <td>Common</td>
+                                            <td><span class="severity-badge caution">High Risk</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Physical Examination -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-stethoscope"></i> Physical Examination</h3>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1</div>
+                                        <div class="flow-content">
+                                            <h4>General Appearance</h4>
+                                            <p>Agitation, diaphoresis, tremulousness, weight loss</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">2</div>
+                                        <div class="flow-content">
+                                            <h4>Route-specific Signs</h4>
+                                            <p>Nasal septum damage, track marks, oral injuries, respiratory issues</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">3</div>
+                                        <div class="flow-content">
+                                            <h4>Cardiovascular</h4>
+                                            <p>Blood pressure, heart rate, rhythm abnormalities</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">4</div>
+                                        <div class="flow-content">
+                                            <h4>Neurological</h4>
+                                            <p>Focal deficits, seizure activity, cognitive impairment</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Route-Specific Findings:</h4>
+                                <ul>
+                                    <li><strong>Intranasal:</strong> Sinusitis, nasal septum perforation, epistaxis</li>
+                                    <li><strong>Smoking:</strong> Oral burns, blisters, respiratory issues ("crack lung")</li>
+                                    <li><strong>Injection:</strong> Track marks, skin infections, abscesses</li>
+                                    <li><strong>Levamisole-contaminated:</strong> Skin necrosis, agranulocytosis, ear lobe necrosis</li>
+                                </ul>
+                            </div>
+
+                            <!-- Investigations -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-flask"></i> Initial Investigations</h3>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Test</th>
+                                            <th>Indication</th>
+                                            <th>Purpose</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Urine Toxicology</strong></td>
+                                            <td>Confirm use, forensic</td>
+                                            <td>Detects benzoylecgonine (metabolite)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>ECG</strong></td>
+                                            <td>Chest pain, tachycardia</td>
+                                            <td>Assess for MI, arrhythmias, Brugada pattern</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Cardiac Enzymes</strong></td>
+                                            <td>Chest pain suspicion</td>
+                                            <td>Rule out acute myocardial infarction</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>HIV/Hepatitis</strong></td>
+                                            <td>All patients</td>
+                                            <td>Screen for blood-borne infections</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Chest X-ray</strong></td>
+                                            <td>Dyspnea, chest pain</td>
+                                            <td>Assess for pneumothorax, pulmonary edema</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>CT Head</strong></td>
+                                            <td>Focal neurological signs</td>
+                                            <td>Rule out stroke, hemorrhage</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Risk Factors -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-exclamation-circle"></i> Risk Factors</h3>
+                                <h4>Strong Risk Factors:</h4>
+                                <div class="severity-badge caution">
+                                    <i class="fas fa-warning"></i>
+                                    Adverse childhood events (abuse, neglect, family conflict)
+                                </div>
+                                <div class="severity-badge caution">
+                                    <i class="fas fa-users"></i>
+                                    Family history of substance use disorders
+                                </div>
+                                <div class="severity-badge caution">
+                                    <i class="fas fa-pills"></i>
+                                    Polysubstance use
+                                </div>
+                                <div class="severity-badge caution">
+                                    <i class="fas fa-brain"></i>
+                                    Co-occurring mental health disorders
+                                </div>
+
+                                <h4>Other Factors:</h4>
+                                <ul>
+                                    <li><strong>Male sex:</strong> Higher prevalence in males (3995 vs 1845 per 100,000)</li>
+                                    <li><strong>Genetic predisposition:</strong> Polymorphisms affecting dopamine metabolism</li>
+                                    <li><strong>Environmental:</strong> Social marginalization, peer influence</li>
+                                    <li><strong>Route of administration:</strong> Smoking/injection increases addiction risk</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="step-section" id="diagnosis">
+                <div class="step-card">
+                    <div class="step-header diagnosis" onclick="toggleSection('diagnosis')">
+                        <div class="step-title">
+                            <div class="step-icon">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <h2>Diagnosis</h2>
+                        </div>
+                        <div class="expand-icon" id="diagnosis-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="step-content" id="diagnosis-content">
+                        <div class="content-inner">
+                            <!-- DSM-5-TR Criteria -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-book-medical"></i> DSM-5-TR Diagnostic Criteria</h3>
+                                <div class="severity-badge urgent">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Requires ≥2 criteria in 12 months
+                                </div>
+                                <p><strong>Severity classification:</strong></p>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">Mild</div>
+                                        <div class="flow-content">
+                                            <p>2-3 symptoms present</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Moderate</div>
+                                        <div class="flow-content">
+                                            <p>4-5 symptoms present</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Severe</div>
+                                        <div class="flow-content">
+                                            <p>≥6 symptoms present</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Diagnostic Criteria Checklist:</h4>
+                                <ul>
+                                    <li>Using larger amounts or over longer period than intended</li>
+                                    <li>Persistent desire or unsuccessful attempts to cut down</li>
+                                    <li>Great deal of time spent obtaining, using, or recovering from cocaine</li>
+                                    <li>Craving or strong desire to use</li>
+                                    <li>Failure to fulfill major role obligations due to use</li>
+                                    <li>Continued use despite social/interpersonal problems</li>
+                                    <li>Reduction of important activities due to use</li>
+                                    <li>Recurrent use in hazardous situations</li>
+                                    <li>Continued use despite physical/psychological problems</li>
+                                    <li>Tolerance (need for increased amounts)</li>
+                                    <li>Withdrawal symptoms or use to relieve withdrawal</li>
+                                </ul>
+
+                                <p><strong>Remission Specifiers:</strong></p>
+                                <ul>
+                                    <li><strong>Early Remission:</strong> No criteria met for 3-12 months (except craving)</li>
+                                    <li><strong>Sustained Remission:</strong> No criteria met for ≥12 months (except craving)</li>
+                                </ul>
+                            </div>
+
+                            <!-- Differential Diagnosis -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-not-equal"></i> Differential Diagnosis</h3>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Condition</th>
+                                            <th>Distinguishing Features</th>
+                                            <th>Differentiating Tests</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Amphetamine/Methamphetamine Use</strong></td>
+                                            <td>Longer-lasting effects (days vs hours), dental erosion, skin lesions</td>
+                                            <td>Urine toxicology for amphetamines</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Thyrotoxicosis</strong></td>
+                                            <td>Weight loss prominent, thyroid enlargement, bruit</td>
+                                            <td>TFTs: ↑T4, ↓TSH</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Mood Disorder</strong></td>
+                                            <td>Similar symptoms but persistent regardless of substance use</td>
+                                            <td>Clinical interview, PRIME-MD, urine screen negative</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Psychotic Disorder</strong></td>
+                                            <td>Psychosis unrelated to cocaine use episodes</td>
+                                            <td>History, urine toxicology negative</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Personality Disorder</strong></td>
+                                            <td>Long-standing pattern, may be comorbid</td>
+                                            <td>Clinical assessment over time</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Synthetic Cannabinoids/Cathinones</strong></td>
+                                            <td>Similar symptoms, not detected by standard urine screens</td>
+                                            <td>TOF spectroscopy (specialized centers)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Screening Tools -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-question-circle"></i> Screening Tools</h3>
+                                <h4>Healthcare Settings:</h4>
+                                <ul>
+                                    <li><strong>USPSTF Recommendation:</strong> Screen adults ≥18 years when treatment services available</li>
+                                    <li><strong>UK - ASSIST-Lite:</strong> Recommended for substance use screening in adults</li>
+                                    <li><strong>Trauma Centers:</strong> Bedside screening for high-risk trauma patients</li>
+                                </ul>
+
+                                <h4>Special Populations:</h4>
+                                <ul>
+                                    <li><strong>Pregnancy:</strong> Ask about substance use at all antenatal visits</li>
+                                    <li><strong>Self-report:</strong> Accurate compared with urine toxicology in pregnant women</li>
+                                    <li><strong>Workplace:</strong> Point-of-care immunoassay tests (urine/saliva)</li>
+                                </ul>
+
+                                <div class="severity-badge stable">
+                                    <i class="fas fa-check-circle"></i>
+                                    Self-report screening is reliable
+                                </div>
+                            </div>
+
+                            <!-- Diagnosis Summary -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-clipboard-list"></i> Diagnosis Summary</h3>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1</div>
+                                        <div class="flow-content">
+                                            <h4>Clinical Assessment</h4>
+                                            <p>Comprehensive history and physical examination</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">2</div>
+                                        <div class="flow-content">
+                                            <h4>Apply DSM-5-TR Criteria</h4>
+                                            <p>Count symptoms, determine severity</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">3</div>
+                                        <div class="flow-content">
+                                            <h4>Rule Out Differentials</h4>
+                                            <p>Consider other substances, medical conditions</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">4</div>
+                                        <div class="flow-content">
+                                            <h4>Document Diagnosis</h4>
+                                            <p>Specify severity, current use, remission status</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="step-section" id="treatment">
+                <div class="step-card">
+                    <div class="step-header treatment" onclick="toggleSection('treatment')">
+                        <div class="step-title">
+                            <div class="step-icon">
+                                <i class="fas fa-pills"></i>
+                            </div>
+                            <h2>Treatment</h2>
+                        </div>
+                        <div class="expand-icon" id="treatment-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="step-content" id="treatment-content">
+                        <div class="content-inner">
+                            <!-- Treatment Approach -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-cogs"></i> General Treatment Approach</h3>
+                                <div class="severity-badge urgent">
+                                    <i class="fas fa-ambulance"></i>
+                                    Acute intoxication requires emergency management first
+                                </div>
+                                <p><strong>Core Principles:</strong></p>
+                                <ul>
+                                    <li>Create welcoming, non-judgmental, trauma-sensitive environment</li>
+                                    <li>Don't require abstinence as condition for treatment initiation</li>
+                                    <li>Proactively engage patients at all stages of readiness for change</li>
+                                    <li>Address co-occurring mental and physical health conditions</li>
+                                    <li>Develop individualized treatment plans responsive to patient needs</li>
+                                    <li>Focus on therapeutic strategies over punitive measures</li>
+                                </ul>
+
+                                <p><strong>Psychosocial treatments are primary options</strong> - Pharmacotherapy has limited efficacy but may be considered in certain cases.</p>
+                            </div>
+
+                            <!-- Treatment Algorithm -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-project-diagram"></i> Treatment Algorithm</h3>
+                                
+                                <h4><i class="fas fa-chart-line"></i> Mild Cocaine Use Disorder</h4>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1st</div>
+                                        <div class="flow-content">
+                                            <h4>Drug Counseling</h4>
+                                            <p>Individual or group counseling, education, trigger identification, mutual help groups</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">If fails</div>
+                                        <div class="flow-content">
+                                            <h4>Intensive Outpatient Therapy</h4>
+                                            <p>After 2-3 months, consider contingency management or CBT</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Adjunct</div>
+                                        <div class="flow-content">
+                                            <h4>Family/Couples Therapy</h4>
+                                            <p>If patient amenable to involving family</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4><i class="fas fa-chart-line"></i> Moderate to Severe Cocaine Use Disorder</h4>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1st</div>
+                                        <div class="flow-content">
+                                            <h4>Intensive Outpatient Therapy</h4>
+                                            <p>≥9 hours/week, individual + group counseling, couples/family therapy</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Options</div>
+                                        <div class="flow-content">
+                                            <h4>Evidence-Based Psychosocial Interventions</h4>
+                                            <p>Contingency Management, CBT, Motivational Interviewing</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4><i class="fas fa-chart-line"></i> Treatment-Resistant Cases</h4>
+                                <div class="flow-item">
+                                    <div class="flow-number">1st</div>
+                                    <div class="flow-content">
+                                        <h4>Refer to Addiction Specialist</h4>
+                                        <p>After 12 weeks intensive treatment with continued relapse</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Psychosocial Interventions -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-hands-helping"></i> Psychosocial Interventions</h3>
+                                
+                                <h4>Contingency Management (CM)</h4>
+                                <div class="severity-badge stable">
+                                    <i class="fas fa-star"></i>
+                                    Strong evidence for efficacy
+                                </div>
+                                <ul>
+                                    <li>Operant behavioral techniques (voucher-based reinforcement)</li>
+                                    <li>Rewards achievement of therapeutic goals</li>
+                                    <li>Increases abstinence period and reduces drug intake</li>
+                                    <li>Large body of evidence for stimulant use disorders</li>
+                                </ul>
+
+                                <h4>Cognitive Behavioral Therapy (CBT)</h4>
+                                <ul>
+                                    <li>Recognition of triggers and teaching coping skills</li>
+                                    <li>Mixed results in trials but skills may persist after treatment</li>
+                                    <li>More effective for severe symptoms or comorbid depression</li>
+                                    <li>Computerized CBT as effective as traditional CBT</li>
+                                </ul>
+
+                                <h4>Motivational Interviewing</h4>
+                                <ul>
+                                    <li>Patient-centered counseling approach</li>
+                                    <li>Increases motivation for behavior change</li>
+                                    <li>Effective compared to no treatment</li>
+                                    <li>Less effective compared to other active interventions</li>
+                                </ul>
+                            </div>
+
+                            <!-- Pharmacotherapy -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-syringe"></i> Pharmacotherapy Options</h3>
+                                <p><strong>Emerging evidence for adjunctive medications (limited efficacy):</strong></p>
+                                
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Medication</th>
+                                            <th>Evidence</th>
+                                            <th>Best for</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Bupropion</strong></td>
+                                            <td>More efficacious than placebo</td>
+                                            <td>Co-occurring nicotine/tobacco use or depression</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Topiramate</strong></td>
+                                            <td>Some evidence from systematic review</td>
+                                            <td>Co-occurring alcohol use disorder</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Modafinil</strong></td>
+                                            <td>Mixed results</td>
+                                            <td>Patients without alcohol use disorder</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Amfetamines (extended-release)</strong></td>
+                                            <td>Systematic review supports efficacy</td>
+                                            <td>Co-occurring ADHD or alcohol use disorder</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Disulfiram</strong></td>
+                                            <td>No effect in systematic review</td>
+                                            <td>Not recommended for routine use</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="severity-badge caution">
+                                    <i class="fas fa-info-circle"></i>
+                                    Symptomatic pharmacotherapy (benzodiazepines, antipsychotics) may be warranted for severe distress
+                                </div>
+                            </div>
+
+                            <!-- Special Populations -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-user-friends"></i> Special Populations</h3>
+                                
+                                <h4><i class="fas fa-baby"></i> Pregnancy</h4>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1st</div>
+                                        <div class="flow-content">
+                                            <h4>Psychosocial Interventions</h4>
+                                            <p>Primary treatment approach, no routine pharmacotherapy</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Consider</div>
+                                        <div class="flow-content">
+                                            <h4>Inpatient Withdrawal Management</h4>
+                                            <p>Lower threshold due to risks to mother and fetus</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Specialist</div>
+                                        <div class="flow-content">
+                                            <h4>Specialized Substance Use in Pregnancy Services</h4>
+                                            <p>Comprehensive care including social support</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4><i class="fas fa-pills"></i> Secondary Substance Use</h4>
+                                <ul>
+                                    <li>Provide evidence-based treatment for all substances</li>
+                                    <li>Don't let secondary use be a barrier to care</li>
+                                    <li>Address underlying drivers of secondary use</li>
+                                    <li>Collaborate with patient if secondary use undermines progress</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="step-section" id="followup">
+                <div class="step-card">
+                    <div class="step-header followup" onclick="toggleSection('followup')">
+                        <div class="step-title">
+                            <div class="step-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h2>Follow-up</h2>
+                        </div>
+                        <div class="expand-icon" id="followup-icon">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="step-content" id="followup-content">
+                        <div class="content-inner">
+                            <!-- Monitoring -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-heartbeat"></i> Monitoring</h3>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">1</div>
+                                        <div class="flow-content">
+                                            <h4>Drug Treatment Program</h4>
+                                            <p>Regular follow-up in structured program</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">2</div>
+                                        <div class="flow-content">
+                                            <h4>Urine Drug Screening</h4>
+                                            <p>Random intervals to monitor for return to use</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">3</div>
+                                        <div class="flow-content">
+                                            <h4>Medical Follow-up</h4>
+                                            <p>Primary care for all, specialist for complex conditions</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">4</div>
+                                        <div class="flow-content">
+                                            <h4>Mental Health Follow-up</h4>
+                                            <p>For patients with suspected or known mental health conditions</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="severity-badge stable">
+                                    <i class="fas fa-calendar-check"></i>
+                                    Continuing care reduces recurrent use
+                                </div>
+                            </div>
+
+                            <!-- Complications -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Potential Complications</h3>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Complication</th>
+                                            <th>Timeframe</th>
+                                            <th>Likelihood</th>
+                                            <th>Management</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Cocaine Toxicity</strong></td>
+                                            <td>Short-term</td>
+                                            <td><span class="severity-badge urgent">Medium</span></td>
+                                            <td>Emergency management, aggressive sedation</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Hyperactive Delirium</strong></td>
+                                            <td>Short-term</td>
+                                            <td><span class="severity-badge urgent">Medium</span></td>
+                                            <td>Cooling, antipsychotics (monitor QT)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Cocaine-Induced Psychosis</strong></td>
+                                            <td>Short-term</td>
+                                            <td><span class="severity-badge caution">Medium</span></td>
+                                            <td>Antipsychotics, supportive care</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Hemorrhagic Stroke</strong></td>
+                                            <td>Short-term</td>
+                                            <td><span class="severity-badge caution">Low</span></td>
+                                            <td>Standard stroke management</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Acute MI</strong></td>
+                                            <td>Variable</td>
+                                            <td><span class="severity-badge caution">Low</span></td>
+                                            <td>Avoid beta-blockers, standard MI care</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Acute Kidney Injury</strong></td>
+                                            <td>Variable</td>
+                                            <td><span class="severity-badge caution">Medium</span></td>
+                                            <td>Supportive, treat underlying cause</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Hepatitis/HIV</strong></td>
+                                            <td>Variable</td>
+                                            <td><span class="severity-badge caution">Medium</span></td>
+                                            <td>Screening, treatment, prevention</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <h4>Chronic Complications:</h4>
+                                <ul>
+                                    <li><strong>Neurocognitive impairment:</strong> Executive dysfunction, memory deficits</li>
+                                    <li><strong>Cardiomyopathy:</strong> LV hypertrophy, arrhythmias</li>
+                                    <li><strong>Pulmonary:</strong> Fibrosis, emphysematous changes ("crack lung")</li>
+                                    <li><strong>Gastrointestinal:</strong> Ulcers, perforation, ischemia</li>
+                                    <li><strong>Dermatologic:</strong> Chronic skin ulcers, necrotizing fasciitis (rare)</li>
+                                    <li><strong>Psychiatric:</strong> Persistent mood disorders, increased suicide risk</li>
+                                </ul>
+                            </div>
+
+                            <!-- Prognosis -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-crystal-ball"></i> Prognosis</h3>
+                                
+                                <h4>Withdrawal Management:</h4>
+                                <div class="severity-badge stable">
+                                    <i class="fas fa-check-circle"></i>
+                                    Cocaine withdrawal does not require medically supervised withdrawal
+                                </div>
+                                <ul>
+                                    <li>Many patients can be safely discharged with drug counseling referral</li>
+                                    <li>Symptoms: dysphoria, fatigue, vivid dreams, increased appetite, bradycardia</li>
+                                </ul>
+
+                                <h4>Treatment Outcomes:</h4>
+                                <div class="algorithm-flow">
+                                    <div class="flow-item">
+                                        <div class="flow-number">50%</div>
+                                        <div class="flow-content">
+                                            <h4>Partial Treatment Completion</h4>
+                                            <p>In England 2022-2023, ~50% did not complete treatment successfully</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">Risk Factors</div>
+                                        <div class="flow-content">
+                                            <h4>Predictors of Relapse</h4>
+                                            <p>Younger age, frequent recent use, longer duration of use</p>
+                                        </div>
+                                    </div>
+                                    <div class="flow-item">
+                                        <div class="flow-number">90+ days</div>
+                                        <div class="flow-content">
+                                            <h4>Treatment Duration</h4>
+                                            <p>Participation >90 days associated with greater improvement</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h4>Long-term Outlook:</h4>
+                                <ul>
+                                    <li>High rates of relapse are common</li>
+                                    <li>Continuing care improves outcomes, especially with family/social issues</li>
+                                    <li>Mutual support groups helpful for maintenance</li>
+                                    <li>Addressing co-occurring disorders improves prognosis</li>
+                                    <li>Social support and stable housing are crucial for recovery</li>
+                                </ul>
+                            </div>
+
+                            <!-- Patient Education -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-user-graduate"></i> Patient Education & Prevention</h3>
+                                
+                                <h4>Secondary Prevention Measures:</h4>
+                                <ul>
+                                    <li><strong>Cardiovascular risk reduction:</strong> Diet, exercise, weight management, reduce alcohol, smoking cessation</li>
+                                    <li><strong>Harm reduction:</strong> Naloxone prescription if fentanyl contamination risk</li>
+                                    <li><strong>Fentanyl test strips:</strong> Available for drug checking in some areas</li>
+                                </ul>
+
+                                <h4>Patient Counseling Points:</h4>
+                                <ul>
+                                    <li>Discuss triggers (staying awake, performance, weight loss, chemsex)</li>
+                                    <li>Explain progression from occasional to problematic use</li>
+                                    <li>Encourage avoiding friends/family who use substances</li>
+                                    <li>Recommend mutual support groups (SAMHSA, FRANK)</li>
+                                    <li><strong>Breastfeeding:</strong> Cocaine passes into milk, bottle feed for 24h after use</li>
+                                </ul>
+
+                                <h4>Support Resources:</h4>
+                                <div class="severity-badge stable">
+                                    <i class="fas fa-phone"></i>
+                                    UK FRANK: Free 24-hour drug advice service
+                                </div>
+                                <div class="severity-badge stable">
+                                    <i class="fas fa-users"></i>
+                                    SAMHSA: Find support groups and local programs
+                                </div>
+                            </div>
+
+                            <!-- Follow-up Schedule -->
+                            <div class="content-block">
+                                <h3><i class="fas fa-calendar-alt"></i> Recommended Follow-up Schedule</h3>
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Timeframe</th>
+                                            <th>Assessment</th>
+                                            <th>Intervention</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Weekly</strong></td>
+                                            <td>Urine drug screen, cravings, mood</td>
+                                            <td>Counseling sessions, support groups</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Monthly</strong></td>
+                                            <td>Treatment progress, side effects</td>
+                                            <td>Medication review, plan adjustment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Quarterly</strong></td>
+                                            <td>Comprehensive review, complications</td>
+                                            <td>Intensify or step down treatment</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Annually</strong></td>
+                                            <td>Full medical workup, screening</td>
+                                            <td>Long-term planning, relapse prevention</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+
+                                <div class="severity-badge caution">
+                                    <i class="fas fa-clock"></i>
+                                    More frequent monitoring in early recovery or high-risk situations
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <p><i class="fas fa-info-circle"></i> This algorithm is based on BMJ Best Practice guidelines (May 2025) and ASAM/AAAP Clinical Practice Guidelines</p>
+                <p>Always use clinical judgment and consider individual patient factors</p>
+            </footer>
+        </main>
+    </div>
+
+    <script>
+        // Toggle sections
+        function toggleSection(sectionId) {
+            const content = document.getElementById(`${sectionId}-content`);
+            const icon = document.getElementById(`${sectionId}-icon`);
+            const isExpanded = content.classList.contains('expanded');
+            
+            // Close all other sections
+            document.querySelectorAll('.step-content').forEach(el => {
+                el.classList.remove('expanded');
+            });
+            document.querySelectorAll('.expand-icon').forEach(el => {
+                el.style.transform = 'rotate(0deg)';
+            });
+            
+            // Toggle current section
+            if (!isExpanded) {
+                content.classList.add('expanded');
+                icon.style.transform = 'rotate(180deg)';
+                
+                // Smooth scroll to section
+                setTimeout(() => {
+                    document.getElementById(sectionId).scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }, 200);
+            }
+        }
+
+        // Progress tracking
+        const sections = ['assessment', 'diagnosis', 'treatment', 'followup'];
+        const progressItems = document.querySelectorAll('.progress-item');
+        let currentSection = 'assessment';
+
+        // Update progress on scroll
+        window.addEventListener('scroll', () => {
+            const scrollPosition = window.scrollY + 100;
+            
+            sections.forEach(section => {
+                const element = document.getElementById(section);
+                const sectionTop = element.offsetTop;
+                const sectionHeight = element.offsetHeight;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    currentSection = section;
+                    updateProgress(section);
+                }
+            });
+        });
+
+        function updateProgress(activeSection) {
+            progressItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.step === activeSection) {
+                    item.classList.add('active');
+                }
+            });
+        }
+
+        // Click on progress items
+        progressItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const section = item.dataset.step;
+                const element = document.getElementById(section);
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Auto-expand the section
+                setTimeout(() => {
+                    toggleSection(section);
+                }, 500);
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobileToggle');
+        const progressSidebar = document.getElementById('progressSidebar');
+        
+        mobileToggle.addEventListener('click', () => {
+            progressSidebar.classList.toggle('open');
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && 
+                !progressSidebar.contains(e.target) && 
+                !mobileToggle.contains(e.target)) {
+                progressSidebar.classList.remove('open');
+            }
+        });
+
+        // Initialize: Expand assessment section by default
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                toggleSection('assessment');
+            }, 500);
+        });
+
+        // Add smooth scrolling to all anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Highlight elements when clicked
+        document.querySelectorAll('.content-block, .flow-item').forEach(element => {
+            element.addEventListener('click', function() {
+                this.classList.add('highlight');
+                setTimeout(() => {
+                    this.classList.remove('highlight');
+                }, 2000);
+            });
+        });
+
+        // Add search functionality
+        function searchAlgorithm(query) {
+            const sections = document.querySelectorAll('.step-section');
+            const results = [];
+            
+            sections.forEach(section => {
+                const text = section.textContent.toLowerCase();
+                if (text.includes(query.toLowerCase())) {
+                    results.push(section.id);
+                    // Highlight matching section
+                    const content = section.querySelector('.content-inner');
+                    if (content) {
+                        content.style.background = 'rgba(52, 152, 219, 0.1)';
+                        setTimeout(() => {
+                            content.style.background = '';
+                        }, 2000);
+                    }
+                }
+            });
+            
+            return results;
+        }
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Alt + 1-4 to jump to sections
+            if (e.altKey && e.key >= '1' && e.key <= '4') {
+                const sectionIndex = parseInt(e.key) - 1;
+                const section = sections[sectionIndex];
+                if (section) {
+                    document.getElementById(section).scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    setTimeout(() => {
+                        toggleSection(section);
+                    }, 500);
+                }
+            }
+            
+            // Alt + S to focus search (if search exists)
+            if (e.altKey && e.key === 's') {
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
