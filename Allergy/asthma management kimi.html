@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asthma Management Algorithm | NICE CKS Guidelines</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --assessment: #3498db;
+            --diagnosis: #9b59b6;
+            --treatment: #e67e22;
+            --followup: #27ae60;
+            --urgent: #e74c3c;
+            --caution: #f39c12;
+            --stable: #27ae60;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --border: #ecf0f1;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar Progress Indicator */
+        .progress-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: var(--primary);
+            padding: 2rem 1.5rem;
+            z-index: 1000;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .progress-header {
+            color: white;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .progress-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .progress-header p {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .progress-steps {
+            list-style: none;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .progress-step:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .progress-step.active {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .progress-step.completed {
+            color: white;
+            opacity: 0.9;
+        }
+
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active .step-icon {
+            transform: scale(1.1);
+        }
+
+        .progress-step.assessment .step-icon {
+            background: var(--assessment);
+        }
+
+        .progress-step.diagnosis .step-icon {
+            background: var(--diagnosis);
+        }
+
+        .progress-step.treatment .step-icon {
+            background: var(--treatment);
+        }
+
+        .progress-step.followup .step-icon {
+            background: var(--followup);
+        }
+
+        .step-text {
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .step-desc {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .checkmark {
+            color: var(--followup);
+            font-size: 1.25rem;
+            margin-left: auto;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-step.completed .checkmark {
+            opacity: 1;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .alert i {
+            font-size: 1.25rem;
+        }
+
+        .cards-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border-left: 6px solid;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            transform: translateY(-4px);
+        }
+
+        .card.assessment {
+            border-left-color: var(--assessment);
+        }
+
+        .card.diagnosis {
+            border-left-color: var(--diagnosis);
+        }
+
+        .card.treatment {
+            border-left-color: var(--treatment);
+        }
+
+        .card.followup {
+            border-left-color: var(--followup);
+        }
+
+        .card-header {
+            padding: 1.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: linear-gradient(135deg, rgba(0,0,0,0.02), transparent);
+            transition: background 0.3s ease;
+        }
+
+        .card-header:hover {
+            background: linear-gradient(135deg, rgba(0,0,0,0.04), transparent);
+        }
+
+        .card-title-section {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .assessment .card-icon { background: var(--assessment); }
+        .diagnosis .card-icon { background: var(--diagnosis); }
+        .treatment .card-icon { background: var(--treatment); }
+        .followup .card-icon { background: var(--followup); }
+
+        .card-title-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-title-content p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .expand-icon {
+            font-size: 1.25rem;
+            color: var(--text-light);
+            transition: transform 0.3s ease;
+        }
+
+        .card.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .card-content {
+            padding: 0 1.75rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease, padding 0.5s ease;
+        }
+
+        .card.expanded .card-content {
+            padding: 0 1.75rem 1.75rem;
+            max-height: 2000px;
+        }
+
+        /* Content Sections */
+        .content-section {
+            margin-bottom: 2rem;
+        }
+
+        .content-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .section-title i {
+            font-size: 1rem;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .checklist li:last-child {
+            border-bottom: none;
+        }
+
+        .checklist li i {
+            color: var(--text-light);
+            margin-top: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background: #fdf2f2;
+            color: var(--urgent);
+            border: 1px solid #fecaca;
+        }
+
+        .badge-caution {
+            background: #fffbeb;
+            color: var(--caution);
+            border: 1px solid #fed7aa;
+        }
+
+        .badge-stable {
+            background: #f0fdf4;
+            color: var(--stable);
+            border: 1px solid #bbf7d0;
+        }
+
+        .algorithm-path {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border: 1px solid var(--border);
+        }
+
+        .path-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .age-group {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            border-left: 4px solid var(--assessment);
+        }
+
+        .age-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .age-group h4 {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .age-group p {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .flow-step {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .flow-step::after {
+            content: "↓";
+            position: absolute;
+            bottom: -1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--text-light);
+            font-size: 1.25rem;
+        }
+
+        .flow-step:last-child::after {
+            display: none;
+        }
+
+        .step-header {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .step-content {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .criteria-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .criteria-title {
+            font-weight: 600;
+            color: #0c4a6e;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .criteria-list {
+            list-style: none;
+        }
+
+        .criteria-list li {
+            padding: 0.25rem 0;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .criteria-list li i {
+            color: #0284c7;
+            margin-top: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #34495e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn-secondary {
+            background: #ecf0f1;
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background: #bdc3c7;
+        }
+
+        .btn-urgent {
+            background: var(--urgent);
+            color: white;
+        }
+
+        .btn-urgent:hover {
+            background: #c0392b;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .progress-sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .progress-sidebar.mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .mobile-menu-toggle {
+                display: block;
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 1001;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 0.75rem;
+                cursor: pointer;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-header {
+                padding: 1.25rem;
+            }
+            
+            .card-title-section {
+                gap: 1rem;
+            }
+            
+            .card-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+            
+            .card-title-content h2 {
+                font-size: 1.25rem;
+            }
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Sidebar -->
+        <aside class="progress-sidebar" id="progressSidebar">
+            <div class="progress-header">
+                <h2>
+                    <i class="fas fa-lungs"></i>
+                    Asthma Algorithm
+                </h2>
+                <p>Interactive Clinical Decision Support</p>
+                <div class="alert">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Follow each step systematically to ensure comprehensive assessment and management</span>
+                </div>
+            </div>
+            
+            <ul class="progress-steps">
+                <li class="progress-step assessment active" data-step="assessment">
+                    <div class="step-icon">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                    <div class="step-text">
+                        <div class="step-title">Assessment</div>
+                        <div class="step-desc">History, examination & red flags</div>
+                    </div>
+                    <i class="fas fa-check-circle checkmark"></i>
+                </li>
+                
+                <li class="progress-step diagnosis" data-step="diagnosis">
+                    <div class="step-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <div class="step-text">
+                        <div class="step-title">Diagnosis</div>
+                        <div class="step-desc">Objective tests & differential</div>
+                    </div>
+                    <i class="fas fa-check-circle checkmark"></i>
+                </li>
+                
+                <li class="progress-step treatment" data-step="treatment">
+                    <div class="step-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div class="step-text">
+                        <div class="step-title">Treatment</div>
+                        <div class="step-desc">Pharmacological management</div>
+                    </div>
+                    <i class="fas fa-check-circle checkmark"></i>
+                </li>
+                
+                <li class="progress-step followup" data-step="followup">
+                    <div class="step-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="step-text">
+                        <div class="step-title">Follow-up</div>
+                        <div class="step-desc">Monitoring & referral</div>
+                    </div>
+                    <i class="fas fa-check-circle checkmark"></i>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <h1><i class="fas fa-lungs"></i> Asthma Management Algorithm</h1>
+                <p class="subtitle">Based on NICE CKS Guidelines (May 2025) | BTS/NICE/SIGN NG245</p>
+                <div class="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span><strong>Critical:</strong> Do not confirm asthma diagnosis without objective testing. Always assess severity and refer urgently when red flags present.</span>
+                </div>
+            </header>
+
+            <div class="cards-container">
+                <!-- Assessment Card -->
+                <div class="card assessment expanded" id="assessment-card">
+                    <div class="card-header" onclick="toggleCard('assessment')">
+                        <div class="card-title-section">
+                            <div class="card-icon">
+                                <i class="fas fa-clipboard-check"></i>
+                            </div>
+                            <div class="card-title-content">
+                                <h2>Assessment & Initial Evaluation</h2>
+                                <p>Systematic history and examination to suspect asthma and identify red flags</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-history"></i>
+                                Key History Questions
+                            </h3>
+                            <ul class="checklist">
+                                <li>
+                                    <i class="fas fa-square"></i>
+                                    <span><strong>Symptom pattern:</strong> Wheeze, cough, breathlessness, chest tightness - variable over time & intensity</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-square"></i>
+                                    <span><strong>Triggers:</strong> Exercise, allergens (dust, pollen, pets), viral infections, cold air, emotions, drugs (NSAIDs/β-blockers)</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-square"></i>
+                                    <span><strong>Risk factors:</strong> Personal/family atopy, smoking exposure, prematurity, low birth weight, obesity</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-square"></i>
+                                    <span><strong>Occupational history:</strong> High-risk jobs (baking, printing, healthcare, animal handling) - symptoms better away from work?</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-square"></i>
+                                    <span><strong>Severity indicators:</strong> Previous ED visits, hospital admissions, ICU admissions, mechanical ventilation</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-square"></i>
+                                    <span><strong>Comorbidities:</strong> Allergic rhinitis, sinusitis, GERD, anxiety/depression, obesity</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-stethoscope"></i>
+                                Examination Findings
+                            </h3>
+                            <div class="algorithm-path">
+                                <div class="path-title">Normal examination does NOT exclude asthma</div>
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-check"></i>
+                                        <span>Vital signs: RR, HR, O₂ saturation, temperature</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check"></i>
+                                        <span>Chest: Expiratory polyphonic wheeze (may be absent), use of accessory muscles</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check"></i>
+                                        <span>Nasal: Signs of allergic rhinitis, nasal polyps</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check"></i>
+                                        <span>Growth: Height/weight (children) - assess for faltering growth</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Critical Red Flags
+                            </h3>
+                            <div class="criteria-box">
+                                <div class="criteria-title">
+                                    <i class="fas fa-flag"></i>
+                                    Life-Threatening Features
+                                </div>
+                                <ul class="criteria-list">
+                                    <li><i class="fas fa-arrow-right"></i>Cyanosis, drowsiness, exhaustion</li>
+                                    <li><i class="fas fa-arrow-right"></i>SpO₂ <92% on air</li>
+                                    <li><i class="fas fa-arrow-right"></i>PEF <33% predicted</li>
+                                    <li><i class="fas fa-arrow-right"></i>Hypotension, bradycardia, arrhythmia</li>
+                                    <li><i class="fas fa-arrow-right"></i>'Silent chest' on auscultation</li>
+                                    <li><i class="fas fa-arrow-right"></i>Unable to speak in full sentences</li>
+                                </ul>
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn btn-urgent" onclick="showAction('emergency')">
+                                    <i class="fas fa-ambulance"></i>
+                                    Emergency Referral
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diagnosis Card -->
+                <div class="card diagnosis" id="diagnosis-card">
+                    <div class="card-header" onclick="toggleCard('diagnosis')">
+                        <div class="card-title-section">
+                            <div class="card-icon">
+                                <i class="fas fa-microscope"></i>
+                            </div>
+                            <div class="card-title-content">
+                                <h2>Objective Diagnosis</h2>
+                                <p>Confirm diagnosis with objective tests based on age group</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-user"></i>
+                                Age-Specific Diagnostic Pathways
+                            </h3>
+                            
+                            <div class="age-group">
+                                <h4>Adults & Young People (>16 years)</h4>
+                                <div class="flowchart">
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-vial"></i>
+                                            Step 1: FeNO & Eosinophils
+                                        </div>
+                                        <div class="step-content">
+                                            <strong>Diagnose if:</strong> FeNO ≥50 ppb OR Blood eosinophils > upper limit of normal
+                                        </div>
+                                    </div>
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-lungs"></i>
+                                            Step 2: Spirometry (if Step 1 negative)
+                                        </div>
+                                        <div class="step-content">
+                                            <strong>Diagnose if:</strong> FEV₁ increase ≥12% AND ≥200ml post-bronchodilator
+                                        </div>
+                                    </div>
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-chart-line"></i>
+                                            Step 3: Peak Flow Variability (if spirometry unavailable)
+                                        </div>
+                                        <div class="step-content">
+                                            <strong>Diagnose if:</strong> ≥20% variability over 2 weeks (twice daily readings)
+                                        </div>
+                                    </div>
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-hospital"></i>
+                                            Step 4: Specialist Referral
+                                        </div>
+                                        <div class="step-content">
+                                            Bronchial challenge test if still suspected but tests negative
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="age-group">
+                                <h4>Children (5-16 years)</h4>
+                                <div class="flowchart">
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-vial"></i>
+                                            Step 1: FeNO
+                                        </div>
+                                        <div class="step-content">
+                                            <strong>Diagnose if:</strong> FeNO ≥35 ppb
+                                        </div>
+                                    </div>
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-lungs"></i>
+                                            Step 2: Spirometry (if FeNO <35)
+                                        </div>
+                                        <div class="step-content">
+                                            <strong>Diagnose if:</strong> FEV₁ increase ≥12% post-bronchodilator
+                                        </div>
+                                    </div>
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-chart-line"></i>
+                                            Step 3: Peak Flow Variability
+                                        </div>
+                                        <div class="step-content">
+                                            <strong>Diagnose if:</strong> ≥20% variability over 2 weeks
+                                        </div>
+                                    </div>
+                                    <div class="flow-step">
+                                        <div class="step-header">
+                                            <i class="fas fa-allergies"></i>
+                                            Step 4: Allergy Testing
+                                        </div>
+                                        <div class="step-content">
+                                            Skin prick test for house dust mite OR total IgE + eosinophils >0.5 x10⁹/L
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="age-group">
+                                <h4>Children Under 5 Years</h4>
+                                <p><strong>Clinical diagnosis:</strong> Trial of low-dose ICS for 8-12 weeks. Response confirms diagnosis. Re-assess at age 5 with objective tests.</p>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-clipboard-list"></i>
+                                Differential Diagnosis
+                            </h3>
+                            <div class="criteria-box">
+                                <div class="criteria-title">
+                                    <i class="fas fa-question-circle"></i>
+                                    Consider alternatives when:
+                                </div>
+                                <ul class="criteria-list">
+                                    <li><i class="fas fa-arrow-right"></i>Persistent productive cough with purulent sputum → Bronchiectasis</li>
+                                    <li><i class="fas fa-arrow-right"></i>Onset >35 years + smoking history → COPD</li>
+                                    <li><i class="fas fa-arrow-right"></i>Prominent systemic features → TB, lung cancer</li>
+                                    <li><i class="fas fa-arrow-right"></i>Dry cough + crackles → Interstitial lung disease</li>
+                                    <li><i class="fas fa-arrow-right"></i>Paroxysmal cough with vomiting → Pertussis</li>
+                                    <li><i class="fas fa-arrow-right"></i>Inspiratory stridor → Foreign body, laryngeal obstruction</li>
+                                    <li><i class="fas fa-arrow-right"></i>Orthopnea + edema → Heart failure</li>
+                                    <li><i class="fas fa-arrow-right"></i>Dizziness + tingling → Panic attack/breathing pattern disorder</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-tags"></i>
+                                Severity Indicators
+                            </h3>
+                            <span class="badge badge-urgent">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Urgent Referral: Life-threatening features, diagnostic uncertainty
+                            </span>
+                            <span class="badge badge-caution">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Caution: Atypical symptoms, poor response to treatment
+                            </span>
+                            <span class="badge badge-stable">
+                                <i class="fas fa-check-circle"></i>
+                                Stable: Classic symptoms + positive objective tests
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Treatment Card -->
+                <div class="card treatment" id="treatment-card">
+                    <div class="card-header" onclick="toggleCard('treatment')">
+                        <div class="card-title-section">
+                            <div class="card-icon">
+                                <i class="fas fa-pills"></i>
+                            </div>
+                            <div class="card-title-content">
+                                <h2>Treatment Strategy</h2>
+                                <p>Age-appropriate pharmacological management & inhaler technique</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-user-md"></i>
+                                Initial Treatment by Age Group
+                            </h3>
+                            
+                            <div class="age-group">
+                                <h4>Adults & Young People (≥12 years)</h4>
+                                <div class="algorithm-path">
+                                    <div class="path-title">First-line: Anti-Inflammatory Reliever (AIR) Therapy</div>
+                                    <ul class="checklist">
+                                        <li>
+                                            <i class="fas fa-prescription-bottle"></i>
+                                            <span><strong>Low-dose ICS/formoterol</strong> as needed for symptom relief</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-sync"></i>
+                                            <span>If using ≥3 times/week → Switch to <strong>Maintenance & Reliever Therapy (MART)</strong></span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-layer-group"></i>
+                                            <span>Continue MART with low-dose ICS/formoterol (maintenance + as-needed reliever)</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>If uncontrolled: <strong>Moderate-dose MART</strong></span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-plus"></i>
+                                            <span>Still uncontrolled? Add LTRA or LAMA for 8-12 week trial</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-hospital"></i>
+                                            <span>Persistent symptoms → <strong>Refer to asthma specialist</strong></span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="age-group">
+                                <h4>Children (5-11 years)</h4>
+                                <div class="algorithm-path">
+                                    <div class="path-title">First-line: Paediatric Low-dose ICS</div>
+                                    <ul class="checklist">
+                                        <li>
+                                            <i class="fas fa-prescription-bottle"></i>
+                                            <span><strong>Twice-daily paediatric low-dose ICS</strong> + SABA as needed</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-child"></i>
+                                            <span>If child can manage MART: Consider <strong>paediatric low-dose MART</strong> (off-label)</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-plus"></i>
+                                            <span>If uncontrolled: Add <strong>LTRA trial</strong> (8-12 weeks)</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-layer-group"></i>
+                                            <span>Still uncontrolled: <strong>ICS/LABA combination</strong> + SABA</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>Next step: <strong>Moderate-dose ICS/LABA</strong></span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-hospital"></i>
+                                            <span>Persistent symptoms → <strong>Paediatric specialist referral</strong></span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="age-group">
+                                <h4>Children Under 5 Years</h4>
+                                <div class="algorithm-path">
+                                    <div class="path-title">Trial of Treatment Approach</div>
+                                    <ul class="checklist">
+                                        <li>
+                                            <i class="fas fa-prescription-bottle"></i>
+                                            <span><strong>8-12 week trial</strong> of paediatric low-dose ICS twice daily</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-check"></i>
+                                            <span><strong>Response confirms diagnosis:</strong> Continue treatment & review</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-times"></i>
+                                            <span><strong>No response:</strong> Check technique, adherence, environment, reconsider diagnosis</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-arrow-up"></i>
+                                            <span>Uncontrolled: Step up to <strong>moderate-dose ICS</strong></span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-plus"></i>
+                                            <span>Add <strong>LTRA</strong> if still uncontrolled</span>
+                                        </li>
+                                        <li>
+                                            <i class="fas fa-hospital"></i>
+                                            <span>Refer to paediatric specialist if no improvement</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-inhaler"></i>
+                                Inhaler Technique & Devices
+                            </h3>
+                            <div class="criteria-box">
+                                <div class="criteria-title">
+                                    <i class="fas fa-tools"></i>
+                                    Critical Management Points:
+                                </div>
+                                <ul class="criteria-list">
+                                    <li><i class="fas fa-arrow-right"></i>NEVER prescribe SABA without concomitant ICS</li>
+                                    <li><i class="fas fa-arrow-right"></i>Check technique at EVERY consultation</li>
+                                    <li><i class="fas fa-arrow-right"></i>Prescribe spacer with pMDI (especially children)</li>
+                                    <li><i class="fas fa-arrow-right"></i>Consider environmental impact - prefer DPIs when suitable</li>
+                                    <li><i class="fas fa-arrow-right"></i>Ensure dose counters on inhalers</li>
+                                    <li><i class="fas fa-arrow-right"></i>Provide written personalised asthma action plan</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-file-medical"></i>
+                                Personalised Asthma Action Plan (PAAP)
+                            </h3>
+                            <ul class="checklist">
+                                <li>
+                                    <i class="fas fa-clipboard"></i>
+                                    <span><strong>Green Zone (Well controlled):</strong> Continue maintenance therapy, no symptoms, normal activities</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <span><strong>Yellow Zone (Worsening):</strong> Increase reliever (AIR/MART), consider quadrupling ICS dose (adults), start oral prednisolone if needed</span>
+                                </li>
+                                <li>
+                                    <i class="fas fa-ambulance"></i>
+                                    <span><strong>Red Zone (Emergency):</strong> Call 999 if reliever needed every 1-3 minutes or symptoms not improving after 6-10 puffs</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Follow-up Card -->
+                <div class="card followup" id="followup-card">
+                    <div class="card-header" onclick="toggleCard('followup')">
+                        <div class="card-title-section">
+                            <div class="card-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="card-title-content">
+                                <h2>Follow-up & Monitoring</h2>
+                                <p>Regular review, stepping therapy, and referral criteria</p>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    
+                    <div class="card-content">
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-calendar-check"></i>
+                                Review Schedule
+                            </h3>
+                            <div class="algorithm-path">
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-calendar-alt"></i>
+                                        <span><strong>Minimum:</strong> Annual review (more frequent if uncontrolled)</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-exclamation"></i>
+                                        <span><strong>Post-exacerbation:</strong> Within 2 working days of discharge</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-user-md"></i>
+                                        <span><strong>Pregnancy:</strong> Early pregnancy & post-partum review</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-child"></i>
+                                        <span><strong>Children:</strong> Every 3-6 months, monitor growth (height/weight)</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-tasks"></i>
+                                Review Components
+                            </h3>
+                            <div class="flowchart">
+                                <div class="flow-step">
+                                    <div class="step-header">
+                                        <i class="fas fa-inhaler"></i>
+                                        1. Inhaler Technique & Adherence
+                                    </div>
+                                    <div class="step-content">
+                                        Observe technique, check prescription records, ask about barriers
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="step-header">
+                                        <i class="fas fa-chart-bar"></i>
+                                        2. Asthma Control Assessment
+                                    </div>
+                                    <div class="step-content">
+                                        Symptoms (day/night), reliever use (>2 inhalers/year = poor control), exacerbations, time off work/school
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="step-header">
+                                        <i class="fas fa-vial"></i>
+                                        3. Objective Measures
+                                    </div>
+                                    <div class="step-content">
+                                        FeNO monitoring (if available), spirometry/PEF, consider before/after treatment changes
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="step-header">
+                                        <i class="fas fa-shield-alt"></i>
+                                        4. Risk Factors & Comorbidities
+                                    </div>
+                                    <div class="step-content">
+                                        Smoking cessation, weight management, rhinitis/sinusitis, GERD, anxiety/depression
+                                    </div>
+                                </div>
+                                <div class="flow-step">
+                                    <div class="step-header">
+                                        <i class="fas fa-file-medical"></i>
+                                        5. Action Plan & Education
+                                    </div>
+                                    <div class="step-content">
+                                        Review/update PAAP, provide educational materials, discuss triggers
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-arrows-alt-v"></i>
+                                Stepping Therapy
+                            </h3>
+                            
+                            <div class="algorithm-path">
+                                <div class="path-title">Stepping Up (if uncontrolled for 8-12 weeks)</div>
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>Address adherence, technique, triggers first</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>Increase maintenance ICS dose OR add LTRA/LAMA</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-arrow-up"></i>
+                                        <span>Consider MART regimen if not already on it</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-hospital"></i>
+                                        <span>Refer to specialist if uncontrolled on moderate-dose MART + LTRA/LAMA</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="algorithm-path" style="margin-top: 1.5rem;">
+                                <div class="path-title">Stepping Down (if well controlled for 8-12 weeks)</div>
+                                <ul class="checklist">
+                                    <li>
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Discuss risks/benefits with patient</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Reduce dose gradually (e.g., 25-50% every 8-12 weeks)</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Monitor symptoms closely</span>
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-arrow-down"></i>
+                                        <span>Aim for lowest dose maintaining control</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-hospital-alt"></i>
+                                Specialist Referral Criteria
+                            </h3>
+                            <div class="criteria-box">
+                                <div class="criteria-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Urgent Referral (Red Flags)
+                                </div>
+                                <ul class="criteria-list">
+                                    <li><i class="fas fa-arrow-right"></i>Life-threatening or near-fatal asthma</li>
+                                    <li><i class="fas fa-arrow-right"></i>Hospital admission/ED attendance despite treatment</li>
+                                    <li><i class="fas fa-arrow-right"></i>Using ≥3 SABA inhalers/year</li>
+                                    <li><i class="fas fa-arrow-right"></i>Occupational asthma (refer within 6 weeks)</li>
+                                </ul>
+                            </div>
+
+                            <div class="criteria-box" style="margin-top: 1rem;">
+                                <div class="criteria-title">
+                                    <i class="fas fa-question-circle"></i>
+                                    Routine Referral
+                                </div>
+                                <ul class="criteria-list">
+                                    <li><i class="fas fa-arrow-right"></i>Diagnostic uncertainty</li>
+                                    <li><i class="fas fa-arrow-right"></i>Persistent symptoms despite optimized therapy for 3-6 months</li>
+                                    <li><i class="fas fa-arrow-right"></i>Poor control on high-dose ICS</li>
+                                    <li><i class="fas fa-arrow-right"></i>Asthma + COPD overlap syndrome</li>
+                                    <li><i class="fas fa-arrow-right"></i>Suspected severe/difficult asthma</li>
+                                    <li><i class="fas fa-arrow-right"></i>Children <5 years not responding to treatment</li>
+                                    <li><i class="fas fa-arrow-right"></i>Food allergy/anaphylaxis + asthma (children)</li>
+                                    <li><i class="fas fa-arrow-right"></i>Significant treatment side effects (e.g., faltering growth)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="content-section">
+                            <h3 class="section-title">
+                                <i class="fas fa-tags"></i>
+                                Asthma Control Status
+                            </h3>
+                            <span class="badge badge-urgent">
+                                <i class="fas fa-times-circle"></i>
+                                Poor Control: ≥3 SABA/week, night symptoms, ≥2 OCS courses/year, time off work/school
+                            </span>
+                            <span class="badge badge-caution">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Partial Control: Some symptoms, occasional reliever use, 1 exacerbation/year
+                            </span>
+                            <span class="badge badge-stable">
+                                <i class="fas fa-check-circle"></i>
+                                Good Control: No day/night symptoms, no exacerbations, normal activity, PEF >80% predicted
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Card toggle functionality
+        function toggleCard(cardId) {
+            const card = document.getElementById(cardId + '-card');
+            const isExpanded = card.classList.contains('expanded');
+            
+            // Close all cards
+            document.querySelectorAll('.card').forEach(c => {
+                c.classList.remove('expanded');
+            });
+            
+            // Open clicked card if it wasn't already expanded
+            if (!isExpanded) {
+                card.classList.add('expanded');
+                
+                // Smooth scroll to card
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            }
+            
+            // Update progress indicator
+            updateProgress(cardId);
+        }
+
+        // Progress indicator functionality
+        function updateProgress(currentStep) {
+            const steps = document.querySelectorAll('.progress-step');
+            let foundActive = false;
+            
+            steps.forEach((step, index) => {
+                const stepId = step.dataset.step;
+                
+                if (stepId === currentStep) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                    foundActive = true;
+                } else if (foundActive) {
+                    step.classList.remove('active');
+                    step.classList.remove('completed');
+                } else {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                }
+            });
+        }
+
+        // Progress step click handler
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.addEventListener('click', () => {
+                const targetStep = step.dataset.step;
+                const targetCard = document.getElementById(targetStep + '-card');
+                
+                // Close all cards
+                document.querySelectorAll('.card').forEach(c => {
+                    c.classList.remove('expanded');
+                });
+                
+                // Open target card
+                targetCard.classList.add('expanded');
+                
+                // Update progress
+                updateProgress(targetStep);
+                
+                // Smooth scroll
+                setTimeout(() => {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+        const progressSidebar = document.getElementById('progressSidebar');
+        
+        mobileMenuToggle.addEventListener('click', () => {
+            progressSidebar.classList.toggle('mobile-open');
+        });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 1024 && 
+                !progressSidebar.contains(e.target) && 
+                !mobileMenuToggle.contains(e.target)) {
+                progressSidebar.classList.remove('mobile-open');
+            }
+        });
+
+        // Auto-expand first card on load
+        window.addEventListener('load', () => {
+            document.getElementById('assessment-card').classList.add('expanded');
+            updateProgress('assessment');
+        });
+
+        // Scroll spy to update progress indicator
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const cards = document.querySelectorAll('.card');
+                const scrollPosition = window.scrollY + 200;
+                
+                cards.forEach(card => {
+                    const cardTop = card.offsetTop;
+                    const cardHeight = card.offsetHeight;
+                    const cardId = card.id.replace('-card', '');
+                    
+                    if (scrollPosition >= cardTop && scrollPosition < cardTop + cardHeight) {
+                        updateProgress(cardId);
+                    }
+                });
+            }, 50);
+        });
+
+        // Action button handler
+        function showAction(actionType) {
+            switch(actionType) {
+                case 'emergency':
+                    alert('🚨 EMERGENCY REFERRAL\n\nImmediate actions:\n1. Call 999 for ambulance\n2. Give high-flow oxygen (94-98% target)\n3. Nebulised salbutamol 5mg + ipratropium 0.5mg\n4. Oral prednisolone 40-50mg immediately\n5. Prepare for emergency transfer');
+                    break;
+                case 'urgent':
+                    alert('⚠️ Urgent Specialist Referral\n\nRefer to respiratory specialist/rapid access clinic within 2 weeks for:\n- Diagnostic uncertainty\n- Suspected occupational asthma\n- Poor control despite moderate-dose therapy');
+                    break;
+            }
+        }
+
+        // Smooth scrolling for internal links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Add fade-in animation to cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                const currentStep = document.querySelector('.progress-step.active');
+                const nextStep = currentStep?.nextElementSibling;
+                if (nextStep) {
+                    nextStep.click();
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                const currentStep = document.querySelector('.progress-step.active');
+                const prevStep = currentStep?.previousElementSibling;
+                if (prevStep) {
+                    prevStep.click();
+                }
+            }
+        });
+
+        // Print functionality
+        function printAlgorithm() {
+            window.print();
+        }
+
+        // Reset algorithm
+        function resetAlgorithm() {
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('expanded');
+            });
+            document.getElementById('assessment-card').classList.add('expanded');
+            updateProgress('assessment');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add copy-to-clipboard functionality for checklists
+        document.querySelectorAll('.checklist li').forEach(item => {
+            item.addEventListener('dblclick', () => {
+                const text = item.textContent;
+                navigator.clipboard.writeText(text).then(() => {
+                    const originalIcon = item.querySelector('i').className;
+                    item.querySelector('i').className = 'fas fa-check text-green-500';
+                    setTimeout(() => {
+                        item.querySelector('i').className = originalIcon;
+                    }, 1000);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
