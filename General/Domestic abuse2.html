@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DA Clinical Navigator - Primary Care</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --color-urgent: #d32f2f;       /* Red for Danger/Immediate Action */
+            --color-urgent-bg: #ffcdd2;
+            --color-caution: #f57c00;      /* Orange for High Risk/Red Flags */
+            --color-safe: #2e7d32;         /* Green for Safe/Validation */
+            --color-safe-bg: #e8f5e9;
+            --color-info: #1565c0;         /* Blue for Investigation/General */
+            --color-info-bg: #e3f2fd;
+            --color-neutral: #37474f;      /* Dark Grey for Text */
+            --color-bg: #f5f7fa;
+            --color-surface: #ffffff;
+            
+            /* Spacing & Typography */
+            --spacing-sm: 8px;
+            --spacing-md: 16px;
+            --spacing-lg: 24px;
+            --radius: 8px;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--color-bg);
+            color: var(--color-neutral);
+            margin: 0;
+            padding: 0;
+            line-height: 1.5;
+        }
+
+        /* --- Safety Header --- */
+        .safety-header {
+            background-color: var(--color-neutral);
+            color: white;
+            padding: var(--spacing-sm) var(--spacing-md);
+            text-align: right;
+            font-size: 0.9rem;
+        }
+        .safety-exit {
+            text-decoration: none;
+            color: #ff5252;
+            font-weight: bold;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+        }
+
+        /* --- Main Layout --- */
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+            display: grid;
+            gap: var(--spacing-lg);
+            grid-template-columns: 1fr;
+        }
+
+        /* --- Hero / Search --- */
+        .hero-section {
+            text-align: center;
+            padding: var(--spacing-lg) 0;
+            animation: fadeIn 0.8s ease-out;
+        }
+        h1 {
+            margin: 0;
+            color: var(--color-neutral);
+            font-size: 2rem;
+        }
+        .subtitle {
+            color: #607d8b;
+            margin-top: var(--spacing-sm);
+        }
+        .search-box {
+            margin-top: var(--spacing-md);
+            position: relative;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #cfd8dc;
+            border-radius: 30px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .search-input:focus {
+            border-color: var(--color-info);
+            outline: none;
+        }
+
+        /* --- Dynamic Grid --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        /* --- Cards --- */
+        .card {
+            background: var(--color-surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            border-left: 5px solid transparent;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+
+        .card-header {
+            padding: var(--spacing-md);
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body {
+            padding: var(--spacing-md);
+            flex-grow: 1;
+        }
+
+        /* Card Types */
+        .card.urgent { border-left-color: var(--color-urgent); }
+        .card.urgent .card-header { background-color: var(--color-urgent-bg); color: var(--color-urgent); }
+        
+        .card.high-risk { border-left-color: var(--color-caution); }
+        .card.high-risk .card-header { background-color: #fff3e0; color: var(--color-caution); }
+
+        .card.investigation { border-left-color: var(--color-info); }
+        .card.investigation .card-header { background-color: var(--color-info-bg); color: var(--color-info); }
+
+        .card.support { border-left-color: var(--color-safe); }
+        .card.support .card-header { background-color: var(--color-safe-bg); color: var(--color-safe); }
+
+        /* --- Content Elements --- */
+        ul.checklist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        ul.checklist li {
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee;
+            display: flex;
+            align-items: flex-start;
+        }
+        ul.checklist li:last-child { border-bottom: none; }
+        ul.checklist li::before {
+            content: '•';
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .urgent li::before { color: var(--color-urgent); content: '⚠'; }
+        .investigation li::before { color: var(--color-info); content: '?'; }
+        .support li::before { color: var(--color-safe); content: '✓'; }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: auto;
+        }
+        .badge-urgent { background: var(--color-urgent); color: white; }
+        .badge-risk { background: var(--color-caution); color: white; }
+
+        /* Tables */
+        .mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        .mini-table th, .mini-table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .mini-table th { color: #78909c; font-weight: 600; }
+
+        /* Mnemonic Box */
+        .mnemonic-box {
+            background: #eceff1;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            border: 1px solid #cfd8dc;
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: center;
+            transition: opacity 0.2s;
+        }
+        .action-btn:hover { opacity: 0.9; }
+        .btn-999 { background-color: var(--color-urgent); color: white; animation: pulse 2s infinite; }
+        .btn-support { background-color: var(--color-info); color: white; }
+
+        /* Highlights */
+        .highlight-text {
+            background-color: #fff9c4;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
+        }
+
+        /* Utilities */
+        .hidden { display: none; }
+        .grid-span-2 { grid-column: span 2; }
+        @media(max-width: 768px) {
+            .grid-span-2 { grid-column: span 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Safety Exit -->
+    <div class="safety-header">
+        <a href="https://www.bbc.co.uk/weather" class="safety-exit">Quick Exit (Weather)</a>
+    </div>
+
+    <div class="app-container">
+        
+        <!-- Header & Filter -->
+        <header class="hero-section">
+            <h1>Domestic Abuse Clinical Navigator</h1>
+            <div class="subtitle">Primary Care Reference: Investigation & Management</div>
+            
+            <div class="search-box">
+                <input type="text" id="filterInput" class="search-input" placeholder="Search symptoms, actions, or mnemonics..." autocomplete="off">
+            </div>
+        </header>
+
+        <div class="dashboard-grid" id="mainGrid">
+
+            <!-- 1. IMMEDIATE RISK (RED) -->
+            <div class="card urgent grid-span-2" data-category="emergency 999 danger">
+                <div class="card-header">
+                    <span>🚨 IMMEDIATE DANGER?</span>
+                    <span class="badge badge-urgent">ACT NOW</span>
+                </div>
+                <div class="card-body">
+                    <p style="margin-top:0;"><strong>If patient feels unsafe to go home OR expresses fear of immediate serious harm:</strong></p>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px;">
+                        <ul class="checklist urgent">
+                            <li><strong>Believes partner will kill them</strong></li>
+                            <li><strong>Planning to leave relationship</strong> <br><span class="highlight-text">*High risk time*</span></li>
+                            <li>Recent/severe escalation</li>
+                        </ul>
+                        <div style="border-left: 1px solid #eee; padding-left: 16px;">
+                            <button class="action-btn btn-999" onclick="copySilentSolution()">POLICE 999 (Silent Solution Info)</button>
+                            <ul class="checklist urgent" style="margin-top: 10px;">
+                                <li>Do not let them go home alone if unsafe</li>
+                                <li>Initiate Urgent Safeguarding</li>
+                                <li>Referral to MARAC</li>
+                                <li>Disclose without consent if life at risk</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. INVESTIGATION / RED FLAGS (BLUE/ORANGE) -->
+            <div class="card investigation" data-category="inquiry symptoms signs ask">
+                <div class="card-header">
+                    <span>🔍 When to Ask (Red Flags)</span>
+                </div>
+                <div class="card-body">
+                    <table class="mini-table">
+                        <tr>
+                            <td>• Frequent attendance</td>
+                            <td>• Unexplained injuries</td>
+                        </tr>
+                        <tr>
+                            <td>• Chronic pain/fatigue</td>
+                            <td>• Anxiety/Depression</td>
+                        </tr>
+                        <tr>
+                            <td>• Pregnancy complications</td>
+                            <td>• Partner answers for them</td>
+                        </tr>
+                        <tr>
+                            <td>• Sleep problems</td>
+                            <td>• Miscarriage</td>
+                        </tr>
+                    </table>
+                    <div style="margin-top: 12px; background: #fff3e0; padding: 8px; border-radius: 4px; font-size: 0.9rem;">
+                        <strong>CRITICAL:</strong> Ask routinely if flags exist. Do NOT screen universally (NICE PH50).
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. THE ASK (Blue) -->
+            <div class="card investigation" data-category="communication hock questions">
+                <div class="card-header">
+                    <span>💬 How to Ask (HOCK Mnemonic)</span>
+                </div>
+                <div class="card-body">
+                    <div class="mnemonic-box">H O C K</div>
+                    <ul class="checklist investigation">
+                        <li><strong>H</strong>umiliation: "Do you feel humiliated or put down?"</li>
+                        <li><strong>O</strong>bjectifying/Afraid: "Are you afraid of your partner?"</li>
+                        <li><strong>C</strong>ontrolling: "Do they control your money/activities?"</li>
+                        <li><strong>K</strong>ick: "Have you been hit, kicked, or physically hurt?"</li>
+                    </ul>
+                    <p style="font-size: 0.85rem; color: #666; margin-top: 10px;">
+                        <em>Ensure patient is ALONE. Use "blood pressure in other room" tactic.</em>
+                    </p>
+                </div>
+            </div>
+
+            <!-- 4. RESPONSE FRAMEWORK (Green/Blue) -->
+            <div class="card support grid-span-2" data-category="response disclosure lives">
+                <div class="card-header">
+                    <span>🤝 Response to Disclosure: LIVES</span>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                        <div style="flex: 1; min-width: 140px; background: #e8f5e9; padding: 10px; border-radius: 4px;">
+                            <strong>L</strong>isten
+                            <div style="font-size: 0.85rem; color: #555;">Without judgment. Let them speak.</div>
+                        </div>
+                        <div style="flex: 1; min-width: 140px; background: #e8f5e9; padding: 10px; border-radius: 4px;">
+                            <strong>I</strong>nquire
+                            <div style="font-size: 0.85rem; color: #555;">Ask about needs & concerns.</div>
+                        </div>
+                        <div style="flex: 1; min-width: 140px; background: #e8f5e9; padding: 10px; border-radius: 4px;">
+                            <strong>V</strong>alidate
+                            <div style="font-size: 0.85rem; color: #555;">"I believe you." "It's not your fault."</div>
+                        </div>
+                        <div style="flex: 1; min-width: 140px; background: #e8f5e9; padding: 10px; border-radius: 4px;">
+                            <strong>E</strong>nhance Safety
+                            <div style="font-size: 0.85rem; color: #555;">Assess immediate risk (See Red Card).</div>
+                        </div>
+                        <div style="flex: 1; min-width: 140px; background: #e8f5e9; padding: 10px; border-radius: 4px;">
+                            <strong>S</strong>upport
+                            <div style="font-size: 0.85rem; color: #555;">Refer to specialist services.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. HIGH RISK MARKERS (Orange) -->
+            <div class="card high-risk" data-category="strangulation risk pregnancy escalation">
+                <div class="card-header">
+                    <span>⚠ High Risk Indicators (No immediate danger, but...)</span>
+                    <span class="badge badge-risk">MARAC Referral</span>
+                </div>
+                <div class="card-body">
+                    <ul class="checklist">
+                        <li>Strangulation / Attempted suffocation</li>
+                        <li>Sexual assault</li>
+                        <li>Stalking / Harassment</li>
+                        <li>Pregnancy / Recent birth</li>
+                        <li>Access to weapons</li>
+                        <li>Threats to kill children or self</li>
+                        <li>Abuse of family pets</li>
+                        <li>Escalating violence</li>
+                    </ul>
+                    <button class="action-btn btn-support" onclick="alert('Check Local Pathway for MARAC Referral Form')">Referral: MARAC & Safeguarding</button>
+                </div>
+            </div>
+
+            <!-- 6. DOCUMENTATION (Blue/Critical) -->
+            <div class="card investigation" data-category="coding records safety privacy">
+                <div class="card-header">
+                    <span>📝 Documentation & Safety</span>
+                </div>
+                <div class="card-body">
+                    <ul class="checklist investigation">
+                        <li><strong>Code:</strong> "History of Domestic Abuse"</li>
+                        <li><strong>Quote:</strong> Use patient's own words.</li>
+                        <li><strong>Privacy:</strong> Hide from online access!</li>
+                        <li><strong>Alerts:</strong> Use record alert systems carefully.</li>
+                        <li><strong>Printouts:</strong> Ensure no info visible to family (e.g., med3 forms, referral letters).</li>
+                    </ul>
+                    <div style="margin-top:10px; border-top: 1px dashed #ccc; padding-top: 8px;">
+                        <strong>Perpetrator Records:</strong><br>
+                        <span style="font-size: 0.9rem;">Do NOT enter abuse info in perpetrator's record unless they disclosed it directly.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. CHILDREN (Orange) -->
+            <div class="card high-risk" data-category="children safeguarding capva">
+                <div class="card-header">
+                    <span>👶 Children & Young People</span>
+                </div>
+                <div class="card-body">
+                    <p><strong>Domestic Abuse Act 2021:</strong> Children seeing/hearing abuse are victims in their own right.</p>
+                    <ul class="checklist">
+                        <li><strong>Safeguarding:</strong> Mandatory if children in house.</li>
+                        <li><strong>Teen Relationships:</strong> Abuse often goes unnoticed. Ask about controlling behavior.</li>
+                        <li><strong>CAPVA:</strong> Child-to-Parent Violence/Abuse. If parents feel threatened, it's abuse. Refer for safeguarding assessment.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 8. COLLEAGUES (Blue) -->
+            <div class="card investigation" data-category="colleagues work signs">
+                <div class="card-header">
+                    <span>🩺 Impacted Colleagues</span>
+                </div>
+                <div class="card-body">
+                    <p>Clinicians experience higher rates of abuse than general population.</p>
+                    <ul class="checklist investigation">
+                        <li><strong>Signs:</strong> Lateness, reduced concentration, frequent sick leave, anxiety.</li>
+                        <li><strong>Action:</strong> Speak privately ("You seem under pressure...").</li>
+                        <li><strong>Support:</strong> Signpost to Occ Health, Domestic Abuse Leads, or EAP.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <footer>
+            <p style="text-align: center; color: #90a4ae; font-size: 0.8rem; margin-top: 20px;">
+                Data sourced from Red Whale / NICE / Domestic Abuse Act 2021. <br>
+                <strong>Disclaimer:</strong> Immediate life threats require 999.
+            </p>
+        </footer>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" style="visibility: hidden; min-width: 250px; margin-left: -125px; background-color: #333; color: #fff; text-align: center; border-radius: 2px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; font-size: 17px;">
+        Info copied to clipboard
+    </div>
+
+    <script>
+        // --- Search / Filter Functionality ---
+        const filterInput = document.getElementById('filterInput');
+        const cards = document.querySelectorAll('.card');
+
+        filterInput.addEventListener('keyup', (e) => {
+            const term = e.target.value.toLowerCase();
+
+            cards.forEach(card => {
+                const text = card.innerText.toLowerCase();
+                const category = card.getAttribute('data-category').toLowerCase();
+                
+                if (text.includes(term) || category.includes(term)) {
+                    card.style.display = 'flex';
+                    // Slight highlight animation reset
+                    card.style.animation = 'none';
+                    card.offsetHeight; /* trigger reflow */
+                    card.style.animation = 'fadeIn 0.5s ease-out';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // --- Silent Solution Helper ---
+        function copySilentSolution() {
+            const text = "999 SILENT SOLUTION: Dial 999 -> Listen to questions -> Cough/Tap if unable to speak -> Press 55 when prompted.";
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("999 Silent Solution steps copied!");
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.innerText = message;
+            toast.style.visibility = "visible";
+            toast.style.opacity = "1";
+            setTimeout(function(){ 
+                toast.style.visibility = "hidden"; 
+            }, 3000);
+        }
+
+        // --- Animation on Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+    </script>
+</body>
+</html>
