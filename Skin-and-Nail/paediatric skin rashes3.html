@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pediatric Dermatology Assessment Algorithm</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --assessment: #3498db;
+            --diagnosis: #e74c3c;
+            --treatment: #2ecc71;
+            --followup: #f39c12;
+            --urgent: #e74c3c;
+            --caution: #f39c12;
+            --stable: #27ae60;
+            --bg: #f5f7fa;
+            --card: #ffffff;
+            --text: #2c3e50;
+            --border: #e0e6ed;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg) 0%, #eef2f7 100%);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 25px;
+            min-height: 100vh;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, var(--assessment) 0%, #2980b9 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px var(--shadow);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            background: var(--card);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .sidebar h3 {
+            color: var(--text);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3em;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            font-weight: 500;
+        }
+
+        .progress-item:hover {
+            transform: translateX(5px);
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .progress-item.active {
+            background: linear-gradient(135deg, var(--assessment) 0%, #2980b9 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .progress-item.completed {
+            background: rgba(46, 204, 113, 0.1);
+            color: var(--stable);
+        }
+
+        .progress-item.completed::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            margin-left: auto;
+            color: var(--stable);
+        }
+
+        .progress-indicator {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+
+        .progress-item.active .progress-indicator {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .progress-item:not(.active) .progress-indicator {
+            background: var(--border);
+            color: #7f8c8d;
+        }
+
+        .main-content {
+            display: grid;
+            gap: 25px;
+        }
+
+        .section-card {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 25px var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .section-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.15);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid;
+        }
+
+        .assessment .section-header { border-color: var(--assessment); }
+        .diagnosis .section-header { border-color: var(--diagnosis); }
+        .treatment .section-header { border-color: var(--treatment); }
+        .followup .section-header { border-color: var(--followup); }
+
+        .section-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8em;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .assessment .section-icon { background: var(--assessment); }
+        .diagnosis .section-icon { background: var(--diagnosis); }
+        .treatment .section-icon { background: var(--treatment); }
+        .followup .section-icon { background: var(--followup); }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .subsection {
+            margin-bottom: 25px;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .subsection-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
+            padding: 18px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .subsection-header:hover {
+            background: linear-gradient(135deg, #e3f2fd 0%, #d1e8ff 100%);
+        }
+
+        .subsection-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+            color: var(--assessment);
+            font-size: 1.2em;
+        }
+
+        .subsection.expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .subsection-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: white;
+        }
+
+        .subsection.expanded .subsection-content {
+            max-height: 1000px;
+        }
+
+        .subsection-body {
+            padding: 25px;
+            border: 1px solid var(--border);
+            border-top: none;
+        }
+
+        .condition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .condition-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .condition-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 5px;
+            height: 100%;
+            background: var(--assessment);
+        }
+
+        .condition-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--shadow);
+        }
+
+        .condition-title {
+            font-weight: 700;
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        .badge-container {
+            display: flex;
+            gap: 8px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .badge-urgent {
+            background: linear-gradient(135deg, var(--urgent) 0%, #c0392b 100%);
+            color: white;
+        }
+
+        .badge-caution {
+            background: linear-gradient(135deg, var(--caution) 0%, #d35400 100%);
+            color: white;
+        }
+
+        .badge-stable {
+            background: linear-gradient(135deg, var(--stable) 0%, #219653 100%);
+            color: white;
+        }
+
+        .badge-info {
+            background: linear-gradient(135deg, var(--assessment) 0%, #2980b9 100%);
+            color: white;
+        }
+
+        .key-points {
+            background: linear-gradient(135deg, #e3f2fd 0%, #d1e8ff 100%);
+            border-left: 4px solid var(--assessment);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .key-points ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .key-points li {
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        .key-points li::before {
+            content: '•';
+            color: var(--assessment);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+
+        .warning-box {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 4px solid var(--caution);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .warning-box .icon {
+            color: var(--caution);
+            margin-right: 10px;
+        }
+
+        .urgent-box {
+            background: linear-gradient(135deg, #fee 0%, #ffcdd2 100%);
+            border-left: 4px solid var(--urgent);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .urgent-box .icon {
+            color: var(--urgent);
+            margin-right: 10px;
+        }
+
+        .treatment-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+
+        .treatment-list li {
+            padding: 12px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            border-left: 3px solid var(--treatment);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+
+        .treatment-list li:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .differential-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .differential-item {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .differential-item:hover {
+            border-color: var(--diagnosis);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .differential-features {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-top: 8px;
+        }
+
+        .steroid-ladder {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .steroid-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 2px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .steroid-card:hover {
+            border-color: var(--treatment);
+            transform: scale(1.03);
+        }
+
+        .steroid-potency {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .steroid-examples {
+            font-size: 0.9em;
+            color: #7f8c8d;
+        }
+
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .flowchart-step {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--assessment);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .flowchart-step:hover {
+            transform: translateX(10px);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .flowchart-step .icon {
+            font-size: 1.5em;
+            color: var(--assessment);
+        }
+
+        .flowchart-decision {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-left: 4px solid var(--caution);
+        }
+
+        .flowchart-decision .icon {
+            color: var(--caution);
+        }
+
+        .flowchart-action {
+            background: linear-gradient(135deg, #e3f2fd 0%, #d1e8ff 100%);
+            border-left: 4px solid var(--treatment);
+        }
+
+        .flowchart-action .icon {
+            color: var(--treatment);
+        }
+
+        .flowchart-referral {
+            background: linear-gradient(135deg, #fee 0%, #ffcdd2 100%);
+            border-left: 4px solid var(--urgent);
+        }
+
+        .flowchart-referral .icon {
+            color: var(--urgent);
+        }
+
+        .specialist-box {
+            background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+            border-left: 4px solid #9c27b0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .specialist-box .icon {
+            color: #9c27b0;
+            margin-right: 10px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: relative;
+                top: 0;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .differential-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-child"></i> Pediatric Dermatology Algorithm</h1>
+            <p>Clinical Decision Support Tool for Common Pediatric Skin Conditions</p>
+        </div>
+
+        <aside class="sidebar">
+            <h3><i class="fas fa-route"></i> Algorithm Progress</h3>
+            <div id="progressSteps">
+                <div class="progress-item active" data-section="assessment">
+                    <div class="progress-indicator">1</div>
+                    <span>Assessment</span>
+                </div>
+                <div class="progress-item" data-section="diagnosis">
+                    <div class="progress-indicator">2</div>
+                    <span>Diagnosis</span>
+                </div>
+                <div class="progress-item" data-section="treatment">
+                    <div class="progress-indicator">3</div>
+                    <span>Treatment</span>
+                </div>
+                <div class="progress-item" data-section="followup">
+                    <div class="progress-indicator">4</div>
+                    <span>Follow-up</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <h4 style="margin-bottom: 15px;"><i class="fas fa-info-circle"></i> Quick Reference</h4>
+                <div class="badge-container">
+                    <div class="badge badge-urgent"><i class="fas fa-exclamation-triangle"></i> Urgent Referral</div>
+                    <div class="badge badge-caution"><i class="fas fa-exclamation-circle"></i> Caution</div>
+                    <div class="badge badge-stable"><i class="fas fa-check-circle"></i> Stable</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <!-- Assessment Section -->
+            <section class="section-card assessment fade-in" id="assessment">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-stethoscope"></i>
+                    </div>
+                    <h2 class="section-title">Assessment</h2>
+                </div>
+
+                <div class="subsection expanded">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-question-circle"></i> Key History Questions
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="flowchart">
+                                <div class="flowchart-step">
+                                    <i class="fas fa-clock"></i>
+                                    <div>
+                                        <strong>Duration & Onset:</strong> When did the rash start? How long has it been present?
+                                    </div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-itch"></i>
+                                    <div>
+                                        <strong>Itch Severity:</strong> "If it's not itchy, it's very unlikely to be eczema" - rate 0-10
+                                    </div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-user-friends"></i>
+                                    <div>
+                                        <strong>Atopic History:</strong> Family history of eczema, asthma, hay fever, food allergies
+                                    </div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-home"></i>
+                                    <div>
+                                        <strong>Environmental:</strong> Pets, dust mites, smoking at home, recent infections
+                                    </div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-moon"></i>
+                                    <div>
+                                        <strong>Sleep & Impact:</strong> "Impact on mum, impact on the kids if they're sleeping or not"
+                                    </div>
+                                </div>
+                                <div class="flowchart-decision">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <div>
+                                        <strong>Red Flags:</strong> Fever, unwell child, painful lesions, rapid spread
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-search"></i> Examination Tips
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="condition-grid">
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-search-plus"></i> Look for Burrows</div>
+                                    <p>Scabies: Check wrists, ankles, waist, genital areas. Use dermoscopy if available - "you see the little windy track"</p>
+                                    <div class="badge-container">
+                                        <div class="badge badge-caution"><i class="fas fa-exclamation-circle"></i> Scabies until proven otherwise</div>
+                                    </div>
+                                </div>
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-satellite"></i> Satellite Lesions</div>
+                                    <p>Candida: "tiny little macules at the periphery" - especially in nappy area, skin folds</p>
+                                    <div class="badge-container">
+                                        <div class="badge badge-info"><i class="fas fa-info-circle"></i> Diagnostic clue</div>
+                                    </div>
+                                </div>
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-tint"></i> Crust Characteristics</div>
+                                    <p>Impetigo: "honey-colored crusts, almost cornflake-like" vs weeping eczema</p>
+                                    <div class="badge-container">
+                                        <div class="badge badge-caution"><i class="fas fa-exclamation-circle"></i> Infection indicator</div>
+                                    </div>
+                                </div>
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-palette"></i> Skin of Color</div>
+                                    <p>"Redness tends to be very difficult to appreciate" - look for scale, pigmentation changes</p>
+                                    <div class="badge-container">
+                                        <div class="badge badge-info"><i class="fas fa-info-circle"></i> Papular eczema more common</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-exclamation-triangle"></i> Urgent Red Flags
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="urgent-box">
+                                <i class="fas fa-ambulance icon"></i>
+                                <strong>IMMEDIATE REFERRAL NEEDED:</strong>
+                                <ul style="margin-left: 30px; margin-top: 10px;">
+                                    <li>Eczema Herpeticum: "monomorphic punched lesions on face" + fever/unwell</li>
+                                    <li>Bullous Impetigo: "looks almost like bullous pemphigoid in kids"</li>
+                                    <li>Kerion: "boggy swellings with pus, crusting" - DO NOT SEND FOR I&D</li>
+                                    <li>Infantile Hemangioma: obstructing vision, airway, or ulcerating</li>
+                                    <li>Severe infection with systemic symptoms</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diagnosis Section -->
+            <section class="section-card diagnosis fade-in" id="diagnosis">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-microscope"></i>
+                    </div>
+                    <h2 class="section-title">Diagnosis</h2>
+                </div>
+
+                <div class="subsection expanded">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-brain"></i> Differential Diagnosis by Presentation
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="flowchart">
+                                <div class="flowchart-step">
+                                    <i class="fas fa-question-circle"></i>
+                                    <div><strong>Itchy Rash on Elbows/Knees?</strong></div>
+                                </div>
+                                <div class="flowchart-decision">
+                                    <i class="fas fa-project-diagram"></i>
+                                    <div><strong>Consider: Eczema</strong> - Especially with atopic family history</div>
+                                </div>
+                                <div class="flowchart-action">
+                                    <i class="fas fa-prescription"></i>
+                                    <div><strong>Key Features:</strong> Itchy, chronic, flexural distribution, improves with steroids</div>
+                                </div>
+                            </div>
+
+                            <div class="condition-grid" style="margin-top: 30px;">
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-child"></i> ECZEMA</div>
+                                    <div class="badge-container">
+                                        <div class="badge badge-stable"><i class="fas fa-itch"></i> Almost always itchy</div>
+                                        <div class="badge badge-info"><i class="fas fa-dna"></i> 50% genetic</div>
+                                    </div>
+                                    <div class="key-points">
+                                        <strong>Key Features:</strong>
+                                        <ul>
+                                            <li>Barrier defect with inflammatory component</li>
+                                            <li>Atopic history (asthma, hay fever, food allergy)</li>
+                                            <li>Can be dry, scaly, weepy, rough, or bumpy</li>
+                                            <li>Weeping ≠ infection (common misconception)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-bug"></i> SCABIES</div>
+                                    <div class="badge-container">
+                                        <div class="badge badge-caution"><i class="fas fa-moon"></i> Worse at night</div>
+                                        <div class="badge badge-urgent"><i class="fas fa-users"></i> Treat whole family</div>
+                                    </div>
+                                    <div class="key-points">
+                                        <strong>Diagnostic Clues:</strong>
+                                        <ul>
+                                            <li>Burrows/tracks on wrists, ankles, waist</li>
+                                            <li>Genital nodules (pathognomonic)</li>
+                                            <li>Family members itching</li>
+                                            <li>Can affect face in infants</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-baby"></i> NAPPY RASH</div>
+                                    <div class="badge-container">
+                                        <div class="badge badge-info"><i class="fas fa-ruler"></i> Spares skin folds</div>
+                                        <div class="badge badge-caution"><i class="fas fa-satellite"></i> Check satellite lesions</div>
+                                    </div>
+                                    <div class="key-points">
+                                        <strong>Differentiation:</strong>
+                                        <ul>
+                                            <li><strong>Irritant:</strong> Spares skin folds, red where nappy contacts</li>
+                                            <li><strong>Candida:</strong> Involves skin folds, satellite lesions at periphery</li>
+                                            <li><strong>Psoriasis:</strong> Involves skin folds, well-demarcated, not necessarily scaly</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-virus"></i> MOLLUSCUM</div>
+                                    <div class="badge-container">
+                                        <div class="badge badge-stable"><i class="fas fa-clock"></i> Self-limiting</div>
+                                        <div class="badge badge-info"><i class="fas fa-crosshairs"></i> Umbilicated papules</li>
+                                    </div>
+                                    <div class="key-points">
+                                        <strong>Management:</strong>
+                                        <ul>
+                                            <li>Umbilicated, skin-colored papules</li>
+                                            <li>"Cut in their eyes" - appear on traumatized skin</li>
+                                            <li>Reassurance: angry appearance = resolution phase</li>
+                                            <li>Usually resolves within 12-18 months</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-band-aid"></i> IMPETIGO</div>
+                                    <div class="badge-container">
+                                        <div class="badge badge-caution"><i class="fas fa-certificate"></i> Honey-colored crusts</div>
+                                        <div class="badge badge-info"><i class="fas fa-bacteria"></i> Staph/Strep</li>
+                                    </div>
+                                    <div class="key-points">
+                                        <strong>Types:</strong>
+                                        <ul>
+                                            <li><strong>Non-bullous:</strong> "Cornflake-like" yellow crusts</li>
+                                            <li><strong>Bullous:</strong> "Looks like bullous pemphigoid" - urgent referral</li>
+                                            <li>Risk factors: crowded environment, poor hygiene</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-head-side-cough"></i> TINEA CAPITIS</div>
+                                    <div class="badge-container">
+                                        <div class="badge badge-urgent"><i class="fas fa-exclamation-triangle"></i> Must treat aggressively</div>
+                                        <div class="badge badge-caution"><i class="fas fa-prescription"></i> Oral terbinafine needed</li>
+                                    </div>
+                                    <div class="key-points">
+                                        <strong>vs Alopecia Areata:</strong>
+                                        <ul>
+                                            <li><strong>Tinea:</strong> Scaling, annular patches, broken hairs</li>
+                                            <li><strong>Alopecia:</strong> No scale, not itchy, exclamation mark hairs</li>
+                                            <li>Progresses to kerion if untreated → scarring alopecia</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-flask"></i> Investigations
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="flowchart">
+                                <div class="flowchart-step">
+                                    <i class="fas fa-search"></i>
+                                    <div><strong>Swab:</strong> Only if signs of infection (honey crusts, cellulitic appearance)</div>
+                                </div>
+                                <div class="flowchart-decision">
+                                    <i class="fas fa-microscope"></i>
+                                    <div><strong>Skin Scraping:</strong> Scabies burrows, fungal infections</div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-lightbulb"></i>
+                                    <div><strong>Wood's Lamp:</strong> Vitiligo vs Pityriasis Alba (vitiligo fluoresces)</div>
+                                </div>
+                                <div class="flowchart-referral">
+                                    <i class="fas fa-user-md"></i>
+                                    <div><strong>Allergy Testing:</strong> "No role unless not growing or clear trigger" - refer to allergy clinic</div>
+                                </div>
+                            </div>
+                            <div class="warning-box">
+                                <i class="fas fa-exclamation-circle icon"></i>
+                                <strong>Warning:</strong> "RAST tests open a can of worms" - most show positivity to common allergens that are already known triggers. Avoid routine testing.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Treatment Section -->
+            <section class="section-card treatment fade-in" id="treatment">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <h2 class="section-title">Treatment</h2>
+                </div>
+
+                <div class="subsection expanded">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-pump-medical"></i> Emollients & Moisturizers
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="key-points">
+                                <strong>Key Principles:</strong>
+                                <ul>
+                                    <li><strong>Quantity:</strong> Children need ~1000g/month, adults 250-500g/week</li>
+                                    <li><strong>Application:</strong> "Gently rub into skin, downward stroke along hair growth" to avoid folliculitis</li>
+                                    <li><strong>Timing:</strong> Apply immediately after bathing on damp skin to trap moisture</li>
+                                    <li><strong>Bathing:</strong> Daily baths up to 15 minutes are fine - "nothing too warm"</li>
+                                </ul>
+                            </div>
+
+                            <div class="steroid-ladder">
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Creams</div>
+                                    <div>Doublebase, Dermol, Cetraben</div>
+                                    <small>Patient preference is key</small>
+                                </div>
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Gels</div>
+                                    <div>Adex gel with Niacinamide</div>
+                                    <small>For redness and scaling</small>
+                                </div>
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Ointments</div>
+                                    <div>Hydromol, 50/50, White soft paraffin</div>
+                                    <small>Very greasy but effective</small>
+                                </div>
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Soap Substitutes</div>
+                                    <div>Same as emollient</div>
+                                    <small>Prescribe 3 tubs: 1 for shower, 1 for room, 1 for work</small>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <i class="fas fa-eye icon"></i>
+                                <strong>Important:</strong> "Avoid Epimax on face/eyelids" - periocular irritation risk. Fine for neck and below.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-syringe"></i> Topical Steroids - The Ladder
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="flowchart">
+                                <div class="flowchart-step">
+                                    <i class="fas fa-info-circle"></i>
+                                    <div><strong>Education First:</strong> "Hit it hard and then drop it down" - treat early, use short courses</div>
+                                </div>
+                                <div class="flowchart-decision">
+                                    <i class="fas fa-question-circle"></i>
+                                    <div><strong>Severity Assessment:</strong> Mild, Moderate, Severe, Body Site</div>
+                                </div>
+                            </div>
+
+                            <div class="steroid-ladder">
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Mild</div>
+                                    <div class="steroid-examples">Hydrocortisone 1%</div>
+                                    <small>Face, flexures, children</small>
+                                </div>
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Moderate</div>
+                                    <div class="steroid-examples">Eumovate (clobetasone)</div>
+                                    <small>Trunk, limbs</small>
+                                </div>
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Potent</div>
+                                    <div class="steroid-examples">Betnovate (betamethasone)</div>
+                                    <small>Thick skin, palms/soles</small>
+                                </div>
+                                <div class="steroid-card">
+                                    <div class="steroid-potency">Very Potent</div>
+                                    <div class="steroid-examples">Dermovate (clobetasol)</div>
+                                    <small>Short courses only, severe flare</small>
+                                </div>
+                            </div>
+
+                            <div class="key-points">
+                                <strong>Application Schedule:</strong>
+                                <ul>
+                                    <li><strong>Acute flare:</strong> Once daily for 7-14 days (twice daily if severe)</li>
+                                    <li><strong>Tapering:</strong> Drop to alternate days for 1 week, then twice weekly for 2 weeks</li>
+                                    <li><strong>Maintenance:</strong> "Once or twice a week" for persistent eczema</li>
+                                    <li><strong>Face:</strong> Use mild steroids for 3-5 days, then switch to topical calcineurin inhibitors</li>
+                                </ul>
+                            </div>
+
+                            <div class="warning-box">
+                                <i class="fas fa-ban icon"></i>
+                                <strong>Steroid Phobia:</strong> "Reassure patients, robust evidence in terms of long-term safety use"
+                            </div>
+
+                            <div class="urgent-box">
+                                <i class="fas fa-fire icon"></i>
+                                <strong>Topical Steroid Withdrawal:</strong> "Burning and stinging rather than worsening eczema" - controversial diagnosis, distinct from poorly controlled eczema
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-tablets"></i> Specific Condition Treatments
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="condition-grid">
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-bug"></i> SCABIES</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>1st line:</strong> Permethrin 5% - apply neck down, leave overnight, wash off next day</li>
+                                        <li><strong>Repeat:</strong> In 7 days to kill newly hatched mites</li>
+                                        <li><strong>Family:</strong> Treat all close contacts simultaneously</li>
+                                        <li><strong>Environment:</strong> Hot wash bedding, clothing, towels; vacuum furniture</li>
+                                        <li><strong>Itch relief:</strong> "Itch can stay for weeks or months" - cetirizine HC, short topical steroid course</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-urgent"><i class="fas fa-users"></i> Whole family treatment</div>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-baby"></i> NAPPY RASH - CANDIDA</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>Barrier:</strong> Zinc oxide or barrier cream (e.g., Metanium)</li>
+                                        <li><strong>Antifungal:</strong> Clotrimazole or miconazole cream</li>
+                                        <li><strong>Combined:</strong> Canesten HC (clotrimazole + hydrocortisone) for inflamed cases</li>
+                                        <li><strong>Hygiene:</strong> Keep area dry, frequent nappy changes, fragrance-free wipes</li>
+                                        <li><strong>Duration:</strong> Continue 1 week after clearance</li>
+                                    </ul>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-virus"></i> MOLLUSCUM</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>1st line:</strong> Reassurance - "self-limiting condition" 12-18 months</li>
+                                        <li><strong>If treatment desired:</strong> Molludab/Mollutink (potassium hydroxide)</li>
+                                        <li><strong>Application:</strong> Daily up to 14 days or until inflammatory reaction</li>
+                                        <li><strong>Caution:</strong> Risk of post-inflammatory pigmentation especially in skin of color</li>
+                                        <li><strong>Important:</strong> "Angry appearance = resolution phase" - reassure parents</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-stable"><i class="fas fa-clock"></i> Watchful waiting</div>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-band-aid"></i> IMPETIGO</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>Mild/localized:</strong> Topical fusidic acid 3 times daily for 5-7 days</li>
+                                        <li><strong>Extensive/severe:</strong> Oral flucloxacillin for 7 days</li>
+                                        <li><strong>MRSA risk:</strong> Consider topical mupirocin if not responding</li>
+                                        <li><strong>Hygiene:</strong> Avoid sharing towels, wash hands frequently</li>
+                                        <li><strong>School:</strong> Exclude until 48 hours after starting antibiotics</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-urgent"><i class="fas fa-ambulance"></i> Bullous type = urgent referral</div>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-head-side-cough"></i> TINEA CAPITIS</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>1st line:</strong> Oral terbinafine (off-license but more effective)</li>
+                                        <li><strong>Alternative:</strong> Griseofulvin (licensed but more side effects)</li>
+                                        <li><strong>Adjunct:</strong> Ketoconazole shampoo twice weekly for family</li>
+                                        <li><strong>Duration:</strong> 4-6 weeks (3 months for kerion)</li>
+                                        <li><strong>Refer:</strong> If uncomfortable prescribing off-license</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-urgent"><i class="fas fa-exclamation-triangle"></i> Aggressive treatment needed</div>
+                                        <div class="badge badge-caution"><i class="fas fa-prescription"></i> Off-license medication</div>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-head-side-cough-slash"></i> ALOPECIA AREATA</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>Topical steroids:</strong> Dermovate cream once daily for 4 weeks, then twice weekly</li>
+                                        <li><strong>Intralesional:</strong> For resistant patches (specialist procedure)</li>
+                                        <li><strong>JAK inhibitors:</strong> Baricitinib (licensed for >12 years with >50% hair loss)</li>
+                                        <li><strong>Reassurance:</strong> "High likelihood that hair will grow back" - non-scarring</li>
+                                        <li><strong>Differentiate:</strong> Must rule out tinea capitis first</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-caution"><i class="fas fa-info-circle"></i> Rule out fungal infection</div>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-baby"></i> CRADLE CAP</div>
+                                    <ul class="treatment-list">
+                                        <li><strong>Conservative:</strong> Baby shampoo, gentle brushing with soft brush</li>
+                                        <li><strong>If scaly:</strong> Dermax shampoo (salicylic acid) - caution: strong smell</li>
+                                        <li><strong>If inflamed:</strong> Ketoconazole shampoo twice weekly</li>
+                                        <li><strong>Persistent:</strong> Betacap scalp application daily for 10-14 days</li>
+                                        <li><strong>Alternative:</strong> Cocois ointment (apply to dry scalp, leave overnight)</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-stable"><i class="fas fa-clock"></i> Very common, self-limiting</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="specialist-box">
+                                <i class="fas fa-user-md icon"></i>
+                                <strong>Topical Calcineurin Inhibitors:</strong> Protopic (tacrolimus) - 0.03% for 2+ years, 0.1% for 16+ years. "Very safe to use" but off-license. Use for face/eyelids, maintenance therapy, steroid-sparing.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-vial"></i> Advanced Therapies
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="condition-grid">
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-flask"></i> Bleach Baths</div>
+                                    <p>For recurrent "infected eczema" or high Staph aureus colonization:</p>
+                                    <ul class="treatment-list">
+                                        <li>Milton bleach: 150ml in half bath or 300ml in full bath</li>
+                                        <li>Soak for 15 minutes, twice weekly</li>
+                                        <li>Avoid face contact</li>
+                                        <li>Reduces bacterial load, may reduce flares</li>
+                                        <li>"Anecdotally, some patients love it"</li>
+                                    </ul>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-tshirt"></i> Wet Wraps/Garments</div>
+                                    <p>For severe eczema or constant scratching:</p>
+                                    <ul class="treatment-list">
+                                        <li>Brands: Clinifast, Skinnies</li>
+                                        <li>Occlusive effect: bumps steroid potency by one level</li>
+                                        <li>Apply moisturizer, wait 30 min, steroid on flare areas, then garment</li>
+                                        <li>Prevents scratching, breaks itch-scratch cycle</li>
+                                        <li><strong>Cost:</strong> ~£12-13 each, need 6-7 pieces</li>
+                                    </ul>
+                                    <div class="badge-container">
+                                        <div class="badge badge-caution"><i class="fas fa-pound-sign"></i> Expensive</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="warning-box">
+                                <i class="fas fa-pills icon"></i>
+                                <strong>Antihistamines:</strong> "No evidence of long-term benefit" - short-term sedative antihistamines for sleep only. Risk of cognitive changes and growth delay with long-term use in children.
+                            </div>
+
+                            <div class="warning-box">
+                                <i class="fas fa-leaf icon"></i>
+                                <strong>Alternative Therapies:</strong> Traditional Chinese Medicine may contain immunosuppressants similar to prednisolone or cyclosporine. "Herbal doesn't always mean good" - expensive and unregulated.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Follow-up Section -->
+            <section class="section-card followup fade-in" id="followup">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <h2 class="section-title">Follow-up</h2>
+                </div>
+
+                <div class="subsection expanded">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-clock"></i> Review Timeframes
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="flowchart">
+                                <div class="flowchart-step">
+                                    <i class="fas fa-calendar"></i>
+                                    <div><strong>Acute Flare:</strong> Review in 1-2 weeks after starting treatment</div>
+                                </div>
+                                <div class="flowchart-decision">
+                                    <i class="fas fa-question-circle"></i>
+                                    <div><strong>Improving?</strong> Continue taper vs step up treatment</div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <div><strong>Maintenance:</strong> Review every 3-6 months for stable patients</div>
+                                </div>
+                                <div class="flowchart-referral">
+                                    <i class="fas fa-hospital"></i>
+                                    <div><strong>Refer if:</strong> Not responding, frequent flares requiring potent steroids, diagnostic uncertainty</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-exclamation-triangle"></i> When to Refer
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="condition-grid">
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-ambulance"></i> URGENT (Same Day)</div>
+                                    <ul class="treatment-list">
+                                        <li>Eczema herpeticum with systemic symptoms</li>
+                                        <li>Severe bullous impetigo</li>
+                                        <li>Kerion (do not send for I&D)</li>
+                                        <li>Infantile hemangioma obstructing vision/airway</li>
+                                        <li>Severe infection with fever/malaise</li>
+                                    </ul>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-walking"></i> ROUTINE (Community Dermatology)</div>
+                                    <ul class="treatment-list">
+                                        <li>Diagnostic uncertainty</li>
+                                        <li>Failed primary care treatment (3 months)</li>
+                                        <li>Recurrent "infected eczema" needing multiple antibiotics</li>
+                                        <li>Scabies not responding to permethrin</li>
+                                        <li>Alopecia areata (for intralesional steroids)</li>
+                                        <li>Off-license treatments (terbinafine <12y, Protopic <2y)</li>
+                                        <li>Severe acne in pre-teens</li>
+                                    </ul>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-user-md"></i> SPECIALIST (Secondary Care)</div>
+                                    <ul class="treatment-list">
+                                        <li>Possible skin cancer (2-week wait)</li>
+                                        <li>Severe bullous disorders</li>
+                                        <li>Genodermatoses</li>
+                                        <li>Complex vascular malformations</li>
+                                        <li>Phototherapy candidates (guttate psoriasis, severe eczema)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="specialist-box">
+                                <i class="fas fa-info-circle icon"></i>
+                                <strong>Community vs Secondary Care:</strong> "Everything can be referred to community dermatology unless 2-week wait needed." Community services can biopsy and manage most conditions. Secondary care for cancer suspicion and complex cases.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-user-graduate"></i> Patient Education & Resources
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="flowchart">
+                                <div class="flowchart-step">
+                                    <i class="fas fa-book"></i>
+                                    <div><strong>Eczema Society:</strong> Provide patient information leaflets</div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-laptop"></i>
+                                    <div><strong>Websites:</strong> Eczema Society, BAD (British Association of Dermatologists)</div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-users"></i>
+                                    <div><strong>Community Services:</strong> Community dermatology, eczema nurse specialists</div>
+                                </div>
+                                <div class="flowchart-step">
+                                    <i class="fas fa-school"></i>
+                                    <div><strong>School:</strong> Provide action plans for teachers, ensure emollients available</div>
+                                </div>
+                            </div>
+
+                            <div class="key-points">
+                                <strong>Education Priorities:</strong>
+                                <ul>
+                                    <li><strong>Steroid Safety:</strong> "It's not a worry if you use it early and treat it quickly"</li>
+                                    <li><strong>Moisturizer Quantity:</strong> Most parents use too little - demonstrate with 500g/week example</li>
+                                    <li><strong>Trigger Management:</strong> Overheating, stress, infection - practical strategies</li>
+                                    <li><strong>Infection Recognition:</strong> When to seek help vs normal eczema weeping</li>
+                                    <li><strong>Allergy Myths:</strong> "Most of the time... regardless of what you remove, eczema will still flare"</li>
+                                </ul>
+                            </div>
+
+                            <div class="warning-box">
+                                <i class="fas fa-exclamation-circle icon"></i>
+                                <strong>Antibiotic Stewardship:</strong> "Most of the time, if you treat the eczema flare-up with topical steroids, it will settle down." Only use antibiotics for clear signs of infection (honey crusts, cellulitis).
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <div class="subsection-header">
+                        <div class="subsection-title">
+                            <i class="fas fa-baby"></i> Special Considerations - Infants
+                        </div>
+                        <i class="fas fa-chevron-down expand-icon"></i>
+                    </div>
+                    <div class="subsection-content">
+                        <div class="subsection-body">
+                            <div class="condition-grid">
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-milk"></i> Breastfeeding & Allergy</div>
+                                    <div class="key-points">
+                                        <strong>Key Points:</strong>
+                                        <ul>
+                                            <li>Exclusive breastfeeding rarely causes food allergy</li>
+                                            <li>If concern: Mum excludes dairy for 6 weeks minimum</li>
+                                            <li>Reintroduction: If flare occurs, likely related</li>
+                                            <li>Many foods are pseudo-allergens (tomato, histamine-rich foods)</li>
+                                            <li>"Education is key" - eczema is primarily genetic</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="condition-card">
+                                    <div class="condition-title"><i class="fas fa-bath"></i> Infant Skin Care</div>
+                                    <div class="key-points">
+                                        <strong>Recommendations:</strong>
+                                        <ul>
+                                            <li><strong>Bathing:</strong> Daily baths fine, 15 minutes maximum</li>
+                                            <li><strong>Temperature:</strong> "Nothing too warm" - heat causes dryness and itching</li>
+                                            <li><strong>Products:</strong> Soap substitutes only, fragrance-free baby wipes</li>
+                                            <li><strong>Drying:</strong> Pat dry, don't rub - apply moisturizer immediately</li>
+                                            <li><strong>Cradle Cap:</strong> Baby shampoo, gentle brushing - usually asymptomatic</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Interactivity and animations
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scroll and section tracking
+            const sections = document.querySelectorAll('.section-card');
+            const progressItems = document.querySelectorAll('.progress-item');
+            
+            // Intersection Observer for section tracking
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const sectionId = entry.target.id;
+                        
+                        // Update progress sidebar
+                        progressItems.forEach(item => {
+                            item.classList.remove('active');
+                            if (item.dataset.section === sectionId) {
+                                item.classList.add('active');
+                            }
+                        });
+                        
+                        // Mark previous sections as completed
+                        let foundActive = false;
+                        progressItems.forEach(item => {
+                            if (item.classList.contains('active')) {
+                                foundActive = true;
+                            } else if (!foundActive) {
+                                item.classList.add('completed');
+                            } else {
+                                item.classList.remove('completed');
+                            }
+                        });
+                    }
+                });
+            }, {
+                threshold: 0.5,
+                rootMargin: '-100px 0px -100px 0px'
+            });
+            
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+            
+            // Progress item click handlers
+            progressItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const targetSection = this.dataset.section;
+                    const targetElement = document.getElementById(targetSection);
+                    
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                    
+                    // Add pulse animation
+                    targetElement.classList.add('pulse');
+                    setTimeout(() => {
+                        targetElement.classList.remove('pulse');
+                    }, 2000);
+                });
+            });
+            
+            // Subsection expand/collapse
+            const subsectionHeaders = document.querySelectorAll('.subsection-header');
+            
+            subsectionHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const subsection = this.parentElement;
+                    const isExpanded = subsection.classList.contains('expanded');
+                    
+                    // Close all subsections in the same section
+                    const sameSectionSubsections = subsection.parentElement.querySelectorAll('.subsection');
+                    sameSectionSubsections.forEach(ss => {
+                        ss.classList.remove('expanded');
+                    });
+                    
+                    // Toggle current subsection
+                    if (!isExpanded) {
+                        subsection.classList.add('expanded');
+                    }
+                });
+            });
+            
+            // Hover effects for cards
+            const cards = document.querySelectorAll('.condition-card, .steroid-card, .differential-item');
+            
+            cards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-5px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+            
+            // Badge pulse animation on hover
+            const badges = document.querySelectorAll('.badge');
+            
+            badges.forEach(badge => {
+                badge.addEventListener('mouseenter', function() {
+                    this.classList.add('pulse');
+                    setTimeout(() => {
+                        this.classList.remove('pulse');
+                    }, 1000);
+                });
+            });
+            
+            // Smooth fade-in on scroll
+            const fadeElements = document.querySelectorAll('.subsection, .flowchart-step, .treatment-list li');
+            
+            const fadeObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in');
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+            
+            fadeElements.forEach(element => {
+                fadeObserver.observe(element);
+            });
+            
+            // Dynamic search functionality (optional enhancement)
+            const searchBox = document.createElement('div');
+            searchBox.innerHTML = `
+                <div style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+                    <input type="text" id="searchInput" placeholder="Search algorithm..." 
+                           style="padding: 10px 15px; border: 2px solid var(--assessment); border-radius: 25px; 
+                                  width: 250px; box-shadow: 0 4px 15px var(--shadow);">
+                    <i class="fas fa-search" style="margin-left: -35px; color: var(--assessment);"></i>
+                </div>
+            `;
+            document.body.appendChild(searchBox);
+            
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const allContent = document.querySelectorAll('.condition-card, .key-points, .treatment-list li, .warning-box, .urgent-box');
+                
+                allContent.forEach(element => {
+                    const text = element.textContent.toLowerCase();
+                    if (searchTerm && text.includes(searchTerm)) {
+                        element.style.border = '3px solid var(--assessment)';
+                        element.style.boxShadow = '0 0 20px rgba(52, 152, 219, 0.5)';
+                    } else {
+                        element.style.border = '';
+                        element.style.boxShadow = '';
+                    }
+                });
+                
+                // Highlight matching text
+                if (searchTerm) {
+                    const bodyText = document.querySelector('body');
+                    const walker = document.createTreeWalker(
+                        bodyText,
+                        NodeFilter.SHOW_TEXT,
+                        null,
+                        false
+                    );
+                    
+                    const textNodes = [];
+                    let node;
+                    while (node = walker.nextNode()) {
+                        if (node.parentElement.tagName !== 'SCRIPT' && 
+                            node.parentElement.tagName !== 'STYLE' &&
+                            node.textContent.toLowerCase().includes(searchTerm)) {
+                            textNodes.push(node);
+                        }
+                    }
+                    
+                    // Simple highlight (could be enhanced)
+                    textNodes.forEach(node => {
+                        const parent = node.parentElement;
+                        if (parent && !parent.classList.contains('header') && 
+                            !parent.classList.contains('sidebar')) {
+                            parent.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                        }
+                    });
+                } else {
+                    // Remove all highlights
+                    document.querySelectorAll('*').forEach(el => {
+                        el.style.backgroundColor = '';
+                    });
+                }
+            });
+            
+            // Add floating action button for quick reference
+            const fab = document.createElement('button');
+            fab.innerHTML = '<i class="fas fa-question-circle"></i>';
+            fab.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--assessment) 0%, #2980b9 100%);
+                color: white;
+                border: none;
+                font-size: 1.5em;
+                cursor: pointer;
+                box-shadow: 0 8px 25px var(--shadow);
+                transition: all 0.3s ease;
+                z-index: 999;
+            `;
+            
+            fab.addEventListener('click', function() {
+                const sidebar = document.querySelector('.sidebar');
+                sidebar.scrollIntoView({ behavior: 'smooth' });
+                sidebar.classList.add('pulse');
+                setTimeout(() => sidebar.classList.remove('pulse'), 1000);
+            });
+            
+            fab.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1) rotate(90deg)';
+            });
+            
+            fab.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1) rotate(0deg)';
+            });
+            
+            document.body.appendChild(fab);
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                    const activeItem = document.querySelector('.progress-item.active');
+                    const nextItem = activeItem.nextElementSibling;
+                    if (nextItem && nextItem.classList.contains('progress-item')) {
+                        nextItem.click();
+                    }
+                } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                    const activeItem = document.querySelector('.progress-item.active');
+                    const prevItem = activeItem.previousElementSibling;
+                    if (prevItem && prevItem.classList.contains('progress-item')) {
+                        prevItem.click();
+                    }
+                } else if (e.key === 'Home') {
+                    document.getElementById('assessment').scrollIntoView({ behavior: 'smooth' });
+                } else if (e.key === 'End') {
+                    document.getElementById('followup').scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+            
+            // Print-friendly version
+            const printButton = document.createElement('button');
+            printButton.innerHTML = '<i class="fas fa-print"></i> Print';
+            printButton.style.cssText = `
+                position: fixed;
+                bottom: 30px;
+                left: 30px;
+                padding: 10px 20px;
+                background: var(--stable);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px var(--shadow);
+                transition: all 0.3s ease;
+                z-index: 999;
+            `;
+            
+            printButton.addEventListener('click', function() {
+                window.print();
+            });
+            
+            printButton.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+            });
+            
+            printButton.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            document.body.appendChild(printButton);
+        });
+    </script>
+</body>
+</html>

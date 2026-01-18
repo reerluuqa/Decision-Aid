@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PedsDerm Rapid Ref | Clinical Quick-Scan</title>
+    <style>
+        :root {
+            /* Clinical Palette */
+            --primary: #0056b3;       /* Medical Blue */
+            --primary-light: #e7f1ff;
+            --danger: #dc3545;        /* Emergency Red */
+            --danger-light: #f8d7da;
+            --success: #28a745;       /* Safe/Green */
+            --warning: #ffc107;       /* Caution/Amber */
+            --neutral: #6c757d;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-hover: 0 10px 15px rgba(0,0,0,0.15);
+            --radius: 8px;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg);
+            color: var(--text-dark);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* --- Header & Nav --- */
+        header {
+            background-color: #fff;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .brand span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 400;
+            border-left: 1px solid var(--neutral);
+            padding-left: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-bar {
+            position: relative;
+        }
+
+        .search-bar input {
+            padding: 0.5rem 1rem 0.5rem 2.2rem;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            width: 250px;
+            transition: all 0.2s;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+            width: 300px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            width: 16px;
+            height: 16px;
+        }
+
+        /* --- Main Layout --- */
+        main {
+            flex: 1;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- Sidebar / Visualizer --- */
+        .visualizer-panel {
+            background: #fff;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            height: fit-content;
+            position: sticky;
+            top: 90px;
+        }
+
+        .visualizer-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .body-map-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #bodyMap {
+            height: 400px;
+            width: auto;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .body-part {
+            fill: #e9ecef;
+            stroke: #adb5bd;
+            stroke-width: 1;
+            transition: fill 0.4s ease, filter 0.4s ease;
+        }
+
+        .body-part:hover {
+            fill: #ced4da;
+            cursor: pointer;
+        }
+
+        .body-part.active {
+            fill: var(--primary);
+            stroke: var(--primary);
+            filter: drop-shadow(0 0 8px rgba(0,86,179,0.6));
+            animation: pulse-area 2s infinite;
+        }
+
+        .visualizer-legend {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* --- Content Grid --- */
+        .filters {
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: var(--bg);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* --- Card Design --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 0;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid transparent;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        /* Card Types: Color Coding */
+        .card.critical { border-top: 5px solid var(--danger); }
+        .card.common { border-top: 5px solid var(--primary); }
+        .card.safe { border-top: 5px solid var(--success); }
+        .card.info { border-top: 5px solid var(--neutral); }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            background: #fff;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge.danger { background: var(--danger-light); color: var(--danger); }
+        .badge.success { background: #d4edda; color: var(--success); }
+        .badge.info { background: #e2e3e5; color: var(--text-muted); }
+
+        .card-body {
+            padding: 1.5rem;
+            flex: 1;
+            background: #fafafa;
+        }
+
+        .key-visuals {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .visual-tag {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .visual-tag svg { width: 14px; height: 14px; }
+
+        .section-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            margin-top: 1rem;
+            display: block;
+        }
+        
+        .section-label:first-child { margin-top: 0; }
+
+        .action-list {
+            list-style: none;
+        }
+
+        .action-list li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .action-list li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .red-flag-box {
+            background: var(--danger-light);
+            border-left: 4px solid var(--danger);
+            padding: 0.8rem;
+            margin-top: 1rem;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .red-flag-title {
+            color: var(--danger);
+            font-weight: 700;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 0.3rem;
+        }
+
+        .red-flag-text {
+            font-size: 0.85rem;
+            color: #721c24;
+        }
+
+        /* --- Footer --- */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+        }
+
+        /* --- Animations --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse-area {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .hidden { display: none; }
+
+        /* --- Modal --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: #fff;
+            width: 90%;
+            max-width: 600px;
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: scale(0.95);
+            transition: transform 0.3s;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.open .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 1rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary)"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <h1>PedsDerm <span>Rapid Ref</span></h1>
+        </div>
+        <div class="controls">
+            <div class="search-bar">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="searchInput" placeholder="Search rash, symptom...">
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Panel: Interactive Body Map -->
+        <aside class="visualizer-panel">
+            <div class="visualizer-title">Distribution Map</div>
+            <div class="body-map-container">
+                <!-- SVG Body Map Outline -->
+                <svg id="bodyMap" viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Head -->
+                    <path id="part-head" class="body-part" d="M100,20 C80,20 65,35 65,55 C65,75 80,90 100,90 C120,90 135,75 135,55 C135,35 120,20 100,20 Z" />
+                    <!-- Torso -->
+                    <path id="part-torso" class="body-part" d="M70,95 L130,95 L140,200 L60,200 Z" />
+                    <!-- Arms (L) -->
+                    <path id="part-arm-left" class="body-part" d="M70,95 L40,100 L35,180 L50,185 L60,120 Z" />
+                    <path id="part-arm-right" class="body-part" d="M130,95 L160,100 L165,180 L150,185 L140,120 Z" />
+                    <!-- Legs -->
+                    <path id="part-legs" class="body-part" d="M60,205 L95,205 L90,350 L65,350 Z M105,205 L140,205 L135,350 L110,350 Z" />
+                    <!-- Diaper/Nappy Area -->
+                    <ellipse id="part-diaper" class="body-part" cx="100" cy="190" rx="30" ry="15" />
+                </svg>
+            </div>
+            <div class="visualizer-legend">
+                <p><strong>Interactive:</strong> Hover over a card to see affected areas. Click an area to filter conditions.</p>
+                <div style="display:flex; gap:10px; margin-top:10px; font-size: 0.75rem;">
+                    <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:var(--danger); border-radius:50%;"></span> Red Flag</span>
+                    <span style="display:flex; align-items:center; gap:4px;"><span style="width:10px; height:10px; background:var(--success); border-radius:50%;"></span> Benign</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Content Cards -->
+        <section class="content-area">
+            <div class="filters">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="critical">Red Flags</button>
+                <button class="filter-btn" data-filter="common">Common</button>
+                <button class="filter-btn" data-filter="infection">Infection</button>
+                <button class="filter-btn" data-filter="chronic">Chronic</button>
+            </div>
+
+            <div class="cards-grid" id="cardsContainer">
+                <!-- Cards will be injected via JS -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Clinical reference tool based on pediatric dermatology management. For educational use. Verify locally.</p>
+    </footer>
+
+    <!-- Modal for Details -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Condition Title</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Data Source (Based on Transcript) ---
+        const conditions = [
+            {
+                id: "eczema_herpeticum",
+                title: "Eczema Herpeticum",
+                subtitle: "HSV on eczema background",
+                type: "critical",
+                category: "infection",
+                visuals: ["Fever", "Punched-out lesions", "Unwell child"],
+                management: ["Urgent Derm/Peds referral", "Systemic antivirals", "Consider antibiotics if secondary infection"],
+                redFlags: "HIGH RISK: Child is unwell, fever, monomorphic punched-out lesions on face/body. Do not delay.",
+                mapAreas: ["part-head", "part-torso", "part-arms"]
+            },
+            {
+                id: "scabies",
+                title: "Scabies",
+                subtitle: "Sarcoptes scabiei",
+                type: "common",
+                category: "infection",
+                visuals: ["Itchy (worse night)", "Burrows", "Genital nodules"],
+                management: ["Permethrin 5% (Neck down)", "Repeat in 7 days", "Treat whole family", "Wash bedding on hot"],
+                redFlags: "Nodules can persist for months after treatment (Post-scabetic nodules).",
+                mapAreas: ["part-arm-left", "part-arm-right", "part-legs", "part-diaper"]
+            },
+            {
+                id: "eczema",
+                title: "Atopic Eczema",
+                subtitle: "Barrier defect",
+                type: "common",
+                category: "chronic",
+                visuals: ["Flexures", "Cheeks", "Dry/Scaly"],
+                management: ["Emollients: 1000g/mo child / 500g/wk adult", "Soap substitutes", "Treat flares early with steroids", "Bleach baths if recurrent Staph"],
+                redFlags: "Steroid Phobia is common. Reassure: Treat flare hard & fast, then taper. Educate parents.",
+                mapAreas: ["part-arm-left", "part-arm-right", "part-legs", "part-head", "part-torso"]
+            },
+            {
+                id: "impetigo",
+                title: "Impetigo",
+                subtitle: "Staph / Strep",
+                type: "info",
+                category: "infection",
+                visuals: ["Honey-colored crusts", "Golden"],
+                management: ["Mild: Fusidic acid", "Severe: Flucloxacillin", "Hygiene"],
+                redFlags: "Bullous Impetigo looks like blisters. Can look scary but is still impetigo.",
+                mapAreas: ["part-head", "part-torso"]
+            },
+            {
+                id: "nappy_candida",
+                title: "Candida Nappy Rash",
+                subtitle: "Fungal infection",
+                type: "info",
+                category: "infection",
+                visuals: ["Satellite lesions", "Red angry", "Involves folds"],
+                management: ["Topical Antifungal (Clotrimazole/Miconazole)", "Barrier cream", "Hygiene"],
+                redFlags: "If spares folds, it is likely Irritant Contact Dermatitis, not Candida.",
+                mapAreas: ["part-diaper"]
+            },
+            {
+                id: "hemangioma",
+                title: "Infantile Hemangioma",
+                subtitle: "Strawberry Nevus",
+                type: "critical",
+                category: "chronic",
+                visuals: ["Red lump", "Grows rapidly (0-6mo)"],
+                management: ["Observation (usually regresses)", "Propranolol if symptomatic"],
+                redFlags: "URGENT REFER: Eye/lip obstruction, ulceration, chin (airway risk), large facial (PHACE), lumbosacral (tethered cord).",
+                mapAreas: ["part-head", "part-torso"]
+            },
+            {
+                id: "alopecia_areata",
+                title: "Alopecia Areata",
+                subtitle: "Autoimmune hair loss",
+                type: "info",
+                category: "chronic",
+                visuals: ["Patchy hair loss", "Exclamation mark hairs"],
+                management: ["Dermovate Scalp application (4wks)", "Intralesional steroids", "Refer if >50% loss (JAK inhibitors)"],
+                redFlags: "Rule out Tinea Capitis (Ringworm) first: Scaling? Annular? Itchy? -> Oral Terbinafine.",
+                mapAreas: ["part-head"]
+            },
+            {
+                id: "molluscum",
+                title: "Molluscum",
+                subtitle: "Viral skin infection",
+                type: "safe",
+                category: "infection",
+                visuals: ["Umbilicated papules", "Pearly white"],
+                management: ["Self-limiting", "Reassurance", "Leave alone to avoid scarring"],
+                redFlags: "If red/angry (BOD's sign), it means the immune system is fighting it. It will resolve soon. Do not treat.",
+                mapAreas: ["part-torso", "part-arms"]
+            },
+            {
+                id: "tinea_capitis",
+                title: "Tinea Capitis",
+                subtitle: "Scalp Ringworm",
+                type: "critical",
+                category: "infection",
+                visuals: ["Scaling", "Annular patches", "Hair loss"],
+                management: ["Oral Terbinafine (off-license but preferred)", "Ketoconazole shampoo (family too)", "Do NOT biopsy"],
+                redFlags: "Kerion (Boggy swelling) needs aggressive treatment. Can cause scarring alopecia if missed.",
+                mapAreas: ["part-head"]
+            },
+            {
+                id: "cradle_cap",
+                title: "Cradle Cap",
+                subtitle: "Seborrheic Dermatitis",
+                type: "safe",
+                category: "chronic",
+                visuals: ["Greasy yellow scales", "Scalp"],
+                management: ["Soft brushing", "Baby shampoo", "If itchy: Mild steroid"],
+                redFlags: "If it spreads extensively, consider Psoriasis. Very common, benign.",
+                mapAreas: ["part-head"]
+            }
+        ];
+
+        // --- DOM Elements ---
+        const cardsContainer = document.getElementById('cardsContainer');
+        const searchInput = document.getElementById('searchInput');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const modalOverlay = document.getElementById('detailModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalContent = document.getElementById('modalContent');
+        const bodyParts = document.querySelectorAll('.body-part');
+
+        // --- Initialization ---
+        function init() {
+            renderCards(conditions);
+            setupEventListeners();
+        }
+
+        // --- Render Functions ---
+        function renderCards(data) {
+            cardsContainer.innerHTML = '';
+            
+            if (data.length === 0) {
+                cardsContainer.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color: var(--text-muted); padding: 2rem;">No conditions found matching criteria.</div>`;
+                return;
+            }
+
+            data.forEach(cond => {
+                const card = document.createElement('article');
+                card.className = `card ${cond.type}`;
+                card.setAttribute('data-id', cond.id);
+                
+                // Interaction for Body Map
+                card.addEventListener('mouseenter', () => highlightBody(cond.mapAreas, true));
+                card.addEventListener('mouseleave', () => highlightBody(cond.mapAreas, false));
+                card.addEventListener('click', () => openModal(cond));
+
+                let redFlagHTML = '';
+                if (cond.redFlags) {
+                    redFlagHTML = `
+                        <div class="red-flag-box">
+                            <div class="red-flag-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                Red Flag / Tip
+                            </div>
+                            <div class="red-flag-text">${cond.redFlags}</div>
+                        </div>
+                    `;
+                }
+
+                let badgeClass = 'info';
+                if (cond.type === 'critical') badgeClass = 'danger';
+                if (cond.type === 'safe') badgeClass = 'success';
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">${cond.title}</div>
+                            <div class="card-subtitle">${cond.subtitle}</div>
+                        </div>
+                        <span class="badge ${badgeClass}">${cond.type}</span>
+                    </div>
+                    <div class="card-body">
+                        <span class="section-label">Key Visuals</span>
+                        <div class="key-visuals">
+                            ${cond.visuals.map(v => `<div class="visual-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg> ${v}</div>`).join('')}
+                        </div>
+                        
+                        <span class="section-label">Management</span>
+                        <ul class="action-list">
+                            ${cond.management.slice(0, 3).map(m => `<li>${m}</li>`).join('')}
+                        </ul>
+                        ${redFlagHTML}
+                    </div>
+                `;
+                cardsContainer.appendChild(card);
+            });
+        }
+
+        // --- Logic & Interactivity ---
+        function highlightBody(areas, isActive) {
+            // Reset all
+            document.querySelectorAll('.body-part').forEach(part => part.classList.remove('active'));
+            
+            if (isActive && areas) {
+                areas.forEach(areaId => {
+                    const el = document.getElementById(areaId);
+                    if (el) el.classList.add('active');
+                });
+            }
+        }
+
+        function setupEventListeners() {
+            // Search
+            searchInput.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = conditions.filter(c => 
+                    c.title.toLowerCase().includes(term) || 
+                    c.visuals.some(v => v.toLowerCase().includes(term))
+                );
+                renderCards(filtered);
+            });
+
+            // Filter Buttons
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    const filter = btn.getAttribute('data-filter');
+                    if (filter === 'all') {
+                        renderCards(conditions);
+                    } else {
+                        renderCards(conditions.filter(c => c.category === filter || c.type === filter));
+                    }
+                });
+            });
+
+            // Body Map Click Filtering
+            bodyParts.forEach(part => {
+                part.addEventListener('click', () => {
+                    const partId = part.id;
+                    const filtered = conditions.filter(c => c.mapAreas.includes(partId));
+                    renderCards(filtered);
+                    // Visual feedback
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                });
+            });
+        }
+
+        // --- Modal Functions ---
+        function openModal(cond) {
+            modalTitle.innerText = cond.title;
+            modalContent.innerHTML = `
+                <p style="color:var(--text-muted); margin-bottom:1.5rem;"><em>${cond.subtitle}</em></p>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="background:#f8f9fa; padding:1rem; border-radius:8px;">
+                        <span class="section-label" style="color:var(--primary)">Clinical Features</span>
+                        <ul class="action-list">
+                            ${cond.visuals.map(v => `<li>${v}</li>`).join('')}
+                        </ul>
+                    </div>
+                    <div style="background:#f8f9fa; padding:1rem; border-radius:8px;">
+                        <span class="section-label" style="color:var(--success)">Management Plan</span>
+                        <ul class="action-list">
+                            ${cond.management.map(m => `<li>${m}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+
+                ${cond.redFlags ? `
+                    <div style="background:var(--danger-light); border-left:4px solid var(--danger); padding:1rem; border-radius:4px;">
+                        <strong style="color:var(--danger)">⚠️ CRITICAL ALERT:</strong><br>
+                        ${cond.redFlags}
+                    </div>
+                ` : ''}
+            `;
+            modalOverlay.classList.add('open');
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('open');
+        }
+
+        // Close modal on outside click
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+
+        // Run
+        init();
+
+    </script>
+</body>
+</html>

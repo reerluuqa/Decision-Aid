@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DermCheck: Clinical Lumps & Bumps Triage</title>
+    <style>
+        :root {
+            /* Palette */
+            --primary-blue: #0ea5e9;
+            --primary-dark: #0369a1;
+            --bg-neutral: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            
+            /* Status Colors */
+            --danger-bg: #fef2f2;
+            --danger-border: #ef4444;
+            --danger-text: #991b1b;
+            
+            --warning-bg: #fff7ed;
+            --warning-border: #f97316;
+            --warning-text: #9a3412;
+
+            --safe-bg: #f0fdf4;
+            --safe-border: #22c55e;
+            --safe-text: #166534;
+
+            /* Spacing & Layout */
+            --radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-neutral);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding-bottom: 4rem;
+        }
+
+        /* --- Header & Nav --- */
+        header {
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary-blue);
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        input[type="text"] {
+            padding: 0.5rem 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            width: 250px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        /* --- Triage Bar --- */
+        .triage-bar {
+            background: #1e293b;
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        .triage-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .triage-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .triage-item.active {
+            background: var(--primary-blue);
+        }
+
+        /* --- Main Layout --- */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* --- Clinical Card Design --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            border-left: 5px solid transparent;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        /* Card Types */
+        .card.danger { border-left-color: var(--danger-border); }
+        .card.warning { border-left-color: var(--warning-border); }
+        .card.safe { border-left-color: var(--safe-border); }
+
+        .card-header {
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .title-group h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 99px;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.danger { background: var(--danger-bg); color: var(--danger-text); }
+        .badge.warning { background: var(--warning-bg); color: var(--warning-text); }
+        .badge.safe { background: var(--safe-bg); color: var(--safe-text); }
+
+        .card-body {
+            padding: 1rem;
+            flex-grow: 1;
+        }
+
+        /* Clinical Highlights */
+        .highlight-box {
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .danger .highlight-box { background: #fff1f2; border: 1px solid #fecdd3; }
+        .warning .highlight-box { background: #fff7ed; border: 1px solid #fed7aa; }
+        .safe .highlight-box { background: #f0fdf4; border: 1px solid #bbf7d0; }
+
+        .highlight-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+            opacity: 0.8;
+        }
+
+        .clinical-tips {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+        
+        .clinical-tips ul {
+            padding-left: 1.2rem;
+            margin-top: 0.25rem;
+        }
+
+        .clinical-tips li {
+            margin-bottom: 0.25rem;
+        }
+
+        /* Action Bar at bottom of card */
+        .action-bar {
+            background: #f8fafc;
+            padding: 0.75rem 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .action-btn.primary {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .action-btn.urgent {
+            background: var(--danger-border);
+            color: white;
+            border-color: var(--danger-border);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        /* --- Red Flag Banner --- */
+        .red-flag-alert {
+            background: var(--danger-text);
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            display: none; /* Hidden by default, shown via JS filter if needed */
+            margin-bottom: 1rem;
+            border-radius: var(--radius);
+        }
+
+        /* --- Comparison Table Section --- */
+        .comparison-section {
+            margin-top: 3rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        .comparison-section h2 {
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            color: var(--text-main);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        tr:hover td {
+            background: #f1f5f9;
+        }
+
+        /* Utility classes for visibility */
+        .hidden { display: none !important; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header { flex-direction: column; align-items: stretch; gap: 1rem; }
+            .controls { flex-direction: column; }
+            input[type="text"] { width: 100%; }
+            .triage-bar { padding-bottom: 1.5rem; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="brand-icon">DC</div>
+            <div>
+                <h1>DermCheck</h1>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Lumps & Bumps Triage</span>
+            </div>
+        </div>
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Search (e.g. 'wart', 'bleed', 'pearly')..." onkeyup="filterGrid()">
+        </div>
+    </header>
+
+    <nav class="triage-bar">
+        <div class="triage-item active" onclick="filterCategory('all', this)">All Conditions</div>
+        <div class="triage-item" onclick="filterCategory('malignant', this)">🔴 Malignant (Urgent)</div>
+        <div class="triage-item" onclick="filterCategory('premalignant', this)">🟠 Pre-Malignant</div>
+        <div class="triage-item" onclick="filterCategory('benign', this)">🟢 Benign/Routine</div>
+    </nav>
+
+    <main>
+        <!-- Context Banner for Red Flags -->
+        <div id="redFlagBanner" class="red-flag-alert">
+            ⚠️ REMINDER: Any lesion with rapid growth, tenderness (perineural invasion), or 'ugly duckling' appearance requires urgent referral.
+        </div>
+
+        <div class="grid-container" id="cardGrid">
+
+            <!-- BENIGN CONDITIONS -->
+
+            <!-- Seborrheic Keratosis -->
+            <div class="card safe" data-category="benign" data-keywords="seborrheic keratosis benign stuck on wart old age brain like">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Seborrheic Keratosis</h3>
+                        <span class="badge safe">Benign</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        "Stuck on" appearance, waxy, warty. Can look like a brain (cerebriform pattern).
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Key:</strong> If confident in diagnosis, DO NOT refer.</li>
+                            <li><strong>Dermoscopy:</strong> Comedo-like openings, milia-like cysts.</li>
+                            <li><strong>Management:</strong> Reassurance. Cosmetic removal if private.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn">Reassure</button>
+                    <button class="action-btn">Cosmetic Referral</button>
+                </div>
+            </div>
+
+            <!-- Skin Tags -->
+            <div class="card safe" data-category="benign" data-keywords="skin tag acrochordon friction benign neck axilla">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Skin Tags (Acrochordon)</h3>
+                        <span class="badge safe">Benign</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Soft fleshy lumps on skin folds (neck, axilla). Often due to friction.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Management:</strong> If asymptomatic, no treatment needed.</li>
+                            <li><strong>Tip:</strong> Thread ligation (tie cotton string at base) for pedunculated ones.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn">Leave Alone</button>
+                    <button class="action-btn">Ligation/Cryotherapy</button>
+                </div>
+            </div>
+
+            <!-- Warts -->
+            <div class="card safe" data-category="benign" data-keywords="warts verruca HPV salicylic acid cryotherapy not commissioned">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Warts (Verrucae)</h3>
+                        <span class="badge safe">Benign</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Firm, rough papules. Plantar warts lose skin lines and have bleeding dots.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Treatment:</strong> Salicylic acid + soak + file (disposable file!).</li>
+                            <li><strong>NHS:</strong> Cryotherapy generally not commissioned unless painful/symptomatic.</li>
+                            <li><strong>Duration:</strong> Can take 3-6 months to resolve.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn">Salicylic Acid</button>
+                    <button class="action-btn">Safety Netting</button>
+                </div>
+            </div>
+
+            <!-- Molluscum -->
+            <div class="card safe" data-category="benign" data-keywords="molluscum contagiosum pearly umbilicated kids inflammation">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Molluscum Contagiosum</h3>
+                        <span class="badge safe">Benign</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Shiny pearly papules, often umbilicated. Common in children.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Inflammation:</strong> If angry/crusty, body is clearing it. Do not treat with antibiotics (e.g. Fucidin).</li>
+                            <li><strong>Treatment:</strong> Usually none needed. Can try Podophyllotoxin if persistent (max 2 weeks).</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn">Reassurance</button>
+                    <button class="action-btn">No Antibiotics</button>
+                </div>
+            </div>
+
+            <!-- Pyogenic Granuloma -->
+            <div class="card warning" data-category="benign" data-keywords="pyogenic granuloma bleed red nodule pregnancy amelanotic melanoma">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Pyogenic Granuloma</h3>
+                        <span class="badge warning">Caution</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Rapidly growing, red, fleshy, bleeds easily.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Danger:</strong> Differential is Amelanotic Melanoma.</li>
+                            <li><strong>Action:</strong> If treated in community (curettage/cautery), MUST send for histology.</li>
+                            <li><strong>Risk Factors:</strong> Pregnancy, trauma, hormones.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn urgent">Refer / Excise + Histo</button>
+                </div>
+            </div>
+
+            <!-- PRE-MALIGNANT CONDITIONS -->
+
+            <!-- Actinic Keratosis -->
+            <div class="card warning" data-category="premalignant" data-keywords="actinic keratosis AK sun damage field change 5-FU">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Actinic Keratosis (AK)</h3>
+                        <span class="badge warning">Pre-Malignant</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Red, scaly macules on sun-exposed sites (scalp, face). "Strawberry pattern" on dermoscopy.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Risk:</strong> High cumulative sun exposure increases SCC risk.</li>
+                            <li><strong>Management:</strong> 5-Fluorouracil (Efudix) or generic 5-FU once daily for 4 weeks.</li>
+                            <li><strong>Warning:</strong> Will look angry/crusty during treatment (normal reaction).</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn primary">5-FU / Field Treatment</button>
+                </div>
+            </div>
+
+            <!-- Bowen's Disease -->
+            <div class="card warning" data-category="premalignant" data-keywords="bowens disease SCC in situ scaly patch slow growing 5-FU">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Bowen's Disease</h3>
+                        <span class="badge warning">SCC In Situ</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Persistent scaly patch, sharp border, often on lower legs. Glomerular vessels on dermoscopy.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Definition:</strong> Full thickness dysplasia (vs AK partial).</li>
+                            <li><strong>Treatment:</strong> 5-FU for 4 weeks.</li>
+                            <li><strong>Caution:</strong> High risk of ulceration on lower legs. Stop if too inflamed.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn primary">5-FU / Cryotherapy</button>
+                </div>
+            </div>
+
+            <!-- MALIGNANT CONDITIONS -->
+
+            <!-- BCC -->
+            <div class="card danger" data-category="malignant" data-keywords="basal cell carcinoma BCC pearly telangiectasia rodent ulcer slow growing">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Basal Cell Carcinoma</h3>
+                        <span class="badge danger">Malignant</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Pearl roll edges, telangiectasia. History: "Bleeds, scabs, never heals."
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Types:</strong> Nodular (classic), Superficial (scaly patch).</li>
+                            <li><strong>Growth:</strong> Slow (years). 80% get another within 5 years.</li>
+                            <li><strong>Management:</strong> Excision is gold standard. Superficial BCC can be treated with topical (Imiquimod/5-FU) for 6 weeks.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn urgent">Routine/Urgent Excision</button>
+                    <button class="action-btn">Check for other lesions</button>
+                </div>
+            </div>
+
+            <!-- SCC -->
+            <div class="card danger" data-category="malignant" data-keywords="squamous cell carcinoma SCC rapid growth tender keratin horn">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Squamous Cell Carcinoma</h3>
+                        <span class="badge danger">Malignant</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Rapidly growing nodule, keratin plug, ulcerated. Can look like a volcano.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Key differentiator vs BCC:</strong> Grows fast (months vs years). TENDERNESS is a red flag (perineural invasion).</li>
+                            <li><strong>Risk:</strong> Immunosuppression (Transplant patients x200 risk).</li>
+                            <li><strong>Action:</strong> Refer 2WW (Urgent).</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn urgent">2-Week Wait Referral</button>
+                </div>
+            </div>
+
+            <!-- Keratoacanthoma -->
+            <div class="card danger" data-category="malignant" data-keywords="keratoacanthoma volcano rapid SCC differential">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Keratoacanthoma</h3>
+                        <span class="badge danger">High Risk</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Volcano-like lesion with central keratin plug. Grows rapidly over weeks.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Problem:</strong> Cannot differentiate clinically from well-differentiated SCC without histology.</li>
+                            <li><strong>Action:</strong> Treat as SCC. Excise or Refer 2WW.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn urgent">Excise / 2WW Referral</button>
+                </div>
+            </div>
+
+            <!-- Melanoma -->
+            <div class="card danger" data-category="malignant" data-keywords="melanoma ugly duckling ABCDE new change rapid nodular">
+                <div class="card-header">
+                    <div class="title-group">
+                        <h3>Malignant Melanoma</h3>
+                        <span class="badge danger">Critical</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="highlight-box">
+                        <span class="highlight-label">Visual Cue</span>
+                        Ugly Duckling sign. New changing mole. Nodular = Aggressive.
+                    </div>
+                    <div class="clinical-tips">
+                        <ul>
+                            <li><strong>Demographics:</strong> 80% de novo (new lesions). Intermittent sun exposure/childhood sunburn.</li>
+                            <li><strong>Types:</strong> Nodular (aggressive, vertical growth), Superficial Spreading, Acral (nailbed), Lentigo Maligna (face).</li>
+                            <li><strong>Nail Melanoma:</strong> Hutchinson sign (pigment on nail fold). Wide band (>3mm) with variation.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="action-bar">
+                    <button class="action-btn urgent">2-Week Wait Referral</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Comparison Table for Tricky Diagnoses -->
+        <section class="comparison-section">
+            <h2>⚡ Quick Differential: BCC vs. SCC vs. Melanoma</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>BCC</th>
+                        <th>SCC</th>
+                        <th>Melanoma</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Growth Speed</strong></td>
+                        <td>Slow (Years)</td>
+                        <td>Fast (Months)</td>
+                        <td>Variable (Nodular is fast)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Pain/Tenderness</strong></td>
+                        <td>Rare</td>
+                        <td><span style="color:var(--danger-text)">Common (Perineural invasion)</span></td>
+                        <td>Usually none</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Key Visual</strong></td>
+                        <td>Pearly roll, telangiectasia</td>
+                        <td>Hard nodule, scale, crust</td>
+                        <td>Asymmetry, Color variation, "Ugly Duckling"</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Action</strong></td>
+                        <td>Routine Excision / Topical</td>
+                        <td><span style="color:var(--danger-text); font-weight:bold;">2-Week Wait</span></td>
+                        <td><span style="color:var(--danger-text); font-weight:bold;">2-Week Wait</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+    <script>
+        // Filter Functionality
+        function filterCategory(category, element) {
+            // Update active tab
+            document.querySelectorAll('.triage-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+
+            const cards = document.querySelectorAll('.card');
+            const banner = document.getElementById('redFlagBanner');
+
+            // Show/Hide Red Flag Banner based on urgency
+            if(category === 'malignant') {
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+            }
+
+            // Filter cards
+            cards.forEach(card => {
+                if (category === 'all') {
+                    card.classList.remove('hidden');
+                } else if (card.dataset.category === category) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        // Search Functionality
+        function filterGrid() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const cards = document.querySelectorAll('.card');
+
+            cards.forEach(card => {
+                const keywords = card.dataset.keywords;
+                if (keywords.toLowerCase().indexOf(filter) > -1) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
