@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GP Mortality Audit Data Collector</title>
+    <style>
+        :root {
+            /* Color Palette */
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary: #64748b;
+            --secondary-light: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #cbd5e1;
+            
+            /* Spacing & Radius */
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            line-height: 1.5;
+            font-size: 1rem;
+        }
+
+        /* --- Layout & Typography --- */
+        header {
+            background-color: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--secondary-light);
+            padding-bottom: 0.5rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .btn-secondary {
+            background-color: white;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+        .btn-secondary:hover { background-color: var(--background); }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        /* --- Dashboard Views --- */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Filters & Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            background: var(--surface);
+            padding: 1rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+
+        .search-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-grow: 1;
+        }
+
+        input[type="text"], input[type="number"], input[type="date"], select, textarea {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 1rem;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Data Table */
+        .table-container {
+            overflow-x: auto;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        thead {
+            background-color: var(--background);
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--secondary);
+            white-space: nowrap;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background-color: #f1f5f9; }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #d1fae5; color: #065f46; }
+        .badge-warning { background: #fef3c7; color: #92400e; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-neutral { background: #f1f5f9; color: #475569; }
+
+        /* --- Form Styles --- */
+        .form-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .form-section {
+            background: var(--surface);
+            padding: 1.5rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--secondary);
+        }
+
+        .required::after {
+            content: " *";
+            color: var(--danger);
+        }
+
+        .radio-group, .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--background);
+        }
+
+        .check-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .check-item input {
+            width: auto;
+        }
+
+        .form-actions {
+            position: sticky;
+            bottom: 0;
+            background: var(--surface);
+            padding: 1rem 0;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        /* Warning Banner */
+        .warning-banner {
+            background-color: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            padding: 0.75rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 400px;
+            box-shadow: var(--shadow-md);
+        }
+        .modal-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; }
+
+        /* Print Styles */
+        @media print {
+            header, .toolbar, .form-actions, .btn, .warning-banner { display: none !important; }
+            .container { max-width: 100%; padding: 0; }
+            .view-section { display: block !important; }
+            body { background: white; }
+            .form-section { break-inside: avoid; border: 1px solid #ccc; box-shadow: none; margin-bottom: 1rem; }
+            .table-container { box-shadow: none; border: 1px solid #ccc; }
+        }
+
+        /* Helper for Congruence Highlight */
+        .congruent-match { color: var(--success); font-weight: bold; }
+        .congruent-mismatch { color: var(--danger); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            Mortality Audit Collector
+        </h1>
+        <nav>
+            <button class="btn btn-secondary" onclick="showDashboard()">Dashboard</button>
+            <button class="btn btn-primary" onclick="showForm()">+ New Record</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        
+        <!-- Confidentiality Warning -->
+        <div id="storageWarning" class="warning-banner" style="display:none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span><strong>Privacy Notice:</strong> Data is stored locally on this device. Ensure patient confidentiality is maintained. Clear browser data to wipe records.</span>
+            <button class="btn btn-sm btn-secondary" style="margin-left:auto;" onclick="clearAllData()">Clear Data</button>
+        </div>
+
+        <!-- DASHBOARD VIEW -->
+        <section id="dashboardView" class="view-section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statTotal">0</div>
+                    <div class="stat-label">Total Records</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statExpected">0%</div>
+                    <div class="stat-label">Expected Deaths</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statACP">0%</div>
+                    <div class="stat-label">ACP Completion</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statCongruence">0%</div>
+                    <div class="stat-label">Place of Death Congruence</div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <div class="search-group">
+                    <input type="text" id="searchInput" placeholder="Search by cause, ID..." onkeyup="filterRecords()">
+                    <select id="filterAge" onchange="filterRecords()">
+                        <option value="all">All Ages</option>
+                        <option value="premature">Premature (<75)</option>
+                        <option value="elderly">Elderly (75+)</option>
+                    </select>
+                    <select id="filterACP" onchange="filterRecords()">
+                        <option value="all">All ACP Status</option>
+                        <option value="completed">Has ACP</option>
+                        <option value="none">No ACP</option>
+                    </select>
+                </div>
+                <button class="btn btn-success" onclick="exportToCSV()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export CSV
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table id="recordsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Date</th>
+                            <th>Cause</th>
+                            <th>Expected?</th>
+                            <th>Place (Pref vs Act)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+                <div id="emptyState" style="padding: 2rem; text-align: center; color: var(--text-muted); display: none;">
+                    No records found. Click "+ New Record" to begin.
+                </div>
+            </div>
+        </section>
+
+        <!-- DATA ENTRY FORM VIEW -->
+        <section id="formView" class="view-section">
+            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <h2 id="formTitle">Add New Record</h2>
+                <span class="badge badge-neutral" id="recordIdDisplay">ID: --</span>
+            </div>
+
+            <form id="auditForm" onsubmit="saveRecord(event)">
+                <input type="hidden" id="recordId"> <!-- Empty for new, populated for edit -->
+
+                <div class="form-layout">
+                    <!-- Section 1: Patient Info -->
+                    <div class="form-section">
+                        <h2>1. Patient Information</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="age" class="required">Age at Death</label>
+                                <input type="number" id="age" name="age" min="0" max="120" required oninput="updatePrematureFlag()">
+                            </div>
+                            <div class="form-group">
+                                <label for="gender" class="required">Gender</label>
+                                <select id="gender" name="gender" required>
+                                    <option value="" disabled selected>Select...</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                    <option value="Unknown">Unknown</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="dateOfDeath" class="required">Date of Death</label>
+                                <input type="date" id="dateOfDeath" name="dateOfDeath" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="cause">Primary Cause of Death</label>
+                                <input type="text" id="cause" name="cause" placeholder="e.g. Metastatic Lung Cancer" list="commonCauses">
+                                <datalist id="commonCauses">
+                                    <option value="Ischaemic Heart Disease">
+                                    <option value="Stroke">
+                                    <option value="Pneumonia">
+                                    <option value="Metastatic Cancer">
+                                    <option value="Heart Failure">
+                                    <option value="Chronic Obstructive Pulmonary Disease">
+                                    <option value="Dementia / Alzheimer's">
+                                </datalist>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="comorbidities">Significant Comorbidities</label>
+                                <textarea id="comorbidities" rows="2" placeholder="e.g. Diabetes, Hypertension, CKD Stage 3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Categorization -->
+                    <div class="form-section">
+                        <h2>2. Categorization</h2>
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label class="required">Expected vs Unexpected</label>
+                                <div class="radio-group">
+                                    <label class="check-item" title="Death expected due to chronic decline">
+                                        <input type="radio" name="expected" value="Expected" onchange="togglePalliativeFields()" required> 
+                                        Expected (End of Life trajectory)
+                                    </label>
+                                    <label class="check-item" title="Sudden or unexpected death">
+                                        <input type="radio" name="expected" value="Unexpected" onchange="togglePalliativeFields()"> 
+                                        Unexpected (Sudden event)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group" id="palliativeGroup" style="display:none;">
+                                <label for="palliativeReg">Palliative Care Register</label>
+                                <select id="palliativeReg" name="palliativeReg">
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="palliativeDateGroup" style="display:none;">
+                                <label for="palliativeDate">Date Added to Register</label>
+                                <input type="date" id="palliativeDate" name="palliativeDate">
+                            </div>
+                            <div class="form-group">
+                                <label>Premature Death Status</label>
+                                <div id="prematureIndicator" class="badge badge-neutral">--</div>
+                                <small style="color:var(--text-muted)">Auto-calculated if < 75</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Advance Care Planning -->
+                    <div class="form-section">
+                        <h2>3. Advance Care Planning (ACP)</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="respect">ReSPECT Form</label>
+                                <select id="respect" name="respect">
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="lpa">LPA Documented</label>
+                                <select id="lpa" name="lpa">
+                                    <option value="No">No</option>
+                                    <option value="Yes - Health & Welfare">Yes - Health & Welfare</option>
+                                    <option value="Yes - Property">Yes - Property</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="prefPlace">Preferred Place of Death</label>
+                                <select id="prefPlace" name="prefPlace" onchange="calculateCongruence()">
+                                    <option value="" disabled selected>Select...</option>
+                                    <option value="Home">Home</option>
+                                    <option value="Hospice">Hospice</option>
+                                    <option value="Hospital">Hospital</option>
+                                    <option value="Care Home">Care Home</option>
+                                    <option value="No Preference">No Preference</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastAcpDate">Date of Last ACP Discussion</label>
+                                <input type="date" id="lastAcpDate" name="lastAcpDate">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Outcomes -->
+                    <div class="form-section">
+                        <h2>4. Outcomes</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="actualPlace" class="required">Actual Place of Death</label>
+                                <select id="actualPlace" name="actualPlace" required onchange="calculateCongruence()">
+                                    <option value="" disabled selected>Select...</option>
+                                    <option value="Home">Home</option>
+                                    <option value="Hospice">Hospice</option>
+                                    <option value="Hospital">Hospital</option>
+                                    <option value="Care Home">Care Home</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Congruence</label>
+                                <div id="congruenceResult" class="badge badge-neutral">--</div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="discrepancyNotes">Notes on Discrepancies (if applicable)</label>
+                                <textarea id="discrepancyNotes" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Risk Factors & Analysis -->
+                    <div class="form-section">
+                        <h2>5. Risk Factors & Analysis</h2>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="alcohol">Alcohol Involvement</label>
+                                <select id="alcohol" name="alcohol">
+                                    <option value="None">None</option>
+                                    <option value="Low">Low</option>
+                                    <option value="Moderate">Moderate</option>
+                                    <option value="High">High</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="lastMonthAE">A&E Admission in Last Month?</label>
+                                <select id="lastMonthAE" name="lastMonthAE">
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Psychosocial Factors</label>
+                                <div class="checkbox-group" style="flex-direction: row; flex-wrap: wrap;">
+                                    <label class="check-item"><input type="checkbox" name="psychosocial" value="Homelessness"> Homelessness</label>
+                                    <label class="check-item"><input type="checkbox" name="psychosocial" value="Severe Mental Illness"> Severe Mental Illness</label>
+                                    <label class="check-item"><input type="checkbox" name="psychosocial" value="Social Isolation"> Social Isolation</label>
+                                    <label class="check-item"><input type="checkbox" name="psychosocial" value="Carer Stress"> Carer Stress</label>
+                                    <label class="check-item"><input type="checkbox" name="psychosocial" value="Safeguarding Issue"> Safeguarding Issue</label>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="learningPoints">Learning Points / Opportunities</label>
+                                <textarea id="learningPoints" rows="3" placeholder="What could be improved?"></textarea>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="practiceReview">Could the practice have done better?</label>
+                                <textarea id="practiceReview" rows="2" placeholder="Reflective note..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="showDashboard()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Record</button>
+                </div>
+            </form>
+        </section>
+
+    </main>
+
+    <!-- Toast Component -->
+    <div id="toast">Message here</div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal">
+            <h3 class="modal-title">Delete Record</h3>
+            <p>Are you sure you want to delete this record? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let auditData = [];
+        let recordToDeleteId = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRecords();
+            // Set default date to today
+            document.getElementById('dateOfDeath').valueAsDate = new Date();
+        });
+
+        // --- Navigation ---
+        function showDashboard() {
+            document.getElementById('dashboardView').classList.add('active');
+            document.getElementById('formView').classList.remove('active');
+            renderDashboard();
+        }
+
+        function showForm() {
+            document.getElementById('dashboardView').classList.remove('active');
+            document.getElementById('formView').classList.add('active');
+            resetForm();
+        }
+
+        // --- Form Logic ---
+        function resetForm() {
+            document.getElementById('auditForm').reset();
+            document.getElementById('recordId').value = '';
+            document.getElementById('formTitle').textContent = 'Add New Record';
+            
+            // Generate new ID
+            const newId = 'AUD-' + Math.floor(1000 + Math.random() * 9000);
+            document.getElementById('recordIdDisplay').textContent = 'ID: ' + newId;
+            
+            // Reset calculated visuals
+            document.getElementById('prematureIndicator').className = 'badge badge-neutral';
+            document.getElementById('prematureIndicator').textContent = '--';
+            document.getElementById('congruenceResult').className = 'badge badge-neutral';
+            document.getElementById('congruenceResult').textContent = '--';
+            
+            // Reset visibility of conditional fields
+            document.getElementById('palliativeGroup').style.display = 'none';
+            document.getElementById('palliativeDateGroup').style.display = 'none';
+
+            // Reset date to today
+            document.getElementById('dateOfDeath').valueAsDate = new Date();
+        }
+
+        function updatePrematureFlag() {
+            const age = parseInt(document.getElementById('age').value) || 0;
+            const indicator = document.getElementById('prematureIndicator');
+            
+            if (age > 0 && age < 75) {
+                indicator.textContent = 'Premature (<75)';
+                indicator.className = 'badge badge-danger';
+            } else if (age >= 75) {
+                indicator.textContent = 'Elderly (75+)';
+                indicator.className = 'badge badge-success';
+            } else {
+                indicator.textContent = '--';
+                indicator.className = 'badge badge-neutral';
+            }
+        }
+
+        function togglePalliativeFields() {
+            const isExpected = document.querySelector('input[name="expected"]:checked')?.value === 'Expected';
+            const palGroup = document.getElementById('palliativeGroup');
+            const palDateGroup = document.getElementById('palliativeDateGroup');
+
+            if (isExpected) {
+                palGroup.style.display = 'flex';
+                palDateGroup.style.display = 'flex';
+            } else {
+                palGroup.style.display = 'none';
+                palDateGroup.style.display = 'none';
+            }
+        }
+
+        function calculateCongruence() {
+            const pref = document.getElementById('prefPlace').value;
+            const act = document.getElementById('actualPlace').value;
+            const result = document.getElementById('congruenceResult');
+
+            if (!pref || !act) {
+                result.textContent = '--';
+                result.className = 'badge badge-neutral';
+                return;
+            }
+
+            if (pref === act) {
+                result.textContent = 'Congruent (Match)';
+                result.className = 'badge badge-success';
+            } else {
+                result.textContent = 'Incongruent (Mismatch)';
+                result.className = 'badge badge-warning';
+            }
+        }
+
+        // --- Data Operations ---
+        function saveRecord(event) {
+            event.preventDefault();
+
+            const form = document.getElementById('auditForm');
+            if (!form.checkValidity()) {
+                showToast('Please fill in all required fields.');
+                return;
+            }
+
+            const id = document.getElementById('recordId').value || 'AUD-' + Math.floor(1000 + Math.random() * 9000);
+            
+            // Collect Checkboxes (Psychosocial)
+            const psychosocialChecks = document.querySelectorAll('input[name="psychosocial"]:checked');
+            const psychosocialValues = Array.from(psychosocialChecks).map(cb => cb.value).join('; ');
+
+            // Construct Object
+            const record = {
+                id: id,
+                age: document.getElementById('age').value,
+                gender: document.getElementById('gender').value,
+                dateOfDeath: document.getElementById('dateOfDeath').value,
+                cause: document.getElementById('cause').value,
+                comorbidities: document.getElementById('comorbidities').value,
+                expected: document.querySelector('input[name="expected"]:checked').value,
+                palliativeReg: document.getElementById('palliativeReg').value,
+                palliativeDate: document.getElementById('palliativeDate').value,
+                respect: document.getElementById('respect').value,
+                lpa: document.getElementById('lpa').value,
+                prefPlace: document.getElementById('prefPlace').value,
+                lastAcpDate: document.getElementById('lastAcpDate').value,
+                actualPlace: document.getElementById('actualPlace').value,
+                congruence: document.getElementById('congruenceResult').textContent.split(' ')[0],
+                discrepancyNotes: document.getElementById('discrepancyNotes').value,
+                alcohol: document.getElementById('alcohol').value,
+                lastMonthAE: document.getElementById('lastMonthAE').value,
+                psychosocial: psychosocialValues,
+                learningPoints: document.getElementById('learningPoints').value,
+                practiceReview: document.getElementById('practiceReview').value,
+                timestamp: new Date().toISOString()
+            };
+
+            // Check if editing
+            const existingIndex = auditData.findIndex(r => r.id === id);
+            if (existingIndex >= 0) {
+                auditData[existingIndex] = record;
+                showToast('Record updated successfully');
+            } else {
+                auditData.unshift(record); // Add to top
+                showToast('Record saved successfully');
+            }
+
+            saveToLocalStorage();
+            showDashboard();
+        }
+
+        function loadRecords() {
+            const stored = localStorage.getItem('gpMortalityAuditData');
+            if (stored) {
+                auditData = JSON.parse(stored);
+                document.getElementById('storageWarning').style.display = 'flex';
+            }
+            renderDashboard();
+        }
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('gpMortalityAuditData', JSON.stringify(auditData));
+                document.getElementById('storageWarning').style.display = 'flex';
+            } catch (e) {
+                alert('LocalStorage quota exceeded. Please export data and clear old records.');
+            }
+        }
+
+        function editRecord(id) {
+            const record = auditData.find(r => r.id === id);
+            if (!record) return;
+
+            // Populate Form
+            document.getElementById('recordId').value = record.id;
+            document.getElementById('recordIdDisplay').textContent = 'ID: ' + record.id;
+            document.getElementById('formTitle').textContent = 'Edit Record';
+
+            document.getElementById('age').value = record.age;
+            document.getElementById('gender').value = record.gender;
+            document.getElementById('dateOfDeath').value = record.dateOfDeath;
+            document.getElementById('cause').value = record.cause;
+            document.getElementById('comorbidities').value = record.comorbidities || '';
+            
+            const expectedRadio = document.querySelector(`input[name="expected"][value="${record.expected}"]`);
+            if(expectedRadio) expectedRadio.checked = true;
+
+            togglePalliativeFields(); // Update visibility first
+            document.getElementById('palliativeReg').value = record.palliativeReg || 'No';
+            document.getElementById('palliativeDate').value = record.palliativeDate || '';
+
+            document.getElementById('respect').value = record.respect || 'No';
+            document.getElementById('lpa').value = record.lpa || 'No';
+            document.getElementById('prefPlace').value = record.prefPlace;
+            document.getElementById('lastAcpDate').value = record.lastAcpDate || '';
+            document.getElementById('actualPlace').value = record.actualPlace;
+            document.getElementById('discrepancyNotes').value = record.discrepancyNotes || '';
+            
+            document.getElementById('alcohol').value = record.alcohol || 'None';
+            document.getElementById('lastMonthAE').value = record.lastMonthAE || 'No';
+            document.getElementById('learningPoints').value = record.learningPoints || '';
+            document.getElementById('practiceReview').value = record.practiceReview || '';
+
+            // Checkboxes
+            const psychosocialArray = record.psychosocial ? record.psychosocial.split('; ') : [];
+            document.querySelectorAll('input[name="psychosocial"]').forEach(cb => {
+                cb.checked = psychosocialArray.includes(cb.value);
+            });
+
+            // Trigger calcs
+            updatePrematureFlag();
+            calculateCongruence();
+
+            // Switch view
+            document.getElementById('dashboardView').classList.remove('active');
+            document.getElementById('formView').classList.add('active');
+        }
+
+        // --- Deletion ---
+        function promptDelete(id) {
+            recordToDeleteId = id;
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            recordToDeleteId = null;
+        }
+
+        function confirmDelete() {
+            if (recordToDeleteId) {
+                auditData = auditData.filter(r => r.id !== recordToDeleteId);
+                saveToLocalStorage();
+                renderDashboard();
+                showToast('Record deleted');
+            }
+            closeModal();
+        }
+
+        function clearAllData() {
+            if(confirm('WARNING: This will delete ALL records. This cannot be undone. Are you sure?')) {
+                localStorage.removeItem('gpMortalityAuditData');
+                auditData = [];
+                document.getElementById('storageWarning').style.display = 'none';
+                renderDashboard();
+                showToast('All data cleared');
+            }
+        }
+
+        // --- Dashboard Rendering ---
+        function renderDashboard() {
+            // Stats
+            const total = auditData.length;
+            const expectedCount = auditData.filter(r => r.expected === 'Expected').length;
+            const acpCount = auditData.filter(r => r.respect === 'Yes' || r.lpa.includes('Yes')).length;
+            const congruentCount = auditData.filter(r => r.congruence === 'Congruent').length;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statExpected').textContent = total ? Math.round((expectedCount/total)*100) + '%' : '0%';
+            document.getElementById('statACP').textContent = total ? Math.round((acpCount/total)*100) + '%' : '0%';
+            document.getElementById('statCongruence').textContent = total ? Math.round((congruentCount/total)*100) + '%' : '0%';
+
+            // Table
+            renderTable(auditData);
+        }
+
+        function filterRecords() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const ageFilter = document.getElementById('filterAge').value;
+            const acpFilter = document.getElementById('filterACP').value;
+
+            const filtered = auditData.filter(r => {
+                const matchesSearch = 
+                    r.cause.toLowerCase().includes(term) || 
+                    r.id.toLowerCase().includes(term) ||
+                    (r.comorbidities && r.comorbidities.toLowerCase().includes(term));
+                
+                let matchesAge = true;
+                if (ageFilter === 'premature') matchesAge = parseInt(r.age) < 75;
+                if (ageFilter === 'elderly') matchesAge = parseInt(r.age) >= 75;
+
+                let matchesACP = true;
+                if (acpFilter === 'completed') matchesACP = (r.respect === 'Yes' || r.lpa.includes('Yes'));
+                if (acpFilter === 'none') matchesACP = !(r.respect === 'Yes' || r.lpa.includes('Yes'));
+
+                return matchesSearch && matchesAge && matchesACP;
+            });
+
+            renderTable(filtered);
+        }
+
+        function renderTable(data) {
+            const tbody = document.querySelector('#recordsTable tbody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            }
+            emptyState.style.display = 'none';
+
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                
+                // Badges logic
+                const expectedClass = r.expected === 'Expected' ? 'badge-success' : 'badge-warning';
+                const isCongruent = r.congruence === 'Congruent';
+                const congruenceClass = isCongruent ? 'congruent-match' : 'congruent-mismatch';
+
+                tr.innerHTML = `
+                    <td><strong>${r.id}</strong></td>
+                    <td>${r.age}</td>
+                    <td>${r.gender}</td>
+                    <td>${r.dateOfDeath}</td>
+                    <td>${r.cause}</td>
+                    <td><span class="badge ${expectedClass}">${r.expected}</span></td>
+                    <td>
+                        <small>Pref: ${r.prefPlace || '-'}</small><br>
+                        <small>Act: ${r.actualPlace}</small><br>
+                        <span class="${congruenceClass}" style="font-size:0.75rem">${r.congruence}</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="editRecord('${r.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="promptDelete('${r.id}')">Del</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- CSV Export ---
+        function exportToCSV() {
+            if (auditData.length === 0) {
+                showToast('No data to export');
+                return;
+            }
+
+            const headers = [
+                "PatientID", "Age", "Gender", "DateOfDeath", "PrimaryCause", 
+                "ExpectedDeath", "PalliativeRegister", "ResPECT_Completed", 
+                "LPA_Documented", "PreferredPlace", "ActualPlace", "Congruence", 
+                "AlcoholInvolvement", "LastMonth_AE", "PsychosocialFactors",
+                "LearningPoints", "PracticeReview"
+            ];
+
+            const rows = auditData.map(r => {
+                // Clean strings to handle commas and quotes
+                const clean = (text) => text ? `"${String(text).replace(/"/g, '""')}"` : "";
+                
+                return [
+                    clean(r.id),
+                    r.age,
+                    clean(r.gender),
+                    r.dateOfDeath,
+                    clean(r.cause),
+                    clean(r.expected),
+                    clean(r.palliativeReg === 'Yes' ? `Yes,${r.palliativeDate}` : 'No'),
+                    clean(r.respect),
+                    clean(r.lpa),
+                    clean(r.prefPlace),
+                    clean(r.actualPlace),
+                    clean(r.congruence),
+                    clean(r.alcohol),
+                    clean(r.lastMonthAE),
+                    clean(r.psychosocial),
+                    clean(r.learningPoints),
+                    clean(r.practiceReview)
+                ].join(",");
+            });
+
+            const csvContent = [headers.join(","), ...rows].join("\n");
+            
+            // Add BOM for Excel UTF-8 compatibility
+            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement("a");
+            const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '-'); // DD-MM-YYYY handled below
+            const d = new Date();
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+
+            link.setAttribute("href", url);
+            link.setAttribute("download", `mortality-audit-${day}-${month}-${year}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- Utilities ---
+        function showToast(message) {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+    </script>
+</body>
+</html>

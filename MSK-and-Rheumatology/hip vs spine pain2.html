@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hip vs Spine Pain — GP Decision Aide</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --primary: #2563eb;
+    --primary-light: #dbeafe;
+    --accent: #059669;
+    --accent-light: #d1fae5;
+    --warn: #d97706;
+    --warn-light: #fef3c7;
+    --danger: #dc2626;
+    --danger-light: #fee2e2;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --radius: 10px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; }
+  
+  /* HEADER */
+  header { background: linear-gradient(135deg, #1e40af, #2563eb); color: #fff; padding: 18px 24px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  header p { font-size: .8rem; opacity: .85; margin-top: 2px; }
+
+  /* NAV TABS */
+  .tab-bar { display: flex; gap: 0; background: #fff; border-bottom: 2px solid var(--border); overflow-x: auto; position: sticky; top: 68px; z-index: 90; }
+  .tab-btn { flex: 1; min-width: 110px; padding: 10px 8px; font-size: .78rem; font-weight: 600; text-align: center; border: none; background: none; cursor: pointer; color: var(--text-muted); border-bottom: 3px solid transparent; transition: all .2s; white-space: nowrap; }
+  .tab-btn:hover { color: var(--primary); background: var(--primary-light); }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--primary-light); }
+
+  /* PANELS */
+  .panel { display: none; padding: 16px; max-width: 900px; margin: 0 auto; }
+  .panel.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; border-left: 4px solid var(--primary); }
+  .card.green { border-left-color: var(--accent); }
+  .card.amber { border-left-color: var(--warn); }
+  .card.red { border-left-color: var(--danger); }
+  .card-header { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; user-select: none; }
+  .card-header h3 { font-size: .92rem; display: flex; align-items: center; gap: 8px; }
+  .card-header .icon { font-size: 1.15rem; }
+  .card-header .chevron { transition: transform .2s; font-size: .8rem; color: var(--text-muted); }
+  .card-header .chevron.open { transform: rotate(180deg); }
+  .card-body { padding: 0 16px 14px; font-size: .85rem; }
+  .card-body ul { padding-left: 18px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body li::marker { color: var(--primary); }
+  .card.green .card-body li::marker { color: var(--accent); }
+  .card.amber .card-body li::marker { color: var(--warn); }
+  .card.red .card-body li::marker { color: var(--danger); }
+
+  /* COMPARISON TABLE */
+  .cmp-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 6px; }
+  .cmp-table th { background: var(--primary); color: #fff; padding: 8px 10px; text-align: left; font-weight: 600; }
+  .cmp-table th:first-child { background: #475569; border-radius: 6px 0 0 0; }
+  .cmp-table th:nth-child(2) { background: #7c3aed; }
+  .cmp-table th:nth-child(3) { background: #059669; }
+  .cmp-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .cmp-table tr:nth-child(even) { background: #f8fafc; }
+  .cmp-table tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; font-size: .7rem; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .badge-hip { background: #d1fae5; color: #065f46; }
+  .badge-spine { background: #ede9fe; color: #5b21b6; }
+  .badge-both { background: #fef3c7; color: #92400e; }
+
+  /* KEY POINT HIGHLIGHT */
+  .key-point { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: .84rem; display: flex; gap: 8px; align-items: flex-start; }
+  .key-point .kp-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+  /* RED FLAG BOX */
+  .red-flag { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 10px 14px; margin: 10px 0; font-size: .84rem; }
+  .red-flag strong { color: var(--danger); }
+
+  /* SEARCH */
+  .search-wrap { padding: 12px 16px; max-width: 900px; margin: 0 auto; }
+  .search-wrap input { width: 100%; padding: 10px 14px; border: 2px solid var(--border); border-radius: 8px; font-size: .9rem; outline: none; transition: border .2s; }
+  .search-wrap input:focus { border-color: var(--primary); }
+
+  /* FLOWCHART */
+  .flow { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 10px 0; }
+  .flow-step { background: var(--primary-light); color: var(--primary); border: 2px solid var(--primary); border-radius: 8px; padding: 10px 20px; font-size: .84rem; font-weight: 600; text-align: center; max-width: 340px; width: 100%; }
+  .flow-step.hip { background: #d1fae5; color: #065f46; border-color: #059669; }
+  .flow-step.spine { background: #ede9fe; color: #5b21b6; border-color: #7c3aed; }
+  .flow-step.both { background: #fef3c7; color: #92400e; border-color: #d97706; }
+  .flow-arrow { font-size: 1.2rem; color: var(--text-muted); padding: 2px 0; }
+
+  @media (max-width: 600px) {
+    .tab-btn { font-size: .72rem; padding: 8px 4px; min-width: 80px; }
+    header h1 { font-size: 1.05rem; }
+    .cmp-table { font-size: .75rem; }
+    .cmp-table th, .cmp-table td { padding: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🦴 Hip vs Spine Pain — GP Quick Decision Aide</h1>
+  <p>Based on expert discussion: Mr Anthony Gosh (Spinal Neurosurgeon) &amp; Mr Jeremy Lane (Hip Surgeon)</p>
+</header>
+
+<div class="search-wrap">
+  <input type="text" id="searchBox" placeholder="🔍 Quick search… e.g. groin, injection, stenosis, rotation" autocomplete="off">
+</div>
+
+<nav class="tab-bar" id="tabBar">
+  <button class="tab-btn active" data-tab="overview">📋 Overview</button>
+  <button class="tab-btn" data-tab="history">🗣️ History</button>
+  <button class="tab-btn" data-tab="exam">🩺 Examination</button>
+  <button class="tab-btn" data-tab="investigations">📊 Investigations</button>
+  <button class="tab-btn" data-tab="management">💊 Management</button>
+  <button class="tab-btn" data-tab="algorithm">🔀 Algorithm</button>
+</nav>
+
+<!-- ==================== OVERVIEW ==================== -->
+<div class="panel active" id="panel-overview">
+  <div class="card">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">⚡</span> Why This Matters</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li>High co-incidence of lumbar spine degeneration + hip OA, especially in older adults</li>
+        <li>Nerves from lumbar spine (sciatic, femoral, obturator) cross the hip → <strong>Hilton's Law</strong>: nerve crossing a joint will supply it</li>
+        <li>Referred pain patterns overlap significantly — pain can be referred <em>down</em> from spine or <em>up</em> from hip</li>
+        <li>Misattribution leads to wrong treatment and prolonged suffering</li>
+      </ul>
+      <div class="key-point">
+        <span class="kp-icon">💡</span>
+        <span><strong>"We treat the patient, not the test result."</strong> History &amp; examination are far more meaningful than scans alone. Scans can lie; a correct history won't.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card green">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🎯</span> Quick Differentiator Summary</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <table class="cmp-table">
+        <tr><th>Feature</th><th>🟣 Spine Origin</th><th>🟢 Hip Origin</th></tr>
+        <tr><td><strong>Pain location</strong></td><td>Back, buttock, radiates below knee to calf/foot</td><td>Groin (60-70%), buttock, lateral thigh, refers to knee but <strong>not beyond</strong></td></tr>
+        <tr><td><strong>Aggravating</strong></td><td>Sitting/bending (disc); Walking (stenosis)</td><td>Weight-bearing, twisting, getting out of chair, putting on socks/shoes</td></tr>
+        <tr><td><strong>Relieving</strong></td><td>Standing (disc); Sitting/leaning forward (stenosis)</td><td>Rest, initial steps may ease after stiffness</td></tr>
+        <tr><td><strong>Associated Sx</strong></td><td>Numbness, weakness, paraesthesia in dermatome</td><td>Stiffness, giving way, locking, limp worsens with distance</td></tr>
+        <tr><td><strong>Key exam</strong></td><td>+ve SLR, neuro deficit, antalgic/stooped gait</td><td>↓ internal rotation, ↓ ROM, Trendelenburg, leg length discrepancy</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== HISTORY ==================== -->
+<div class="panel" id="panel-history">
+  <div class="card">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🟢</span> Hip Pain Symptoms</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li><strong>Groin pain</strong> — ~60-70% of symptomatic hip OA patients point to groin</li>
+        <li>Buttock &amp; lateral thigh pain</li>
+        <li>Pain <strong>refers to knee but NOT beyond</strong> — key differentiator</li>
+        <li>Painful to lie on affected side at night</li>
+        <li>Worse with weight-bearing, twisting under load</li>
+        <li><strong>Functional clues:</strong>
+          <ul>
+            <li>Stiff getting out of chair; first few steps awkward/painful then eases</li>
+            <li>Limp worsens with walking distance</li>
+            <li>Feeling of <strong>giving way or locking</strong> (rough articular surfaces)</li>
+            <li>Difficulty with dressing — putting on trousers, socks, shoes</li>
+            <li>Pain in groin when leaning forward to reach feet</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🟣</span> Spine Pain Symptoms</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li>Pain radiates <strong>below the knee</strong> → calf, ankle, foot</li>
+        <li>Associated <strong>numbness, tingling, weakness</strong> — dermatomal distribution</li>
+        <li><strong>Spinal Stenosis pattern</strong> (typically &gt;50-60 yrs):
+          <ul>
+            <li>Walking brings on leg pain (neurogenic claudication)</li>
+            <li>Stopping, sitting, or leaning forward relieves pain</li>
+            <li>Patients walk stooped with knees slightly bent</li>
+          </ul>
+        </li>
+        <li><strong>Disc herniation pattern:</strong>
+          <ul>
+            <li>Sitting/slouching worsens pain (pushes disc onto nerve)</li>
+            <li>Leaning forward to stand triggers pain</li>
+            <li>Once walking, may ease initially (disc material shifts)</li>
+            <li>Prolonged standing/walking → pain returns + numbness</li>
+          </ul>
+        </li>
+        <li><strong>Partial nerve compression:</strong> only some fibres affected → may cause buttock/lateral hip pain only (can mimic hip pathology)</li>
+        <li>Upper lumbar nerve (L1/L2) compression → groin/anterior hip pain (rare, confusing)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card amber">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">⚠️</span> Overlap & Pitfalls</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li>Partial sciatic nerve compression can mimic hip/buttock pain</li>
+        <li>L1/L2 radiculopathy mimics groin/hip pain</li>
+        <li>A painful hip can cause secondary back pain (altered biomechanics)</li>
+        <li>Both conditions cause limping — but different gait patterns</li>
+        <li>Both common in same demographic (>50 yrs, degenerative)</li>
+      </ul>
+      <div class="key-point">
+        <span class="kp-icon">🔑</span>
+        <span>Ask: <strong>"Does the pain go below the knee?"</strong> and <strong>"Is there any numbness or weakness?"</strong> — Two questions that most reliably separate hip from spine.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== EXAMINATION ==================== -->
+<div class="panel" id="panel-exam">
+  <div class="card green">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">👁️</span> Observation (Starts in Waiting Room)</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li><strong>Call patient from waiting room yourself</strong> — observe gait, pain behaviour, general health</li>
+        <li><strong>Hip clues:</strong> antalgic limp, Trendelenburg gait</li>
+        <li><strong>Spine clues:</strong> stooped posture (stenosis), antalgic stepping (sciatica), guarded movement</li>
+        <li>General fragility / unwell appearance → consider other pathology</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card green">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🦵</span> Hip Examination — Look, Feel, Move</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <p style="margin-bottom:8px; font-weight:600;">Expose: shoes, socks, trousers off</p>
+      <ul>
+        <li><strong>Look:</strong>
+          <ul>
+            <li>Muscle wasting — thigh (VMO above knee) and gluteal muscles</li>
+            <li>Leg length discrepancy — knees &amp; ankles together lying flat</li>
+            <li>Pelvic tilt from unloading painful hip</li>
+          </ul>
+        </li>
+        <li><strong>Move (compare both sides):</strong>
+          <ul>
+            <li>Hip flexion to 90°, knee at 90°</li>
+            <li><strong>Internal rotation</strong> — often <strong>first sign of hip trouble</strong>; restricted &amp; painful = strong hip clue</li>
+            <li>External rotation (foot towards opposite side)</li>
+            <li>Abduction &amp; adduction</li>
+            <li>Reduced ROM + reproduces pain = hip is likely source</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="key-point">
+        <span class="kp-icon">⭐</span>
+        <span><strong>Internal rotation restriction with pain</strong> is the most sensitive early clinical sign of hip joint pathology.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🔬</span> Spine / Neurological Examination</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li><strong>Straight Leg Raise (SLR):</strong> leg straight, lift → stretches nerve against point of impingement → reproduces radicular pain
+          <ul><li>Key differentiator: bending knee (removing nerve stretch) relieves symptoms, whereas hip pain persists with knee bent and hip moved</li></ul>
+        </li>
+        <li><strong>Gait testing:</strong> heel walk (L5), toe walk (S1) — tests power</li>
+        <li><strong>Muscle power:</strong> test each myotome systematically</li>
+        <li><strong>Sensation:</strong> check each dermatome</li>
+        <li><strong>Muscle wasting:</strong> from chronic denervation (calf, quads, gluteals)</li>
+        <li><strong>Reflexes:</strong> knee jerk (L3/4), ankle jerk (S1)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== INVESTIGATIONS ==================== -->
+<div class="panel" id="panel-investigations">
+  <div class="card">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">📸</span> Imaging Summary</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <table class="cmp-table">
+        <tr><th>Investigation</th><th>Hip</th><th>Spine</th></tr>
+        <tr>
+          <td><strong>Plain X-ray</strong></td>
+          <td>AP pelvis — <strong>most important for hip</strong>; compare both hips; look for joint space narrowing, osteophytes, dysplasia. <em>Valid within 1 year.</em></td>
+          <td>Standing + flexion views → assess for spondylolisthesis/instability; dynamic info that MRI cannot provide</td>
+        </tr>
+        <tr>
+          <td><strong>MRI</strong></td>
+          <td>If symptoms present but X-ray near-normal → order MRI to assess soft tissue (labral tears, early OA, AVN)</td>
+          <td><strong>Investigation of choice</strong> for nerve assessment; shows disc herniations, canal stenosis, foraminal stenosis</td>
+        </tr>
+      </table>
+
+      <div class="red-flag" style="margin-top:14px;">
+        <strong>⚠️ MRI Over-interpretation Warning:</strong> No such thing as a "normal" MRI spine over age 40. Degenerative disc changes seen in the <strong>majority of asymptomatic</strong> patients &gt;40. Findings must correlate with clinical picture. Do not treat the scan — treat the patient.
+      </div>
+
+      <div class="key-point">
+        <span class="kp-icon">📝</span>
+        <span><strong>Quality of radiology request matters.</strong> Detailed clinical info on the request form signals the radiologist to look for specific pathology. Under-reporting (e.g., subtle hip dysplasia missed) and over-reporting are both common problems.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card amber">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">💉</span> Diagnostic Injections — Key Decision Tool</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li><strong>When mixed pathology exists</strong> (degenerative spine + arthritic hip) → diagnostic injection is often the most useful tool to determine the <em>main</em> pain source</li>
+        <li><strong>Nerve root block</strong> (image-guided): switches off nerve pain → confirms spinal origin</li>
+        <li><strong>Hip joint injection</strong> (image-guided): switches off hip pain → confirms hip origin</li>
+        <li>Even temporary relief is diagnostically valuable</li>
+      </ul>
+      <p style="margin-top:10px; font-weight:600;">Hip Injection Caveats:</p>
+      <ul>
+        <li>Rule of thumb: <strong>max 3 injections in 2 years</strong> — beyond that, consider surgery</li>
+        <li><strong>No hip replacement within 3 months</strong> of injection (infection risk)</li>
+        <li>Rarely can <strong>accelerate underlying arthritis</strong></li>
+        <li>Can be used therapeutically short-term (e.g., bridging to a holiday/event, months of relief possible)</li>
+      </ul>
+      <p style="margin-top:10px; font-weight:600;">Spine Injection Evidence (NERVE Trial):</p>
+      <ul>
+        <li>Disc herniation + sciatica: targeted nerve root injection vs microdiscectomy</li>
+        <li><strong>~⅔ of injection patients achieved long-term relief</strong>, comparable to surgery</li>
+        <li>Mechanism: reduces inflammation/swelling around nerve; body reabsorbs disc over time</li>
+        <li>If <strong>no motor weakness/progressive deficit</strong> → try injection first (may avoid surgery)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MANAGEMENT ==================== -->
+<div class="panel" id="panel-management">
+  <div class="card green">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🦴</span> Hip Conditions by Age Group</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <table class="cmp-table">
+        <tr><th>Group</th><th>Condition</th><th>Approach</th></tr>
+        <tr>
+          <td><strong>Young adults (20s-30s)</strong></td>
+          <td>Femoroacetabular Impingement (FAI); labral tears — often history of sport in teens → growth-related changes</td>
+          <td>Injection trial; if anatomical abnormality → refer to <strong>hip preservation specialist</strong></td>
+        </tr>
+        <tr>
+          <td><strong>Women 40s-50s</strong></td>
+          <td>Early OA accelerated by <strong>perimenopause</strong> (falling oestrogen); not severe on imaging but symptomatic</td>
+          <td>Injection; physiotherapy; HRT consideration; monitor progression</td>
+        </tr>
+        <tr>
+          <td><strong>Middle-aged &amp; older</strong></td>
+          <td>Established OA — failed conservative Rx</td>
+          <td><strong>Hip replacement surgery</strong> when physio + injections exhausted</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🏥</span> Spine Management Principles</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li><strong>Majority managed non-operatively:</strong> even herniated discs often reabsorb within weeks to ~3 months</li>
+        <li>Simple analgesics + physiotherapy ± injection for pain window to enable rehab</li>
+        <li><strong>Surgery indications:</strong> primarily to <strong>protect nerve function</strong>
+          <ul>
+            <li>Most surgery = minimally invasive decompression (small incision, microscope)</li>
+            <li>Removing thickened ligament, excess bone, or herniated disc material</li>
+            <li>Metalwork/fusion <strong>rarely</strong> needed — only for documented instability (spondylolisthesis with nerve compression)</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="key-point">
+        <span class="kp-icon">🤝</span>
+        <span><strong>MDT approach is key.</strong> When in doubt, the spine surgeon and hip surgeon should have a direct conversation rather than just cross-referring. Include physiotherapists in the team.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card red">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">🚩</span> When to Refer / Red Flags</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ul>
+        <li><strong>Progressive neurological deficit</strong> (weakness, numbness worsening) → urgent spinal referral</li>
+        <li><strong>Cauda equina symptoms</strong> (bladder/bowel disturbance, saddle anaesthesia) → emergency</li>
+        <li>Significant functional impairment despite conservative Rx → specialist assessment</li>
+        <li>Symptoms not matching imaging → further workup / second opinion</li>
+        <li>Patient looking unwell / systemic features → exclude malignancy, infection, inflammatory arthropathy</li>
+        <li>Mixed pathology not resolving → consider diagnostic injection pathway</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ALGORITHM ==================== -->
+<div class="panel" id="panel-algorithm">
+  <h2 style="font-size:1rem; margin-bottom:14px; text-align:center;">🔀 Clinical Decision Flowchart</h2>
+  
+  <div class="flow">
+    <div class="flow-step">Patient with hip / buttock / thigh / leg pain</div>
+    <div class="flow-arrow">⬇</div>
+    <div class="flow-step">HISTORY: Pain below knee? Numbness/weakness?</div>
+    <div class="flow-arrow">⬇</div>
+  </div>
+
+  <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-bottom:8px;">
+    <div style="flex:1; min-width:220px;">
+      <div class="flow">
+        <div class="flow-step spine">YES → Likely SPINE<br><small>Radicular pattern, neuro symptoms</small></div>
+        <div class="flow-arrow">⬇</div>
+        <div class="flow-step spine">EXAMINE: SLR +ve, neuro deficit, stooped gait</div>
+        <div class="flow-arrow">⬇</div>
+        <div class="flow-step spine">MRI Spine<br><small>Correlate findings with clinical picture</small></div>
+        <div class="flow-arrow">⬇</div>
+        <div class="flow-step spine">Conservative Rx ± nerve root injection<br><small>Surgery if progressive deficit / failed Rx</small></div>
+      </div>
+    </div>
+    <div style="flex:1; min-width:220px;">
+      <div class="flow">
+        <div class="flow-step hip">NO → Likely HIP<br><small>Groin pain, stops at knee, mechanical</small></div>
+        <div class="flow-arrow">⬇</div>
+        <div class="flow-step hip">EXAMINE: ↓ Internal rotation, ↓ ROM, leg length diff</div>
+        <div class="flow-arrow">⬇</div>
+        <div class="flow-step hip">AP Pelvis X-ray<br><small>± MRI if X-ray near-normal</small></div>
+        <div class="flow-arrow">⬇</div>
+        <div class="flow-step hip">Physio + analgesia ± hip injection<br><small>Surgery (THR) if failed conservative</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow" style="margin-top:10px;">
+    <div class="flow-step both">UNCLEAR / MIXED PATHOLOGY on both imaging</div>
+    <div class="flow-arrow">⬇</div>
+    <div class="flow-step both">DIAGNOSTIC INJECTION<br><small>Nerve root block OR hip block — which switches off pain?</small></div>
+    <div class="flow-arrow">⬇</div>
+    <div class="flow-step both">Treat confirmed source ± MDT discussion<br><small>Spine surgeon ↔ Hip surgeon conversation</small></div>
+  </div>
+
+  <div class="card amber" style="margin-top:18px;">
+    <div class="card-header" onclick="toggle(this)">
+      <h3><span class="icon">📌</span> Top 5 Takeaways for GP</h3>
+      <span class="chevron open">▼</span>
+    </div>
+    <div class="card-body">
+      <ol style="padding-left:18px;">
+        <li><strong>Pain below the knee + numbness/weakness</strong> = think spine. Pain stops at/before knee + groin pain = think hip.</li>
+        <li><strong>Internal rotation of hip</strong> is the single most useful quick clinical test for hip pathology.</li>
+        <li><strong>MRI findings over 40 are almost never "normal"</strong> — don't over-interpret degenerative changes. Correlate clinically.</li>
+        <li>When in doubt between hip and spine, <strong>diagnostic injection</strong> (nerve block or hip block) is the best differentiator.</li>
+        <li><strong>Most spine conditions resolve conservatively.</strong> Refer urgently only for progressive neurological deficit or cauda equina.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab navigation
+const tabBtns = document.querySelectorAll('.tab-btn');
+const panels = document.querySelectorAll('.panel');
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => b.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// Card toggle
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    chevron.classList.add('open');
+  } else {
+    body.style.display = 'none';
+    chevron.classList.remove('open');
+  }
+}
+
+// Search
+const searchBox = document.getElementById('searchBox');
+searchBox.addEventListener('input', () => {
+  const q = searchBox.value.toLowerCase().trim();
+  if (!q) {
+    document.querySelectorAll('.card').forEach(c => c.style.display = '');
+    document.querySelectorAll('.flow, .flow-step, h2').forEach(c => c.style.display = '');
+    return;
+  }
+  // Show all panels
+  panels.forEach(p => p.classList.add('active'));
+  tabBtns.forEach(b => b.classList.remove('active'));
+
+  document.querySelectorAll('.card').forEach(card => {
+    const text = card.textContent.toLowerCase();
+    if (text.includes(q)) {
+      card.style.display = '';
+      const body = card.querySelector('.card-body');
+      if (body) body.style.display = '';
+      const chev = card.querySelector('.chevron');
+      if (chev) chev.classList.add('open');
+    } else {
+      card.style.display = 'none';
+    }
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypercalcaemia Fast Aid - GP Decision Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary-red: #dc2626;
+            --dark-red: #991b1b;
+            --light-red: #fee2e2;
+            --bg-gray: #f3f4f6;
+            --card-white: #ffffff;
+            --text-dark: #1f2937;
+            --text-gray: #6b7280;
+            --border-gray: #e5e7eb;
+            --warning-bg: #fff7ed;
+            --warning-border: #f97316;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+            padding: 1.5rem 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.25rem;
+        }
+        
+        .header p {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        
+        /* Emergency Banner */
+        .emergency-banner {
+            background-color: var(--primary-red);
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 700;
+            display: none;
+            animation: pulse 2s infinite;
+        }
+        
+        .emergency-banner.active {
+            display: block;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+        
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 1px solid var(--border-gray);
+            overflow-x: auto;
+            scrollbar-width: none;
+            position: sticky;
+            top: 80px;
+            z-index: 99;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .nav-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            min-width: 100px;
+            padding: 1rem 0.5rem;
+            background: none;
+            border: none;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-gray);
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .nav-tab.active {
+            color: var(--primary-red);
+            border-bottom-color: var(--primary-red);
+            background-color: var(--light-red);
+        }
+        
+        .nav-tab:hover {
+            background-color: var(--bg-gray);
+        }
+        
+        /* Main Content */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Cards */
+        .card {
+            background: var(--card-white);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid transparent;
+        }
+        
+        .card.critical {
+            border-left-color: var(--primary-red);
+            background-color: var(--light-red);
+        }
+        
+        .card.warning {
+            border-left-color: var(--warning-border);
+            background-color: var(--warning-bg);
+        }
+        
+        .card h2 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 1rem 0 0.5rem 0;
+            color: var(--text-dark);
+        }
+        
+        /* Important Text - Red Bold */
+        .critical-text {
+            color: var(--primary-red);
+            font-weight: 700;
+        }
+        
+        .highlight-red {
+            background-color: var(--light-red);
+            color: var(--primary-red);
+            font-weight: 700;
+            padding: 0.125rem 0.375rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 0.25rem 0;
+        }
+        
+        /* Lists */
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+            border-bottom: 1px solid var(--bg-gray);
+        }
+        
+        li:last-child {
+            border-bottom: none;
+        }
+        
+        li:before {
+            content: "•";
+            color: var(--primary-red);
+            font-weight: 900;
+            position: absolute;
+            left: 0.5rem;
+        }
+        
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+        
+        .btn {
+            padding: 1rem;
+            border: 2px solid var(--border-gray);
+            background: white;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn:hover {
+            border-color: var(--primary-red);
+            transform: translateX(4px);
+            box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1);
+        }
+        
+        .btn.active {
+            background-color: var(--primary-red);
+            color: white;
+            border-color: var(--primary-red);
+        }
+        
+        .btn .range {
+            font-size: 1.125rem;
+            font-weight: 800;
+        }
+        
+        .btn .desc {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            margin-top: 0.25rem;
+        }
+        
+        /* Result Boxes */
+        .result-box {
+            display: none;
+            margin-top: 1rem;
+            padding: 1.25rem;
+            border-radius: 8px;
+            border: 2px solid;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .result-box.show {
+            display: block;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .result-severe {
+            background-color: var(--light-red);
+            border-color: var(--primary-red);
+        }
+        
+        .result-moderate {
+            background-color: #fef3c7;
+            border-color: #f59e0b;
+        }
+        
+        .result-mild {
+            background-color: #ecfdf5;
+            border-color: #10b981;
+        }
+        
+        /* Grid for PTH */
+        .pth-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        @media (min-width: 640px) {
+            .pth-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .pth-card {
+            border: 2px solid var(--border-gray);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .pth-card:hover {
+            border-color: var(--primary-red);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .pth-card h4 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-gray);
+            margin-bottom: 0.5rem;
+        }
+        
+        .pth-card .level {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+        
+        .pth-card .implication {
+            font-size: 0.875rem;
+            color: var(--primary-red);
+            font-weight: 700;
+        }
+        
+        /* Action Items */
+        .action-list {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+        
+        .action-item {
+            padding: 1rem;
+            border-left: 4px solid var(--primary-red);
+            background-color: var(--light-red);
+            margin-bottom: 0.5rem;
+            border-radius: 0 8px 8px 0;
+            font-weight: 600;
+        }
+        
+        .action-item.secondary {
+            border-left-color: var(--warning-border);
+            background-color: var(--warning-bg);
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background-color: var(--primary-red);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Footer note */
+        .disclaimer {
+            font-size: 0.75rem;
+            color: var(--text-gray);
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            border-top: 1px solid var(--border-gray);
+        }
+        
+        /* Utility */
+        .mb-2 { margin-bottom: 0.5rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .mt-4 { margin-top: 1rem; }
+        .font-bold { font-weight: 700; }
+        .text-sm { font-size: 0.875rem; }
+        .text-xs { font-size: 0.75rem; }
+        .text-gray { color: var(--text-gray); }
+        
+        /* Quick Checklist */
+        .checklist-item {
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--border-gray);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .checklist-item:hover {
+            border-color: var(--primary-red);
+            background-color: var(--light-red);
+        }
+        
+        .checklist-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+            accent-color: var(--primary-red);
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+        
+        .checklist-item.checked {
+            background-color: var(--light-red);
+            border-color: var(--primary-red);
+        }
+        
+        .checklist-item.checked label {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="emergency-banner" id="emergencyBanner">
+        ⚠️ CRITICAL: Calcium ≥3.00 mmol/l - Discuss with secondary care TODAY
+    </div>
+
+    <header class="header">
+        <h1>Hypercalcaemia Quick Aid</h1>
+        <p>Fast decision tool for GP consults • Corrected Calcium (Albumin adjusted)</p>
+    </header>
+
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('suspicion')">When to Check?</button>
+        <button class="nav-tab" onclick="showTab('results')">Result Guide</button>
+        <button class="nav-tab" onclick="showTab('pth')">PTH Levels</button>
+        <button class="nav-tab" onclick="showTab('causes')">Causes & Rx</button>
+    </nav>
+
+    <div class="container">
+        
+        <!-- Tab 1: When to Check -->
+        <div id="suspicion" class="tab-content active">
+            <div class="card critical">
+                <span class="badge">Red Flags</span>
+                <h2>Symptoms of Hypercalcaemia</h2>
+                <ul>
+                    <li>Thirst & polyuria/frequency</li>
+                    <li>Constipation</li>
+                    <li>Nausea/vomiting</li>
+                    <li><span class="critical-text">Drowsiness (late sign - urgent)</span></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2>Primary Hyperparathyroidism Features</h2>
+                <ul>
+                    <li>Bone pathology: <span class="critical-text">Osteoporosis, fragility fracture</span></li>
+                    <li>Renal pathology: <span class="critical-text">Renal stone</span></li>
+                </ul>
+            </div>
+
+            <div class="card warning">
+                <h2>Consider Checking if Chronic Non-Specific:</h2>
+                <div class="checklist-item" onclick="toggleCheck(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()">
+                    <label>Bone, muscle or joint pain</label>
+                </div>
+                <div class="checklist-item" onclick="toggleCheck(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()">
+                    <label>Anxiety, depression, low mood, irritability, apathy</label>
+                </div>
+                <div class="checklist-item" onclick="toggleCheck(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()">
+                    <label>Digestive problems, fatigue, mild confusion</label>
+                </div>
+                <div class="checklist-item" onclick="toggleCheck(this)">
+                    <input type="checkbox" onclick="event.stopPropagation()">
+                    <label>Insomnia</label>
+                </div>
+            </div>
+
+            <div class="card critical">
+                <h2>Cancer Association</h2>
+                <p>Check if known/suspected:</p>
+                <ul>
+                    <li>Lung cancer</li>
+                    <li>Myeloma</li>
+                    <li>Other malignancy associated with hypercalcaemia</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab 2: Result Guide -->
+        <div id="results" class="tab-content">
+            <div class="card">
+                <h2>Select Calcium Result</h2>
+                <p class="text-sm text-gray mb-4">All values are corrected calcium (adjusted for albumin)</p>
+                
+                <div class="btn-group">
+                    <button class="btn" onclick="showResult('severe')">
+                        <div>
+                            <div class="range critical-text">≥3.00 mmol/l</div>
+                            <div class="desc">Severe hypercalcaemia</div>
+                        </div>
+                        <span>→</span>
+                    </button>
+                    
+                    <button class="btn" onclick="showResult('moderate')">
+                        <div>
+                            <div class="range">2.60–2.99 mmol/l</div>
+                            <div class="desc">Mild-moderate elevation</div>
+                        </div>
+                        <span>→</span>
+                    </button>
+                    
+                    <button class="btn" onclick="showResult('mild')">
+                        <div>
+                            <div class="range">2.50–2.59 mmol/l</div>
+                            <div class="desc">High-normal range</div>
+                        </div>
+                        <span>→</span>
+                    </button>
+                </div>
+
+                <div id="result-severe" class="result-box result-severe">
+                    <h3 class="critical-text">⚠️ URGENT ACTION REQUIRED</h3>
+                    <p class="mb-4"><span class="critical-text">Discuss with secondary care that day</span></p>
+                    <ul>
+                        <li>May need admission for rehydration/treatment</li>
+                        <li>May need urgent referral</li>
+                        <li>Check for symptoms of hypercalcaemia (if yes, urgent)</li>
+                    </ul>
+                    <div class="mt-4 p-4 bg-white rounded border-2 border-red-600">
+                        <p class="critical-text">90% of hypercalcaemia due to primary hyperparathyroidism or cancer</p>
+                    </div>
+                </div>
+
+                <div id="result-moderate" class="result-box result-moderate">
+                    <h3>Mild-Moderate Hypercalcaemia</h3>
+                    <p class="mb-4 text-sm">2.60–2.99 mmol/l</p>
+                    
+                    <div class="action-list">
+                        <div class="action-item">
+                            Any symptoms of hypercalcaemia?
+                            <div class="text-sm mt-1 font-normal">If YES: <span class="critical-text">Urgent referral/Admission</span></div>
+                        </div>
+                        <div class="action-item secondary">
+                            If NO symptoms: Repeat corrected calcium
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-white rounded">
+                        <p class="text-sm"><span class="font-bold">Note:</span> 90% due to primary hyperparathyroidism or malignancy</p>
+                    </div>
+                </div>
+
+                <div id="result-mild" class="result-box result-mild">
+                    <h3>High-Normal Range</h3>
+                    <p class="mb-4 text-sm">2.50–2.59 mmol/l</p>
+                    
+                    <div class="action-list">
+                        <div class="action-item secondary">
+                            AND any features of primary hyperparathyroidism?
+                            <div class="text-xs mt-1 font-normal">(bone/renal pathology)</div>
+                        </div>
+                        <div class="action-item">
+                            If YES: <span class="critical-text">Repeat corrected calcium</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-white rounded border border-green-500">
+                        <p class="text-sm">If normal range AND no features → Routine monitoring</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card critical">
+                <h2>Repeat Testing Protocol</h2>
+                <p class="mb-2">If on <span class="font-bold">2 separate occasions</span>:</p>
+                <ul>
+                    <li>Corrected calcium <span class="critical-text">≥2.6 mmol/l</span></li>
+                    <li>OR Calcium 2.50–2.59 <span class="critical-text">AND</span> features of primary hyperparathyroidism</li>
+                </ul>
+                <div class="mt-4 p-3 bg-white rounded">
+                    <p class="critical-text">→ Arrange PTH and repeat corrected calcium</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: PTH Levels -->
+        <div id="pth" class="tab-content">
+            <div class="card">
+                <h2>PTH Interpretation Guide</h2>
+                <p class="text-sm text-gray mb-4">Click cards for details</p>
+                
+                <div class="pth-grid">
+                    <div class="pth-card" onclick="togglePthDetail(this)">
+                        <h4>PTH Low</h4>
+                        <div class="level">Below reference range</div>
+                        <div class="implication">Non-PTH dependent hypercalcaemia</div>
+                        <div class="detail mt-4 text-sm hidden">
+                            <p class="mb-2"><strong>Causes:</strong></p>
+                            <ul class="text-sm">
+                                <li>Cancer (lung, myeloma, bony mets)</li>
+                                <li>Thyrotoxicosis</li>
+                                <li>Vitamin D toxicity</li>
+                                <li>Sarcoidosis</li>
+                                <li>Thiazides</li>
+                                <li>Acromegaly</li>
+                                <li>Phaeochromocytoma</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pth-card" onclick="togglePthDetail(this)">
+                        <h4>PTH Mid-Low + Low Ca</h4>
+                        <div class="level">Below midpoint</div>
+                        <div class="text-xs text-gray mb-1">(but within range) AND Ca &lt;2.6</div>
+                        <div class="implication">Primary hyperparathyroidism unlikely</div>
+                    </div>
+
+                    <div class="pth-card" onclick="togglePthDetail(this)">
+                        <h4>PTH Mid-Low + High Ca</h4>
+                        <div class="level">Below midpoint</div>
+                        <div class="text-xs text-gray mb-1">AND Ca ≥2.6</div>
+                        <div class="implication">Cannot rule out primary hyperparathyroidism</div>
+                        <div class="detail mt-4 text-sm hidden">
+                            <p class="critical-text">Seek endocrine advice</p>
+                        </div>
+                    </div>
+
+                    <div class="pth-card critical" onclick="togglePthDetail(this)" style="border-color: var(--primary-red); background-color: var(--light-red);">
+                        <h4>PTH Raised</h4>
+                        <div class="level">Above midpoint or raised</div>
+                        <div class="implication critical-text">Likely primary hyperparathyroidism</div>
+                        <div class="detail mt-4 text-sm hidden">
+                            <p class="critical-text mb-2">Seek endocrine advice (referral/telephone)</p>
+                            <p class="text-xs"><strong>Other causes:</strong> Tertiary hyperparathyroidism (renal), Familial (MEN1, FHH), Lithium</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Other Tests</h2>
+                <div class="grid gap-4">
+                    <div class="p-3 border rounded">
+                        <span class="badge">NICE says NO</span>
+                        <p class="mt-2 text-sm">Do not check Vitamin D or other tests when assessing for primary hyperparathyroidism</p>
+                    </div>
+                    <div class="p-3 border rounded border-orange-400 bg-orange-50">
+                        <span class="badge" style="background-color: var(--warning-border);">Local Guidance</span>
+                        <p class="mt-2 text-sm">Often suggests checking Vitamin D to assess underlying cause</p>
+                    </div>
+                </div>
+                
+                <h3 class="mt-4">Useful Tests for Underlying Cause:</h3>
+                <ul class="text-sm">
+                    <li>Bone profile & U&Es</li>
+                    <li>TFTs</li>
+                    <li>Myeloma screen (if indicated)</li>
+                    <li>Prolactin (if &lt;45y - for familial causes)</li>
+                    <li>Calcium excretion index (urine)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Tab 4: Causes & Treatment -->
+        <div id="causes" class="tab-content">
+            <div class="card critical">
+                <h2>Immediate Actions</h2>
+                <div class="action-list">
+                    <div class="action-item">
+                        If on Thiazide diuretic: <span class="critical-text">STOP</span>
+                    </div>
+                    <div class="action-item">
+                        If excess dietary calcium: <span class="critical-text">REDUCE</span>
+                    </div>
+                    <div class="action-item">
+                        If Vitamin D low: <span class="critical-text">Do NOT delay referral</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Non-PTH Dependent Causes</h2>
+                <p class="text-sm text-gray mb-4">When PTH is low (suppressed)</p>
+                
+                <div class="grid gap-2">
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label><strong>Malignancy</strong> (lung, myeloma, bony mets)</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label>Thyrotoxicosis</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label>Vitamin D toxicity</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label>Sarcoidosis</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label>Thiazide diuretics</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label>Acromegaly</label>
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox">
+                        <label>Phaeochromocytoma</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Familial/Hereditary Causes</h2>
+                <p class="text-sm mb-4">Consider if PTH raised and:</p>
+                <ul>
+                    <li>Patient &lt;45 years (check <span class="critical-text">prolactin</span>)</li>
+                    <li>Family history</li>
+                    <li>Urine calcium excretion index</li>
+                </ul>
+                <div class="mt-4 p-3 bg-gray-50 rounded text-sm">
+                    <strong>Types:</strong> MEN1, Familial hypocalciuric hypercalcaemia (FHH)
+                </div>
+            </div>
+
+            <div class="card warning">
+                <h2>Renal Disease</h2>
+                <p>Consider <span class="critical-text">tertiary hyperparathyroidism</span> in patients with chronic renal disease</p>
+            </div>
+        </div>
+
+        <div class="disclaimer">
+            <p>Based on NICE NG132, DTB 2010, JAMA 2022, BMJ 2015, Derbyshire Shared Care Pathology Guidelines (2023)</p>
+            <p class="mt-2">For educational use only. Does not replace clinical judgment. August 2024.</p>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Hide emergency banner when switching away from results
+            if (tabName !== 'results') {
+                document.getElementById('emergencyBanner').classList.remove('active');
+            }
+        }
+
+        // Show result guidance
+        function showResult(level) {
+            // Hide all results first
+            document.querySelectorAll('.result-box').forEach(box => {
+                box.classList.remove('show');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected result
+            document.getElementById('result-' + level).classList.add('show');
+            
+            // Add active class to clicked button
+            event.currentTarget.classList.add('active');
+            
+            // Show emergency banner for severe
+            const emergencyBanner = document.getElementById('emergencyBanner');
+            if (level === 'severe') {
+                emergencyBanner.classList.add('active');
+                // Scroll to top to see banner
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                emergencyBanner.classList.remove('active');
+            }
+        }
+
+        // Toggle PTH details
+        function togglePthDetail(card) {
+            const detail = card.querySelector('.detail');
+            if (detail) {
+                detail.classList.toggle('hidden');
+                if (!detail.classList.contains('hidden')) {
+                    card.style.gridColumn = "1 / -1";
+                } else {
+                    card.style.gridColumn = "";
+                }
+            }
+        }
+
+        // Toggle checklist styling
+        function toggleCheck(element) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                element.classList.add('checked');
+            } else {
+                element.classList.remove('checked');
+            }
+        }
+
+        // Initialize - check for any hash in URL
+        window.addEventListener('load', () => {
+            // Add simple animation on load
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                document.body.style.transition = 'opacity 0.3s';
+                document.body.style.opacity = '1';
+            }, 50);
+        });
+
+        // Keyboard shortcuts for fast navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '1') showTab('suspicion');
+            if (e.key === '2') showTab('results');
+            if (e.key === '3') showTab('pth');
+            if (e.key === '4') showTab('causes');
+        });
+    </script>
+</body>
+</html>

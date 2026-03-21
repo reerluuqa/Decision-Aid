@@ -1,0 +1,2286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GP Mortality Audit Data Collector</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary: #64748b;
+            --secondary-light: #94a3b8;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.5;
+            font-size: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        header p {
+            opacity: 0.9;
+            margin-top: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        .nav-tab.active {
+            background: white;
+            color: var(--primary);
+        }
+
+        .warning-banner {
+            background: var(--warning-light);
+            border: 1px solid var(--warning);
+            color: #92400e;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .warning-banner.hidden {
+            display: none;
+        }
+
+        .confidentiality-notice {
+            background: var(--primary-light);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+
+        .view-container {
+            display: none;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        /* Dashboard Styles */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .stat-card h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-card .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.success .value { color: var(--success); }
+        .stat-card.warning .value { color: var(--warning); }
+        .stat-card.danger .value { color: var(--danger); }
+
+        /* Chart Styles */
+        .chart-container {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .bar-chart {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+            height: 150px;
+            padding: 0.5rem 0;
+        }
+
+        .bar-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .bar {
+            width: 100%;
+            max-width: 60px;
+            background: var(--primary);
+            border-radius: 0.25rem 0.25rem 0 0;
+            transition: height 0.3s ease;
+            min-height: 4px;
+        }
+
+        .bar-label {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .bar-value {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        /* Form Styles */
+        .form-card {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+
+        .form-section {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-section:last-child {
+            border-bottom: none;
+        }
+
+        .section-header {
+            background: var(--background);
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .section-header:hover {
+            background: #f1f5f9;
+        }
+
+        .section-header h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-header .toggle-icon {
+            transition: transform 0.3s;
+            color: var(--secondary);
+        }
+
+        .section-header.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+
+        .section-content {
+            padding: 1.25rem;
+            display: grid;
+            gap: 1rem;
+        }
+
+        .section-content.collapsed {
+            display: none;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        label .required {
+            color: var(--danger);
+        }
+
+        label .hint {
+            font-weight: 400;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.625rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: var(--surface);
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        input:invalid,
+        select:invalid {
+            border-color: var(--danger);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .radio-group,
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .radio-option,
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+
+        .radio-option:hover,
+        .checkbox-option:hover {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.05);
+        }
+
+        .radio-option input:checked + span,
+        .checkbox-option input:checked + span {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .radio-option:has(input:checked),
+        .checkbox-option:has(input:checked) {
+            border-color: var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+        }
+
+        input[type="radio"],
+        input[type="checkbox"] {
+            width: auto;
+            accent-color: var(--primary);
+        }
+
+        .tag-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            min-height: 44px;
+            align-items: center;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .tag button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: 0.8;
+        }
+
+        .tag button:hover {
+            opacity: 1;
+        }
+
+        .tag-input {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 120px;
+            padding: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .premature-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--danger-light);
+            color: var(--danger);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 0.5rem;
+        }
+
+        .congruence-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .congruence-indicator.match {
+            background: var(--success-light);
+            color: #065f46;
+        }
+
+        .congruence-indicator.no-match {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .congruence-indicator.unknown {
+            background: #f1f5f9;
+            color: var(--secondary);
+        }
+
+        /* Conditional Fields */
+        .conditional-field {
+            display: none;
+            padding-left: 1.5rem;
+            border-left: 3px solid var(--primary-light);
+            margin-left: 0.5rem;
+        }
+
+        .conditional-field.visible {
+            display: block;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--background);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            width: 36px;
+            height: 36px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: var(--background);
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .table-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            min-width: 200px;
+        }
+
+        .filter-select {
+            min-width: 150px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+        }
+
+        th {
+            background: var(--background);
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-expected {
+            background: var(--success-light);
+            color: #065f46;
+        }
+
+        .status-unexpected {
+            background: var(--warning-light);
+            color: #92400e;
+        }
+
+        .status-yes {
+            background: var(--success-light);
+            color: #065f46;
+        }
+
+        .status-no {
+            background: var(--danger-light);
+            color: var(--danger);
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Progress Indicator */
+        .progress-container {
+            display: flex;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            transition: background 0.3s;
+        }
+
+        .progress-step.completed {
+            background: var(--success);
+        }
+
+        .progress-step.current {
+            background: var(--primary);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--surface);
+            border-radius: 0.75rem;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            background: var(--text);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Print Styles */
+        @media print {
+            header, .nav-tabs, .warning-banner, .form-actions, .actions-cell, .btn {
+                display: none !important;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            .table-container {
+                box-shadow: none;
+                border: 1px solid #000;
+            }
+
+            th, td {
+                border: 1px solid #000;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.25rem;
+            }
+
+            .nav-tab {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.75rem;
+            }
+
+            .dashboard {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-filter {
+                flex-direction: column;
+            }
+
+            .search-input, .filter-select {
+                width: 100%;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--text);
+            color: white;
+            text-align: center;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            font-weight: 400;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+
+        *:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            GP Mortality Audit Data Collector
+        </h1>
+        <p>Clinical Audit Tool for Quality Improvement</p>
+        <nav class="nav-tabs" role="tablist">
+            <button class="nav-tab active" data-view="dashboard" role="tab" aria-selected="true">📊 Dashboard</button>
+            <button class="nav-tab" data-view="form" role="tab" aria-selected="false">➕ Add Record</button>
+            <button class="nav-tab" data-view="records" role="tab" aria-selected="false">📋 View Records</button>
+        </nav>
+    </header>
+
+    <main class="container">
+        <!-- Confidentiality Notice -->
+        <div class="confidentiality-notice">
+            <strong>⚠️ Data Confidentiality:</strong> All data is stored locally in your browser. Do not enter identifiable patient information. Use de-identified codes only.
+        </div>
+
+        <!-- Data Warning Banner -->
+        <div class="warning-banner hidden" id="dataWarning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span><strong id="recordCount">0</strong> records stored locally. Remember to export your data regularly.</span>
+            <button class="btn btn-sm btn-secondary" onclick="exportToCSV()">Export Now</button>
+        </div>
+
+        <!-- Dashboard View -->
+        <div class="view-container active" id="dashboardView">
+            <div class="dashboard">
+                <div class="stat-card">
+                    <h3>Total Records</h3>
+                    <div class="value" id="statTotal">0</div>
+                    <div class="subtitle">mortality cases audited</div>
+                </div>
+                <div class="stat-card success">
+                    <h3>Expected Deaths</h3>
+                    <div class="value" id="statExpected">0%</div>
+                    <div class="subtitle" id="statExpectedCount">0 of 0 cases</div>
+                </div>
+                <div class="stat-card">
+                    <h3>ACP Completion</h3>
+                    <div class="value" id="statACP">0%</div>
+                    <div class="subtitle" id="statACPCount">0 with ReSPECT</div>
+                </div>
+                <div class="stat-card warning">
+                    <h3>Place Congruence</h3>
+                    <div class="value" id="statCongruence">0%</div>
+                    <div class="subtitle" id="statCongruenceCount">died in preferred place</div>
+                </div>
+                <div class="stat-card danger">
+                    <h3>Premature Deaths</h3>
+                    <div class="value" id="statPremature">0</div>
+                    <div class="subtitle">under age 75</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Last Month A&E</h3>
+                    <div class="value" id="statAE">0%</div>
+                    <div class="subtitle" id="statAECount">had A&E visit</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 class="chart-title">Age Distribution at Death</h3>
+                <div class="bar-chart" id="ageChart">
+                    <div class="bar-group">
+                        <div class="bar-value" id="age0-39">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">0-39</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-value" id="age40-49">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">40-49</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-value" id="age50-59">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">50-59</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-value" id="age60-69">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">60-69</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-value" id="age70-79">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">70-79</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-value" id="age80-89">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">80-89</div>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar-value" id="age90+">0</div>
+                        <div class="bar" style="height: 0%"></div>
+                        <div class="bar-label">90+</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group" style="justify-content: center; margin-top: 1rem;">
+                <button class="btn btn-primary" onclick="switchView('form')">➕ Add New Record</button>
+                <button class="btn btn-success" onclick="exportToCSV()">📥 Export to CSV</button>
+            </div>
+        </div>
+
+        <!-- Form View -->
+        <div class="view-container" id="formView">
+            <form id="auditForm" onsubmit="return saveRecord(event)">
+                <!-- Progress Indicator -->
+                <div class="progress-container">
+                    <div class="progress-step completed" data-section="1"></div>
+                    <div class="progress-step" data-section="2"></div>
+                    <div class="progress-step" data-section="3"></div>
+                    <div class="progress-step" data-section="4"></div>
+                    <div class="progress-step" data-section="5"></div>
+                </div>
+
+                <input type="hidden" id="recordId" value="">
+
+                <div class="form-card">
+                    <!-- Section 1: Patient Information -->
+                    <div class="form-section" data-section="1">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <h2>
+                                <span>1️⃣</span>
+                                Patient Information
+                            </h2>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="patientId">Patient ID <span class="hint">(auto-generated)</span></label>
+                                    <input type="text" id="patientId" readonly placeholder="Will be auto-generated">
+                                </div>
+                                <div class="form-group">
+                                    <label for="age">Age at Death <span class="required">*</span></label>
+                                    <input type="number" id="age" min="0" max="120" required onchange="checkPremature()">
+                                    <span id="prematureBadge" class="premature-badge" style="display:none;">⚠️ Premature Death (&lt;75)</span>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="gender">Gender <span class="required">*</span></label>
+                                    <select id="gender" required>
+                                        <option value="">Select gender...</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                        <option value="Unknown">Unknown</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="dateOfDeath">Date of Death <span class="required">*</span></label>
+                                    <input type="date" id="dateOfDeath" required>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="primaryCause">Primary Cause of Death <span class="required">*</span></label>
+                                <input type="text" id="primaryCause" list="causesList" required placeholder="Start typing or select from common causes...">
+                                <datalist id="causesList">
+                                    <option value="Ischaemic Heart Disease">
+                                    <option value="Cerebrovascular Disease (Stroke)">
+                                    <option value="Chronic Obstructive Pulmonary Disease">
+                                    <option value="Dementia/Alzheimer's Disease">
+                                    <option value="Lung Cancer">
+                                    <option value="Colorectal Cancer">
+                                    <option value="Breast Cancer">
+                                    <option value="Prostate Cancer">
+                                    <option value="Pancreatic Cancer">
+                                    <option value="Heart Failure">
+                                    <option value="Pneumonia">
+                                    <option value="COVID-19">
+                                    <option value="Chronic Kidney Disease">
+                                    <option value="Liver Disease">
+                                    <option value="Frailty of Old Age">
+                                    <option value="Motor Neurone Disease">
+                                    <option value="Parkinson's Disease">
+                                    <option value="Sepsis">
+                                    <option value="Suicide">
+                                    <option value="Accident/Trauma">
+                                </datalist>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Significant Comorbidities</label>
+                                <div id="comorbiditiesContainer" class="tag-input-container">
+                                    <input type="text" class="tag-input" id="comorbidityInput" 
+                                        placeholder="Type and press Enter to add..."
+                                        list="comorbiditiesList"
+                                        onkeydown="handleTagInput(event, 'comorbidities')">
+                                </div>
+                                <datalist id="comorbiditiesList">
+                                    <option value="Hypertension">
+                                    <option value="Type 2 Diabetes">
+                                    <option value="Atrial Fibrillation">
+                                    <option value="COPD">
+                                    <option value="Chronic Kidney Disease">
+                                    <option value="Heart Failure">
+                                    <option value="Dementia">
+                                    <option value="Depression">
+                                    <option value="Obesity">
+                                    <option value="Osteoarthritis">
+                                    <option value="Asthma">
+                                    <option value="Stroke">
+                                    <option value="Cancer (active)">
+                                    <option value="Frailty">
+                                </datalist>
+                                <input type="hidden" id="comorbidities" value="[]">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Categorization -->
+                    <div class="form-section" data-section="2">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <h2>
+                                <span>2️⃣</span>
+                                Death Categorization
+                            </h2>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="form-group">
+                                <label>Was this death expected? <span class="required">*</span></label>
+                                <div class="radio-group">
+                                    <label class="radio-option tooltip">
+                                        <input type="radio" name="expectedDeath" value="Expected" required onchange="toggleExpectedFields()">
+                                        <span>Expected</span>
+                                        <span class="tooltip-text">Death was anticipated within days to weeks, patient/family aware</span>
+                                    </label>
+                                    <label class="radio-option tooltip">
+                                        <input type="radio" name="expectedDeath" value="Unexpected" required onchange="toggleExpectedFields()">
+                                        <span>Unexpected</span>
+                                        <span class="tooltip-text">Death was sudden or not anticipated at this time</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="conditional-field" id="expectedFields">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>On Palliative Care Register?</label>
+                                        <div class="radio-group">
+                                            <label class="radio-option">
+                                                <input type="radio" name="palliativeRegister" value="Yes">
+                                                <span>Yes</span>
+                                            </label>
+                                            <label class="radio-option">
+                                                <input type="radio" name="palliativeRegister" value="No">
+                                                <span>No</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="palliativeDate">Date Added to Register</label>
+                                        <input type="date" id="palliativeDate">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label id="prematureLabel">Premature Death Status</label>
+                                <div id="prematureStatus" class="congruence-indicator unknown">
+                                    ℹ️ Enter age to calculate
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Advance Care Planning -->
+                    <div class="form-section" data-section="3">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <h2>
+                                <span>3️⃣</span>
+                                Advance Care Planning
+                            </h2>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>ReSPECT Form Completed?</label>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="respectCompleted" value="Yes" onchange="toggleRespectDate()">
+                                            <span>Yes</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="respectCompleted" value="No" onchange="toggleRespectDate()">
+                                            <span>No</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="respectCompleted" value="Unknown" onchange="toggleRespectDate()">
+                                            <span>Unknown</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group conditional-field" id="respectDateField">
+                                    <label for="respectDate">ReSPECT Date</label>
+                                    <input type="date" id="respectDate">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Lasting Power of Attorney Documented?</label>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="lpaDocumented" value="Yes-HW">
+                                            <span>Yes - Health & Welfare</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="lpaDocumented" value="Yes-PF">
+                                            <span>Yes - Property & Financial</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="lpaDocumented" value="Yes-Both">
+                                            <span>Yes - Both</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="lpaDocumented" value="No">
+                                            <span>No</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="lpaDocumented" value="Unknown">
+                                            <span>Unknown</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="preferredPlace">Preferred Place of Death</label>
+                                    <select id="preferredPlace" onchange="calculateCongruence()">
+                                        <option value="">Not documented/Unknown</option>
+                                        <option value="Home">Home</option>
+                                        <option value="Hospice">Hospice</option>
+                                        <option value="Hospital">Hospital</option>
+                                        <option value="Care Home">Care Home</option>
+                                        <option value="No Preference">No Preference Stated</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="lastACPDiscussion">Date of Last ACP Discussion</label>
+                                    <input type="date" id="lastACPDiscussion">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Outcomes -->
+                    <div class="form-section" data-section="4">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <h2>
+                                <span>4️⃣</span>
+                                Outcomes
+                            </h2>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="actualPlace">Actual Place of Death <span class="required">*</span></label>
+                                    <select id="actualPlace" required onchange="calculateCongruence()">
+                                        <option value="">Select place...</option>
+                                        <option value="Home">Home</option>
+                                        <option value="Hospice">Hospice</option>
+                                        <option value="Hospital">Hospital</option>
+                                        <option value="Care Home">Care Home</option>
+                                        <option value="Other">Other</option>
+                                        <option value="Unknown">Unknown</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Place of Death Congruence</label>
+                                    <div id="congruenceIndicator" class="congruence-indicator unknown">
+                                        ℹ️ Select preferred and actual place
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="discrepancyNotes">Notes on Discrepancies</label>
+                                <textarea id="discrepancyNotes" placeholder="If place of death did not match preference, explain why..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Risk Factors & Analysis -->
+                    <div class="form-section" data-section="5">
+                        <div class="section-header" onclick="toggleSection(this)">
+                            <h2>
+                                <span>5️⃣</span>
+                                Risk Factors & Analysis
+                            </h2>
+                            <span class="toggle-icon">▼</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Alcohol Involvement</label>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="alcoholInvolvement" value="None">
+                                            <span>None</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="alcoholInvolvement" value="Low">
+                                            <span>Low</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="alcoholInvolvement" value="Moderate">
+                                            <span>Moderate</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="alcoholInvolvement" value="High">
+                                            <span>High</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Substance Misuse</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="substanceMisuse" value="None">
+                                        <span>None Known</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="substanceMisuse" value="Opioids">
+                                        <span>Opioids</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="substanceMisuse" value="Cannabis">
+                                        <span>Cannabis</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="substanceMisuse" value="Cocaine">
+                                        <span>Cocaine</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="substanceMisuse" value="Other">
+                                        <span>Other</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="substanceDetails">Substance Misuse Details</label>
+                                <input type="text" id="substanceDetails" placeholder="Additional details if applicable...">
+                            </div>
+                            <div class="form-group">
+                                <label>Psychosocial Factors</label>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="psychosocialFactors" value="Homelessness">
+                                        <span>Homelessness</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="psychosocialFactors" value="SMI">
+                                        <span>Severe Mental Illness</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="psychosocialFactors" value="Social Isolation">
+                                        <span>Social Isolation</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="psychosocialFactors" value="Learning Disability">
+                                        <span>Learning Disability</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="psychosocialFactors" value="Domestic Violence">
+                                        <span>Domestic Violence</span>
+                                    </label>
+                                    <label class="checkbox-option">
+                                        <input type="checkbox" name="psychosocialFactors" value="Poverty">
+                                        <span>Poverty/Deprivation</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>A&E Admission in Last Month of Life?</label>
+                                    <div class="radio-group">
+                                        <label class="radio-option">
+                                            <input type="radio" name="lastMonthAE" value="Yes" onchange="toggleAEDetails()">
+                                            <span>Yes</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="lastMonthAE" value="No" onchange="toggleAEDetails()">
+                                            <span>No</span>
+                                        </label>
+                                        <label class="radio-option">
+                                            <input type="radio" name="lastMonthAE" value="Unknown" onchange="toggleAEDetails()">
+                                            <span>Unknown</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group conditional-field" id="aeDetailsField">
+                                    <label for="aeDetails">A&E Details</label>
+                                    <input type="text" id="aeDetails" placeholder="Reason for attendance, outcome...">
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="learningPoints">Learning Points & Opportunities</label>
+                                <textarea id="learningPoints" placeholder="What lessons can be learned from this case?&#10;&#10;Consider:&#10;• Was there a missed opportunity for earlier intervention?&#10;• Could communication have been improved?&#10;• Were there any system failures?"></textarea>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="couldDoBetter">Could Practice Have Done Better?</label>
+                                <textarea id="couldDoBetter" placeholder="Honest reflection on practice performance...&#10;&#10;Consider:&#10;• Timeliness of referrals&#10;• Quality of ACP discussions&#10;• Coordination of care&#10;• Response to deterioration"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="form-actions">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Clear Form</button>
+                        </div>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="switchView('records')">📋 View Records</button>
+                            <button type="submit" class="btn btn-primary">💾 Save Record</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Records View -->
+        <div class="view-container" id="recordsView">
+            <div class="table-container">
+                <div class="table-header">
+                    <h2 class="table-title">Audit Records</h2>
+                    <div class="search-filter">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search records..." oninput="filterRecords()">
+                        <select id="filterExpected" class="filter-select" onchange="filterRecords()">
+                            <option value="">All Death Types</option>
+                            <option value="Expected">Expected</option>
+                            <option value="Unexpected">Unexpected</option>
+                        </select>
+                        <select id="filterACP" class="filter-select" onchange="filterRecords()">
+                            <option value="">All ACP Status</option>
+                            <option value="Yes">ReSPECT Complete</option>
+                            <option value="No">No ReSPECT</option>
+                        </select>
+                        <select id="filterAge" class="filter-select" onchange="filterRecords()">
+                            <option value="">All Ages</option>
+                            <option value="premature">Premature (&lt;75)</option>
+                            <option value="75+">75 and over</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="recordsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Age</th>
+                                <th>Gender</th>
+                                <th>Date of Death</th>
+                                <th>Cause</th>
+                                <th>Expected</th>
+                                <th>ReSPECT</th>
+                                <th>Place Match</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsBody">
+                            <!-- Records will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="emptyState" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <h3>No records found</h3>
+                    <p>Add your first mortality audit record to get started.</p>
+                    <button class="btn btn-primary" onclick="switchView('form')" style="margin-top: 1rem;">➕ Add Record</button>
+                </div>
+            </div>
+            <div class="btn-group" style="justify-content: center; margin-top: 1rem;">
+                <button class="btn btn-success" onclick="exportToCSV()">📥 Export to CSV</button>
+                <button class="btn btn-secondary" onclick="window.print()">🖨️ Print View</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚠️ Confirm Deletion</h3>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this record? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ============================================
+        // GLOBAL STATE & CONSTANTS
+        // ============================================
+        const STORAGE_KEY = 'mortalityAuditRecords';
+        let currentEditId = null;
+        let deleteTargetId = null;
+        let comorbidities = [];
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecords();
+            updateDashboard();
+            generatePatientId();
+            checkDataWarning();
+        });
+
+        // ============================================
+        // VIEW SWITCHING
+        // ============================================
+        function switchView(viewName) {
+            // Update tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.view === viewName);
+                tab.setAttribute('aria-selected', tab.dataset.view === viewName);
+            });
+
+            // Update view containers
+            document.querySelectorAll('.view-container').forEach(view => {
+                view.classList.toggle('active', view.id === viewName + 'View');
+            });
+
+            // Refresh data if switching to records or dashboard
+            if (viewName === 'records') {
+                loadRecords();
+            } else if (viewName === 'dashboard') {
+                updateDashboard();
+            }
+        }
+
+        // Add click handlers to nav tabs
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => switchView(tab.dataset.view));
+        });
+
+        // ============================================
+        // SECTION TOGGLE
+        // ============================================
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            const isCollapsed = content.classList.toggle('collapsed');
+            header.classList.toggle('collapsed', isCollapsed);
+            updateProgress();
+        }
+
+        // ============================================
+        // PROGRESS INDICATOR
+        // ============================================
+        function updateProgress() {
+            const sections = document.querySelectorAll('.form-section');
+            sections.forEach((section, index) => {
+                const progressStep = document.querySelector(`.progress-step[data-section="${index + 1}"]`);
+                const hasContent = checkSectionHasContent(section);
+                progressStep.classList.toggle('completed', hasContent);
+            });
+        }
+
+        function checkSectionHasContent(section) {
+            const inputs = section.querySelectorAll('input, select, textarea');
+            for (let input of inputs) {
+                if (input.type === 'radio' || input.type === 'checkbox') {
+                    if (input.checked) return true;
+                } else if (input.value && input.value.trim()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // ============================================
+        // PATIENT ID GENERATION
+        // ============================================
+        function generatePatientId() {
+            const records = getRecords();
+            const count = records.length + 1;
+            const paddedCount = String(count).padStart(3, '0');
+            document.getElementById('patientId').value = `AUD-${paddedCount}`;
+        }
+
+        // ============================================
+        // CONDITIONAL FIELDS
+        // ============================================
+        function toggleExpectedFields() {
+            const expectedValue = document.querySelector('input[name="expectedDeath"]:checked')?.value;
+            const expectedFields = document.getElementById('expectedFields');
+            expectedFields.classList.toggle('visible', expectedValue === 'Expected');
+        }
+
+        function toggleRespectDate() {
+            const respectValue = document.querySelector('input[name="respectCompleted"]:checked')?.value;
+            const dateField = document.getElementById('respectDateField');
+            dateField.classList.toggle('visible', respectValue === 'Yes');
+        }
+
+        function toggleAEDetails() {
+            const aeValue = document.querySelector('input[name="lastMonthAE"]:checked')?.value;
+            const detailsField = document.getElementById('aeDetailsField');
+            detailsField.classList.toggle('visible', aeValue === 'Yes');
+        }
+
+        // ============================================
+        // PREMATURE DEATH CHECK
+        // ============================================
+        function checkPremature() {
+            const age = parseInt(document.getElementById('age').value);
+            const badge = document.getElementById('prematureBadge');
+            const status = document.getElementById('prematureStatus');
+            
+            if (isNaN(age)) {
+                badge.style.display = 'none';
+                status.className = 'congruence-indicator unknown';
+                status.innerHTML = 'ℹ️ Enter age to calculate';
+                return;
+            }
+
+            const isPremature = age < 75;
+            badge.style.display = isPremature ? 'inline-flex' : 'none';
+            
+            if (isPremature) {
+                status.className = 'congruence-indicator no-match';
+                status.innerHTML = `⚠️ Premature Death (Age ${age}, under 75)`;
+            } else {
+                status.className = 'congruence-indicator match';
+                status.innerHTML = `✓ Not Premature (Age ${age})`;
+            }
+        }
+
+        // ============================================
+        // CONGRUENCE CALCULATION
+        // ============================================
+        function calculateCongruence() {
+            const preferred = document.getElementById('preferredPlace').value;
+            const actual = document.getElementById('actualPlace').value;
+            const indicator = document.getElementById('congruenceIndicator');
+
+            if (!preferred || !actual || preferred === 'No Preference') {
+                indicator.className = 'congruence-indicator unknown';
+                indicator.innerHTML = preferred === 'No Preference' 
+                    ? 'ℹ️ No preference documented'
+                    : 'ℹ️ Select preferred and actual place';
+                return;
+            }
+
+            const isMatch = preferred === actual;
+            indicator.className = `congruence-indicator ${isMatch ? 'match' : 'no-match'}`;
+            indicator.innerHTML = isMatch 
+                ? `✓ Match - Died in preferred place (${actual})`
+                : `✗ No Match - Preferred: ${preferred}, Actual: ${actual}`;
+        }
+
+        // ============================================
+        // TAG INPUT (COMORBIDITIES)
+        // ============================================
+        function handleTagInput(event, type) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const value = input.value.trim();
+                
+                if (value && !comorbidities.includes(value)) {
+                    comorbidities.push(value);
+                    renderTags();
+                }
+                input.value = '';
+            }
+        }
+
+        function renderTags() {
+            const container = document.getElementById('comorbiditiesContainer');
+            const input = document.getElementById('comorbidityInput');
+            
+            // Clear existing tags
+            container.querySelectorAll('.tag').forEach(tag => tag.remove());
+            
+            // Add tags before input
+            comorbidities.forEach((tag, index) => {
+                const tagEl = document.createElement('span');
+                tagEl.className = 'tag';
+                tagEl.innerHTML = `${tag}<button type="button" onclick="removeTag(${index})">&times;</button>`;
+                container.insertBefore(tagEl, input);
+            });
+            
+            // Update hidden field
+            document.getElementById('comorbidities').value = JSON.stringify(comorbidities);
+        }
+
+        function removeTag(index) {
+            comorbidities.splice(index, 1);
+            renderTags();
+        }
+
+        // ============================================
+        // FORM VALIDATION
+        // ============================================
+        function validateForm() {
+            const form = document.getElementById('auditForm');
+            const requiredFields = form.querySelectorAll('[required]');
+            let isValid = true;
+            let firstInvalid = null;
+
+            requiredFields.forEach(field => {
+                if (!field.value || (field.type === 'radio' && !document.querySelector(`input[name="${field.name}"]:checked`))) {
+                    isValid = false;
+                    field.classList.add('invalid');
+                    if (!firstInvalid) firstInvalid = field;
+                } else {
+                    field.classList.remove('invalid');
+                }
+            });
+
+            if (!isValid && firstInvalid) {
+                firstInvalid.focus();
+                showToast('Please fill in all required fields', 'error');
+            }
+
+            return isValid;
+        }
+
+        // ============================================
+        // RECORD MANAGEMENT
+        // ============================================
+        function getRecords() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error('Error reading from localStorage:', e);
+                return [];
+            }
+        }
+
+        function saveRecords(records) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+                return true;
+            } catch (e) {
+                console.error('Error saving to localStorage:', e);
+                if (e.name === 'QuotaExceededError') {
+                    showToast('Storage quota exceeded. Please export and clear old records.', 'error');
+                }
+                return false;
+            }
+        }
+
+        function saveRecord(event) {
+            event.preventDefault();
+            
+            if (!validateForm()) return false;
+
+            const formData = collectFormData();
+            const records = getRecords();
+
+            if (currentEditId) {
+                // Update existing record
+                const index = records.findIndex(r => r.id === currentEditId);
+                if (index !== -1) {
+                    formData.id = currentEditId;
+                    records[index] = formData;
+                }
+            } else {
+                // Add new record
+                formData.id = Date.now().toString();
+                records.push(formData);
+            }
+
+            if (saveRecords(records)) {
+                showToast(currentEditId ? 'Record updated successfully' : 'Record saved successfully', 'success');
+                resetForm();
+                updateDashboard();
+                checkDataWarning();
+            }
+
+            return false;
+        }
+
+        function collectFormData() {
+            return {
+                patientId: document.getElementById('patientId').value,
+                age: parseInt(document.getElementById('age').value),
+                gender: document.getElementById('gender').value,
+                dateOfDeath: document.getElementById('dateOfDeath').value,
+                primaryCause: document.getElementById('primaryCause').value,
+                comorbidities: [...comorbidities],
+                expectedDeath: document.querySelector('input[name="expectedDeath"]:checked')?.value || '',
+                palliativeRegister: document.querySelector('input[name="palliativeRegister"]:checked')?.value || '',
+                palliativeDate: document.getElementById('palliativeDate').value,
+                respectCompleted: document.querySelector('input[name="respectCompleted"]:checked')?.value || '',
+                respectDate: document.getElementById('respectDate').value,
+                lpaDocumented: document.querySelector('input[name="lpaDocumented"]:checked')?.value || '',
+                preferredPlace: document.getElementById('preferredPlace').value,
+                lastACPDiscussion: document.getElementById('lastACPDiscussion').value,
+                actualPlace: document.getElementById('actualPlace').value,
+                congruence: calculateCongruenceValue(),
+                discrepancyNotes: document.getElementById('discrepancyNotes').value,
+                alcoholInvolvement: document.querySelector('input[name="alcoholInvolvement"]:checked')?.value || '',
+                substanceMisuse: Array.from(document.querySelectorAll('input[name="substanceMisuse"]:checked')).map(el => el.value),
+                substanceDetails: document.getElementById('substanceDetails').value,
+                psychosocialFactors: Array.from(document.querySelectorAll('input[name="psychosocialFactors"]:checked')).map(el => el.value),
+                lastMonthAE: document.querySelector('input[name="lastMonthAE"]:checked')?.value || '',
+                aeDetails: document.getElementById('aeDetails').value,
+                learningPoints: document.getElementById('learningPoints').value,
+                couldDoBetter: document.getElementById('couldDoBetter').value,
+                createdAt: new Date().toISOString(),
+                isPremature: parseInt(document.getElementById('age').value) < 75
+            };
+        }
+
+        function calculateCongruenceValue() {
+            const preferred = document.getElementById('preferredPlace').value;
+            const actual = document.getElementById('actualPlace').value;
+            
+            if (!preferred || preferred === 'No Preference') return 'N/A';
+            if (!actual) return 'Unknown';
+            return preferred === actual ? 'Yes' : 'No';
+        }
+
+        function editRecord(id) {
+            const records = getRecords();
+            const record = records.find(r => r.id === id);
+            
+            if (!record) {
+                showToast('Record not found', 'error');
+                return;
+            }
+
+            currentEditId = id;
+            populateForm(record);
+            switchView('form');
+            showToast('Editing record ' + record.patientId, 'success');
+        }
+
+        function populateForm(record) {
+            document.getElementById('recordId').value = record.id;
+            document.getElementById('patientId').value = record.patientId;
+            document.getElementById('age').value = record.age;
+            document.getElementById('gender').value = record.gender;
+            document.getElementById('dateOfDeath').value = record.dateOfDeath;
+            document.getElementById('primaryCause').value = record.primaryCause;
+            
+            // Comorbidities
+            comorbidities = record.comorbidities || [];
+            renderTags();
+
+            // Radio buttons
+            setRadioValue('expectedDeath', record.expectedDeath);
+            setRadioValue('palliativeRegister', record.palliativeRegister);
+            setRadioValue('respectCompleted', record.respectCompleted);
+            setRadioValue('lpaDocumented', record.lpaDocumented);
+            setRadioValue('alcoholInvolvement', record.alcoholInvolvement);
+            setRadioValue('lastMonthAE', record.lastMonthAE);
+
+            // Checkboxes
+            setCheckboxValues('substanceMisuse', record.substanceMisuse || []);
+            setCheckboxValues('psychosocialFactors', record.psychosocialFactors || []);
+
+            // Other fields
+            document.getElementById('palliativeDate').value = record.palliativeDate || '';
+            document.getElementById('respectDate').value = record.respectDate || '';
+            document.getElementById('preferredPlace').value = record.preferredPlace || '';
+            document.getElementById('lastACPDiscussion').value = record.lastACPDiscussion || '';
+            document.getElementById('actualPlace').value = record.actualPlace || '';
+            document.getElementById('discrepancyNotes').value = record.discrepancyNotes || '';
+            document.getElementById('substanceDetails').value = record.substanceDetails || '';
+            document.getElementById('aeDetails').value = record.aeDetails || '';
+            document.getElementById('learningPoints').value = record.learningPoints || '';
+            document.getElementById('couldDoBetter').value = record.couldDoBetter || '';
+
+            // Trigger conditional fields
+            toggleExpectedFields();
+            toggleRespectDate();
+            toggleAEDetails();
+            checkPremature();
+            calculateCongruence();
+            updateProgress();
+        }
+
+        function setRadioValue(name, value) {
+            const radio = document.querySelector(`input[name="${name}"][value="${value}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        function setCheckboxValues(name, values) {
+            document.querySelectorAll(`input[name="${name}"]`).forEach(cb => {
+                cb.checked = values.includes(cb.value);
+            });
+        }
+
+        function deleteRecord(id) {
+            deleteTargetId = id;
+            document.getElementById('deleteModal').classList.add('active');
+            document.getElementById('confirmDeleteBtn').onclick = confirmDelete;
+        }
+
+        function confirmDelete() {
+            const records = getRecords().filter(r => r.id !== deleteTargetId);
+            saveRecords(records);
+            closeModal();
+            loadRecords();
+            updateDashboard();
+            checkDataWarning();
+            showToast('Record deleted successfully', 'success');
+        }
+
+        function closeModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+            deleteTargetId = null;
+        }
+
+        function resetForm() {
+            document.getElementById('auditForm').reset();
+            currentEditId = null;
+            comorbidities = [];
+            renderTags();
+            generatePatientId();
+            
+            // Reset all conditional fields
+            document.querySelectorAll('.conditional-field').forEach(field => {
+                field.classList.remove('visible');
+            });
+            
+            // Reset indicators
+            document.getElementById('prematureBadge').style.display = 'none';
+            document.getElementById('prematureStatus').className = 'congruence-indicator unknown';
+            document.getElementById('prematureStatus').innerHTML = 'ℹ️ Enter age to calculate';
+            document.getElementById('congruenceIndicator').className = 'congruence-indicator unknown';
+            document.getElementById('congruenceIndicator').innerHTML = 'ℹ️ Select preferred and actual place';
+            
+            // Reset progress
+            document.querySelectorAll('.progress-step').forEach((step, i) => {
+                step.classList.toggle('completed', i === 0);
+            });
+        }
+
+        // ============================================
+        // RECORDS DISPLAY
+        // ============================================
+        function loadRecords() {
+            const records = getRecords();
+            const tbody = document.getElementById('recordsBody');
+            const emptyState = document.getElementById('emptyState');
+            const table = document.getElementById('recordsTable');
+
+            if (records.length === 0) {
+                table.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            table.style.display = 'table';
+            emptyState.style.display = 'none';
+            
+            renderRecordsTable(records);
+        }
+
+        function renderRecordsTable(records) {
+            const tbody = document.getElementById('recordsBody');
+            tbody.innerHTML = '';
+
+            records.forEach(record => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${record.patientId}</strong></td>
+                    <td>${record.age}${record.isPremature ? ' <span class="premature-badge">⚠️</span>' : ''}</td>
+                    <td>${record.gender}</td>
+                    <td>${formatDate(record.dateOfDeath)}</td>
+                    <td title="${record.primaryCause}">${truncate(record.primaryCause, 25)}</td>
+                    <td><span class="status-badge status-${record.expectedDeath?.toLowerCase()}">${record.expectedDeath || 'N/A'}</span></td>
+                    <td><span class="status-badge status-${record.respectCompleted === 'Yes' ? 'yes' : 'no'}">${record.respectCompleted || 'N/A'}</span></td>
+                    <td><span class="status-badge status-${record.congruence === 'Yes' ? 'yes' : record.congruence === 'No' ? 'no' : 'expected'}">${record.congruence || 'N/A'}</span></td>
+                    <td class="actions-cell">
+                        <button class="btn btn-sm btn-secondary btn-icon" onclick="editRecord('${record.id}')" title="Edit">✏️</button>
+                        <button class="btn btn-sm btn-danger btn-icon" onclick="deleteRecord('${record.id}')" title="Delete">🗑️</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function filterRecords() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const expectedFilter = document.getElementById('filterExpected').value;
+            const acpFilter = document.getElementById('filterACP').value;
+            const ageFilter = document.getElementById('filterAge').value;
+
+            let records = getRecords();
+
+            if (search) {
+                records = records.filter(r => 
+                    r.patientId.toLowerCase().includes(search) ||
+                    r.primaryCause.toLowerCase().includes(search) ||
+                    r.gender.toLowerCase().includes(search)
+                );
+            }
+
+            if (expectedFilter) {
+                records = records.filter(r => r.expectedDeath === expectedFilter);
+            }
+
+            if (acpFilter) {
+                records = records.filter(r => r.respectCompleted === acpFilter);
+            }
+
+            if (ageFilter === 'premature') {
+                records = records.filter(r => r.age < 75);
+            } else if (ageFilter === '75+') {
+                records = records.filter(r => r.age >= 75);
+            }
+
+            renderRecordsTable(records);
+        }
+
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        function updateDashboard() {
+            const records = getRecords();
+            const total = records.length;
+
+            // Update total
+            document.getElementById('statTotal').textContent = total;
+
+            if (total === 0) {
+                document.getElementById('statExpected').textContent = '0%';
+                document.getElementById('statExpectedCount').textContent = '0 of 0 cases';
+                document.getElementById('statACP').textContent = '0%';
+                document.getElementById('statACPCount').textContent = '0 with ReSPECT';
+                document.getElementById('statCongruence').textContent = '0%';
+                document.getElementById('statCongruenceCount').textContent = 'died in preferred place';
+                document.getElementById('statPremature').textContent = '0';
+                document.getElementById('statAE').textContent = '0%';
+                document.getElementById('statAECount').textContent = 'had A&E visit';
+                updateAgeChart({});
+                return;
+            }
+
+            // Expected deaths
+            const expected = records.filter(r => r.expectedDeath === 'Expected').length;
+            document.getElementById('statExpected').textContent = Math.round((expected / total) * 100) + '%';
+            document.getElementById('statExpectedCount').textContent = `${expected} of ${total} cases`;
+
+            // ACP completion
+            const acpComplete = records.filter(r => r.respectCompleted === 'Yes').length;
+            document.getElementById('statACP').textContent = Math.round((acpComplete / total) * 100) + '%';
+            document.getElementById('statACPCount').textContent = `${acpComplete} with ReSPECT`;
+
+            // Congruence
+            const congruenceRecords = records.filter(r => r.congruence === 'Yes' || r.congruence === 'No');
+            const congruent = records.filter(r => r.congruence === 'Yes').length;
+            const congruencePercent = congruenceRecords.length > 0 
+                ? Math.round((congruent / congruenceRecords.length) * 100) 
+                : 0;
+            document.getElementById('statCongruence').textContent = congruencePercent + '%';
+            document.getElementById('statCongruenceCount').textContent = `${congruent} died in preferred place`;
+
+            // Premature deaths
+            const premature = records.filter(r => r.age < 75).length;
+            document.getElementById('statPremature').textContent = premature;
+
+            // Last month A&E
+            const aeVisit = records.filter(r => r.lastMonthAE === 'Yes').length;
+            document.getElementById('statAE').textContent = Math.round((aeVisit / total) * 100) + '%';
+            document.getElementById('statAECount').textContent = `${aeVisit} had A&E visit`;
+
+            // Age distribution
+            const ageGroups = {
+                '0-39': 0,
+                '40-49': 0,
+                '50-59': 0,
+                '60-69': 0,
+                '70-79': 0,
+                '80-89': 0,
+                '90+': 0
+            };
+
+            records.forEach(r => {
+                const age = r.age;
+                if (age < 40) ageGroups['0-39']++;
+                else if (age < 50) ageGroups['40-49']++;
+                else if (age < 60) ageGroups['50-59']++;
+                else if (age < 70) ageGroups['60-69']++;
+                else if (age < 80) ageGroups['70-79']++;
+                else if (age < 90) ageGroups['80-89']++;
+                else ageGroups['90+']++;
+            });
+
+            updateAgeChart(ageGroups);
+        }
+
+        function updateAgeChart(ageGroups) {
+            const maxCount = Math.max(...Object.values(ageGroups), 1);
+            const chart = document.getElementById('ageChart');
+            
+            Object.entries(ageGroups).forEach(([group, count]) => {
+                const groupId = group.replace('-', '-').replace('+', '+');
+                const valueEl = document.getElementById('age' + groupId);
+                if (valueEl) {
+                    valueEl.textContent = count;
+                    const bar = valueEl.nextElementSibling;
+                    const percentage = (count / maxCount) * 100;
+                    bar.style.height = Math.max(percentage, 5) + '%';
+                }
+            });
+        }
+
+        // ============================================
+        // CSV EXPORT
+        // ============================================
+        function exportToCSV() {
+            const records = getRecords();
+            
+            if (records.length === 0) {
+                showToast('No records to export', 'error');
+                return;
+            }
+
+            const headers = [
+                'PatientID', 'Age', 'Gender', 'DateOfDeath', 'PrimaryCause', 'Comorbidities',
+                'ExpectedDeath', 'PalliativeRegister', 'PalliativeDate', 'IsPremature',
+                'ReSPECT_Completed', 'ReSPECT_Date', 'LPA_Documented',
+                'PreferredPlace', 'LastACPDiscussion', 'ActualPlace', 'Congruence', 'DiscrepancyNotes',
+                'AlcoholInvolvement', 'SubstanceMisuse', 'SubstanceDetails', 'PsychosocialFactors',
+                'LastMonth_AE', 'AE_Details', 'LearningPoints', 'CouldDoBetter', 'CreatedAt'
+            ];
+
+            const rows = records.map(record => [
+                escapeCSV(record.patientId),
+                record.age,
+                escapeCSV(record.gender),
+                record.dateOfDeath,
+                escapeCSV(record.primaryCause),
+                escapeCSV((record.comorbidities || []).join('; ')),
+                escapeCSV(record.expectedDeath),
+                escapeCSV(record.palliativeRegister),
+                record.palliativeDate,
+                record.isPremature ? 'Yes' : 'No',
+                escapeCSV(record.respectCompleted),
+                record.respectDate,
+                escapeCSV(record.lpaDocumented),
+                escapeCSV(record.preferredPlace),
+                record.lastACPDiscussion,
+                escapeCSV(record.actualPlace),
+                escapeCSV(record.congruence),
+                escapeCSV(record.discrepancyNotes),
+                escapeCSV(record.alcoholInvolvement),
+                escapeCSV((record.substanceMisuse || []).join('; ')),
+                escapeCSV(record.substanceDetails),
+                escapeCSV((record.psychosocialFactors || []).join('; ')),
+                escapeCSV(record.lastMonthAE),
+                escapeCSV(record.aeDetails),
+                escapeCSV(record.learningPoints),
+                escapeCSV(record.couldDoBetter),
+                record.createdAt
+            ]);
+
+            const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+            
+            const date = new Date();
+            const dateStr = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+            const filename = `mortality-audit-${dateStr}.csv`;
+
+            downloadCSV(csvContent, filename);
+            showToast(`Exported ${records.length} records to ${filename}`, 'success');
+        }
+
+        function escapeCSV(value) {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }
+
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        // ============================================
+        // DATA WARNING
+        // ============================================
+        function checkDataWarning() {
+            const records = getRecords();
+            const warning = document.getElementById('dataWarning');
+            const count = document.getElementById('recordCount');
+            
+            if (records.length > 0) {
+                warning.classList.remove('hidden');
+                count.textContent = records.length;
+            } else {
+                warning.classList.add('hidden');
+            }
+        }
+
+        // ============================================
+        // TOAST NOTIFICATIONS
+        // ============================================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = message;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function truncate(str, length) {
+            if (!str) return '';
+            return str.length > length ? str.substring(0, length) + '...' : str;
+        }
+
+        // Handle clicks outside modal to close
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        // Keyboard accessibility for modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+    </script>
+</body>
+</html>
