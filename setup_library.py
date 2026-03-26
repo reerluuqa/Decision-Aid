@@ -29,7 +29,9 @@ CATEGORIES = [
     "Haematology",
     "Allergy",
     "Palliative",
-    "Geriatrics"
+    "Geriatrics",
+    "Investigation-interpretation",
+    "Templated-and-Referrals"
 ]
 
 def create_folder_structure():
