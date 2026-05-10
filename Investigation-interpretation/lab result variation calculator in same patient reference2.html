@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Variation Significance Checker</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            
+            /* Threshold colors */
+            --c-5: #10b981;   /* 2-5% - Very Stable */
+            --c-10: #06b6d4;  /* 6-10% - Stable */
+            --c-20: #3b82f6;  /* 11-20% - Moderate */
+            --c-30: #f59e0b;  /* 21-30% - Variable */
+            --c-40: #f97316;  /* 31-40% - Highly Variable */
+            --c-50: #ef4444;  /* 41-50% - Very Variable */
+            --c-50plus: #7c3aed; /* >50% - Extreme Variation */
+            
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: var(--card);
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 1rem;
+            z-index: 10;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .tab:hover {
+            background: var(--bg);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .view {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Reference Guide Styles */
+        .search-box {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .threshold-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .threshold-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            border-left: 5px solid;
+        }
+
+        .threshold-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .threshold-label {
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .threshold-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .test-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .test-tag {
+            background: var(--bg);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* Calculator Styles */
+        .calculator-card {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            font-size: 0.95rem;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .result-box {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 8px;
+            display: none;
+            border-left: 5px solid;
+        }
+
+        .result-box.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .result-details {
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .result-math {
+            background: rgba(0,0,0,0.05);
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin: 0.75rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .example-btn {
+            background: transparent;
+            border: 1px dashed var(--text-secondary);
+            color: var(--text-secondary);
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+
+        .example-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            color: #1e40af;
+        }
+
+        /* Color coding classes */
+        .bg-5 { background-color: var(--c-5); }
+        .bg-10 { background-color: var(--c-10); }
+        .bg-20 { background-color: var(--c-20); }
+        .bg-30 { background-color: var(--c-30); }
+        .bg-40 { background-color: var(--c-40); }
+        .bg-50 { background-color: var(--c-50); }
+        .bg-50plus { background-color: var(--c-50plus); }
+
+        .border-5 { border-color: var(--c-5); }
+        .border-10 { border-color: var(--c-10); }
+        .border-20 { border-color: var(--c-20); }
+        .border-30 { border-color: var(--c-30); }
+        .border-40 { border-color: var(--c-40); }
+        .border-50 { border-color: var(--c-50); }
+        .border-50plus { border-color: var(--c-50plus); }
+
+        @media (max-width: 640px) {
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+            header h1 {
+                font-size: 1.25rem;
+            }
+            .threshold-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                Lab Result Variation Guide
+            </h1>
+            <p>Determine if a change in lab values is clinically significant or due to biological/analytical variation. Based on BMJ 2020;368:m149.</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" onclick="switchView('reference')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="9" x2="15" y2="9"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                </svg>
+                Reference Guide
+            </button>
+            <button class="tab" onclick="switchView('calculator')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="4" y="2" width="16" height="20" rx="2" ry="2"/>
+                    <line x1="12" y1="18" x2="12.01" y2="18"/>
+                    <path d="M8 6h8"/>
+                    <path d="M8 10h8"/>
+                </svg>
+                Change Calculator
+            </button>
+        </nav>
+
+        <!-- Reference View -->
+        <div id="reference-view" class="view active">
+            <div class="info-box">
+                <strong>How to use:</strong> Find the test below. If a patient's results change by at least the percentage shown, it is likely significant. Smaller changes are likely due to normal biological variation.
+            </div>
+            
+            <input type="text" class="search-box" id="searchInput" placeholder="Search for a test (e.g., HbA1c, Sodium)..." onkeyup="filterTests()">
+            
+            <div class="threshold-grid" id="testGrid">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <!-- Calculator View -->
+        <div id="calculator-view" class="view">
+            <div class="calculator-card">
+                <div class="info-box" style="margin-bottom: 1.5rem;">
+                    Enter two results for the same patient to see if the difference is clinically significant or likely due to normal variation.
+                </div>
+
+                <div class="form-group">
+                    <label for="testSelect">Select Test</label>
+                    <select id="testSelect">
+                        <option value="">-- Choose a test --</option>
+                    </select>
+                </div>
+
+                <div class="input-row">
+                    <div class="form-group">
+                        <label for="oldValue">Previous Result</label>
+                        <input type="number" id="oldValue" step="any" placeholder="e.g., 49">
+                    </div>
+                    <div class="form-group">
+                        <label for="newValue">Current Result</label>
+                        <input type="number" id="newValue" step="any" placeholder="e.g., 45">
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="calculate()">
+                    Check Significance
+                </button>
+
+                <button class="example-btn" onclick="loadExample()">
+                    Load Example: Raj's HbA1c (49 → 45)
+                </button>
+
+                <div id="resultBox" class="result-box">
+                    <div class="result-title" id="resultTitle"></div>
+                    <div class="result-details" id="resultDetails"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data from BMJ article
+        const testData = [
+            { name: "Sodium", threshold: 2, max: 5, range: "2–5%", color: "5", note: "Very stable. Even small changes matter." },
+            { name: "Albumin", threshold: 6, max: 10, range: "6–10%", color: "10", note: "Low biological variability." },
+            { name: "Calcium", threshold: 6, max: 10, range: "6–10%", color: "10", note: "Low biological variability." },
+            { name: "Hb", threshold: 6, max: 10, range: "6–10%", color: "10", note: "Haemoglobin is relatively stable." },
+            { name: "Transferrin", threshold: 6, max: 10, range: "6–10%", color: "10", note: "Low biological variability." },
+            { name: "Creatinine", threshold: 11, max: 20, range: "11–20%", color: "20", note: "Moderate variability." },
+            { name: "Glucose", threshold: 11, max: 20, range: "11–20%", color: "20", note: "Moderate variability." },
+            { name: "HbA1c", threshold: 11, max: 20, range: "11–20%", color: "20", note: "Moderate variability. Small changes may cross diagnostic thresholds by chance." },
+            { name: "Potassium", threshold: 11, max: 20, range: "11–20%", color: "20", note: "Moderate variability." },
+            { name: "Cholesterol", threshold: 11, max: 20, range: "11–20%", color: "20", note: "Moderate variability." },
+            { name: "Alkaline phosphatase", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "AST", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "GGT", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "HDL", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "LDL", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "Rheumatoid factor", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "Uric acid", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "B12", threshold: 21, max: 30, range: "21–30%", color: "30", note: "Variable." },
+            { name: "Vitamin D", threshold: 31, max: 40, range: "31–40%", color: "40", note: "Highly variable." },
+            { name: "Testosterone", threshold: 31, max: 40, range: "31–40%", color: "40", note: "Highly variable." },
+            { name: "Urea", threshold: 31, max: 40, range: "31–40%", color: "40", note: "Highly variable." },
+            { name: "TSH", threshold: 41, max: 50, range: "41–50%", color: "50", note: "Very variable. Large changes may still be insignificant." },
+            { name: "Iron", threshold: 50, max: 100, range: ">50%", color: "50plus", note: "Extreme variation. Very difficult to interpret small changes." },
+            { name: "Bilirubin", threshold: 50, max: 100, range: ">50%", color: "50plus", note: "Extreme variation." },
+            { name: "Triglycerides", threshold: 50, max: 100, range: ">50%", color: "50plus", note: "Extreme variation. Fasting state matters significantly." }
+        ];
+
+        // Sort tests alphabetically
+        testData.sort((a, b) => a.name.localeCompare(b.name));
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderReference();
+            populateDropdown();
+        });
+
+        function switchView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(view + '-view').classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function renderReference() {
+            const grid = document.getElementById('testGrid');
+            const ranges = [
+                { label: "2–5%", color: "5", tests: testData.filter(t => t.range === "2–5%") },
+                { label: "6–10%", color: "10", tests: testData.filter(t => t.range === "6–10%") },
+                { label: "11–20%", color: "20", tests: testData.filter(t => t.range === "11–20%") },
+                { label: "21–30%", color: "30", tests: testData.filter(t => t.range === "21–30%") },
+                { label: "31–40%", color: "40", tests: testData.filter(t => t.range === "31–40%") },
+                { label: "41–50%", color: "50", tests: testData.filter(t => t.range === "41–50%") },
+                { label: ">50%", color: "50plus", tests: testData.filter(t => t.range === ">50%") }
+            ];
+
+            grid.innerHTML = ranges.map(range => `
+                <div class="threshold-card border-${range.color}" data-range="${range.label}">
+                    <div class="threshold-header">
+                        <div class="threshold-label">
+                            <span>Significant if change ≥</span>
+                            <span style="color: var(--c-${range.color})">${range.label}</span>
+                        </div>
+                        <span class="threshold-badge bg-${range.color}">
+                            ${range.tests.length} tests
+                        </span>
+                    </div>
+                    <div class="test-list">
+                        ${range.tests.map(test => `
+                            <span class="test-tag" data-name="${test.name.toLowerCase()}">${test.name}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function populateDropdown() {
+            const select = document.getElementById('testSelect');
+            testData.forEach(test => {
+                const option = document.createElement('option');
+                option.value = test.name;
+                option.textContent = `${test.name} (≥${test.range} change)`;
+                select.appendChild(option);
+            });
+        }
+
+        function filterTests() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const tags = document.querySelectorAll('.test-tag');
+            const cards = document.querySelectorAll('.threshold-card');
+            
+            tags.forEach(tag => {
+                const name = tag.getAttribute('data-name');
+                const match = name.includes(query);
+                tag.style.display = match ? 'inline-block' : 'none';
+            });
+
+            // Hide cards with no visible tests
+            cards.forEach(card => {
+                const visibleTests = card.querySelectorAll('.test-tag[style*="inline-block"]').length;
+                card.style.display = visibleTests > 0 ? 'block' : 'none';
+            });
+        }
+
+        function calculate() {
+            const testName = document.getElementById('testSelect').value;
+            const oldVal = parseFloat(document.getElementById('oldValue').value);
+            const newVal = parseFloat(document.getElementById('newValue').value);
+            const resultBox = document.getElementById('resultBox');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultDetails = document.getElementById('resultDetails');
+
+            if (!testName || isNaN(oldVal) || isNaN(newVal)) {
+                alert('Please select a test and enter both values');
+                return;
+            }
+
+            const test = testData.find(t => t.name === testName);
+            const change = Math.abs(newVal - oldVal);
+            const percentChange = (change / oldVal) * 100;
+            const direction = newVal > oldVal ? 'increased' : 'decreased';
+            
+            // Determine significance
+            const isSignificant = percentChange >= test.threshold;
+            const statusColor = isSignificant ? 'var(--c-5)' : 'var(--c-50)';
+            const statusIcon = isSignificant ? '✓' : '⚠';
+            const statusText = isSignificant ? 'Significant Change' : 'Likely Insignificant';
+            const statusBg = isSignificant ? 'border-5' : 'border-50';
+
+            resultBox.className = `result-box show ${statusBg}`;
+            
+            resultTitle.innerHTML = `
+                <span style="font-size: 1.5rem;">${statusIcon}</span>
+                <span style="color: ${isSignificant ? 'var(--c-5)' : 'var(--c-50)'}">${statusText}</span>
+            `;
+
+            resultDetails.innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <strong>${test.name}</strong> has ${direction} by <strong>${percentChange.toFixed(1)}%</strong> 
+                    (${oldVal} → ${newVal}).
+                </div>
+                
+                <div class="result-math">
+                    Threshold for significance: ≥${test.range}<br>
+                    Actual change: ${percentChange.toFixed(1)}%<br>
+                    Difference: ${(percentChange - test.threshold).toFixed(1)}% ${isSignificant ? 'above' : 'below'} threshold
+                </div>
+
+                <div style="font-size: 0.95rem; margin-top: 0.75rem;">
+                    <strong>Clinical Note:</strong> ${test.note}<br><br>
+                    ${isSignificant 
+                        ? `This change exceeds the expected biological and analytical variation (${test.range}). It likely reflects a true clinical change rather than random variation.` 
+                        : `This change is within the expected biological and analytical variation (${test.range}). It may not reflect a true clinical change. Consider rechecking before altering management.`
+                    }
+                </div>
+            `;
+        }
+
+        function loadExample() {
+            document.getElementById('testSelect').value = 'HbA1c';
+            document.getElementById('oldValue').value = 49;
+            document.getElementById('newValue').value = 45;
+            calculate();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dyspareunia Clinical Dashboard</title>
+    <style>
+        :root {
+            --superficial: #ff6b6b;
+            --deep: #9b5de5;
+            --psych: #00bbf9;
+            --safety: #f8961e;
+            --success: #06d6a0;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.4;
+            overflow-x: hidden;
+        }
+
+        /* Header Status Bar */
+        .status-bar {
+            background: linear-gradient(90deg, var(--superficial), var(--deep));
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .status-bar h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .meta-pill {
+            background: rgba(255,255,255,0.2);
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Safety Lock */
+        .safety-lock {
+            background: var(--safety);
+            color: #000;
+            padding: 0.75rem 2rem;
+            font-weight: 700;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            animation: pulse 3s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+
+        /* Dashboard Grid */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 350px 1fr 350px;
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard { grid-template-columns: 1fr; }
+        }
+
+        /* Cards */
+        .panel {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .panel-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            font-size: 1.25rem;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        /* The Triage Center */
+        .triage-zone {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .triage-card {
+            padding: 1.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .triage-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .triage-card.active {
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+
+        .triage-superficial {
+            background: linear-gradient(135deg, rgba(255,107,107,0.2), rgba(255,107,107,0.05));
+            border: 1px solid rgba(255,107,107,0.3);
+        }
+
+        .triage-deep {
+            background: linear-gradient(135deg, rgba(155,93,229,0.2), rgba(155,93,229,0.05));
+            border: 1px solid rgba(155,93,229,0.3);
+        }
+
+        .triage-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.8;
+            margin-bottom: 0.25rem;
+        }
+
+        .triage-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .triage-location {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Interactive Cause Bubbles */
+        .cause-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .cause-bubble {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .cause-bubble:hover {
+            background: rgba(255,255,255,0.1);
+            transform: scale(1.05);
+        }
+
+        .cause-bubble.highlight-red { border-color: var(--superficial); color: #ffb4b4; }
+        .cause-bubble.highlight-purple { border-color: var(--deep); color: #d8b4fe; }
+
+        .cause-detail {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #000;
+            padding: 0.75rem;
+            border-radius: 8px;
+            width: 250px;
+            font-size: 0.8rem;
+            z-index: 10;
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .cause-bubble:hover .cause-detail {
+            display: block;
+        }
+
+        /* LOFTI Interactive Tool */
+        .lofti-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .lofti-letter {
+            aspect-ratio: 1;
+            background: rgba(0,187,249,0.1);
+            border: 2px solid rgba(0,187,249,0.3);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .lofti-letter:hover, .lofti-letter.active {
+            background: rgba(0,187,249,0.3);
+            transform: translateY(-5px);
+        }
+
+        .lofti-letter span {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--psych);
+        }
+
+        .lofti-letter small {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            margin-top: 0.25rem;
+            opacity: 0.8;
+        }
+
+        .lofti-content {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            display: none;
+            border-left: 4px solid var(--psych);
+        }
+
+        .lofti-content.active { display: block; }
+
+        /* Management Protocol */
+        .protocol-step {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: flex-start;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+
+        .protocol-step.active {
+            opacity: 1;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: var(--success);
+            color: #000;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            font-size: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        .protocol-step.active .step-number {
+            box-shadow: 0 0 0 4px rgba(6,214,160,0.3);
+        }
+
+        .step-content h4 {
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .step-content p {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        /* Red Flag Box */
+        .red-flag {
+            background: rgba(255,107,107,0.1);
+            border: 1px solid rgba(255,107,107,0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .red-flag-title {
+            color: var(--superficial);
+            font-weight: 700;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Presentation Cards */
+        .presentation-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .pres-card {
+            background: rgba(255,255,255,0.03);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid var(--safety);
+            font-size: 0.9rem;
+            position: relative;
+            padding-left: 2.5rem;
+        }
+
+        .pres-card::before {
+            content: "⚠";
+            position: absolute;
+            left: 0.75rem;
+            top: 1rem;
+        }
+
+        .pres-card.direct {
+            border-left-color: var(--success);
+        }
+
+        .pres-card.direct::before {
+            content: "→";
+            color: var(--success);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard { padding: 1rem; }
+            .triage-zone { grid-template-columns: 1fr; }
+            .lofti-container { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* Utility */
+        .hidden { display: none; }
+        .text-center { text-align: center; }
+        .mt-2 { margin-top: 1rem; }
+        .text-muted { color: var(--muted); font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+
+    <div class="status-bar">
+        <div>
+            <h1>Dyspareunia</h1>
+            <div style="font-size: 0.75rem; opacity: 0.8; margin-top: 0.25rem;">Clinical Decision Support | 7.5% prevalence</div>
+        </div>
+        <div style="display: flex; gap: 1rem;">
+            <div class="meta-pill">BMJ 2024</div>
+            <div class="meta-pill">NG210</div>
+        </div>
+    </div>
+
+    <div class="safety-lock">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        PRIMARY RULE: Examination aims to INFORM, NOT cause further pain. Skip if psychosexual cause likely.
+    </div>
+
+    <div class="dashboard">
+
+        <!-- LEFT COLUMN: Diagnosis -->
+        <div class="left-col">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-icon" style="background: rgba(255,107,107,0.2);">🎯</div>
+                    <div class="panel-title">Pain Location Triage</div>
+                </div>
+
+                <div class="triage-zone">
+                    <div class="triage-card triage-superficial" onclick="showCauses('superficial')">
+                        <div class="triage-label">Superficial</div>
+                        <div class="triage-title" style="color: var(--superficial);">ENTRANCE</div>
+                        <div class="triage-location">Introitus/Vulva</div>
+                    </div>
+                    <div class="triage-card triage-deep" onclick="showCauses('deep')">
+                        <div class="triage-label">Deep</div>
+                        <div class="triage-title" style="color: var(--deep);">PELVIC</div>
+                        <div class="triage-location">Cervix/Adnexa</div>
+                    </div>
+                </div>
+
+                <div id="superficial-causes" class="cause-container">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--superficial); margin-bottom: 0.5rem;">
+                        Click to reveal details
+                    </div>
+                    <div class="cause-grid">
+                        <div class="cause-bubble highlight-red">
+                            Candida
+                            <div class="cause-detail">Recurrent infection, itching prominent</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            Herpes
+                            <div class="cause-detail">Vesicles, acute episodes</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            Bartholin's
+                            <div class="cause-detail">Abscess/cyst at 4/8 o'clock</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            Dermatoses
+                            <div class="cause-detail">Dermatitis, lichen sclerosis (scarring)</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            Atrophy
+                            <div class="cause-detail">Post-natal (lactation) or menopause. Shiny, pale mucosa</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            Vaginismus
+                            <div class="cause-detail">Primary or secondary. Involuntary muscle spasm</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            Vulvodynia
+                            <div class="cause-detail">Neuropathic. History of trauma/surgery</div>
+                        </div>
+                        <div class="cause-bubble highlight-red">
+                            FGM
+                            <div class="cause-detail">Structural obstruction/scarring</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="deep-causes" class="cause-container hidden">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--deep); margin-bottom: 0.5rem;">
+                        Deep Causes
+                    </div>
+                    <div class="cause-grid">
+                        <div class="cause-bubble highlight-purple">
+                            Endometriosis
+                            <div class="cause-detail">Cardinal sign. Fixed uterus, nodularity</div>
+                        </div>
+                        <div class="cause-bubble highlight-purple">
+                            Fibroids
+                            <div class="cause-detail">Large/degenerate fibroids</div>
+                        </div>
+                        <div class="cause-bubble highlight-purple">
+                            PID
+                            <div class="cause-detail">Chronic infection, adhesions</div>
+                        </div>
+                        <div class="cause-bubble highlight-purple">
+                            Pelvic Floor
+                            <div class="cause-detail">Overactivity/tightness. Refer physio (NG210)</div>
+                        </div>
+                        <div class="cause-bubble highlight-purple">
+                            IBS/IBD
+                            <div class="cause-detail">Non-gynaecological bowel pain</div>
+                        </div>
+                        <div class="cause-bubble highlight-purple">
+                            Cystitis
+                            <div class="cause-detail">Recurrent UTI or bladder pain syndrome</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="red-flag mt-2">
+                    <div class="red-flag-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        Malignancy Red Flags
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--muted);">
+                        Post-radiotherapy changes, unexplained bleeding, mass on examination
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel mt-2">
+                <div class="panel-header">
+                    <div class="panel-icon" style="background: rgba(248,150,30,0.2);">👁</div>
+                    <div class="panel-title">Presentation Patterns</div>
+                </div>
+                <div class="presentation-stack">
+                    <div class="pres-card direct">
+                        <strong>Direct:</strong> "Painful sex" history, relationship issues
+                    </div>
+                    <div class="pres-card">
+                        <strong>Hidden:</strong> Depression, anxiety, bleeding, contraception queries
+                    </div>
+                    <div class="pres-card">
+                        <strong>Avoidance:</strong> Smear non-attendance, tampon inability
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER COLUMN: Assessment -->
+        <div class="center-col">
+            <div class="panel" style="height: 100%;">
+                <div class="panel-header">
+                    <div class="panel-icon" style="background: rgba(0,187,249,0.2);">🧠</div>
+                    <div class="panel-title">LOFTI Psychosexual Tool</div>
+                </div>
+                
+                <p style="margin-bottom: 1rem; color: var(--muted); font-size: 0.9rem;">
+                    Click each letter during consultation. <span style="color: var(--psych);">Dissociation suggests sexual abuse history.</span>
+                </p>
+
+                <div class="lofti-container">
+                    <div class="lofti-letter active" onclick="showLofti('listen', this)">
+                        <span>L</span>
+                        <small>Listen</small>
+                    </div>
+                    <div class="lofti-letter" onclick="showLofti('observe', this)">
+                        <span>O</span>
+                        <small>Observe</small>
+                    </div>
+                    <div class="lofti-letter" onclick="showLofti('feelings', this)">
+                        <span>F</span>
+                        <small>Feelings</small>
+                    </div>
+                    <div class="lofti-letter" onclick="showLofti('thinking', this)">
+                        <span>T</span>
+                        <small>Thinking</small>
+                    </div>
+                    <div class="lofti-letter" onclick="showLofti('interpreting', this)">
+                        <span>I</span>
+                        <small>Interpret</small>
+                    </div>
+                </div>
+
+                <div id="lofti-listen" class="lofti-content active">
+                    <h4 style="color: var(--psych); margin-bottom: 0.5rem;">Listen</h4>
+                    <ul style="font-size: 0.9rem; padding-left: 1.2rem; color: var(--muted);">
+                        <li>Open questions + brief silences</li>
+                        <li>Tone of voice (angry? sad?)</li>
+                        <li>What's said vs unsaid?</li>
+                    </ul>
+                </div>
+
+                <div id="lofti-observe" class="lofti-content">
+                    <h4 style="color: var(--psych); margin-bottom: 0.5rem;">Observe</h4>
+                    <ul style="font-size: 0.9rem; padding-left: 1.2rem; color: var(--muted);">
+                        <li>Body language</li>
+                        <li>Defensive? Childlike/regressive?</li>
+                        <li>Dissociative (disconnected)?</li>
+                    </ul>
+                </div>
+
+                <div id="lofti-feelings" class="lofti-content">
+                    <h4 style="color: var(--psych); margin-bottom: 0.5rem;">Feelings</h4>
+                    <ul style="font-size: 0.9rem; padding-left: 1.2rem; color: var(--muted);">
+                        <li>Awareness of room's feelings</li>
+                        <li>Doctor's feelings reflect patient's subconscious</li>
+                    </ul>
+                </div>
+
+                <div id="lofti-thinking" class="lofti-content">
+                    <h4 style="color: var(--psych); margin-bottom: 0.5rem;">Thinking</h4>
+                    <ul style="font-size: 0.9rem; padding-left: 1.2rem; color: var(--muted);">
+                        <li>What role are you playing? (Parent/Teacher)</li>
+                        <li>Why presenting now?</li>
+                    </ul>
+                </div>
+
+                <div id="lofti-interpreting" class="lofti-content">
+                    <h4 style="color: var(--psych); margin-bottom: 0.5rem;">Interpreting</h4>
+                    <ul style="font-size: 0.9rem; padding-left: 1.2rem; color: var(--muted);">
+                        <li>Does the picture fit the story?</li>
+                        <li>Dissociation = abuse history?</li>
+                    </ul>
+                </div>
+
+                <div class="mt-2" style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px; margin-top: 2rem;">
+                    <h4 style="margin-bottom: 0.5rem; font-size: 0.9rem;">History Snippets</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size: 0.8rem;">
+                        <div style="background: rgba(255,107,107,0.1); padding: 0.5rem; border-radius: 6px; border-left: 2px solid var(--superficial);">
+                            <strong style="color: var(--superficial);">Sudden onset</strong><br>
+                            <span style="color: var(--muted);">→ Psychosexual</span>
+                        </div>
+                        <div style="background: rgba(155,93,229,0.1); padding: 0.5rem; border-radius: 6px; border-left: 2px solid var(--deep);">
+                            <strong style="color: var(--deep);">Gradual onset</strong><br>
+                            <span style="color: var(--muted);">→ Physical</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-2 text-center" style="padding: 1rem; background: rgba(6,214,160,0.1); border-radius: 8px; border: 1px dashed var(--success);">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--success); margin-bottom: 0.25rem;">Wider Impact Check</div>
+                    <div style="font-size: 0.85rem; color: var(--text);">
+                        Tampons? Smears? Fertility fears? Intimacy?
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Management -->
+        <div class="right-col">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-icon" style="background: rgba(6,214,160,0.2);">💊</div>
+                    <div class="panel-title">Management Protocol</div>
+                </div>
+
+                <div class="protocol-step active">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>First Line (All)</h4>
+                        <p>Coconut oil perineal massage (2× daily) + Vulval health (no soap, simple emollients)</p>
+                    </div>
+                </div>
+
+                <div class="protocol-step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Specific Targets</h4>
+                        <p>Atrophy → Oestrogens | Dermatosis → Steroids + Emollient | Vulvodynia → MDT</p>
+                    </div>
+                </div>
+
+                <div class="protocol-step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Physio Referral</h4>
+                        <p>Pelvic floor dysfunction (NG210): overactivity, prolapse, chronic pain</p>
+                    </div>
+                </div>
+
+                <div class="protocol-step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Psychosexual</h4>
+                        <p>Institute of Psychosexual Medicine. Facilitate understanding, don't "fix"</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <h4 style="font-size: 0.875rem; margin-bottom: 0.75rem; color: var(--muted);">Aids for Intercourse</h4>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem;">Lubricants</span>
+                        <span style="background: rgba(255,255,255,0.1); padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem;">5% Lidocaine</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem; font-size: 0.75rem; color: var(--muted); padding: 0.75rem; background: rgba(255,255,255,0.03); border-radius: 6px;">
+                    <strong>Investigations:</strong> USS for masses. Ferritin if pruritis vulvae.
+                </div>
+            </div>
+
+            <div class="panel mt-2">
+                <div class="panel-header">
+                    <div class="panel-icon" style="background: rgba(255,255,255,0.1);">🔗</div>
+                    <div class="panel-title">Resources</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="#" style="color: var(--psych); text-decoration: none; font-size: 0.9rem; padding: 0.5rem; background: rgba(0,187,249,0.1); border-radius: 6px; text-align: center;">
+                        Institute of Psychosexual Medicine →
+                    </a>
+                    <a href="#" style="color: var(--superficial); text-decoration: none; font-size: 0.9rem; padding: 0.5rem; background: rgba(255,107,107,0.1); border-radius: 6px; text-align: center;">
+                        Vulval Pain Society →
+                    </a>
+                    <a href="#" style="color: var(--deep); text-decoration: none; font-size: 0.9rem; padding: 0.5rem; background: rgba(155,93,229,0.1); border-radius: 6px; text-align: center;">
+                        Vaginismus Network →
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function showCauses(type) {
+            // Reset cards
+            document.querySelectorAll('.triage-card').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            // Hide all
+            document.getElementById('superficial-causes').classList.add('hidden');
+            document.getElementById('deep-causes').classList.add('hidden');
+            
+            // Show selected
+            document.getElementById(type + '-causes').classList.remove('hidden');
+        }
+
+        function showLofti(type, element) {
+            // Remove active from all letters
+            document.querySelectorAll('.lofti-letter').forEach(l => l.classList.remove('active'));
+            element.classList.add('active');
+            
+            // Hide all content
+            document.querySelectorAll('.lofti-content').forEach(c => c.classList.remove('active'));
+            
+            // Show selected
+            document.getElementById('lofti-' + type).classList.add('active');
+        }
+
+        // Animate protocol steps on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        });
+
+        document.querySelectorAll('.protocol-step').forEach(step => {
+            observer.observe(step);
+        });
+
+        // Default to superficial view
+        document.querySelector('.triage-superficial').click();
+    </script>
+</body>
+</html>

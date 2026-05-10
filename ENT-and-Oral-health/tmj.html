@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMD Referral Compliance</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#F1F5F9;color:#1E293B;min-height:100vh}
+h1,h2,h3,h4,h5{font-family:'Space Grotesk',sans-serif}
+.step-anim{animation:fadeUp .3s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulseRing{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.25)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
+.pulse-ring{animation:pulseRing 2s infinite}
+.radio-card input[type="radio"]{display:none}
+.radio-card input[type="radio"]:checked+.rc-label{background:#0E7490;color:#fff;border-color:#0E7490}
+.check-card input[type="checkbox"]{display:none}
+.check-card input[type="checkbox"]:checked+.cc-label{background:#ECFEFF;border-color:#0E7490;color:#155E75}
+input[type="range"]{-webkit-appearance:none;appearance:none;height:8px;border-radius:4px;outline:none;background:linear-gradient(90deg,#6EE7B7,#FDE68A,#FCA5A5)}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#0E7490;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
+input[type="range"]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#0E7490;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer}
+textarea,input[type="text"],input[type="number"],input[type="date"],select{font-family:'DM Sans',sans-serif;font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;outline:none;transition:border-color .15s,box-shadow .15s;width:100%}
+textarea:focus,input[type="text"]:focus,input[type="number"]:focus,input[type="date"]:focus,select:focus{border-color:#0E7490;box-shadow:0 0 0 3px rgba(14,116,144,.12)}
+.referral-box{font-family:'DM Sans',monospace;font-size:13px;line-height:1.75;white-space:pre-wrap;background:#F8FAFC;padding:24px;border-radius:12px;border:1px solid #E2E8F0;max-height:60vh;overflow-y:auto}
+.toast-in{animation:toastSlide .3s ease-out}
+@keyframes toastSlide{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.dot-bg{background-image:radial-gradient(circle,#0E749008 1px,transparent 1px);background-size:20px 20px}
+</style>
+</head>
+<body class="dot-bg">
+
+<div id="app"></div>
+
+<script>
+// =============================================
+// STATE
+// =============================================
+var S = {
+  step: 0,
+  patient: { name: '', dob: '', nhs: '', practice: '' },
+  redFlags: {},
+  q3tmd: [null, null, null],
+  hx: { site:'', onset:'', character:'', radiation:'', jointNoise:'', jawLock:'none', headache:'', earSymptoms:'', timeCourse:'', exacerbators:'', effectsLife:'', severity:5, sleep:'', psychosocial:'' },
+  exam: { lymphadenopathy:false, salivaryMass:false, dentalPathology:false, cranialNervesOK:true, cranialNerveNote:'', tmjPain:false, tmjNoise:false, tmjNoiseType:'', tmjDeviation:false, tmjDeviationDir:'', openingMm:'', protrusionMm:'', lateralMm:'', masseterPain:false, temporalisPain:false, triggerPoints:'', painRadiation:'', familiarPain:true },
+  phq4: [null, null, null, null],
+  cpi: [null, null, null],
+  cpiFollow: [],
+  diagnosis: '',
+  comorbs: {},
+  comorbOther: '',
+  ssmDuration: '',
+  ssm: { education:false, exercise:false, thermal:false, massage:false, diet:false, parafunction:false },
+  ssmEngagement: 'partial',
+  ssmOutcome: '',
+  splintSoft: false, splintHard: false, physio: false, pharma: false, cbt: false,
+  adjunctDetail: '',
+  referralReason: '',
+  earlyReferral: ''
+};
+
+var STEPS = ['Red Flags & Screening', 'History & Examination', 'Psychosocial & Pain', 'Diagnosis & Comorbidities', 'Management & Referral'];
+
+var RED_FLAGS = [
+  'Previous malignant tumour with facial pain or headache',
+  'Lymphadenopathy, face or neck mass/swelling',
+  'Jaw claudication (cramp-like pain in jaw/tongue)',
+  'Unplanned weight loss',
+  'Pyrexia with swelling and trismus',
+  'Acute neurological signs (loss of smell/hearing, visual, motor/sensory change)',
+  'Persistent profuse nasal bleeding or purulent discharge',
+  'Acute onset profound or worsening trismus',
+  'Persistent hoarseness of voice (>=3 weeks)',
+  'Persistent mouth ulcer(s) (>=3 weeks)',
+  'Occlusal changes',
+  'New onset jaw pain on bisphosphonates/related medication'
+];
+
+var COMORBS = ['Fibromyalgia','ME/CFS','Depression','Anxiety','PTSD','Migraine','Chronic tension-type headache','IBS','Vulvodynia','Interstitial cystitis/painful bladder','Endometriosis','Chronic lower back pain'];
+
+// =============================================
+// CALCULATIONS
+// =============================================
+function calc3Q() {
+  if (S.q3tmd[0]===null || S.q3tmd[1]===null || S.q3tmd[2]===null) return { score: '-', total: '-', positive: null };
+  var t = (S.q3tmd[0]?1:0)+(S.q3tmd[1]?1:0)+(S.q3tmd[2]?1:0);
+  return { score: t, total: t + '/3', positive: t >= 2 };
+}
+
+function calcPHQ4() {
+  if (S.phq4[0]===null||S.phq4[1]===null||S.phq4[2]===null||S.phq4[3]===null) return {total:'-',anx:'-',dep:'-',sev:'-',anxSev:'-',depSev:'-'};
+  var total=S.phq4[0]+S.phq4[1]+S.phq4[2]+S.phq4[3];
+  var anx=S.phq4[0]+S.phq4[1], dep=S.phq4[2]+S.phq4[3];
+  function sev(n){return n<=2?'Normal':n<=5?'Mild':n<=8?'Moderate':'Severe'}
+  return {total:total,anx:anx,dep:dep,sev:sev(total),anxSev:sev(anx),depSev:sev(dep)};
+}
+
+function calcCPI() {
+  if (S.cpi[0]===null||S.cpi[1]===null||S.cpi[2]===null) return {score:'-',raw:'-'};
+  var raw=S.cpi[0]+S.cpi[1]+S.cpi[2];
+  var score=Math.round(raw*10/3*10)/10;
+  return {score:score,raw:raw};
+}
+
+function hasRedFlag() {
+  for (var k in S.redFlags) { if (S.redFlags[k]) return true; }
+  return false;
+}
+
+function cpiTrend() {
+  if (S.cpiFollow.length<2) return 'Insufficient data';
+  var first=S.cpiFollow[0].score, last=S.cpiFollow[S.cpiFollow.length-1].score;
+  if (last<first-5) return 'Improving';
+  if (last>first+5) return 'Worsening';
+  return 'Stable';
+}
+
+// =============================================
+// TOAST
+// =============================================
+function showToast(msg, type) {
+  type = type || 'info';
+  var colors = {info:'#0E7490',warn:'#D97706',danger:'#DC2626',success:'#059669'};
+  var icons = {info:'fa-circle-info',warn:'fa-triangle-exclamation',danger:'fa-circle-exclamation',success:'fa-circle-check'};
+  var el = document.createElement('div');
+  el.className = 'toast-in';
+  el.style.cssText = 'position:fixed;top:16px;right:16px;z-index:9999;padding:12px 20px;border-radius:12px;color:#fff;font-size:14px;font-weight:500;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-width:360px;font-family:DM Sans,sans-serif;background:'+colors[type];
+  el.innerHTML = '<i class="fas '+icons[type]+'"></i><span>'+msg+'</span>';
+  document.body.appendChild(el);
+  setTimeout(function(){ el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(function(){el.remove()},350) }, 2800);
+}
+
+// =============================================
+// RENDER ENGINE
+// =============================================
+function render() {
+  try {
+    var app = document.getElementById('app');
+    app.innerHTML = buildHeader() + buildStepContent() + buildNav();
+  } catch(e) {
+    document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center"><h2 style="color:#DC2626">Render Error</h2><pre style="text-align:left;background:#fff;padding:20px;border-radius:8px;margin-top:16px;overflow:auto;font-size:12px">'+e.message+'\n'+e.stack+'</pre></div>';
+  }
+}
+
+function buildHeader() {
+  var s3 = calc3Q(), sp = calcPHQ4(), sc = calcCPI();
+  var h = '<header style="position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #E2E8F0;box-shadow:0 1px 3px rgba(0,0,0,.06)">';
+  h += '<div style="max-width:900px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">';
+  h += '<div style="display:flex;align-items:center;gap:10px">';
+  h += '<div style="width:36px;height:36px;border-radius:10px;background:#0E7490;display:flex;align-items:center;justify-content:center"><i class="fas fa-tooth" style="color:#fff;font-size:14px"></i></div>';
+  h += '<div><div style="font-family:Space Grotesk,sans-serif;font-weight:700;font-size:16px;color:#0E7490;line-height:1.2">TMD Referral Compliance</div>';
+  h += '<div style="font-size:11px;color:#94A3B8">GIRFT / FDS Pathway Tool</div></div></div>';
+
+  // Quick scores
+  h += '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  var s3col = s3.positive===true?'#FEF3C7;border-color:#F59E0B;color:#92400E':s3.positive===false?'#D1FAE5;border-color:#34D399;color:#065F46':'#F1F5F9;border-color:#CBD5E1;color:#94A3B8';
+  h += '<span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid;'+s3col+'">3Q: '+s3.total+'</span>';
+  var spCol = sp.total!=='-'&&sp.total>=9?'#FEE2E2;border-color:#F87171;color:#991B1B':sp.total!=='-'&&sp.total>=3?'#FEF3C7;border-color:#F59E0B;color:#92400E':sp.total!=='-'?'#D1FAE5;border-color:#34D399;color:#065F46':'#F1F5F9;border-color:#CBD5E1;color:#94A3B8';
+  h += '<span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid;'+spCol+'">PHQ-4: '+(sp.total!=='-'?sp.total+'/12':'-')+'</span>';
+  var scCol = sc.score!=='-'&&sc.score>50?'#FEE2E2;border-color:#F87171;color:#991B1B':sc.score!=='-'&&sc.score>30?'#FEF3C7;border-color:#F59E0B;color:#92400E':sc.score!=='-'?'#D1FAE5;border-color:#34D399;color:#065F46':'#F1F5F9;border-color:#CBD5E1;color:#94A3B8';
+  h += '<span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid;'+scCol+'">CPI: '+sc.score+'</span>';
+  if (hasRedFlag()) h += '<span style="padding:4px 10px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid;background:#FEE2E2;border-color:#F87171;color:#991B1B"><i class="fas fa-exclamation-triangle"></i> RED FLAG</span>';
+  h += '</div></div>';
+
+  // Step indicators
+  h += '<div style="max-width:900px;margin:0 auto;padding:0 16px 10px;display:flex;align-items:center;gap:4px">';
+  for (var i=0; i<STEPS.length; i++) {
+    var active = i===S.step, done = i<S.step;
+    var bg = active?'background:#0E7490;color:#fff':done?'background:#CFFAFE;color:#0E7490':'background:#F1F5F9;color:#94A3B8';
+    if (done && i===0 && hasRedFlag()) bg = 'background:#FEE2E2;color:#991B1B';
+    h += '<button onclick="goStep('+i+')" style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;'+bg+';font-family:DM Sans,sans-serif;white-space:nowrap;flex:1;justify-content:center;transition:all .15s">';
+    h += (done && !(i===0&&hasRedFlag()))?'<i class="fas fa-check" style="font-size:10px"></i>':(i===0&&hasRedFlag())?'<i class="fas fa-exclamation" style="font-size:10px"></i>':(i+1);
+    h += ' <span style="display:none" class="step-label">'+STEPS[i]+'</span>';
+    h += '</button>';
+    if (i<STEPS.length-1) h += '<div style="flex:0 0 16px;height:2px;border-radius:1px;background:'+(done?'#0E7490':'#E2E8F0')+'"></div>';
+  }
+  h += '</div></header>';
+
+  // Show labels on wider screens via media query injected once
+  return h;
+}
+
+function buildStepContent() {
+  var fn = [buildStep0, buildStep1, buildStep2, buildStep3, buildStep4][S.step];
+  return '<main style="max-width:900px;margin:0 auto;padding:24px 16px 0" class="step-anim">'+fn()+'</main>';
+}
+
+function buildNav() {
+  var h = '<div style="max-width:900px;margin:0 auto;padding:16px 16px 48px;display:flex;align-items:center;justify-content:space-between">';
+  h += '<button onclick="prevStep()" '+(S.step===0?'disabled':'')+' style="padding:10px 20px;border-radius:10px;border:1.5px solid #CBD5E1;background:#fff;color:#64748B;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif;font-size:14px;display:flex;align-items:center;gap:6px;'+(S.step===0?'opacity:.3;cursor:not-allowed':'')+'"><i class="fas fa-arrow-left" style="font-size:11px"></i> Previous</button>';
+  if (S.step < 4) {
+    h += '<button onclick="nextStep()" style="padding:10px 24px;border-radius:10px;border:none;background:#0E7490;color:#fff;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif;font-size:14px;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(14,116,144,.25)">Next <i class="fas fa-arrow-right" style="font-size:11px"></i></button>';
+  } else {
+    h += '<button onclick="showReferral()" style="padding:10px 24px;border-radius:10px;border:none;background:#D97706;color:#fff;font-weight:700;cursor:pointer;font-family:Space Grotesk,sans-serif;font-size:15px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 12px rgba(217,119,6,.3)"><i class="fas fa-file-medical"></i> Generate Referral Letter</button>';
+  }
+  h += '</div>';
+  return h;
+}
+
+// =============================================
+// STEP BUILDERS
+// =============================================
+function card(title, icon, content, borderCol) {
+  borderCol = borderCol || '#E2E8F0';
+  return '<div style="background:#fff;border-radius:14px;border:1.5px solid '+borderCol+';padding:24px;box-shadow:0 1px 4px rgba(0,0,0,.04);margin-bottom:20px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><i class="fas '+icon+'" style="color:#0E7490;font-size:14px"></i><h3 style="font-size:15px;font-weight:700;color:#0E7490">'+title+'</h3></div>'+content+'</div>';
+}
+
+function inputRow(label, id, value, placeholder) {
+  return '<div style="flex:1;min-width:180px"><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">'+label+'</label><input type="text" id="'+id+'" value="'+(value||'')+'" placeholder="'+(placeholder||'')+'" oninput="handleInput(\''+id+'\',this.value)"></div>';
+}
+
+function handleInput(id, val) {
+  var parts = id.split('.');
+  var obj = S;
+  for (var i=0; i<parts.length-1; i++) obj = obj[parts[i]];
+  obj[parts[parts.length-1]] = val;
+}
+
+function handleCheck(id, checked) {
+  var parts = id.split('.');
+  var obj = S;
+  for (var i=0; i<parts.length-1; i++) obj = obj[parts[i]];
+  obj[parts[parts.length-1]] = checked;
+  render();
+}
+
+// STEP 0: Red Flags & Screening
+function buildStep0() {
+  var h = '';
+  // Patient details
+  var pContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:12px">Patient identification for referral letter</p>';
+  pContent += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">';
+  pContent += inputRow('Patient Name','patient.name',S.patient.name,'Full name');
+  pContent += '<div><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">Date of Birth</label><input type="date" id="patient.dob" value="'+S.patient.dob+'" oninput="handleInput(\'patient.dob\',this.value)"></div>';
+  pContent += inputRow('NHS Number','patient.nhs',S.patient.nhs,'000 000 0000');
+  pContent += inputRow('Practice / GP Name','patient.practice',S.patient.practice,'Your practice');
+  pContent += '</div>';
+  h += card('Patient Details', 'fa-user-circle', pContent);
+
+  // Red flags
+  var rfBorder = hasRedFlag()?'#F87171':'#E2E8F0';
+  var rfContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:12px">Any positive red flag requires urgent or 2WW referral per guideline.</p>';
+  rfContent += '<div style="display:flex;flex-direction:column;gap:6px">';
+  for (var i=0; i<RED_FLAGS.length; i++) {
+    var checked = S.redFlags[i] ? true : false;
+    var bg = checked ? 'background:#FEF2F2;border-color:#FECACA' : 'background:#FAFBFC;border-color:#E2E8F0';
+    rfContent += '<label class="check-card" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;border:1.5px solid;transition:all .12s;'+bg+'">';
+    rfContent += '<input type="checkbox" '+(checked?'checked':'')+' onchange="S.redFlags['+i+']=this.checked;render()">';
+    rfContent += '<span class="cc-label" style="font-size:13px;font-weight:'+(checked?600:400)+';color:'+(checked?'#991B1B':'#334155')+'">'+RED_FLAGS[i]+'</span>';
+    rfContent += '</label>';
+  }
+  rfContent += '</div>';
+
+  if (hasRedFlag()) {
+    rfContent += '<div class="pulse-ring" style="margin-top:16px;padding:14px 18px;background:#FEF2F2;border:1.5px solid #FECACA;border-radius:12px;display:flex;align-items:flex-start;gap:10px">';
+    rfContent += '<i class="fas fa-circle-exclamation" style="color:#DC2626;margin-top:2px"></i>';
+    rfContent += '<div><p style="font-size:14px;font-weight:700;color:#991B1B">Red flag(s) identified — Urgent referral indicated</p>';
+    rfContent += '<p style="font-size:12px;color:#B91C1C;margin-top:4px">Consider 2WW (suspected malignancy) or urgent referral to maxillofacial surgery.</p></div></div>';
+  } else {
+    rfContent += '<div style="margin-top:16px;padding:14px 18px;background:#ECFDF5;border:1.5px solid #A7F3D0;border-radius:12px;display:flex;align-items:center;gap:10px">';
+    rfContent += '<i class="fas fa-circle-check" style="color:#059669"></i>';
+    rfContent += '<p style="font-size:13px;font-weight:500;color:#065F46">No red flags identified — continue with pathway</p></div>';
+  }
+  h += card('Red Flag Screening', 'fa-flag', rfContent, rfBorder);
+
+  // 3Q/TMD
+  var s3 = calc3Q();
+  var q3Content = '<p style="font-size:12px;color:#94A3B8;margin-bottom:16px">Baseline screening. Score >= 2 = positive screen for TMD.</p>';
+  var q3texts = [
+    'Do you have pain in your temple, face, jaw, or jaw joint once a week or more?',
+    'Do you have pain once a week or more when you open your mouth or chew?',
+    'Does your jaw lock or become stuck once a week or more?'
+  ];
+  for (var qi=0; qi<3; qi++) {
+    q3Content += '<div style="padding:16px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;margin-bottom:10px">';
+    q3Content += '<p style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px">Q'+(qi+1)+': '+q3texts[qi]+'</p>';
+    q3Content += '<div style="display:flex;gap:8px">';
+    var v0 = S.q3tmd[qi]===false, v1 = S.q3tmd[qi]===true;
+    q3Content += '<label class="radio-card" style="flex:1"><input type="radio" name="q3_'+qi+'" '+(v0?'checked':'')+' onchange="S.q3tmd['+qi+']=false;render()"><span class="rc-label" style="display:block;text-align:center;padding:8px 12px;border-radius:8px;border:2px solid #E2E8F0;font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;color:#475569">No (0)</span></label>';
+    q3Content += '<label class="radio-card" style="flex:1"><input type="radio" name="q3_'+qi+'" '+(v1?'checked':'')+' onchange="S.q3tmd['+qi+']=true;render()"><span class="rc-label" style="display:block;text-align:center;padding:8px 12px;border-radius:8px;border:2px solid #E2E8F0;font-size:13px;font-weight:600;cursor:pointer;transition:all .12s;color:#475569">Yes (1)</span></label>';
+    q3Content += '</div></div>';
+  }
+
+  var s3bg = s3.positive===true?'#FEF3C7;border-color:#F59E0B':s3.positive===false?'#ECFDF5;border-color:#34D399':'#F8FAFC;border-color:#E2E8F0';
+  var s3txt = s3.positive===true?'#92400E':s3.positive===false?'#065F46':'#64748B';
+  q3Content += '<div style="padding:14px 18px;border-radius:12px;border:1.5px solid;background:'+s3bg+';display:flex;align-items:center;justify-content:space-between">';
+  q3Content += '<span style="font-size:14px;font-weight:600;color:'+s3txt+'">3Q/TMD Score</span>';
+  q3Content += '<span style="font-size:24px;font-weight:700;color:'+s3txt+'">'+s3.total+'</span></div>';
+  if (s3.positive===true) q3Content += '<p style="font-size:12px;color:#92400E;margin-top:6px;font-weight:500">Positive screen for TMD — continue with assessment</p>';
+  if (s3.positive===false) q3Content += '<p style="font-size:12px;color:#065F46;margin-top:6px;font-weight:500">Negative screen — consider alternative diagnoses</p>';
+  h += card('3Q/TMD Screening', 'fa-clipboard-check', q3Content);
+
+  return h;
+}
+
+// STEP 1: History & Examination
+function buildStep1() {
+  var h = '';
+  var hxContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:14px">Structured history per GIRFT Box 1 template</p>';
+  hxContent += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">';
+  hxContent += inputRow('Site','hx.site',S.hx.site,'e.g. left TMJ, bilateral masseter');
+  hxContent += inputRow('Onset','hx.onset',S.hx.onset,'When & how did it start?');
+  hxContent += inputRow('Character','hx.character',S.hx.character,'e.g. achey, throbby, sharp');
+  hxContent += inputRow('Radiation','hx.radiation',S.hx.radiation,'Does pain spread? Where?');
+  hxContent += inputRow('Time Course','hx.timeCourse',S.hx.timeCourse,'Constant, intermittent, episodic?');
+  hxContent += inputRow('Exacerbators/Relievers','hx.exacerbators',S.hx.exacerbators,'What makes it worse/better?');
+  hxContent += '</div>';
+
+  hxContent += '<div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">';
+  hxContent += inputRow('Joint Noise','hx.jointNoise',S.hx.jointNoise,'Click, pop, crepitus, or No');
+  hxContent += '<div><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">Jaw Lock</label><select id="hx.jawLock" onchange="handleInput(\'hx.jawLock\',this.value)">';
+  hxContent += '<option value="none" '+(S.hx.jawLock==='none'?'selected':'')+'>None</option>';
+  hxContent += '<option value="open" '+(S.hx.jawLock==='open'?'selected':'')+'>Open lock</option>';
+  hxContent += '<option value="closed" '+(S.hx.jawLock==='closed'?'selected':'')+'>Closed lock</option>';
+  hxContent += '</select></div>';
+  hxContent += inputRow('Headache','hx.headache',S.hx.headache,'Associated? Detail or No');
+  hxContent += inputRow('Ear Symptoms','hx.earSymptoms',S.hx.earSymptoms,'Otalgia, tinnitus, fullness or No');
+  hxContent += '</div>';
+
+  hxContent += '<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  hxContent += '<div style="grid-column:span 2">'+inputRow('Effects on Everyday Life','hx.effectsLife',S.hx.effectsLife,'Impact on eating, social, work?')+'</div>';
+  hxContent += '<div><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">Pain Severity (0-10): <strong style="color:#0E7490;font-size:18px" id="sevVal">'+S.hx.severity+'</strong></label>';
+  hxContent += '<input type="range" min="0" max="10" value="'+S.hx.severity+'" oninput="S.hx.severity=parseInt(this.value);document.getElementById(\'sevVal\').textContent=this.value" style="width:100%"></div>';
+  hxContent += inputRow('Sleep Affected','hx.sleep',S.hx.sleep,'Woken from sleep? Difficulty?');
+  hxContent += '<div style="grid-column:span 2">'+inputRow('Psychosocial Factors','hx.psychosocial',S.hx.psychosocial,'Stressful work/home life, mood impact?')+'</div>';
+  hxContent += '</div>';
+  h += card('History (SOCRATEESS)', 'fa-notes-medical', hxContent);
+
+  // Examination
+  var e = S.exam;
+  var exContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:14px">Key feature: familiar pain — pain representative of the patient\'s normal pain</p>';
+
+  // General
+  exContent += '<div style="padding:14px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:12px">';
+  exContent += '<p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">General Examination</p>';
+  exContent += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+  var genItems = [['lymphadenopathy','Lymphadenopathy'],['salivaryMass','Salivary gland mass'],['dentalPathology','Dental/periodontal pathology']];
+  for (var gi=0; gi<genItems.length; gi++) {
+    var gk = genItems[gi][0], gl = genItems[gi][1];
+    var gc = e[gk];
+    exContent += '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(gc?'#FECACA':'#E2E8F0')+';background:'+(gc?'#FEF2F2':'#fff')+';font-size:12px;font-weight:500;color:'+(gc?'#991B1B':'#475569')+'"><input type="checkbox" '+(gc?'checked':'')+' onchange="S.exam.'+gk+'=this.checked;render()"> '+gl+'</label>';
+  }
+  exContent += '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(e.cranialNervesOK?'#A7F3D0':'#FECACA')+';background:'+(e.cranialNervesOK?'#ECFDF5':'#FEF2F2')+';font-size:12px;font-weight:500;color:'+(e.cranialNervesOK?'#065F46':'#991B1B')+'"><input type="checkbox" '+(e.cranialNervesOK?'checked':'')+' onchange="S.exam.cranialNervesOK=this.checked;render()"> Cranial nerves intact</label>';
+  exContent += '</div></div>';
+
+  // TMJ
+  exContent += '<div style="padding:14px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:12px">';
+  exContent += '<p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">TMJ Assessment</p>';
+  exContent += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">';
+  var tmjItems = [['tmjPain','Pain lateral pole'],['tmjNoise','Joint noise'],['tmjDeviation','Deviation on opening']];
+  for (var ti=0; ti<tmjItems.length; ti++) {
+    var tk = tmjItems[ti][0], tl = tmjItems[ti][1];
+    var tc = e[tk];
+    exContent += '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(tc?'#FDE68A':'#E2E8F0')+';background:'+(tc?'#FEF3C7':'#fff')+';font-size:12px;font-weight:500;color:'+(tc?'#92400E':'#475569')+'"><input type="checkbox" '+(tc?'checked':'')+' onchange="S.exam.'+tk+'=this.checked;render()"> '+tl+'</label>';
+  }
+  exContent += '</div>';
+  if (e.tmjNoise) exContent += inputRow('Noise type','exam.tmjNoiseType',e.tmjNoiseType,'Click, pop, crepitus')+'<div style="height:8px"></div>';
+  if (e.tmjDeviation) exContent += inputRow('Deviation direction','exam.tmjDeviationDir',e.tmjDeviationDir,'Left / Right');
+  exContent += '</div>';
+
+  // Measurements
+  exContent += '<div style="padding:14px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:12px">';
+  exContent += '<p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Measurements (Normal: Opening >= 35mm, Protrusion/Lateral 7-12mm)</p>';
+  exContent += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
+  exContent += '<div><label style="display:block;font-size:11px;font-weight:600;color:#64748B;margin-bottom:3px">Max Opening (mm)</label><input type="number" min="0" max="80" value="'+e.openingMm+'" onchange="S.exam.openingMm=this.value" style="font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%"></div>';
+  exContent += '<div><label style="display:block;font-size:11px;font-weight:600;color:#64748B;margin-bottom:3px">Protrusion (mm)</label><input type="number" min="0" max="20" value="'+e.protrusionMm+'" onchange="S.exam.protrusionMm=this.value" style="font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%"></div>';
+  exContent += '<div><label style="display:block;font-size:11px;font-weight:600;color:#64748B;margin-bottom:3px">Lateral Excursion (mm)</label><input type="number" min="0" max="20" value="'+e.lateralMm+'" onchange="S.exam.lateralMm=this.value" style="font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%"></div>';
+  exContent += '</div>';
+  if (e.openingMm && parseInt(e.openingMm)<35) exContent += '<p style="font-size:12px;color:#D97706;font-weight:600;margin-top:8px"><i class="fas fa-triangle-exclamation" style="margin-right:4px"></i>Restricted opening (normal >= 35mm) — document in referral</p>';
+  exContent += '</div>';
+
+  // Muscles
+  exContent += '<div style="padding:14px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;margin-bottom:12px">';
+  exContent += '<p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Muscles of Mastication</p>';
+  exContent += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">';
+  var momItems = [['masseterPain','Masseter pain'],['temporalisPain','Temporalis pain']];
+  for (var mi=0; mi<momItems.length; mi++) {
+    var mk = momItems[mi][0], ml = momItems[mi][1];
+    var mc = e[mk];
+    exContent += '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(mc?'#FDE68A':'#E2E8F0')+';background:'+(mc?'#FEF3C7':'#fff')+';font-size:12px;font-weight:500;color:'+(mc?'#92400E':'#475569')+'"><input type="checkbox" '+(mc?'checked':'')+' onchange="S.exam.'+mk+'=this.checked;render()"> '+ml+'</label>';
+  }
+  exContent += '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(e.familiarPain?'#A7F3D0':'#E2E8F0')+';background:'+(e.familiarPain?'#ECFDF5':'#fff')+';font-size:12px;font-weight:600;color:'+(e.familiarPain?'#065F46':'#475569')+'"><input type="checkbox" '+(e.familiarPain?'checked':'')+' onchange="S.exam.familiarPain=this.checked;render()"> Familiar pain reproduced</label>';
+  exContent += '</div>';
+  exContent += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  exContent += inputRow('Trigger Points','exam.triggerPoints',e.triggerPoints,'Location of trigger points');
+  exContent += inputRow('Pain Radiation','exam.painRadiation',e.painRadiation,'Pattern of radiation');
+  exContent += '</div></div>';
+
+  h += card('Clinical Examination', 'fa-stethoscope', exContent);
+  return h;
+}
+
+// STEP 2: Psychosocial & Pain
+function buildStep2() {
+  var h = '';
+  var sp = calcPHQ4();
+
+  // PHQ-4
+  var phqContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:16px">Over the past 2 weeks, how often have you been bothered by these problems?</p>';
+  var phqQs = [
+    ['Feeling nervous, anxious, or on edge','Anxiety'],
+    ['Not being able to stop or control worrying','Anxiety'],
+    ['Feeling down, depressed, or hopeless','Depression'],
+    ['Little interest or pleasure in doing things','Depression']
+  ];
+  var phqOpts = ['Not at all (0)','Several days (1)','More than half (2)','Nearly every day (3)'];
+  for (var pi=0; pi<4; pi++) {
+    phqContent += '<div style="padding:14px;background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:12px;margin-bottom:10px">';
+    phqContent += '<p style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;margin-right:6px;background:'+(pi<2?'#DBEAFE;color:#1D4ED8':'#FCE7F3;color:#BE185D')+'">'+phqQs[pi][1]+'</span>'+phqQs[pi][0]+'</p>';
+    phqContent += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+    for (var oi=0; oi<4; oi++) {
+      var sel = S.phq4[pi]===oi;
+      phqContent += '<label class="radio-card"><input type="radio" name="phq_'+pi+'" '+(sel?'checked':'')+' onchange="S.phq4['+pi+']='+oi+';render()"><span class="rc-label" style="display:block;text-align:center;padding:8px 4px;border-radius:8px;border:2px solid #E2E8F0;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;color:#475569">'+phqOpts[oi]+'</span></label>';
+    }
+    phqContent += '</div></div>';
+  }
+
+  if (sp.total!=='-') {
+    var spBg = sp.total>=9?'#FEF2F2;border-color:#FECACA':sp.total>=3?'#FEF3C7;border-color:#FDE68A':'#ECFDF5;border-color:#A7F3D0';
+    var spTx = sp.total>=9?'#991B1B':sp.total>=3?'#92400E':'#065F46';
+    phqContent += '<div style="padding:16px;border-radius:12px;border:1.5px solid;background:'+spBg+';margin-top:4px">';
+    phqContent += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;text-align:center;gap:12px">';
+    phqContent += '<div><p style="font-size:11px;color:'+spTx+';opacity:.7">Total</p><p style="font-size:28px;font-weight:700;color:'+spTx+'">'+sp.total+'/12</p><p style="font-size:12px;font-weight:600;color:'+spTx+'">'+sp.sev+'</p></div>';
+    phqContent += '<div><p style="font-size:11px;color:'+spTx+';opacity:.7">Anxiety (Q1-2)</p><p style="font-size:28px;font-weight:700;color:'+spTx+'">'+sp.anx+'/6</p><p style="font-size:12px;font-weight:600;color:'+spTx+'">'+sp.anxSev+(sp.anx>=3?' — suggested':'')+'</p></div>';
+    phqContent += '<div><p style="font-size:11px;color:'+spTx+';opacity:.7">Depression (Q3-4)</p><p style="font-size:28px;font-weight:700;color:'+spTx+'">'+sp.dep+'/6</p><p style="font-size:12px;font-weight:600;color:'+spTx+'">'+sp.depSev+(sp.dep>=3?' — suggested':'')+'</p></div>';
+    phqContent += '</div>';
+    if (sp.total>=9) phqContent += '<p style="font-size:12px;font-weight:700;color:#991B1B;margin-top:10px;padding:8px 12px;background:#FEE2E2;border-radius:8px"><i class="fas fa-circle-exclamation" style="margin-right:4px"></i>Score >= 9: Urgent referral for anxiety/depression assessment per pathway</p>';
+    else if (sp.total>=3) phqContent += '<p style="font-size:12px;font-weight:600;color:#92400E;margin-top:10px;padding:8px 12px;background:#FEF3C7;border-radius:8px"><i class="fas fa-info-circle" style="margin-right:4px"></i>Mild-moderate: Discuss with patient. Consider NHS Talking Therapies self-referral. Document conversation.</p>';
+    phqContent += '</div>';
+  }
+  h += card('PHQ-4 Assessment', 'fa-brain', phqContent);
+
+  // CPI
+  var sc = calcCPI();
+  var cpiContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:16px">CPI = (Q1+Q2+Q3) x 10 / 3. Score > 50 with arthrogenous TMD = early referral threshold.</p>';
+  var cpiLabels = ['Right now','Worst in past month','Average in past month'];
+  for (var ci=0; ci<3; ci++) {
+    var cv = S.cpi[ci]!==null ? S.cpi[ci] : 5;
+    cpiContent += '<div style="margin-bottom:16px">';
+    cpiContent += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:600;color:#334155">Q'+(ci+1)+': '+cpiLabels[ci]+'</span><span style="font-size:20px;font-weight:700;color:#0E7490" id="cpiV'+ci+'">'+cv+'</span></div>';
+    cpiContent += '<input type="range" min="0" max="10" value="'+cv+'" style="width:100%" oninput="S.cpi['+ci+']=parseInt(this.value);document.getElementById(\'cpiV'+ci+'\').textContent=this.value;updateCPI()">';
+    cpiContent += '<div style="display:flex;justify-content:space-between;font-size:10px;color:#94A3B8;margin-top:2px"><span>0 — No pain</span><span>10 — Worst imaginable</span></div>';
+    cpiContent += '</div>';
+  }
+
+  var cpiBg = sc.score!=='-'&&sc.score>50?'#FEF2F2;border-color:#FECACA':sc.score!=='-'&&sc.score>30?'#FEF3C7;border-color:#FDE68A':sc.score!=='-'?'#ECFDF5;border-color:#A7F3D0':'#F8FAFC;border-color:#E2E8F0';
+  var cpiTx = sc.score!=='-'&&sc.score>50?'#991B1B':sc.score!=='-'&&sc.score>30?'#92400E':sc.score!=='-'?'#065F46':'#64748B';
+  cpiContent += '<div id="cpiResult" style="padding:16px;border-radius:12px;border:1.5px solid;background:'+cpiBg+';display:flex;align-items:center;justify-content:space-between">';
+  cpiContent += '<span style="font-size:14px;font-weight:600;color:'+cpiTx+'">CPI Score</span>';
+  cpiContent += '<span style="font-size:36px;font-weight:700;color:'+cpiTx+'">'+sc.score+'</span></div>';
+  if (sc.score!=='-'&&sc.score>50) cpiContent += '<p style="font-size:12px;color:#991B1B;font-weight:600;margin-top:8px"><i class="fas fa-triangle-exclamation" style="margin-right:4px"></i>CPI > 50 — meets severe arthrogenous TMD early referral threshold</p>';
+
+  // Follow-up
+  cpiContent += '<div style="margin-top:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em">CPI Follow-up Tracking</p>';
+  cpiContent += '<button onclick="addCPIFollow()" style="padding:4px 12px;border-radius:6px;border:none;background:#ECFEFF;color:#0E7490;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif"><i class="fas fa-plus" style="margin-right:4px"></i>Add</button></div>';
+  if (S.cpiFollow.length>0) {
+    for (var fi=0; fi<S.cpiFollow.length; fi++) {
+      cpiContent += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;margin-bottom:6px">';
+      cpiContent += '<input type="date" value="'+S.cpiFollow[fi].date+'" onchange="S.cpiFollow['+fi+'].date=this.value" style="font-size:12px;padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px;flex:1">';
+      cpiContent += '<span style="font-size:11px;color:#64748B">CPI:</span>';
+      cpiContent += '<input type="number" value="'+S.cpiFollow[fi].score+'" min="0" max="100" onchange="S.cpiFollow['+fi+'].score=parseFloat(this.value)" style="width:70px;font-size:12px;padding:6px 8px;border:1px solid #CBD5E1;border-radius:6px">';
+      cpiContent += '<button onclick="S.cpiFollow.splice('+fi+',1);render()" style="border:none;background:none;color:#F87171;cursor:pointer;font-size:14px"><i class="fas fa-trash-can"></i></button>';
+      cpiContent += '</div>';
+    }
+    if (S.cpiFollow.length>=2) cpiContent += '<p style="font-size:12px;color:#0E7490;font-weight:600;margin-top:4px"><i class="fas fa-chart-line" style="margin-right:4px"></i>Trend: '+cpiTrend()+'</p>';
+  } else {
+    cpiContent += '<p style="font-size:12px;color:#94A3B8;font-style:italic">Add follow-up CPI readings to demonstrate trend</p>';
+  }
+  cpiContent += '</div>';
+  h += card('Characteristic Pain Index (CPI)', 'fa-chart-line', cpiContent);
+  return h;
+}
+
+function addCPIFollow() {
+  var sc = calcCPI();
+  S.cpiFollow.push({date: new Date().toISOString().split('T')[0], score: typeof sc.score==='number'?sc.score:0});
+  render();
+}
+
+function updateCPI() {
+  var sc = calcCPI();
+  var el = document.getElementById('cpiResult');
+  if (el) {
+    var scoreEl = el.querySelector('span:last-child');
+    if (scoreEl) scoreEl.textContent = sc.score;
+  }
+}
+
+// STEP 3: Diagnosis & Comorbidities
+function buildStep3() {
+  var h = '';
+  var dxContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:16px">Broad group TMD diagnosis appropriate in primary care per guideline Table 1.</p>';
+  dxContent += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">';
+
+  var dxOptions = [
+    ['myogenous','Myogenous','Pain at rest / with jaw movement / elicited by palpation. Familiar pain palpating MOM. Pain modified with function/parafunction.'],
+    ['arthrogenous','Arthrogenous','Familiar pain palpating or moving joint. +/- Restricted opening, jaw lock, joint noise, deviation.'],
+    ['combination','Combination','Features of both myogenous and arthrogenous TMD.']
+  ];
+  for (var di=0; di<dxOptions.length; di++) {
+    var sel = S.diagnosis===dxOptions[di][0];
+    var border = sel?'border-color:#0E7490;background:#ECFEFF':'border-color:#E2E8F0;background:#fff';
+    dxContent += '<label onclick="S.diagnosis=\''+dxOptions[di][0]+'\';render()" style="display:block;padding:18px;border-radius:12px;border:2px solid;cursor:pointer;transition:all .15s;'+border+'">';
+    dxContent += '<p style="font-size:15px;font-weight:700;color:'+(sel?'#0E7490':'#334155')+';margin-bottom:8px">'+dxOptions[di][1]+'</p>';
+    dxContent += '<p style="font-size:12px;color:'+(sel?'#155E75':'#64748B')+';line-height:1.5">'+dxOptions[di][2]+'</p>';
+    dxContent += '</label>';
+  }
+  dxContent += '</div>';
+
+  // Early referral check
+  var sc = calcCPI();
+  var earlyMsg = '';
+  if ((S.diagnosis==='arthrogenous'||S.diagnosis==='combination') && typeof sc.score==='number' && sc.score>50) {
+    earlyMsg = 'CPI > 50 with ' + S.diagnosis + ' TMD — early referral threshold met per Table 2';
+  }
+  var openingVal = parseInt(S.exam.openingMm);
+  if ((S.diagnosis==='arthrogenous'||S.diagnosis==='combination') && openingVal && openingVal<30) {
+    earlyMsg = 'Mouth opening < 30mm with ' + S.diagnosis + ' TMD — early referral threshold met per Table 2';
+  }
+  if (earlyMsg) {
+    dxContent += '<div style="margin-top:16px;padding:14px 18px;background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:12px;display:flex;align-items:flex-start;gap:10px">';
+    dxContent += '<i class="fas fa-bolt" style="color:#D97706;margin-top:2px"></i>';
+    dxContent += '<div><p style="font-size:14px;font-weight:700;color:#92400E">Early Referral Threshold Met</p>';
+    dxContent += '<p style="font-size:12px;color:#92400E;margin-top:4px">'+earlyMsg+'</p></div></div>';
+  }
+  h += card('Diagnosis', 'fa-tag', dxContent);
+
+  // Comorbidities
+  var comContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:14px">Conditions associated with persistent painful TMD and poorer prognosis per guideline.</p>';
+  comContent += '<div style="display:flex;flex-wrap:wrap;gap:8px">';
+  for (var ci=0; ci<COMORBS.length; ci++) {
+    var cc = S.comorbs[ci] ? true : false;
+    comContent += '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(cc?'#A7F3D0':'#E2E8F0')+';background:'+(cc?'#ECFDF5':'#fff')+';font-size:12px;font-weight:500;color:'+(cc?'#065F46':'#475569')+';transition:all .12s"><input type="checkbox" '+(cc?'checked':'')+' onchange="S.comorbs['+ci+']=this.checked;render()"> '+COMORBS[ci]+'</label>';
+  }
+  comContent += '</div>';
+  comContent += '<div style="margin-top:12px">'+inputRow('Other comorbidities','comorbOther',S.comorbOther,'Any other relevant conditions')+'</div>';
+  var hasComorb = false;
+  for (var ck in S.comorbs) { if (S.comorbs[ck]) { hasComorb=true; break; } }
+  if (hasComorb || S.comorbOther.trim()) {
+    comContent += '<p style="font-size:12px;color:#92400E;font-weight:600;margin-top:10px;padding:8px 12px;background:#FEF3C7;border-radius:8px"><i class="fas fa-info-circle" style="margin-right:4px"></i>Comorbidities identified — associated with poorer prognosis, document in referral to support urgency.</p>';
+  }
+  h += card('Comorbid Conditions', 'fa-link', comContent);
+  return h;
+}
+
+// STEP 4: Management & Referral
+function buildStep4() {
+  var h = '';
+
+  // SSM
+  var ssmContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:14px">All patients should have SSM initiated and reviewed before referral. Document fully.</p>';
+
+  // Duration
+  ssmContent += '<div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:6px">Duration of SSM Trial</label>';
+  ssmContent += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">';
+  var durOpts = ['<4 weeks','4-8 weeks','8-12 weeks','>12 weeks'];
+  for (var di=0; di<durOpts.length; di++) {
+    var sel = S.ssmDuration===durOpts[di];
+    ssmContent += '<label class="radio-card"><input type="radio" name="ssmDur" '+(sel?'checked':'')+' onchange="S.ssmDuration=\''+durOpts[di]+'\';render()"><span class="rc-label" style="display:block;text-align:center;padding:8px 6px;border-radius:8px;border:2px solid #E2E8F0;font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;color:#475569">'+durOpts[di]+'</span></label>';
+  }
+  ssmContent += '</div></div>';
+
+  // Components
+  ssmContent += '<p style="font-size:11px;font-weight:700;color:#64748B;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Core SSM Components Provided</p>';
+  ssmContent += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:14px">';
+  var ssmItems = [['education','Diagnosis education & analgesic use'],['exercise','Self-exercise therapy'],['thermal','Thermal modalities'],['massage','Self-massage therapy'],['diet','Diet & nutrition advice'],['parafunction','Parafunctional behaviour modification']];
+  for (var si=0; si<ssmItems.length; si++) {
+    var sc = S.ssm[ssmItems[si][0]];
+    ssmContent += '<label style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;border:1.5px solid '+(sc?'#A7F3D0':'#E2E8F0')+';background:'+(sc?'#ECFDF5':'#fff')+';font-size:12px;font-weight:500;color:'+(sc?'#065F46':'#475569')+';transition:all .12s"><input type="checkbox" '+(sc?'checked':'')+' onchange="S.ssm.'+ssmItems[si][0]+'=this.checked;render()"> '+ssmItems[si][1]+'</label>';
+  }
+  ssmContent += '</div>';
+
+  // Engagement & outcome
+  ssmContent += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  ssmContent += '<div><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">Patient Engagement</label><select onchange="S.ssmEngagement=this.value" style="font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%;font-family:DM Sans,sans-serif;background:#fff">';
+  ssmContent += '<option value="good" '+(S.ssmEngagement==='good'?'selected':'')+'>Good — fully engaged</option>';
+  ssmContent += '<option value="partial" '+(S.ssmEngagement==='partial'?'selected':'')+'>Partial — some engagement</option>';
+  ssmContent += '<option value="poor" '+(S.ssmEngagement==='poor'?'selected':'')+'>Poor — minimal engagement</option>';
+  ssmContent += '</select></div>';
+  ssmContent += '<div>'+inputRow('SSM Outcome','ssmOutcome',S.ssmOutcome,'e.g. No improvement, pain persists')+'</div>';
+  ssmContent += '</div>';
+
+  // Resources
+  ssmContent += '<div style="margin-top:14px;padding:12px 16px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px">';
+  ssmContent += '<p style="font-size:12px;font-weight:600;color:#1D4ED8;margin-bottom:6px"><i class="fas fa-link" style="margin-right:4px"></i>Resources signposted per guideline:</p>';
+  ssmContent += '<ul style="font-size:11px;color:#1E40AF;margin-left:16px;line-height:1.7;list-style:disc">';
+  ssmContent += '<li>Newcastle TMD self-physio / jaw exercise videos</li>';
+  ssmContent += '<li>TMJ Association: tmj.org</li>';
+  ssmContent += '<li>TMD Nutrition Guide</li>';
+  ssmContent += '<li>Orofacial Pain UK: orofacialpain.org.uk</li>';
+  ssmContent += '<li>Live Well With Pain — Sleep Well leaflet</li>';
+  ssmContent += '<li>Leeds TMD self-management manual</li>';
+  ssmContent += '<li>ACPTMD physiotherapy resources</li>';
+  ssmContent += '</ul></div>';
+  h += card('Supported Self-Management (SSM) Trial', 'fa-hand-holding-medical', ssmContent);
+
+  // Adjuncts
+  var adjContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:14px">Document which care pathway steps have been considered or tried (Steps 2-6).</p>';
+  var adjItems = [['splintSoft','Soft splint (Step 2)','If SSM alone insufficient'],['splintHard','Hard splint (Step 3)','If SSM + soft splint insufficient'],['physio','Physiotherapy referral (Step 4)','If SSM + splint insufficient'],['pharma','Pharmacotherapy e.g. amitriptyline (Step 5)','If preceding steps insufficient'],['cbt','CBT / psychological intervention (Step 6)','If preceding steps insufficient']];
+  for (var ai=0; ai<adjItems.length; ai++) {
+    var ac = S[adjItems[ai][0]];
+    adjContent += '<label style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:10px;cursor:pointer;border:1.5px solid '+(ac?'#A7F3D0':'#E2E8F0')+';background:'+(ac?'#ECFDF5':'#FAFBFC')+';margin-bottom:6px;transition:all .12s">';
+    adjContent += '<input type="checkbox" style="margin-top:3px" '+(ac?'checked':'')+' onchange="S.'+adjItems[ai][0]+'=this.checked;render()">';
+    adjContent += '<div><span style="font-size:13px;font-weight:'+(ac?600:400)+';color:'+(ac?'#065F46':'#334155')+'">'+adjItems[ai][1]+'</span><p style="font-size:11px;color:#94A3B8;margin-top:2px">'+adjItems[ai][2]+'</p></div></label>';
+  }
+  adjContent += '<div style="margin-top:10px"><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">Additional adjuncts / detail</label><textarea rows="2" oninput="S.adjunctDetail=this.value" style="font-family:DM Sans,sans-serif;font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%;resize:vertical" placeholder="Detail any other treatments tried, medications, durations, outcomes">'+S.adjunctDetail+'</textarea></div>';
+  h += card('Adjunctive Management (Steps 2-6)', 'fa-layer-group', adjContent);
+
+  // Referral justification
+  var refContent = '<p style="font-size:12px;color:#94A3B8;margin-bottom:14px">Why is secondary care referral now appropriate? This will be prominent in the referral letter.</p>';
+  refContent += '<textarea rows="3" oninput="S.referralReason=this.value" style="font-family:DM Sans,sans-serif;font-size:14px;padding:10px 14px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%;resize:vertical;margin-bottom:12px" placeholder="e.g. Persistent painful TMD despite 12 weeks of SSM and trial of soft splint. CPI remains elevated. Significant impact on quality of life and nutrition.">'+S.referralReason+'</textarea>';
+
+  refContent += '<div><label style="display:block;font-size:12px;font-weight:600;color:#64748B;margin-bottom:4px">Early referral criterion (if applicable)</label>';
+  refContent += '<select onchange="S.earlyReferral=this.value" style="font-size:14px;padding:8px 12px;border:1.5px solid #CBD5E1;border-radius:8px;width:100%;font-family:DM Sans,sans-serif;background:#fff">';
+  var erOpts = [['','None — standard pathway'],['redflag','Red flag(s) — urgent/2WW'],['young_restricted','Young (<25) + restricted opening (<25mm)'],['closed_lock','Severe closed lock affecting nutrition'],['severe_arthrogenous','Severe arthrogenous (CPI>50, opening<30mm, occlusal derangement)']];
+  for (var ei=0; ei<erOpts.length; ei++) {
+    refContent += '<option value="'+erOpts[ei][0]+'" '+(S.earlyReferral===erOpts[ei][0]?'selected':'')+'>'+erOpts[ei][1]+'</option>';
+  }
+  refContent += '</select></div>';
+  h += card('Referral Justification', 'fa-share-from-square', refContent, '#F59E0B');
+
+  // Compliance summary
+  var checks = [
+    ['Red flags assessed', hasRedFlag()?'Positive — urgent':true],
+    ['3Q/TMD screening completed', calc3Q().positive!==null],
+    ['History (SOCRATEESS) documented', !!(S.hx.site||S.hx.onset||S.hx.character)],
+    ['Examination performed', !!(S.exam.openingMm||S.exam.masseterPain||S.exam.tmjPain)],
+    ['PHQ-4 completed', S.phq4[0]!==null],
+    ['CPI documented', S.cpi[0]!==null],
+    ['Diagnosis assigned', S.diagnosis!==''],
+    ['Comorbidities assessed', true],
+    ['SSM trial initiated', S.ssmDuration!==''],
+    ['SSM components provided', S.ssm.education||S.ssm.exercise||S.ssm.thermal],
+    ['Adjuncts considered', S.splintSoft||S.splintHard||S.physio||S.pharma||S.cbt],
+    ['Referral justification provided', S.referralReason.trim()!=='']
+  ];
+  var doneCount = 0;
+  var comContent = '<div style="display:flex;flex-direction:column;gap:4px">';
+  for (var chi=0; chi<checks.length; chi++) {
+    var ok = checks[chi][1]===true;
+    if (ok) doneCount++;
+    var icon = ok?'fa-circle-check':'fa-circle-xmark';
+    var iconCol = ok?'#059669':'#CBD5E1';
+    var txtCol = ok?'#334155':'#94A3B8';
+    comContent += '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">';
+    comContent += '<i class="fas '+icon+'" style="color:'+iconCol+';font-size:14px"></i>';
+    comContent += '<span style="font-size:13px;color:'+txtCol+'">'+checks[chi][0]+'</span>';
+    if (checks[chi][1]!==true) comContent += '<span style="font-size:11px;color:#D97706;margin-left:auto;font-weight:600">'+checks[chi][1]+'</span>';
+    comContent += '</div>';
+  }
+  comContent += '</div>';
+  var pct = Math.round(doneCount/checks.length*100);
+  var pctCol = pct>=80?'#059669':pct>=60?'#D97706':'#DC2626';
+  comContent += '<div style="margin-top:12px;padding:12px 16px;border-radius:10px;background:#F8FAFC;border:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between">';
+  comContent += '<span style="font-size:13px;font-weight:600;color:#334155">Pathway Compliance</span>';
+  comContent += '<span style="font-size:22px;font-weight:700;color:'+pctCol+'">'+pct+'%</span></div>';
+  h += card('Pathway Compliance Summary', 'fa-clipboard-check', comContent);
+
+  return h;
+}
+
+// =============================================
+// REFERRAL LETTER
+// =============================================
+function showReferral() {
+  var text = buildReferralText();
+  var strength = getStrength();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'refOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  var html = '<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)" onclick="closeReferral()"></div>';
+  html += '<div style="position:relative;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:860px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;animation:fadeUp .3s ease-out">';
+
+  // Header
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #E2E8F0;flex-shrink:0">';
+  html += '<div><h2 style="font-family:Space Grotesk,sans-serif;font-size:18px;font-weight:700;color:#0E7490">Referral Letter</h2><p style="font-size:12px;color:#94A3B8;margin-top:2px">Review and copy the generated referral text</p></div>';
+  html += '<div style="display:flex;align-items:center;gap:8px">';
+  html += '<button onclick="copyRef()" style="padding:8px 18px;border-radius:8px;border:none;background:#0E7490;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif;display:flex;align-items:center;gap:6px"><i class="fas fa-copy"></i> Copy All</button>';
+  html += '<button onclick="closeReferral()" style="width:36px;height:36px;border-radius:8px;border:none;background:#F1F5F9;color:#64748B;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center"><i class="fas fa-times"></i></button>';
+  html += '</div></div>';
+
+  // Strength bar
+  var sCol = strength.pct>=80?'#059669':strength.pct>=60?'#D97706':'#DC2626';
+  var sBg = strength.pct>=80?'#ECFDF5':strength.pct>=60?'#FEF3C7':'#FEF2F2';
+  html += '<div style="padding:12px 24px;background:'+sBg+';border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:12px;flex-shrink:0">';
+  html += '<div style="width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;border:2px solid '+sCol+'"><span style="font-size:15px;font-weight:700;color:'+sCol+'">'+strength.pct+'%</span></div>';
+  html += '<div><p style="font-size:14px;font-weight:700;color:#1E293B">'+strength.label+'</p><p style="font-size:12px;color:#64748B">'+strength.done+'/'+strength.total+' pathway elements completed</p></div>';
+  html += '</div>';
+
+  // Letter content
+  html += '<div style="flex:1;overflow:auto;padding:24px"><pre id="refText" style="white-space:pre-wrap;font-family:DM Sans,monospace;font-size:13px;line-height:1.75;background:#F8FAFC;padding:24px;border-radius:12px;border:1px solid #E2E8F0;margin:0">'+escapeHtml(text)+'</pre></div>';
+
+  html += '</div>';
+  overlay.innerHTML = html;
+  document.body.appendChild(overlay);
+}
+
+function closeReferral() {
+  var el = document.getElementById('refOverlay');
+  if (el) el.remove();
+}
+
+function copyRef() {
+  var el = document.getElementById('refText');
+  if (el) {
+    navigator.clipboard.writeText(el.textContent).then(function(){
+      showToast('Referral letter copied to clipboard','success');
+    }).catch(function(){
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+      showToast('Referral letter copied to clipboard','success');
+    });
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getStrength() {
+  var total=12, done=0;
+  if (hasRedFlag()||true) done++; // Red flags assessed (always at least checked)
+  if (calc3Q().positive!==null) done++;
+  if (S.hx.site||S.hx.onset||S.hx.character) done++;
+  if (S.exam.openingMm||S.exam.masseterPain||S.exam.tmjPain) done++;
+  if (S.phq4[0]!==null) done++;
+  if (S.cpi[0]!==null) done++;
+  if (S.diagnosis!=='') done++;
+  done++; // Comorbidities always assessed
+  if (S.ssmDuration!=='') done++;
+  if (S.ssm.education||S.ssm.exercise||S.ssm.thermal) done++;
+  if (S.splintSoft||S.splintHard||S.physio||S.pharma||S.cbt) done++;
+  if (S.referralReason.trim()!=='') done++;
+  var pct = Math.round(done/total*100);
+  var label = pct>=90?'Excellent — very low bounce risk':pct>=70?'Good — low bounce risk':pct>=50?'Fair — may be bounced for missing info':'Incomplete — high bounce risk';
+  return {pct:pct,done:done,total:total,label:label};
+}
+
+function buildReferralText() {
+  var s3=calc3Q(), sp=calcPHQ4(), sc=calcCPI();
+  var p=S.patient, hx=S.hx, ex=S.exam;
+  var dateStr = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'});
+
+  var L = '';
+  L += 'TEMPOROMANDIBULAR DISORDER (TMD) REFERRAL\n';
+  L += 'Per NHS England GIRFT / RCS Faculty of Dental Surgery Pathway (V1.1 August 2025)\n';
+  L += '==========================================================================\n\n';
+
+  // Urgency
+  if (S.earlyReferral) {
+    var urgMap = {redflag:'URGENT REFERRAL - Red flag(s) identified',young_restricted:'URGENT REFERRAL - Young patient with substantial decreased mouth opening',closed_lock:'URGENT REFERRAL - Severe disc displacement without reduction affecting nutrition',severe_arthrogenous:'EARLY REFERRAL - Severe arthrogenous TMD meeting pathway threshold criteria'};
+    L += urgMap[S.earlyReferral]+'\n';
+    L += '==========================================================================\n\n';
+  }
+
+  L += 'DATE: '+dateStr+'\n\n';
+  L += 'PATIENT: '+(p.name||'[Patient Name]')+'\n';
+  L += 'DOB: '+(p.dob||'[DOB]')+'\n';
+  L += 'NHS NUMBER: '+(p.nhs||'[NHS Number]')+'\n';
+  L += 'REFERRING GP: '+(p.practice||'[Practice]')+'\n\n';
+
+  // 1. Red flags
+  L += '--------------------------------------------------------------------------\n';
+  L += '1. RED FLAG SCREENING\n';
+  L += '--------------------------------------------------------------------------\n';
+  var posRF = [];
+  for (var rfi=0; rfi<RED_FLAGS.length; rfi++) { if (S.redFlags[rfi]) posRF.push(RED_FLAGS[rfi]); }
+  if (posRF.length>0) {
+    L += 'The following red flags have been identified:\n';
+    for (var r=0; r<posRF.length; r++) L += '  * '+posRF[r]+'\n';
+    L += '\nAction: '+(S.earlyReferral==='redflag'?'Urgent/2WW referral indicated as per GIRFT pathway.':'Documented for secondary care awareness.')+'\n';
+  } else {
+    L += 'All red flags have been explicitly assessed and EXCLUDED:\n';
+    for (var rfj=0; rfj<RED_FLAGS.length; rfj++) L += '  [x] '+RED_FLAGS[rfj]+' - not present\n';
+  }
+  L += '\n';
+
+  // 2. 3Q/TMD
+  L += '--------------------------------------------------------------------------\n';
+  L += '2. 3Q/TMD SCREENING\n';
+  L += '--------------------------------------------------------------------------\n';
+  var q3texts = ['Pain in temple, face, jaw, or jaw joint once a week or more','Pain once a week or more when opening mouth or chewing','Jaw lock or stuck once a week or more'];
+  for (var qi=0; qi<3; qi++) {
+    L += 'Q'+(qi+1)+': '+q3texts[qi]+'? - '+(S.q3tmd[qi]===true?'YES (1)':S.q3tmd[qi]===false?'NO (0)':'Not completed')+'\n';
+  }
+  L += '\nScore: '+s3.total+' - '+(s3.positive===true?'POSITIVE screen for TMD':s3.positive===false?'Negative screen - consider alternative diagnoses':'Not completed')+'\n\n';
+
+  // 3. History
+  L += '--------------------------------------------------------------------------\n';
+  L += '3. HISTORY (SOCRATEESS)\n';
+  L += '--------------------------------------------------------------------------\n';
+  L += 'Site: '+(hx.site||'Not documented')+'\n';
+  L += 'Onset: '+(hx.onset||'Not documented')+'\n';
+  L += 'Character: '+(hx.character||'Not documented')+'\n';
+  L += 'Radiation: '+(hx.radiation||'Not documented')+'\n';
+  L += 'Associations:\n';
+  L += '  Joint noise: '+(hx.jointNoise||'Not documented')+'\n';
+  L += '  Jaw lock: '+(hx.jawLock==='none'?'None':hx.jawLock||'Not documented')+'\n';
+  L += '  Headache: '+(hx.headache||'Not documented')+'\n';
+  L += '  Ear symptoms: '+(hx.earSymptoms||'Not documented')+'\n';
+  L += 'Time course: '+(hx.timeCourse||'Not documented')+'\n';
+  L += 'Exacerbators/relievers: '+(hx.exacerbators||'Not documented')+'\n';
+  L += 'Effects on everyday life: '+(hx.effectsLife||'Not documented')+'\n';
+  L += 'Severity: '+hx.severity+'/10\n';
+  L += 'Sleep affected: '+(hx.sleep||'Not documented')+'\n';
+  L += 'Psychosocial factors: '+(hx.psychosocial||'Not documented')+'\n\n';
+
+  // 4. Examination
+  L += '--------------------------------------------------------------------------\n';
+  L += '4. EXAMINATION FINDINGS\n';
+  L += '--------------------------------------------------------------------------\n';
+  L += 'Extra-oral: '+(ex.lymphadenopathy?'Lymphadenopathy noted. ':'')+(ex.salivaryMass?'Salivary gland mass noted. ':'')+(!ex.lymphadenopathy&&!ex.salivaryMass?'No lymphadenopathy or salivary gland masses.':'')+'\n';
+  L += 'Intra-oral: '+(ex.dentalPathology?'Dental/periodontal pathology noted.':'No dental or periodontal pathology identified.')+'\n';
+  L += 'Cranial nerves: '+(ex.cranialNervesOK?'Intact'+(ex.cranialNerveNote?' - '+ex.cranialNerveNote:''):'Abnormal - '+(ex.cranialNerveNote||'detail not specified'))+'\n\n';
+  L += 'TMJ assessment:\n';
+  L += '  Pain on lateral pole palpation: '+(ex.tmjPain?'YES':'No')+'\n';
+  L += '  Joint noise: '+(ex.tmjNoise?'YES - '+(ex.tmjNoiseType||'not specified')+' (reported in last 30 days)':'No')+'\n';
+  L += '  Deviation on opening: '+(ex.tmjDeviation?'YES - '+(ex.tmjDeviationDir||'not specified'):'No')+'\n';
+  L += '  Max inter-incisal opening: '+(ex.openingMm||'Not measured')+'mm'+(ex.openingMm&&parseInt(ex.openingMm)<35?' (RESTRICTED - normal >= 35mm)':'')+'\n';
+  L += '  Protrusion: '+(ex.protrusionMm||'Not measured')+'mm\n';
+  L += '  Lateral excursion: '+(ex.lateralMm||'Not measured')+'mm\n\n';
+  L += 'Muscles of mastication:\n';
+  L += '  Masseter pain on palpation: '+(ex.masseterPain?'YES':'No')+'\n';
+  L += '  Temporalis pain on palpation: '+(ex.temporalisPain?'YES':'No')+'\n';
+  L += '  Trigger points: '+(ex.triggerPoints||'None documented')+'\n';
+  L += '  Pain radiation: '+(ex.painRadiation||'None documented')+'\n';
+  L += "  Familiar pain reproduced: "+(ex.familiarPain?"YES - pain representative of patient's normal pain":'No')+'\n\n';
+
+  // 5. PHQ-4
+  L += '--------------------------------------------------------------------------\n';
+  L += '5. PSYCHOSOCIAL ASSESSMENT (PHQ-4)\n';
+  L += '--------------------------------------------------------------------------\n';
+  if (sp.total!=='-') {
+    L += 'Total PHQ-4 Score: '+sp.total+'/12 ('+sp.sev+')\n';
+    L += 'Anxiety subscale (Q1-2): '+sp.anx+'/6 ('+sp.anxSev+')'+(sp.anx>=3?' - suggests anxiety':'')+'\n';
+    L += 'Depression subscale (Q3-4): '+sp.dep+'/6 ('+sp.depSev+')'+(sp.dep>=3?' - suggests depression':'')+'\n\n';
+    if (sp.total>=9) L += 'Action: Urgent referral initiated for anxiety/depression assessment (PHQ-4 >= 9).\n';
+    else if (sp.total>=3) L += 'Action: Discussed score with patient. Advised NHS Talking Therapies self-referral. GP informed. Noted that anxiety/depression does not cause TMD but can worsen symptoms.\n';
+    else L += 'Action: Score within normal range. No additional psychological intervention required.\n';
+  } else {
+    L += 'PHQ-4 not completed.\n';
+  }
+  L += '\n';
+
+  // 6. CPI
+  L += '--------------------------------------------------------------------------\n';
+  L += '6. CPI PAIN ASSESSMENT\n';
+  L += '--------------------------------------------------------------------------\n';
+  if (sc.score!=='-') {
+    L += 'Baseline CPI: '+sc.score+' (Present: '+S.cpi[0]+', Worst: '+S.cpi[1]+', Average: '+S.cpi[2]+')\n';
+    L += 'Formula: ('+S.cpi[0]+'+'+S.cpi[1]+'+'+S.cpi[2]+') x 10 / 3 = '+sc.score+'\n';
+    if (sc.score>50) L += '** CPI > 50 - meets severe arthrogenous TMD early referral threshold **\n';
+    if (S.cpiFollow.length>0) {
+      L += '\nFollow-up readings:\n';
+      for (var fi=0; fi<S.cpiFollow.length; fi++) L += '  '+S.cpiFollow[fi].date+': CPI '+S.cpiFollow[fi].score+'\n';
+      L += 'Trend: '+cpiTrend()+'\n';
+    }
+  } else {
+    L += 'CPI not completed.\n';
+  }
+  L += '\n';
+
+  // 7. Diagnosis
+  L += '--------------------------------------------------------------------------\n';
+  L += '7. DIAGNOSIS\n';
+  L += '--------------------------------------------------------------------------\n';
+  if (S.diagnosis) {
+    var dxLabel = S.diagnosis.charAt(0).toUpperCase()+S.diagnosis.slice(1);
+    L += 'Broad group diagnosis: '+dxLabel+' TMD\n';
+    if (S.diagnosis==='myogenous') L += 'Supporting features: Pain at rest/with jaw movement/elicited by palpation, familiar pain palpating MOM, pain modified with function/parafunction\n';
+    else if (S.diagnosis==='arthrogenous') L += 'Supporting features: Familiar pain when palpating or moving joint, +/- restricted opening, joint noise, deviation\n';
+    else L += 'Supporting features: Combined myogenous and arthrogenous features as documented above\n';
+  } else {
+    L += 'Diagnosis not assigned\n';
+  }
+  L += '\n';
+
+  // 8. Comorbidities
+  L += '--------------------------------------------------------------------------\n';
+  L += '8. COMORBIDITIES\n';
+  L += '--------------------------------------------------------------------------\n';
+  var posCom = [];
+  for (var ci=0; ci<COMORBS.length; ci++) { if (S.comorbs[ci]) posCom.push(COMORBS[ci]); }
+  if (S.comorbOther.trim()) posCom.push(S.comorbOther.trim());
+  if (posCom.length>0) {
+    L += 'The following comorbidities associated with persistent painful TMD identified:\n';
+    for (var pc=0; pc<posCom.length; pc++) L += '  - '+posCom[pc]+'\n';
+    L += '\nThese are associated with poorer prognostic outcome and have been considered in management planning.\n';
+  } else {
+    L += 'No comorbidities identified on assessment.\n';
+  }
+  L += '\n';
+
+  // 9. SSM
+  L += '--------------------------------------------------------------------------\n';
+  L += '9. SUPPORTED SELF-MANAGEMENT (SSM) TRIAL\n';
+  L += '--------------------------------------------------------------------------\n';
+  if (S.ssmDuration) {
+    L += 'Duration of SSM trial: '+S.ssmDuration+'\n';
+    var ssmParts = [];
+    if (S.ssm.education) ssmParts.push('diagnosis education & analgesic guidance');
+    if (S.ssm.exercise) ssmParts.push('self-exercise therapy');
+    if (S.ssm.thermal) ssmParts.push('thermal modalities');
+    if (S.ssm.massage) ssmParts.push('self-massage therapy');
+    if (S.ssm.diet) ssmParts.push('diet & nutrition advice');
+    if (S.ssm.parafunction) ssmParts.push('parafunctional behaviour modification');
+    L += 'Components provided: '+(ssmParts.length?ssmParts.join(', '):'None documented')+'\n';
+    var engMap = {good:'Good - fully engaged with SSM plan',partial:'Partial - some engagement with SSM plan',poor:'Poor - minimal engagement with SSM plan'};
+    L += 'Patient engagement: '+(engMap[S.ssmEngagement]||'Not documented')+'\n';
+    L += 'Outcome: '+(S.ssmOutcome||'Not documented')+'\n\n';
+    L += 'Resources signposted per guideline: Newcastle TMD resources, TMJ Association (tmj.org),\nTMD Nutrition Guide, Orofacial Pain UK, Live Well With Pain, Leeds TMD self-management\nmanual, ACPTMD.\n';
+  } else {
+    L += 'SSM trial duration not documented.\n';
+  }
+  L += '\n';
+
+  // 10. Adjuncts
+  L += '--------------------------------------------------------------------------\n';
+  L += '10. ADJUNCTIVE MANAGEMENT (CARE PATHWAY STEPS 2-6)\n';
+  L += '--------------------------------------------------------------------------\n';
+  var adjUsed = [];
+  if (S.splintSoft) adjUsed.push('Soft splint (Step 2)');
+  if (S.splintHard) adjUsed.push('Hard splint (Step 3)');
+  if (S.physio) adjUsed.push('Physiotherapy referral (Step 4)');
+  if (S.pharma) adjUsed.push('Pharmacotherapy (Step 5)');
+  if (S.cbt) adjUsed.push('CBT/psychological intervention (Step 6)');
+  if (adjUsed.length>0) {
+    L += 'The following adjunctive steps have been trialled per the evidence-based care pathway:\n';
+    for (var au=0; au<adjUsed.length; au++) L += '  - '+adjUsed[au]+'\n';
+  } else {
+    L += 'No adjunctive management steps documented yet.\n';
+  }
+  if (S.adjunctDetail.trim()) L += '\nAdditional detail: '+S.adjunctDetail+'\n';
+  L += '\n';
+
+  // 11. Referral justification
+  L += '--------------------------------------------------------------------------\n';
+  L += '11. REFERRAL JUSTIFICATION\n';
+  L += '--------------------------------------------------------------------------\n';
+  L += (S.referralReason||'Referral reason not documented')+'\n\n';
+  if (S.earlyReferral) {
+    var erMap = {redflag:'Positive red flag sign/symptom - urgent/2WW referral',young_restricted:'Young (<25 years) + substantial decreased mouth opening (<25mm)',closed_lock:'Severe disc displacement without reduction (closed lock) affecting nutritional requirements',severe_arthrogenous:'Severe arthrogenous TMD with CPI>50, dietary restriction, mouth opening <30mm, and/or occlusal derangement'};
+    L += 'Early referral criterion met per GIRFT pathway Table 2:\n'+erMap[S.earlyReferral]+'\n\n';
+  }
+
+  // 12. Compliance statement
+  L += '--------------------------------------------------------------------------\n';
+  L += '12. PATHWAY COMPLIANCE STATEMENT\n';
+  L += '--------------------------------------------------------------------------\n';
+  L += 'This referral has been prepared in accordance with the NHS England GIRFT / Royal\nCollege of Surgeons Faculty of Dental Surgery guideline "Management of painful\nTemporomandibular disorder in adults" (V1.1 August 2025).\n\n';
+  L += 'The following pathway requirements have been fulfilled:\n';
+  L += '  [x] Red flag screening completed\n';
+  L += '  [x] 3Q/TMD screening completed (score: '+s3.total+')\n';
+  L += '  [x] Structured history (SOCRATEESS) documented\n';
+  L += '  [x] Clinical examination performed including TMJ and MOM assessment\n';
+  L += '  [x] PHQ-4 psychosocial assessment completed (score: '+(sp.total!=='-'?sp.total+'/12':'N/A')+')\n';
+  L += '  [x] CPI pain assessment documented (score: '+sc.score+')\n';
+  L += '  [x] Broad group TMD diagnosis assigned ('+(S.diagnosis||'not assigned')+')\n';
+  L += '  [x] Comorbidities assessed\n';
+  L += '  [x] Supported self-management trial initiated and reviewed\n';
+  L += '  [x] Adjunctive management steps considered per care pathway\n';
+  L += '  [x] Patient signposted to recommended SSM resources\n\n';
+  L += '==========================================================================\n';
+  L += 'Referring clinician: '+(p.practice||'[GP Name / Practice]')+'\n';
+  L += 'Date: '+dateStr+'\n';
+  L += '==========================================================================';
+
+  return L;
+}
+
+// =============================================
+// NAVIGATION
+// =============================================
+function nextStep() {
+  if (S.step < 4) { S.step++; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+function prevStep() {
+  if (S.step > 0) { S.step--; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+}
+function goStep(i) {
+  S.step = i; render(); window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// =============================================
+// RESPONSIVE STEP LABELS
+// =============================================
+function showStepLabels() {
+  var w = window.innerWidth;
+  var labels = document.querySelectorAll('.step-label');
+  for (var i=0; i<labels.length; i++) {
+    labels[i].style.display = w >= 768 ? 'inline' : 'none';
+  }
+}
+
+// =============================================
+// INIT
+// =============================================
+render();
+showStepLabels();
+window.addEventListener('resize', showStepLabels);
+</script>
+</body>
+</html>

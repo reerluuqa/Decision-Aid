@@ -1,0 +1,1026 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GP Blood Results Interpreter — Haematology</title>
+<style>
+  :root {
+    --bg: #f0f2f5;
+    --card: #ffffff;
+    --primary: #1a56db;
+    --primary-light: #e8eefb;
+    --danger: #dc2626;
+    --danger-light: #fef2f2;
+    --danger-border: #fca5a5;
+    --success: #16a34a;
+    --success-light: #f0fdf4;
+    --success-border: #86efac;
+    --warning: #d97706;
+    --warning-light: #fffbeb;
+    --warning-border: #fcd34d;
+    --text: #1e293b;
+    --text-mid: #475569;
+    --text-light: #94a3b8;
+    --border: #e2e8f0;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.07), 0 4px 6px rgba(0,0,0,0.04);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #1a56db 100%);
+    color: white;
+    padding: 20px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  header .top-row {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  header h1 .icon { font-size: 1.8rem; }
+
+  header .subtitle {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    font-weight: 400;
+  }
+
+  .sex-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .sex-toggle button {
+    padding: 8px 20px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.7);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+  }
+
+  .sex-toggle button.active {
+    background: rgba(255,255,255,0.25);
+    color: white;
+  }
+
+  .sex-toggle button:hover:not(.active) {
+    background: rgba(255,255,255,0.1);
+  }
+
+  .alert-banner {
+    max-width: 1200px;
+    margin: 16px auto 0;
+    padding: 14px 20px;
+    border-radius: var(--radius);
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    animation: slideDown 0.3s ease;
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .alert-banner.pancytopenia {
+    background: var(--danger-light);
+    border: 2px solid var(--danger);
+    color: var(--danger);
+    display: flex;
+  }
+
+  .alert-banner .alert-icon { font-size: 1.4rem; }
+
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 16px 60px;
+  }
+
+  .section-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 28px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid var(--primary);
+    display: inline-block;
+    letter-spacing: -0.3px;
+  }
+
+  .section-title .st-icon { margin-right: 6px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    border: 2px solid var(--border);
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .card.status-normal { border-color: var(--success-border); }
+  .card.status-abnormal { border-color: var(--danger-border); }
+  .card.status-warning { border-color: var(--warning-border); }
+
+  .card-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .card-header:hover { background: #f8fafc; }
+
+  .card-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+
+  .card-abbr {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .card-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+
+  .badge-normal { background: var(--success-light); color: var(--success); }
+  .badge-high { background: var(--danger-light); color: var(--danger); }
+  .badge-low { background: var(--warning-light); color: var(--warning); }
+  .badge-pending { background: #f1f5f9; color: var(--text-light); }
+
+  .card-input-row {
+    padding: 0 18px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-input-row input {
+    width: 120px;
+    padding: 9px 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+
+  .card-input-row input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+
+  .card-input-row input.input-high {
+    border-color: var(--danger);
+    background: var(--danger-light);
+  }
+
+  .card-input-row input.input-low {
+    border-color: var(--warning);
+    background: var(--warning-light);
+  }
+
+  .card-input-row input.input-normal {
+    border-color: var(--success);
+    background: var(--success-light);
+  }
+
+  .card-unit {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    font-weight: 500;
+  }
+
+  .card-ref {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+
+  .card-detail {
+    padding: 0 18px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s ease;
+  }
+
+  .card-detail.open {
+    max-height: 600px;
+    padding: 0 18px 18px;
+  }
+
+  .card-detail-inner {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    line-height: 1.65;
+    color: var(--text-mid);
+  }
+
+  .card-detail-inner strong {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .card-detail-inner .detail-label {
+    font-weight: 800;
+    color: var(--primary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 10px;
+    margin-bottom: 2px;
+  }
+
+  .card-detail-inner .detail-label:first-child { margin-top: 0; }
+
+  .interp-line {
+    padding: 6px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .interp-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+
+  .dot-red { background: var(--danger); }
+  .dot-green { background: var(--success); }
+  .dot-amber { background: var(--warning); }
+  .dot-blue { background: var(--primary); }
+
+  .chevron {
+    display: inline-block;
+    transition: transform 0.3s;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    margin-left: 4px;
+  }
+
+  .chevron.open { transform: rotate(180deg); }
+
+  .bar-container {
+    padding: 0 18px 6px;
+  }
+
+  .bar-track {
+    width: 100%;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    position: relative;
+    overflow: visible;
+  }
+
+  .bar-range {
+    position: absolute;
+    height: 100%;
+    background: var(--success);
+    opacity: 0.25;
+    border-radius: 3px;
+  }
+
+  .bar-marker {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border: 2.5px solid white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: left 0.4s ease, background 0.3s;
+  }
+
+  .marker-normal { background: var(--success); }
+  .marker-high { background: var(--danger); }
+  .marker-low { background: var(--warning); }
+
+  .summary-bar {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--border);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .summary-stat {
+    text-align: center;
+  }
+
+  .summary-stat .stat-num {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .summary-stat .stat-label {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-green { color: var(--success); }
+  .stat-red { color: var(--danger); }
+  .stat-amber { color: var(--warning); }
+  .stat-grey { color: var(--text-light); }
+
+  .clear-btn {
+    margin-left: auto;
+    padding: 8px 20px;
+    background: #f1f5f9;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-weight: 700;
+    color: var(--text-mid);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+
+  .clear-btn:hover {
+    background: var(--danger-light);
+    border-color: var(--danger-border);
+    color: var(--danger);
+  }
+
+  .info-box {
+    background: var(--primary-light);
+    border: 2px solid #bfdbfe;
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    color: #1e40af;
+    line-height: 1.6;
+  }
+
+  .info-box strong { font-weight: 800; }
+
+  .timestamp {
+    font-size: 0.78rem;
+    color: var(--text-light);
+    margin-top: 4px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 0.78rem;
+    color: var(--text-light);
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  footer strong { color: var(--danger); font-weight: 700; }
+
+  @media (max-width: 600px) {
+    .grid { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.2rem; }
+    .summary-bar { gap: 16px; }
+    .card-input-row input { width: 100px; }
+  }
+
+  .pulse {
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .fade-in {
+    animation: fadeIn 0.4s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .sample-note {
+    background: var(--warning-light);
+    border: 2px solid var(--warning-border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 0.85rem;
+    color: #92400e;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sample-note .note-icon { font-size: 1.2rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top-row">
+    <div>
+      <h1><span class="icon">🩸</span> Haematology Interpreter</h1>
+      <div class="subtitle">Quick-reference blood result interpreter for UK General Practice</div>
+    </div>
+    <div class="sex-toggle">
+      <button id="btn-male" class="active" onclick="setSex('male')">♂ Male</button>
+      <button id="btn-female" onclick="setSex('female')">♀ Female</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="pancytopenia-alert" class="alert-banner">
+    <span class="alert-icon pulse">⚠️</span>
+    <span><strong>PANCYTOPENIA DETECTED:</strong> All 3 cell lines (Hb, WBC, Platelets) are low. Consider bone marrow suppression, haematological malignancy, severe infection, or drug cause. <strong>Urgent haematology referral recommended.</strong></span>
+  </div>
+
+  <div style="margin-top:20px">
+    <div class="summary-bar fade-in">
+      <div class="summary-stat">
+        <div class="stat-num stat-grey" id="stat-entered">0</div>
+        <div class="stat-label">Entered</div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-num stat-green" id="stat-normal">0</div>
+        <div class="stat-label">Normal</div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-num stat-red" id="stat-abnormal">0</div>
+        <div class="stat-label">Abnormal</div>
+      </div>
+      <div class="summary-stat">
+        <div class="stat-num stat-grey" id="stat-pending">—</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="timestamp" id="timestamp"></div>
+      <button class="clear-btn" onclick="clearAll()">✕ Clear All</button>
+    </div>
+  </div>
+
+  <div class="sample-note">
+    <span class="note-icon">⏱️</span>
+    <span><strong>Sample note:</strong> FBC (EDTA) samples deteriorate quickly — aim to get to lab <strong>within 4 hours</strong>. Hb &amp; PCV are affected by hydration status.</span>
+  </div>
+
+  <!-- FULL BLOOD COUNT -->
+  <div class="section-title"><span class="st-icon">🔬</span> Full Blood Count</div>
+  <div class="grid" id="fbc-grid"></div>
+
+  <!-- WHITE CELL DIFFERENTIAL -->
+  <div class="section-title"><span class="st-icon">🛡️</span> White Cell Differential</div>
+  <div class="grid" id="wcc-grid"></div>
+
+  <!-- INFLAMMATORY MARKERS -->
+  <div class="section-title"><span class="st-icon">🔥</span> Inflammatory Markers</div>
+  <div class="grid" id="inflam-grid"></div>
+
+  <!-- OTHER HAEMATOLOGY -->
+  <div class="section-title"><span class="st-icon">🧪</span> Other Haematology Tests</div>
+  <div class="grid" id="other-grid"></div>
+
+</main>
+
+<footer>
+  <strong>⚠️ Clinical decision support tool only.</strong> Not a substitute for clinical judgement. Always interpret results in clinical context.<br>
+  Reference ranges may vary between laboratories. Designed for UK General Practice use.
+</footer>
+
+<script>
+const TESTS = {
+  fbc: [
+    {
+      id: 'hb',
+      name: 'Haemoglobin',
+      abbr: 'Hb',
+      unit: 'g/L',
+      ranges: { male: [130, 170], female: [120, 150] },
+      barMin: 60, barMax: 200,
+      explanation: 'The oxygen-carrying protein in red blood cells.',
+      interpHigh: 'May suggest <strong>polycythaemia</strong>. Consider dehydration (spurious rise), polycythaemia vera, chronic hypoxia (e.g. COPD, OSA), smoking. Check haematocrit.',
+      interpLow: 'Indicates <strong>anaemia</strong>. Use MCV to classify: microcytic (iron deficiency, thalassaemia), normocytic (chronic disease, renal, acute bleed), macrocytic (B12/folate, alcohol, hypothyroid, myelodysplasia). See Anaemia: GEMS.',
+      interpNormal: 'Within normal range. Interpret alongside MCV and clinical picture. Remember Hb rises in dehydration and falls in fluid overload.',
+      pancyto: 'low'
+    },
+    {
+      id: 'wbc',
+      name: 'White Blood Cell Count',
+      abbr: 'WBC',
+      unit: '×10⁹/L',
+      ranges: { male: [4.0, 11.0], female: [4.0, 11.0] },
+      barMin: 0, barMax: 20,
+      explanation: 'Total white cell count — immune function. Sum of neutrophils, lymphocytes, monocytes, eosinophils and basophils.',
+      interpHigh: '<strong>Leucocytosis.</strong> Check the differential. Common causes: infection, inflammation, corticosteroids, stress response, leukaemia (very high counts). Abnormal morphology flagged by analysers.',
+      interpLow: '<strong>Leucopenia.</strong> Consider viral infections, drug causes (e.g. methotrexate, carbimazole, chemotherapy), bone marrow failure, autoimmune. Check differential — isolated neutropenia is most significant.',
+      interpNormal: 'Within normal range. If clinical concern persists, review the white cell differential for relative changes.',
+      pancyto: 'low'
+    },
+    {
+      id: 'plt',
+      name: 'Platelets',
+      abbr: 'Plt',
+      unit: '×10⁹/L',
+      ranges: { male: [150, 400], female: [150, 400] },
+      barMin: 0, barMax: 600,
+      explanation: 'Involved in thrombus (clot) formation. Note: this is different from the coagulation cascade (PT/APTT).',
+      interpHigh: '<strong>Thrombocytosis.</strong> Reactive (infection, inflammation, iron deficiency, post-splenectomy) vs primary (essential thrombocythaemia, other myeloproliferative). Persistent unexplained thrombocytosis may be associated with cancer — consider investigation.',
+      interpLow: '<strong>Thrombocytopenia.</strong> Risk of bleeding. Causes: ITP, drugs (e.g. heparin), viral, liver disease, DIC, bone marrow failure, hypersplenism. If <100, avoid IM injections. If <50, increased bleeding risk. If <20, spontaneous bleeding risk — urgent.',
+      interpNormal: 'Within normal range. No action needed from platelet perspective.',
+      pancyto: 'low'
+    },
+    {
+      id: 'rbc',
+      name: 'Red Cell Count',
+      abbr: 'RBC',
+      unit: '×10¹²/L',
+      ranges: { male: [4.5, 5.5], female: [3.8, 5.0] },
+      barMin: 2, barMax: 7,
+      explanation: 'Number of erythrocytes per unit volume. Usually moves in conjunction with Hb and PCV.',
+      interpHigh: 'Raised RBC count. Usually tracks with raised Hb/PCV. Consider polycythaemia.',
+      interpLow: 'Low RBC. Usually accompanies low Hb. Investigate as for anaemia.',
+      interpNormal: 'Normal. Usually not the first value scanned — Hb is more clinically useful as a starting point.'
+    },
+    {
+      id: 'hct',
+      name: 'Haematocrit / PCV',
+      abbr: 'HCT',
+      unit: 'L/L',
+      ranges: { male: [0.40, 0.54], female: [0.37, 0.47] },
+      barMin: 0.2, barMax: 0.65,
+      explanation: 'Packed cell volume — the proportion of blood volume made up of cells. Affected by hydration status.',
+      interpHigh: '<strong>Raised PCV.</strong> Consider dehydration (blood more concentrated → spurious rise), polycythaemia vera. Correlate with Hb.',
+      interpLow: '<strong>Low PCV.</strong> May indicate fluid overload (dilutional) or anaemia. Correlate with Hb and clinical picture.',
+      interpNormal: 'Normal. Remember this value changes with hydration status — raised in dehydration, low in fluid overload.'
+    },
+    {
+      id: 'mcv',
+      name: 'Mean Cell Volume',
+      abbr: 'MCV',
+      unit: 'fL',
+      ranges: { male: [80, 100], female: [80, 100] },
+      barMin: 50, barMax: 130,
+      explanation: 'Average size of a red blood cell. Key for classifying anaemia.',
+      interpHigh: '<strong>Macrocytosis (MCV >100 fL).</strong> Common causes: B12/folate deficiency, excess alcohol, hypothyroidism, liver disease, reticulocytosis, myelodysplasia, drugs (e.g. methotrexate, azathioprine). Check B12, folate, TFTs, LFTs.',
+      interpLow: '<strong>Microcytosis (MCV <80 fL).</strong> Common causes: iron deficiency (most common), thalassaemia trait, chronic disease (can be normocytic too), sideroblastic anaemia. Check ferritin, iron studies.',
+      interpNormal: 'Normocytic. If anaemic with normal MCV, consider: chronic disease, renal failure, acute blood loss, mixed deficiency (iron + B12), bone marrow disorders.'
+    }
+  ],
+  wcc: [
+    {
+      id: 'neut',
+      name: 'Neutrophils',
+      abbr: 'Neut',
+      unit: '×10⁹/L',
+      ranges: { male: [2.0, 7.5], female: [2.0, 7.5] },
+      barMin: 0, barMax: 15,
+      explanation: 'Primary infection-fighting white cells. First responders to bacterial infection.',
+      interpHigh: '<strong>Neutrophilia.</strong> Common causes: bacterial infection, inflammation, corticosteroids, stress, smoking, post-surgery. Very high levels → consider leukaemia.',
+      interpLow: '<strong>Neutropenia.</strong> Significant if <1.0 — increased infection risk. Causes: viral infections, drugs (methotrexate, carbimazole, chemotherapy, clozapine), bone marrow failure, autoimmune, benign ethnic neutropenia. <strong>If <0.5: urgent — risk of neutropenic sepsis.</strong>',
+      interpNormal: 'Normal neutrophil count. No concerns regarding bacterial infection risk from this value.'
+    },
+    {
+      id: 'lymph',
+      name: 'Lymphocytes',
+      abbr: 'Lymph',
+      unit: '×10⁹/L',
+      ranges: { male: [1.0, 4.0], female: [1.0, 4.0] },
+      barMin: 0, barMax: 10,
+      explanation: 'Key immune cells. B-lymphocytes produce antibodies. T-lymphocytes destroy tumour and infected cells.',
+      interpHigh: '<strong>Lymphocytosis.</strong> Causes: viral infections (EBV, CMV, hepatitis), chronic lymphocytic leukaemia (CLL — most common in elderly, often incidental), other lymphomas. Persistent unexplained lymphocytosis in over 40s → consider flow cytometry / haematology referral.',
+      interpLow: '<strong>Lymphopenia.</strong> Causes: viral infections (including HIV), corticosteroids, immunosuppressants, SLE, lymphoma, post-chemotherapy. Less commonly: primary immunodeficiency.',
+      interpNormal: 'Within normal range.'
+    },
+    {
+      id: 'mono',
+      name: 'Monocytes',
+      abbr: 'Mono',
+      unit: '×10⁹/L',
+      ranges: { male: [0.2, 0.8], female: [0.2, 0.8] },
+      barMin: 0, barMax: 2,
+      explanation: 'Involved in immune function, infection and inflammation. Part of the innate immune system.',
+      interpHigh: 'Monocytosis. Seen in chronic infections (e.g. TB, endocarditis), inflammatory conditions, recovering from infection, and some haematological malignancies (chronic myelomonocytic leukaemia).',
+      interpLow: 'Low monocytes are rarely clinically significant in isolation in primary care.',
+      interpNormal: 'Within normal range.'
+    },
+    {
+      id: 'eos',
+      name: 'Eosinophils',
+      abbr: 'Eos',
+      unit: '×10⁹/L',
+      ranges: { male: [0.04, 0.4], female: [0.04, 0.4] },
+      barMin: 0, barMax: 2,
+      explanation: 'Involved in immune function and atopy (allergic responses).',
+      interpHigh: '<strong>Eosinophilia.</strong> Common: allergies, asthma, eczema, hay fever, drug reactions. Less common: parasitic infections (especially if travel history), vasculitis (e.g. EGPA), hypereosinophilic syndrome, lymphoma. If markedly raised or persistent, consider referral.',
+      interpLow: 'Low eosinophils are rarely significant in primary care.',
+      interpNormal: 'Within normal range.'
+    },
+    {
+      id: 'baso',
+      name: 'Basophils',
+      abbr: 'Baso',
+      unit: '×10⁹/L',
+      ranges: { male: [0.0, 0.1], female: [0.0, 0.1] },
+      barMin: 0, barMax: 0.5,
+      explanation: 'Active against pathogens and allergens. Least common circulating white cell.',
+      interpHigh: 'Basophilia. Rarely clinically problematic in primary care. Can be raised in myeloproliferative disorders, allergic conditions.',
+      interpLow: 'Not clinically significant.',
+      interpNormal: 'Normal. Basophil abnormalities are rarely clinically problematic in primary care.'
+    }
+  ],
+  inflam: [
+    {
+      id: 'esr',
+      name: 'ESR',
+      abbr: 'ESR',
+      unit: 'mm/hr',
+      ranges: { male: [0, 20], female: [0, 20] },
+      barMin: 0, barMax: 120,
+      explanation: 'Non-specific marker of inflammation. Rises with age (rough guide: upper limit = age ÷ 2 for males, (age + 10) ÷ 2 for females).',
+      interpHigh: '<strong>Raised ESR.</strong> Non-specific. Very high levels (>100): consider <strong>polymyalgia rheumatica (PMR), giant cell arteritis (GCA)</strong>, myeloma, malignancy, severe infection/sepsis. Moderate rises: infection, inflammation, autoimmune, malignancy. Also rises with age, anaemia, pregnancy.',
+      interpLow: 'Normal. Low ESR is reassuring but does not exclude pathology.',
+      interpNormal: 'Within normal range. Note: ESR rises with age. Interpret in clinical context.'
+    },
+    {
+      id: 'pv',
+      name: 'Plasma Viscosity',
+      abbr: 'PV',
+      unit: 'mPa·s',
+      ranges: { male: [1.50, 1.72], female: [1.50, 1.72] },
+      barMin: 1.2, barMax: 2.2,
+      explanation: 'Non-specific marker of inflammation. More reliable than ESR but less widely available.',
+      interpHigh: 'Raised. Similar interpretation to ESR — non-specific inflammation marker. Consider infection, inflammatory, autoimmune, malignant causes.',
+      interpLow: 'Normal.',
+      interpNormal: 'Within normal range.'
+    },
+    {
+      id: 'crp',
+      name: 'C-Reactive Protein',
+      abbr: 'CRP',
+      unit: 'mg/L',
+      ranges: { male: [0, 5], female: [0, 5] },
+      barMin: 0, barMax: 100,
+      explanation: 'Acute-phase protein. Rises quickly with inflammation/infection and falls quickly with resolution. Often processed in biochemistry lab.',
+      interpHigh: '<strong>Raised CRP.</strong> Rises rapidly (within 6-8 hours). Causes: infection (bacterial > viral), inflammation, tissue damage, post-surgery, autoimmune flare. Very high (>100): likely bacterial infection or severe inflammation. Useful for monitoring treatment response.',
+      interpLow: 'Normal CRP. Helpful for ruling out significant acute bacterial infection (good negative predictive value).',
+      interpNormal: 'Within normal range. Low CRP is reassuring in the context of ?infection.'
+    }
+  ],
+  other: [
+    {
+      id: 'pt',
+      name: 'Prothrombin Time',
+      abbr: 'PT',
+      unit: 'seconds',
+      ranges: { male: [11.0, 13.5], female: [11.0, 13.5] },
+      barMin: 8, barMax: 25,
+      explanation: 'Measures the extrinsic clotting pathway. Prolonged by warfarin. INR is derived from PT.',
+      interpHigh: '<strong>Prolonged PT.</strong> Causes: warfarin/DOAC therapy, liver disease, vitamin K deficiency, DIC, clotting factor deficiencies. See Bruising: investigation.',
+      interpLow: 'Short PT. Rarely clinically significant.',
+      interpNormal: 'Normal. Extrinsic pathway intact.'
+    },
+    {
+      id: 'aptt',
+      name: 'Activated Partial Thromboplastin Time',
+      abbr: 'APTT',
+      unit: 'seconds',
+      ranges: { male: [25, 35], female: [25, 35] },
+      barMin: 15, barMax: 55,
+      explanation: 'Measures the intrinsic clotting pathway. Prolonged by heparin. Part of the coagulation screen.',
+      interpHigh: '<strong>Prolonged APTT.</strong> Causes: heparin therapy, haemophilia (A or B), von Willebrand disease, lupus anticoagulant, DIC, liver disease. See Bruising: investigation.',
+      interpLow: 'Short APTT. Can be seen in acute phase response. Rarely significant.',
+      interpNormal: 'Normal. Intrinsic pathway intact.'
+    },
+    {
+      id: 'ddimer',
+      name: 'D-Dimer',
+      abbr: 'D-Dimer',
+      unit: 'ng/mL',
+      ranges: { male: [0, 500], female: [0, 500] },
+      barMin: 0, barMax: 2000,
+      explanation: 'Fibrin degradation product. Good sensitivity but poor specificity for VTE. Many false positives.',
+      interpHigh: '<strong>Raised D-dimer.</strong> Raised in presence of blood clot (DVT/PE) but ALSO raised in: infection, inflammation, malignancy, pregnancy, post-surgery, DIC, liver disease, increasing age. <strong>A negative D-dimer helps EXCLUDE VTE (good sensitivity). A positive D-dimer does NOT confirm VTE</strong> — further imaging required (CTPA/USS).',
+      interpLow: 'Normal. In a patient with low clinical probability (Wells score), a negative D-dimer effectively excludes VTE.',
+      interpNormal: 'Within normal range. In context of suspected VTE with low pre-test probability, this is reassuring.'
+    },
+    {
+      id: 'retic',
+      name: 'Reticulocyte Count',
+      abbr: 'Retic',
+      unit: '%',
+      ranges: { male: [0.5, 2.5], female: [0.5, 2.5] },
+      barMin: 0, barMax: 8,
+      explanation: 'Immature red blood cells. Indicates bone marrow red cell production activity.',
+      interpHigh: '<strong>Raised reticulocytes.</strong> Suggests the marrow is actively producing new red cells. Seen in: haemolytic anaemia, acute blood loss, response to treatment of anaemia (e.g. iron/B12 replacement). A good sign if treating anaemia.',
+      interpLow: '<strong>Low reticulocytes</strong> in context of anaemia suggests inadequate marrow response. Consider: bone marrow failure, aplastic anaemia, nutritional deficiency not yet treated, chronic disease.',
+      interpNormal: 'Normal reticulocyte count. Marrow production appears appropriate.'
+    }
+  ]
+};
+
+let sex = 'male';
+let values = {};
+
+function setSex(s) {
+  sex = s;
+  document.getElementById('btn-male').classList.toggle('active', s === 'male');
+  document.getElementById('btn-female').classList.toggle('active', s === 'female');
+  reEvaluateAll();
+}
+
+function buildCards() {
+  Object.keys(TESTS).forEach(section => {
+    const grid = document.getElementById(section + '-grid');
+    grid.innerHTML = '';
+    TESTS[section].forEach(test => {
+      const range = test.ranges[sex] || test.ranges.male;
+      const card = document.createElement('div');
+      card.className = 'card fade-in';
+      card.id = 'card-' + test.id;
+      card.innerHTML = `
+        <div class="card-header" onclick="toggleDetail('${test.id}')">
+          <div>
+            <div class="card-name">${test.name} <span class="chevron" id="chev-${test.id}">▼</span></div>
+            <div class="card-abbr">${test.abbr}</div>
+          </div>
+          <span class="card-badge badge-pending" id="badge-${test.id}">Awaiting</span>
+        </div>
+        <div class="card-input-row">
+          <input type="number" step="any" id="input-${test.id}" placeholder="—" oninput="onInput('${test.id}')" autocomplete="off">
+          <span class="card-unit">${test.unit}</span>
+          <span class="card-ref" id="ref-${test.id}">${range[0]}–${range[1]}</span>
+        </div>
+        <div class="bar-container">
+          <div class="bar-track" id="bar-${test.id}">
+            <div class="bar-range" id="barrange-${test.id}"></div>
+            <div class="bar-marker" id="barmarker-${test.id}" style="display:none;"></div>
+          </div>
+        </div>
+        <div class="card-detail" id="detail-${test.id}">
+          <div class="card-detail-inner">
+            <div class="detail-label">What is it?</div>
+            ${test.explanation}
+            <div class="detail-label" style="margin-top:12px">If High ↑</div>
+            <div class="interp-line"><span class="interp-dot dot-red"></span><span>${test.interpHigh}</span></div>
+            <div class="detail-label">If Low ↓</div>
+            <div class="interp-line"><span class="interp-dot dot-amber"></span><span>${test.interpLow}</span></div>
+            <div class="detail-label">If Normal ✓</div>
+            <div class="interp-line"><span class="interp-dot dot-green"></span><span>${test.interpNormal}</span></div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+      updateBar(test);
+    });
+  });
+}
+
+function updateBar(test) {
+  const range = test.ranges[sex] || test.ranges.male;
+  const refSpan = document.getElementById('ref-' + test.id);
+  if (refSpan) refSpan.textContent = range[0] + '–' + range[1];
+
+  const barRange = document.getElementById('barrange-' + test.id);
+  const total = test.barMax - test.barMin;
+  const left = ((range[0] - test.barMin) / total) * 100;
+  const width = ((range[1] - range[0]) / total) * 100;
+  barRange.style.left = Math.max(0, left) + '%';
+  barRange.style.width = Math.min(100, width) + '%';
+}
+
+function onInput(id) {
+  const input = document.getElementById('input-' + id);
+  const val = parseFloat(input.value);
+  if (input.value === '' || isNaN(val)) {
+    delete values[id];
+  } else {
+    values[id] = val;
+  }
+  evaluate(id);
+  updateSummary();
+  checkPancytopenia();
+}
+
+function evaluate(id) {
+  let test = null;
+  for (const section of Object.values(TESTS)) {
+    test = section.find(t => t.id === id);
+    if (test) break;
+  }
+  if (!test) return;
+
+  const input = document.getElementById('input-' + id);
+  const badge = document.getElementById('badge-' + id);
+  const card = document.getElementById('card-' + id);
+  const marker = document.getElementById('barmarker-' + id);
+  const range = test.ranges[sex] || test.ranges.male;
+
+  input.classList.remove('input-high', 'input-low', 'input-normal');
+  card.classList.remove('status-normal', 'status-abnormal', 'status-warning');
+  marker.style.display = 'none';
+
+  if (!(id in values)) {
+    badge.className = 'card-badge badge-pending';
+    badge.textContent = 'Awaiting';
+    return;
+  }
+
+  const val = values[id];
+  const total = test.barMax - test.barMin;
+  let pct = ((val - test.barMin) / total) * 100;
+  pct = Math.max(2, Math.min(98, pct));
+  marker.style.left = pct + '%';
+  marker.style.display = 'block';
+
+  if (val < range[0]) {
+    badge.className = 'card-badge badge-low';
+    badge.textContent = '↓ LOW';
+    input.classList.add('input-low');
+    card.classList.add('status-warning');
+    marker.className = 'bar-marker marker-low';
+  } else if (val > range[1]) {
+    badge.className = 'card-badge badge-high';
+    badge.textContent = '↑ HIGH';
+    input.classList.add('input-high');
+    card.classList.add('status-abnormal');
+    marker.className = 'bar-marker marker-high';
+  } else {
+    badge.className = 'card-badge badge-normal';
+    badge.textContent = '✓ Normal';
+    input.classList.add('input-normal');
+    card.classList.add('status-normal');
+    marker.className = 'bar-marker marker-normal';
+  }
+}
+
+function reEvaluateAll() {
+  Object.keys(TESTS).forEach(section => {
+    TESTS[section].forEach(test => {
+      updateBar(test);
+      if (test.id in values) evaluate(test.id);
+    });
+  });
+  updateSummary();
+  checkPancytopenia();
+}
+
+function updateSummary() {
+  let entered = 0, normal = 0, abnormal = 0;
+  const allTests = [].concat(...Object.values(TESTS));
+  const totalTests = allTests.length;
+
+  allTests.forEach(test => {
+    if (test.id in values) {
+      entered++;
+      const range = test.ranges[sex] || test.ranges.male;
+      const val = values[test.id];
+      if (val >= range[0] && val <= range[1]) {
+        normal++;
+      } else {
+        abnormal++;
+      }
+    }
+  });
+
+  document.getElementById('stat-entered').textContent = entered;
+  document.getElementById('stat-normal').textContent = normal;
+  document.getElementById('stat-abnormal').textContent = abnormal;
+  document.getElementById('stat-pending').textContent = totalTests - entered;
+
+  if (entered > 0) {
+    const now = new Date();
+    document.getElementById('timestamp').textContent = 'Last updated: ' + now.toLocaleTimeString('en-GB');
+  }
+}
+
+function checkPancytopenia() {
+  const alert = document.getElementById('pancytopenia-alert');
+  const hb = values['hb'];
+  const wbc = values['wbc'];
+  const plt = values['plt'];
+
+  if (hb === undefined || wbc === undefined || plt === undefined) {
+    alert.classList.remove('pancytopenia');
+    alert.style.display = 'none';
+    return;
+  }
+
+  const hbRange = TESTS.fbc[0].ranges[sex];
+  const wbcRange = TESTS.fbc[1].ranges[sex];
+  const pltRange = TESTS.fbc[2].ranges[sex];
+
+  if (hb < hbRange[0] && wbc < wbcRange[0] && plt < pltRange[0]) {
+    alert.classList.add('pancytopenia');
+    alert.style.display = 'flex';
+  } else {
+    alert.classList.remove('pancytopenia');
+    alert.style.display = 'none';
+  }
+}
+
+function toggleDetail(id) {
+  const detail = document.getElementById('detail-' + id);
+  const chev = document.getElementById('chev-' + id);
+  detail.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function clearAll() {
+  values = {};
+  Object.values(TESTS).flat().forEach(test => {
+    const input = document.getElementById('input-' + test.id);
+    if (input) input.value = '';
+  });
+  reEvaluateAll();
+  document.getElementById('timestamp').textContent = '';
+}
+
+// Init
+buildCards();
+</script>
+
+</body>
+</html>

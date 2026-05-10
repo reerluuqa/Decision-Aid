@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GP Anaemia Assistant | Rapid Pathway Tool</title>
+    <style>
+        :root {
+            --nhs-blue: #005EB8;
+            --emergency: #DA291C;
+            --urgent: #D5281B;
+            --success: #007F3B;
+            --warning: #FFB81C;
+            --dark: #212B32;
+            --gray-100: #F0F4F5;
+            --gray-200: #D8DDE0;
+            --gray-700: #4C6272;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--gray-100);
+            color: var(--dark);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--nhs-blue);
+            color: white;
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .app-header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 968px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card.emergency {
+            border-color: var(--emergency);
+            background: #FEF2F2;
+        }
+
+        .card.warning {
+            border-color: var(--warning);
+            background: #FFFBEB;
+        }
+
+        .card.success {
+            border-color: var(--success);
+            background: #F0FDF4;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 1.5rem 0 0.75rem;
+            color: var(--dark);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.875rem;
+        }
+
+        .label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: var(--gray-700);
+        }
+
+        /* Form Elements */
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        input[type="number"], input[type="text"], select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        input[type="number"]:focus, select:focus {
+            outline: none;
+            border-color: var(--nhs-blue);
+            box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.1);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .radio-btn {
+            flex: 1;
+            min-width: 60px;
+            padding: 0.5rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .radio-btn:hover {
+            border-color: var(--nhs-blue);
+        }
+
+        .radio-btn.active {
+            background: var(--nhs-blue);
+            color: white;
+            border-color: var(--nhs-blue);
+        }
+
+        .radio-btn.danger.active {
+            background: var(--emergency);
+            border-color: var(--emergency);
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-red {
+            background: #FEE2E2;
+            color: #991B1B;
+            border-left: 4px solid var(--emergency);
+        }
+
+        .alert-green {
+            background: #D1FAE5;
+            color: #065F46;
+            border-left: 4px solid var(--success);
+        }
+
+        .alert-amber {
+            background: #FEF3C7;
+            color: #92400E;
+            border-left: 4px solid var(--warning);
+        }
+
+        /* Pathway Sections */
+        .pathway {
+            display: none;
+        }
+
+        .pathway.active {
+            display: block;
+            animation: fadeIn 0.4s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .mcv-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .mcv-tab {
+            padding: 1rem;
+            border: 3px solid var(--gray-200);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s;
+            background: white;
+        }
+
+        .mcv-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .mcv-tab.micro.active { 
+            background: #EFF6FF; 
+            border-color: #3B82F6; 
+            color: #1E40AF;
+        }
+        .mcv-tab.normo.active { 
+            background: #F5F3FF; 
+            border-color: #8B5CF6; 
+            color: #5B21B6;
+        }
+        .mcv-tab.macro.active { 
+            background: #FDF2F8; 
+            border-color: #EC4899; 
+            color: #9D174D;
+        }
+
+        .mcv-value {
+            font-size: 2rem;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Logic Trees */
+        .decision-node {
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--nhs-blue);
+        }
+
+        .decision-header {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--nhs-blue);
+        }
+
+        .action-box {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+
+        .action-box.critical {
+            border-color: var(--emergency);
+            background: #FEF2F2;
+        }
+
+        .action-box.do {
+            border-color: var(--success);
+            background: #F0FDF4;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--nhs-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #004a93;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-danger {
+            background: var(--emergency);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid currentColor;
+        }
+
+        /* Utility */
+        .hidden { display: none !important; }
+        
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .tag-red { background: #FEE2E2; color: #991B1B; }
+        .tag-green { background: #D1FAE5; color: #065F46; }
+        .tag-amber { background: #FEF3C7; color: #92400E; }
+        .tag-blue { background: #DBEAFE; color: #1E40AF; }
+
+        .result-display {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0.5rem 0;
+        }
+
+        .copy-text {
+            background: var(--gray-100);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.875rem;
+            position: relative;
+            margin: 1rem 0;
+            border: 1px solid var(--gray-200);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .checklist {
+            list-style: none;
+        }
+
+        .checklist li {
+            padding: 0.5rem 0;
+            padding-left: 1.75rem;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "□";
+            position: absolute;
+            left: 0;
+            font-weight: 700;
+            color: var(--gray-700);
+        }
+
+        @media print {
+            .app-header, .input-panel { display: none; }
+            .results-panel { grid-column: 1 / -1; }
+            .card { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <h1>🩸 Anaemia Assistant</h1>
+    <div class="subtitle">UK Primary Care Decision Support | NHS Pathways</div>
+</header>
+
+<div class="container">
+    <!-- INPUT PANEL -->
+    <aside class="input-panel">
+        <div class="card">
+            <h2>Patient Context</h2>
+            
+            <div class="input-group">
+                <label class="label">Age</label>
+                <input type="number" id="age" placeholder="Years" min="0" max="120">
+            </div>
+
+            <div class="input-group">
+                <label class="label">Sex</label>
+                <div class="radio-group">
+                    <button class="radio-btn" onclick="setSex('M')" id="sex-m">Male</button>
+                    <button class="radio-btn" onclick="setSex('F')" id="sex-f">Female</button>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label class="label">Key Symptoms</label>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.875rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="upper-abdo" onchange="updateCancerFlags()"> Upper abdo pain
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="haematuria" onchange="updateCancerFlags()"> Visible haematuria
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="neuro-sx"> Neuro symptoms (B12)
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>FBC Results</h2>
+            
+            <div class="input-group">
+                <label class="label">Haemoglobin (g/L)</label>
+                <input type="number" id="hb" placeholder="e.g., 95" oninput="calculateSeverity()">
+                <div id="hb-status" class="result-display"></div>
+            </div>
+
+            <div class="input-group">
+                <label class="label">MCV (fL)</label>
+                <input type="number" id="mcv" placeholder="e.g., 78" oninput="routeMCV()">
+            </div>
+
+            <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div class="input-group">
+                    <label class="label">WCC</label>
+                    <input type="number" id="wcc" placeholder="×10⁹/L" oninput="checkPancytopenia()">
+                </div>
+                <div class="input-group">
+                    <label class="label">Platelets</label>
+                    <input type="number" id="plts" placeholder="×10⁹/L" oninput="checkPancytopenia()">
+                </div>
+            </div>
+
+            <div id="pancytopenia-alert" class="alert alert-red hidden">
+                ⚠️ <strong>PANCYTOPENIA</strong><br>
+                Urgent haematology referral
+            </div>
+        </div>
+
+        <!-- Dynamic Additional Tests -->
+        <div id="dynamic-inputs" class="card hidden">
+            <h2>Additional Tests</h2>
+            <div id="additional-fields"></div>
+        </div>
+
+        <button class="btn btn-outline" onclick="resetAll()" style="width: 100%; margin-top: 1rem; color: var(--gray-700);">
+            Reset All
+        </button>
+    </aside>
+
+    <!-- RESULTS PANEL -->
+    <main class="results-panel">
+        
+        <!-- Global Alerts -->
+        <div id="cancer-flags"></div>
+
+        <div id="severity-banner"></div>
+
+        <!-- MCV Router -->
+        <div class="card">
+            <h2>Select Pathway by MCV</h2>
+            <div class="mcv-tabs">
+                <div class="mcv-tab micro" onclick="selectPathway('micro')">
+                    <span class="mcv-value">&lt;80</span>
+                    <div>Microcytic</div>
+                    <small>Iron deficiency</small>
+                </div>
+                <div class="mcv-tab normo" onclick="selectPathway('normo')">
+                    <span class="mcv-value">80-100</span>
+                    <div>Normocytic</div>
+                    <small>ACD / Haemolysis</small>
+                </div>
+                <div class="mcv-tab macro" onclick="selectPathway('macro')">
+                    <span class="mcv-value">&gt;100</span>
+                    <div>Macrocytic</div>
+                    <small>B12 / Folate / Alcohol</small>
+                </div>
+            </div>
+
+            <div id="pathway-instruction" style="text-align: center; color: var(--gray-700); padding: 2rem;">
+                Enter MCV above or click a pathway to begin
+            </div>
+        </div>
+
+        <!-- MICROCYTIC PATHWAY -->
+        <div id="pathway-micro" class="pathway">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Microcytic Anaemia <span class="tag tag-blue">MCV &lt;80</span></h2>
+                    <span class="tag tag-amber">Check Ferritin</span>
+                </div>
+
+                <div class="input-group">
+                    <label class="label">Ferritin (µg/L)</label>
+                    <input type="number" id="ferritin" placeholder="e.g., 8" oninput="interpretMicrocytic()">
+                </div>
+
+                <div id="micro-results"></div>
+
+                <div id="ida-management" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+                    <h3>Iron Deficiency Management</h3>
+                    
+                    <div class="action-box do">
+                        <strong>Prescribe:</strong> Oral iron OD (empty stomach)<br>
+                        • Ferrous sulfate 200mg, OR<br>
+                        • Ferrous fumarate 210mg, OR<br>
+                        • Ferrous gluconate 600mg<br>
+                        <small style="color: var(--gray-700); display: block; margin-top: 0.5rem;">
+                            Avoid: Tea/coffee (↓90% absorption), antacids, food if possible
+                        </small>
+                    </div>
+
+                    <div class="decision-node">
+                        <div class="decision-header">Cancer Investigation (IDA)</div>
+                        <ul class="checklist">
+                            <li>FIT test (all adults ≥10 µg Hb/g = refer)</li>
+                            <li>Age ≥60: Routine FIT + OGD/colonoscopy consideration</li>
+                            <li>Men ≥40 + post-menopausal women: GI investigation</li>
+                            <li>Coeliac serology (duodenal biopsy if positive)</li>
+                        </ul>
+                    </div>
+
+                    <div class="decision-node" style="border-left-color: var(--warning);">
+                        <div class="decision-header" style="color: #92400E;">Microcytosis without Anaemia</div>
+                        <p style="font-size: 0.875rem; margin-top: 0.5rem;">
+                            <strong>Red flag for malignancy</strong> if age ≥40 (men) or ≥70 (all)<br>
+                            Associated with: Colorectal, lung, kidney, stomach, lymphoma
+                        </p>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="generateIDAPlan()" style="margin-top: 1rem;">
+                        Generate Management Plan
+                    </button>
+                </div>
+
+                <div id="acd-management" class="hidden" style="margin-top: 1.5rem;">
+                    <h3>Anaemia of Chronic Disease</h3>
+                    <div class="alert alert-amber">
+                        Ferritin normal/high + Low serum iron + Low TIBC
+                    </div>
+                    <p style="margin: 1rem 0;"><strong>Consider:</strong> CKD, Heart failure, RA/SLE, TB, Malignancy, Liver disease</p>
+                    
+                    <div class="action-box">
+                        <strong>Trial of IV iron if:</strong> CKD (dialysis), IBD, Heart failure, Late pregnancy, or oral intolerance
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NORMOCYTIC PATHWAY -->
+        <div id="pathway-normo" class="pathway">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Normocytic Anaemia <span class="tag tag-blue">MCV 80-100</span></h2>
+                </div>
+
+                <div class="input-group">
+                    <label class="label">Reticulocytes (×10⁹/L)</label>
+                    <input type="number" id="retics" placeholder="Normal 50-100" oninput="interpretNormocytic()">
+                </div>
+
+                <div id="retic-results"></div>
+
+                <div id="high-retics-panel" class="hidden" style="margin-top: 1.5rem;">
+                    <div class="input-group">
+                        <label class="label">Bilirubin (µmol/L)</label>
+                        <input type="number" id="bili" placeholder="e.g., 25" oninput="checkBilirubin()">
+                    </div>
+                    <div id="bili-result"></div>
+                </div>
+
+                <div id="norm-retics-panel" class="hidden" style="margin-top: 1.5rem;">
+                    <div class="action-box">
+                        <strong>Consider:</strong>
+                        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                            <li>Anaemia of chronic disease (most common)</li>
+                            <li>Early iron deficiency (check ferritin)</li>
+                            <li>Mixed deficiency</li>
+                            <li>Myeloma (if age appropriate + symptoms)</li>
+                            <li>CKD (check eGFR)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MACROCYTIC PATHWAY -->
+        <div id="pathway-macro" class="pathway">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Macrocytic Anaemia <span class="tag tag-blue">MCV &gt;100</span></h2>
+                    <span id="macro-urgent" class="tag tag-red hidden">URGENT</span>
+                </div>
+
+                <div class="alert alert-red hidden" id="neuro-alert">
+                    ⚠️ <strong>Neurological symptoms present</strong><br>
+                    Start B12 IMMEDIATELY (do not wait for results)
+                </div>
+
+                <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="input-group">
+                        <label class="label">B12 (ng/L)</label>
+                        <input type="number" id="b12" placeholder="e.g., 150" oninput="interpretMacrocytic()">
+                    </div>
+                    <div class="input-group">
+                        <label class="label">Folate (µg/L)</label>
+                        <input type="number" id="folate" placeholder="e.g., 2.0" oninput="interpretMacrocytic()">
+                    </div>
+                </div>
+
+                <div id="macro-results"></div>
+
+                <div class="decision-node" style="margin-top: 1.5rem;">
+                    <div class="decision-header">Other Causes to Consider</div>
+                    <div style="font-size: 0.875rem; margin-top: 0.5rem;">
+                        <strong>Drugs:</strong> Methotrexate, Anticonvulsants, PPIs, Metformin, Nitrous oxide<br>
+                        <strong>Other:</strong> Alcohol, Liver disease, Hypothyroidism, Pregnancy, MDS/Myeloma
+                    </div>
+                </div>
+
+                <div id="b12-management" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+                    <h3>B12 Replacement</h3>
+                    <div class="action-box do">
+                        <strong>Definite deficiency (&lt;180):</strong> IM Hydroxocobalamin 1mg<br>
+                        • Alternate days × 1 week, then weekly × 4 weeks, then 3-monthly for life<br>
+                        <small>If neurological symptoms: continue 2-weekly until no further improvement</small>
+                    </div>
+                    <div class="action-box warning">
+                        <strong>Possible deficiency (180-350):</strong> Check MMA/homocysteine or trial of therapy if symptomatic
+                    </div>
+                </div>
+
+                <div id="folate-management" class="hidden" style="margin-top: 1.5rem;">
+                    <h3>Folate Replacement</h3>
+                    <div class="action-box do">
+                        <strong>Folic acid 5mg daily × 4 months</strong><br>
+                        <small style="color: var(--emergency); font-weight: 700;">⚠️ NEVER give folate alone if B12 deficient (risk of neurological damage)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GENERIC CANCER PATHWAYS -->
+        <div id="cancer-panel" class="hidden">
+            <div class="card emergency">
+                <h2>🚨 Cancer Pathway Triggers</h2>
+                <div id="cancer-specific-actions"></div>
+            </div>
+        </div>
+
+        <!-- FOOTER ACTIONS -->
+        <div class="card" style="background: var(--dark); color: white;">
+            <h2 style="color: white;">Clinical Actions</h2>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                <button class="btn btn-success" onclick="copyPlan()">📋 Copy Plan to Clipboard</button>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Print</button>
+            </div>
+            <div id="plan-text" class="copy-text" style="margin-top: 1rem; background: rgba(255,255,255,0.1); color: white; border-color: rgba(255,255,255,0.2);">
+                [Enter results above to generate plan]
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script>
+// State management
+const state = {
+    sex: null,
+    age: null,
+    hb: null,
+    mcv: null,
+    pathway: null,
+    ferritin: null,
+    retics: null,
+    b12: null,
+    folate: null
+};
+
+function setSex(sex) {
+    state.sex = sex;
+    document.getElementById('sex-m').classList.toggle('active', sex === 'M');
+    document.getElementById('sex-f').classList.toggle('active', sex === 'F');
+    updateCancerFlags();
+    generatePlan();
+}
+
+function calculateSeverity() {
+    const hb = parseFloat(document.getElementById('hb').value);
+    state.hb = hb;
+    
+    const banner = document.getElementById('severity-banner');
+    const sex = state.sex;
+    
+    if (!hb) {
+        banner.innerHTML = '';
+        return;
+    }
+
+    // Thresholds: Men <130, Women <120 generally, but use conservative clinic thresholds
+    const isMale = sex === 'M';
+    const severe = isMale ? hb < 80 : hb < 70;
+    const moderate = isMale ? (hb < 100 && hb >= 80) : (hb < 90 && hb >= 70);
+    
+    let html = '';
+    
+    if (severe || (hb < 80)) {
+        html = `<div class="alert alert-red">
+            <strong>SEVERE ANAEMIA</strong> (Hb ${hb} g/L)<br>
+            ${hb < 60 ? '⚠️ Consider transfusion / Admission' : 'Urgent referral if symptomatic'}
+        </div>`;
+    } else if (moderate) {
+        html = `<div class="alert alert-amber">
+            <strong>MODERATE ANAEMIA</strong> (Hb ${hb} g/L)<br>
+            Assess symptoms; consider haematology referral if pancytopenia
+        </div>`;
+    } else if (hb < (isMale ? 130 : 120)) {
+        html = `<div class="alert alert-amber">
+            <strong>MILD ANAEMIA</strong> (Hb ${hb} g/L)
+        </div>`;
+    } else {
+        html = `<div class="alert alert-green">
+            <strong>Hb NORMAL</strong> (${hb} g/L) - Check for microcytosis without anaemia if MCV low
+        </div>`;
+    }
+    
+    banner.innerHTML = html;
+    checkPancytopenia();
+    generatePlan();
+}
+
+function checkPancytopenia() {
+    const wcc = parseFloat(document.getElementById('wcc').value);
+    const plts = parseFloat(document.getElementById('plts').value);
+    const hb = parseFloat(document.getElementById('hb').value);
+    
+    const alert = document.getElementById('pancytopenia-alert');
+    
+    // Simplified thresholds: WCC <4, Plts <150, Hb low
+    if (wcc && plts && hb) {
+        if (wcc < 4 && plts < 150 && hb < 100) {
+            alert.classList.remove('hidden');
+            // Add urgent tag to header
+            document.querySelector('.app-header').style.background = 'var(--emergency)';
+        } else {
+            alert.classList.add('hidden');
+            document.querySelector('.app-header').style.background = 'var(--nhs-blue)';
+        }
+    } else {
+        alert.classList.add('hidden');
+    }
+    generatePlan();
+}
+
+function routeMCV() {
+    const mcv = parseFloat(document.getElementById('mcv').value);
+    state.mcv = mcv;
+    
+    if (!mcv) return;
+    
+    // Auto-select pathway
+    if (mcv < 80) selectPathway('micro');
+    else if (mcv <= 100) selectPathway('normo');
+    else selectPathway('macro');
+    
+    generatePlan();
+}
+
+function selectPathway(pathway) {
+    state.pathway = pathway;
+    
+    // Update tabs
+    document.querySelectorAll('.mcv-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector(`.mcv-tab.${pathway}`).classList.add('active');
+    
+    // Show pathway
+    document.querySelectorAll('.pathway').forEach(p => p.classList.remove('active'));
+    document.getElementById(`pathway-${pathway}`).classList.add('active');
+    
+    document.getElementById('pathway-instruction').classList.add('hidden');
+    
+    // Update additional inputs visibility
+    updateAdditionalInputs(pathway);
+    generatePlan();
+}
+
+function updateAdditionalInputs(pathway) {
+    const container = document.getElementById('dynamic-inputs');
+    const fields = document.getElementById('additional-fields');
+    
+    if (!pathway) {
+        container.classList.add('hidden');
+        return;
+    }
+    
+    container.classList.remove('hidden');
+    
+    let html = '';
+    if (pathway === 'micro') {
+        html = '<div style="font-size: 0.875rem; color: var(--gray-700);">Also check: Iron, TIBC, Coeliac serology, Haemoglobinopathy screen (if indicated)</div>';
+    } else if (pathway === 'normo') {
+        html = '<div style="font-size: 0.875rem; color: var(--gray-700);">Also check: Reticulocytes, Blood film, CKD stage, CRP/ESR</div>';
+    } else if (pathway === 'macro') {
+        html = '<div style="font-size: 0.875rem; color: var(--gray-700);">Also check: Reticulocytes, LFTs, TFTs, Alcohol history, Drug history</div>';
+    }
+    fields.innerHTML = html;
+}
+
+function updateCancerFlags() {
+    const age = parseInt(document.getElementById('age').value) || 0;
+    const sex = state.sex;
+    const upperAbdo = document.getElementById('upper-abdo').checked;
+    const haematuria = document.getElementById('haematuria').checked;
+    const hb = parseFloat(document.getElementById('hb').value);
+    
+    const container = document.getElementById('cancer-flags');
+    let alerts = [];
+    
+    // Age 55+ with upper abdo pain + anaemia
+    if (age >= 55 && upperAbdo && hb && hb < (sex === 'M' ? 130 : 120)) {
+        alerts.push({
+            type: 'urgent',
+            text: 'Age ≥55 + Upper abdo pain + Anaemia → Consider non-urgent OGD (2WW if red flags)'
+        });
+    }
+    
+    // Women 55+ with haematuria + anaemia
+    if (sex === 'F' && age >= 55 && haematuria && hb && hb < 120) {
+        alerts.push({
+            type: 'urgent',
+            text: 'Woman ≥55 + Haematuria + Anaemia → Gynaecological assessment'
+        });
+    }
+    
+    // FIT criteria
+    if (hb && hb < (sex === 'M' ? 130 : 120)) {
+        if (age >= 60) {
+            alerts.push({
+                type: 'routine',
+                text: `Age ≥60 with anaemia → Offer FIT (Refer if ≥10 µg Hb/g)`
+            });
+        }
+        // Iron deficiency assumption (will be refined by pathway)
+        if (state.pathway === 'micro') {
+            alerts.push({
+                type: 'routine',
+                text: 'Iron deficiency anaemia → FIT testing mandatory'
+            });
+        }
+    }
+    
+    let html = '';
+    alerts.forEach(alert => {
+        const colorClass = alert.type === 'urgent' ? 'alert-red' : 'alert-amber';
+        const icon = alert.type === 'urgent' ? '🚨' : '📋';
+        html += `<div class="alert ${colorClass}">${icon} ${alert.text}</div>`;
+    });
+    
+    container.innerHTML = html;
+}
+
+// MICROCYTIC LOGIC
+function interpretMicrocytic() {
+    const ferritin = parseFloat(document.getElementById('ferritin').value);
+    state.ferritin = ferritin;
+    
+    const resultsDiv = document.getElementById('micro-results');
+    const idaPanel = document.getElementById('ida-management');
+    const acdPanel = document.getElementById('acd-management');
+    
+    if (!ferritin) return;
+    
+    if (ferritin < 30) {
+        // Iron deficiency
+        resultsDiv.innerHTML = `
+            <div class="alert alert-red">
+                <strong>IRON DEFICIENCY ANAEMIA</strong><br>
+                Ferritin ${ferritin} µg/L (Low)
+            </div>
+        `;
+        idaPanel.classList.remove('hidden');
+        acdPanel.classList.add('hidden');
+    } else if (ferritin >= 30 && ferritin < 100) {
+        // Grey zone - suggest ACD or early IDA
+        resultsDiv.innerHTML = `
+            <div class="alert alert-amber">
+                <strong>BORDERLINE</strong> Ferritin ${ferritin} µg/L<br>
+                Check: Serum iron, TIBC, Transferrin saturation<br>
+                If low iron + low TIBC → Anaemia of Chronic Disease<br>
+                If low iron + high TIBC → Early iron deficiency
+            </div>
+        `;
+        idaPanel.classList.remove('hidden');
+        acdPanel.classList.remove('hidden');
+    } else {
+        // High ferritin
+        resultsDiv.innerHTML = `
+            <div class="alert alert-amber">
+                <strong>Ferritin NORMAL/HIGH</strong> (${ferritin} µg/L)<br>
+                Consider: Anaemia of Chronic Disease, Thalassaemia trait, Sideroblastic anaemia
+            </div>
+        `;
+        idaPanel.classList.add('hidden');
+        acdPanel.classList.remove('hidden');
+    }
+    
+    updateCancerFlags();
+    generatePlan();
+}
+
+// NORMOCYTIC LOGIC
+function interpretNormocytic() {
+    const retics = parseFloat(document.getElementById('retics').value);
+    state.retics = retics;
+    
+    const resultsDiv = document.getElementById('retic-results');
+    const highPanel = document.getElementById('high-retics-panel');
+    const normPanel = document.getElementById('norm-retics-panel');
+    
+    if (!retics) return;
+    
+    if (retics > 100) {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-red">
+                <strong>High Reticulocytes (>100)</strong> → Haemolysis or Bleeding
+            </div>
+        `;
+        highPanel.classList.remove('hidden');
+        normPanel.classList.add('hidden');
+    } else if (retics < 50) {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-amber">
+                <strong>Low Reticulocytes (&lt;50)</strong> → Poor marrow response
+            </div>
+        `;
+        highPanel.classList.add('hidden');
+        normPanel.classList.remove('hidden');
+    } else {
+        resultsDiv.innerHTML = `
+            <div class="alert alert-green">
+                <strong>Normal Reticulocytes</strong> (${retics})
+            </div>
+        `;
+        highPanel.classList.add('hidden');
+        normPanel.classList.remove('hidden');
+    }
+    generatePlan();
+}
+
+function checkBilirubin() {
+    const bili = parseFloat(document.getElementById('bili').value);
+    const resultDiv = document.getElementById('bili-result');
+    
+    if (!bili) return;
+    
+    if (bili > 21) {
+        resultDiv.innerHTML = `
+            <div class="alert alert-red" style="margin-top: 1rem;">
+                <strong>RAISED BILIRUBIN (${bili})</strong><br>
+                Consistent with HAEMOLYSIS<br>
+                → Urgent haematology referral
+            </div>
+        `;
+    } else {
+        resultDiv.innerHTML = `
+            <div class="alert alert-amber" style="margin-top: 1rem;">
+                <strong>Normal Bilirubin</strong><br>
+                Consider ACUTE BLEEDING as cause<br>
+                → Investigate source (GI, GU, Gynae)
+            </div>
+        `;
+    }
+    generatePlan();
+}
+
+// MACROCYTIC LOGIC
+function interpretMacrocytic() {
+    const b12 = parseFloat(document.getElementById('b12').value);
+    const folate = parseFloat(document.getElementById('folate').value);
+    const neuroSymptoms = document.getElementById('neuro-sx').checked;
+    
+    state.b12 = b12;
+    state.folate = folate;
+    
+    const resultsDiv = document.getElementById('macro-results');
+    const b12Panel = document.getElementById('b12-management');
+    const folatePanel = document.getElementById('folate-management');
+    const neuroAlert = document.getElementById('neuro-alert');
+    
+    let html = '';
+    
+    if (neuroSymptoms) {
+        neuroAlert.classList.remove('hidden');
+    } else {
+        neuroAlert.classList.add('hidden');
+    }
+    
+    if (b12) {
+        if (b12 < 180) {
+            html += `<div class="alert alert-red">B12 DEFINITE DEFICIENCY (${b12} ng/L)</div>`;
+            b12Panel.classList.remove('hidden');
+        } else if (b12 < 350) {
+            html += `<div class="alert alert-amber">B12 POSSIBLE DEFICIENCY (${b12} ng/L)<br><small>Check MMA/homocysteine or treat if symptomatic</small></div>`;
+            b12Panel.classList.remove('hidden');
+        } else {
+            html += `<div class="alert alert-green">B12 Normal (${b12})</div>`;
+            b12Panel.classList.add('hidden');
+        }
+    }
+    
+    if (folate) {
+        if (folate < 3) {
+            html += `<div class="alert alert-red" style="margin-top: 0.5rem;">FOLATE DEFICIENCY (${folate} µg/L)</div>`;
+            if (b12 && b12 < 350) {
+                html += `<div class="alert alert-red" style="margin-top: 0.5rem;"><strong>⚠️ Treat B12 FIRST before folate</strong></div>`;
+            } else {
+                folatePanel.classList.remove('hidden');
+            }
+        } else {
+            html += `<div class="alert alert-green" style="margin-top: 0.5rem;">Folate Normal (${folate})</div>`;
+            folatePanel.classList.add('hidden');
+        }
+    }
+    
+    resultsDiv.innerHTML = html;
+    generatePlan();
+}
+
+function generateIDAPlan() {
+    const plan = `IRON DEFICIENCY ANAEMIA MANAGEMENT:
+• Oral iron: Ferrous sulfate 200mg OD (or fumarate 210mg/gluconate 600mg)
+• Take with orange juice, avoid tea/coffee/antacids
+• Check: Coeliac serology, FIT test (if ≥10 refer), consider OGD/colonoscopy based on age
+• Review in 4 weeks (target Hb rise ≥20g/L)
+• Continue 3 months after Hb normalised, then stop
+• If malabsorption/intolerance: Consider IV iron (ferric derisomaltose/ferric carboxymaltose)`;
+    
+    navigator.clipboard.writeText(plan);
+    alert('IDA management plan copied to clipboard!');
+}
+
+function generatePlan() {
+    const lines = [];
+    const age = document.getElementById('age').value;
+    const sex = state.sex;
+    const hb = document.getElementById('hb').value;
+    
+    if (age) lines.push(`Age: ${age} ${sex || ''}`);
+    if (hb) lines.push(`Hb: ${hb} g/L`);
+    if (state.mcv) lines.push(`MCV: ${state.mcv} fL (${state.mcv < 80 ? 'Micro' : state.mcv > 100 ? 'Macro' : 'Normo'}cytic)`);
+    
+    // Add pathway specific advice
+    if (state.pathway === 'micro' && state.ferritin) {
+        if (state.ferritin < 30) {
+            lines.push('Diagnosis: Iron Deficiency Anaemia');
+            lines.push('Actions: Oral iron OD, Coeliac screen, FIT test, GI referral if indicated');
+        }
+    }
+    
+    if (state.pathway === 'macro' && state.b12) {
+        if (state.b12 < 180) {
+            lines.push('Diagnosis: B12 Deficiency');
+            lines.push('Actions: IM Hydroxocobalamin 1mg alternate days x1wk, then weekly x4wk, then 3-monthly');
+        }
+    }
+    
+    document.getElementById('plan-text').textContent = lines.join('\n') || '[Enter results above to generate plan]';
+}
+
+function copyPlan() {
+    const text = document.getElementById('plan-text').textContent;
+    navigator.clipboard.writeText(text);
+    
+    const btn = event.target;
+    const original = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = original, 2000);
+}
+
+function resetAll() {
+    document.querySelectorAll('input').forEach(i => i.value = '');
+    document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+    document.querySelectorAll('.radio-btn').forEach(r => r.classList.remove('active'));
+    state.sex = null;
+    selectPathway(null);
+    document.getElementById('pathway-instruction').classList.remove('hidden');
+    document.querySelectorAll('.pathway').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.alert').forEach(a => a.classList.add('hidden'));
+    document.getElementById('severity-banner').innerHTML = '';
+    document.getElementById('cancer-flags').innerHTML = '';
+    generatePlan();
+}
+
+// Initialize
+generatePlan();
+</script>
+
+</body>
+</html>
